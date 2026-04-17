@@ -1,6 +1,7 @@
 from textifai.conversation.contracts import (
     ConversationRequest,
     ConversationTurn,
+    ExecutionResult,
     FLOW_NAME_CATALOG,
     INTENT_CATALOG,
     PlannedTask,
@@ -21,6 +22,7 @@ __all__ = [
     "ConversationRequest",
     "ConversationState",
     "ConversationTurn",
+    "ExecutionResult",
     "RecognizedIntent",
     "PlannedTask",
     "INTENT_CATALOG",

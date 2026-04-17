@@ -122,6 +122,20 @@ class ConversationTurn:
     persisted: bool = False
 
 
+@dataclass(frozen=True)
+class ExecutionResult:
+    type: str
+    flow_name: str
+    success: bool
+    result_summary: str
+    result: Any | None = None
+    context_request: dict | None = None
+    context_pack: dict | None = None
+    artifacts_touched: list[str] = field(default_factory=list)
+    persisted: bool = False
+    missing_target: bool = False
+
+
 def _ensure_catalog_value(field_name: str, value: str, catalog: tuple[str, ...]) -> None:
     if value not in catalog:
         raise ValueError(f"Unsupported {field_name}: {value}")

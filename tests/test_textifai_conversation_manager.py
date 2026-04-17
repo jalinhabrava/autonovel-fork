@@ -3,6 +3,12 @@ import unittest
 from textifai.conversation.contracts import ConversationRequest
 from textifai.conversation.hybrid_recognizer import HybridIntentRecognizer
 from textifai.conversation.manager import ConversationManager
+from textifai.conversation.executor import MinimalExecutionLayer
+from textifai.runtime_config import load_runtime_environment
+from textifai.session import create_session
+from pathlib import Path
+import tempfile
+from vault.bootstrap import bootstrap_vault
 
 
 class TextifAIConversationManagerTests(unittest.TestCase):
@@ -60,6 +66,40 @@ class TextifAIConversationManagerTests(unittest.TestCase):
         self.assertEqual(turn.recognized_intent.recognizer_kind, "hybrid_llm")
         self.assertEqual(turn.recognized_intent.metadata["recognition_source"], "hybrid_llm")
         self.assertEqual(turn.planned_task.flow_name, "scene_context_flow")
+
+    def test_manager_syncs_real_execution_context_into_state(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base_dir = Path(tmp)
+            vault_root = base_dir / "Vault"
+            bootstrap_vault(vault_root, title="Test Project")
+            (base_dir / ".env").write_text(
+                "\n".join(
+                    [
+                        "AUTONOVEL_PROJECT_BACKEND=vault",
+                        f"AUTONOVEL_VAULT_ROOT={vault_root}",
+                        "AUTONOVEL_TEXT_PROVIDER=ollama",
+                    ]
+                )
+                + "\n"
+            )
+            session = create_session(load_runtime_environment(base_dir))
+            manager = ConversationManager(session=session, executor=MinimalExecutionLayer(session=session))
+            request = ConversationRequest(
+                raw_text="world",
+                source="user",
+                mode="normal",
+                interface_language="en",
+                user_command_language="en",
+                internal_system_language="en",
+                project_default_language="en",
+                mixed_language_allowed=True,
+                explanation_language="en",
+            )
+            turn = manager.handle_request(request)
+            self.assertEqual(turn.result_type, "context_pack")
+            self.assertIsNotNone(manager.state.last_context_request)
+            self.assertIsNotNone(manager.state.last_context_pack)
+            self.assertIs(session.conversation_state, manager.state)
 
 
 class _StubClassifier:
