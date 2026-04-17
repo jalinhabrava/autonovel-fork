@@ -12,26 +12,26 @@ def build_context_pack(
     ranked_candidates: list[ScoredCandidate],
 ) -> ContextPack:
     budgets = _effective_budgets(policy, request.token_budget)
-    hard_constraints = _consume_section(
+    hard_constraints, hard_meta = _consume_section(
         [candidate for candidate in ranked_candidates if candidate.section == "hard_constraints"],
         budgets["hard_constraints"],
     )
-    narrative_context = _consume_section(
+    narrative_context, narrative_meta = _consume_section(
         [candidate for candidate in ranked_candidates if candidate.section == "narrative_context"],
         budgets["narrative_context"],
     )
-    evidence = _consume_section(
+    evidence, evidence_meta = _consume_section(
         [candidate for candidate in ranked_candidates if candidate.section == "evidence"],
         budgets["evidence"],
     )
 
     voice_candidates = [candidate for candidate in ranked_candidates if candidate.section == "voice_context"]
-    project_voice = _consume_section(
+    project_voice, project_voice_meta = _consume_section(
         [candidate for candidate in voice_candidates if candidate.candidate.artifact_kind == "root_artifact"],
         int(budgets["voice_context"] * 0.7),
     )
-    remaining_voice_budget = max(budgets["voice_context"] - _entry_cost_total(project_voice), 0)
-    character_voice = _consume_section(
+    remaining_voice_budget = max(budgets["voice_context"] - project_voice_meta["used_budget"], 0)
+    character_voice, character_voice_meta = _consume_section(
         [candidate for candidate in voice_candidates if candidate.candidate.artifact_type == "character"],
         remaining_voice_budget,
     )
@@ -73,18 +73,60 @@ def build_context_pack(
                 "character_voice": len(character_voice),
                 "evidence": len(evidence),
             },
+            "budget_usage": {
+                "hard_constraints": hard_meta,
+                "narrative_context": narrative_meta,
+                "project_voice": project_voice_meta,
+                "character_voice": character_voice_meta,
+                "evidence": evidence_meta,
+            },
             "target_type": request.target_type,
         },
     )
 
 
-def _consume_section(candidates: list[ScoredCandidate], budget: int) -> list[ContextEntry]:
+def _consume_section(candidates: list[ScoredCandidate], budget: int) -> tuple[list[ContextEntry], dict]:
     entries: list[ContextEntry] = []
+    excluded: list[dict] = []
     spent = 0
-    for scored in candidates:
-        content = _render_content(scored)
+    for index, scored in enumerate(candidates, start=1):
+        content, render_meta = _render_content(scored, budget_remaining=max(budget - spent, 1))
         cost = _entry_cost(content)
-        if entries and spent + cost > budget:
+        if cost <= 0:
+            excluded.append(
+                {
+                    "id": scored.candidate.id,
+                    "reason": "empty_content_after_render",
+                    "score": scored.score.total,
+                }
+            )
+            continue
+        if spent + cost > budget:
+            if cost > budget and not entries and scored.score.total >= 1.8:
+                content, render_meta = _render_content(
+                    scored,
+                    budget_remaining=max(int(budget * 0.75), 1),
+                    force_stronger_compression=True,
+                )
+                cost = _entry_cost(content)
+            if spent + cost > budget:
+                excluded.append(
+                    {
+                        "id": scored.candidate.id,
+                        "reason": "excluded_by_budget",
+                        "score": scored.score.total,
+                        "budget_remaining": max(budget - spent, 0),
+                    }
+                )
+                continue
+        if scored.score.total < 0.95 and spent > 0:
+            excluded.append(
+                {
+                    "id": scored.candidate.id,
+                    "reason": "below_relevance_threshold",
+                    "score": scored.score.total,
+                }
+            )
             continue
         entry = ContextEntry(
             id=scored.candidate.id,
@@ -105,25 +147,60 @@ def _consume_section(candidates: list[ScoredCandidate], budget: int) -> list[Con
                 "target_bonus": scored.score.target_bonus,
                 "reason": scored.score.reason,
             },
+            section_reason=scored.score.reason,
+            selection_rank=index,
+            effective_literality=render_meta["effective_literality"],
+            content_mode_info=render_meta,
             source_refs=scored.candidate.source_refs,
             line_span=scored.candidate.line_span,
         )
         entries.append(entry)
         spent += cost
-    return entries
+    return entries, {
+        "available_budget": budget,
+        "used_budget": spent,
+        "remaining_budget": max(budget - spent, 0),
+        "selected_count": len(entries),
+        "excluded_count": len(excluded),
+        "excluded_preview": excluded[:5],
+    }
 
 
-def _render_content(scored: ScoredCandidate) -> str:
+def _render_content(
+    scored: ScoredCandidate,
+    *,
+    budget_remaining: int,
+    force_stronger_compression: bool = False,
+) -> tuple[str, dict]:
     content = scored.candidate.content.strip()
     if not content:
-        return ""
-    if scored.literality >= 0.85:
-        return content
-    if scored.literality >= 0.5:
-        target_words = max(40, int(len(content.split()) * scored.literality * 0.7))
-        return _truncate_words(extract_summary(content, content[: max(240, target_words * 6)]), target_words)
-    target_words = max(18, int(len(content.split()) * max(scored.literality, 0.1) * 0.45))
-    return _truncate_words(extract_summary(content, content[: max(140, target_words * 5)]), target_words)
+        return "", {
+            "effective_literality": scored.literality,
+            "artifact_type": scored.candidate.artifact_type,
+            "source_words": 0,
+            "rendered_words": 0,
+            "compression_ratio": 1.0,
+        }
+
+    source_words = len(content.split())
+    effective_literality = _effective_literality(scored.literality, budget_remaining, source_words, force_stronger_compression)
+    if effective_literality >= 0.9:
+        rendered = _truncate_words(content, min(source_words, budget_remaining))
+    elif effective_literality >= 0.6:
+        target_words = max(28, int(source_words * effective_literality * 0.75))
+        rendered = _truncate_words(extract_summary(content, content[: max(220, target_words * 7)]), min(target_words, budget_remaining))
+    else:
+        target_words = max(14, int(source_words * max(effective_literality, 0.15) * 0.55))
+        rendered = _truncate_words(extract_summary(content, content[: max(120, target_words * 6)]), min(target_words, budget_remaining))
+
+    rendered_words = len(rendered.split())
+    return rendered, {
+        "effective_literality": round(effective_literality, 3),
+        "artifact_type": scored.candidate.artifact_type,
+        "source_words": source_words,
+        "rendered_words": rendered_words,
+        "compression_ratio": round(rendered_words / max(source_words, 1), 3),
+    }
 
 
 def _entry_cost(content: str) -> int:
@@ -154,3 +231,19 @@ def _effective_budgets(policy: ContextPolicy, token_budget: int) -> dict[str, in
     ratio = token_budget / base_total
     scaled = {key: max(1, int(value * ratio)) for key, value in base.items()}
     return scaled
+
+
+def _effective_literality(
+    base_literality: float,
+    budget_remaining: int,
+    source_words: int,
+    force_stronger_compression: bool,
+) -> float:
+    effective = base_literality
+    if source_words > budget_remaining * 1.5:
+        effective -= 0.15
+    if source_words > budget_remaining * 2.5:
+        effective -= 0.15
+    if force_stronger_compression:
+        effective -= 0.2
+    return max(0.05, min(1.0, effective))

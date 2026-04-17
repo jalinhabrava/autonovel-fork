@@ -35,6 +35,7 @@ def inspect_context(
     ranked = rank_candidates(request, intent, scope, policy, candidates)
     pack = build_context_pack_payload(request, intent, scope, policy, ranked)
 
+    serialized_candidates = _serialize_candidates(ranked, debug_mode=debug_mode, max_candidates=max_candidates)
     return ContextDebugResult(
         request={
             "intent": request.intent,
@@ -73,23 +74,31 @@ def inspect_context(
                 "evidence": policy.section_budgets.evidence,
             },
             "literality_by_artifact_type": policy.literality_by_artifact_type,
+            "scope_radius": {
+                key: {
+                    "scene_neighbors": value.scene_neighbors,
+                    "chapter_neighbors": value.chapter_neighbors,
+                }
+                for key, value in policy.scope_radius.items()
+            },
         },
-        candidates=tuple(_serialize_candidates(ranked, debug_mode=debug_mode, max_candidates=max_candidates)),
+        candidates=tuple(serialized_candidates),
         context_pack=pack,
     )
 
 
 def _serialize_candidates(ranked, *, debug_mode: str, max_candidates: int) -> list[dict]:
     serialized = []
-    for scored in ranked[:max_candidates]:
+    for index, scored in enumerate(ranked[:max_candidates], start=1):
         item = {
+            "rank": index,
             "id": scored.candidate.id,
             "artifact_kind": scored.candidate.artifact_kind,
             "artifact_type": scored.candidate.artifact_type,
             "category": scored.candidate.category,
             "title": scored.candidate.title,
             "status": scored.candidate.status,
-            "section": scored.section,
+            "final_section": scored.section,
             "reason": scored.candidate.reason,
             "score": {
                 "total": scored.score.total,

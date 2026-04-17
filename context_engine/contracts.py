@@ -123,6 +123,10 @@ class ContextEntry:
     path: str
     score: float
     score_breakdown: dict[str, float | str]
+    section_reason: str = ""
+    selection_rank: int = 0
+    effective_literality: float = 0.5
+    content_mode_info: dict[str, float | int | str] = field(default_factory=dict)
     source_refs: tuple[str, ...] = ()
     line_span: dict[str, int] | None = None
 

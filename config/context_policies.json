@@ -3,7 +3,7 @@
     "default": {
       "selection_weights": {
         "canon": 1.0,
-        "lore": 0.9,
+        "lore": 0.82,
         "voice": 0.85,
         "characters": 0.75,
         "scenes": 0.8,
@@ -57,14 +57,14 @@
     },
     "strict_canon": {
       "selection_weights": {
-        "canon": 1.2,
-        "lore": 1.0,
-        "voice": 0.7,
-        "characters": 0.7,
-        "scenes": 0.6,
-        "chapters": 0.6,
-        "timeline": 0.5,
-        "outline": 0.5
+        "canon": 1.35,
+        "lore": 1.08,
+        "voice": 0.62,
+        "characters": 0.62,
+        "scenes": 0.45,
+        "chapters": 0.45,
+        "timeline": 0.35,
+        "outline": 0.35
       },
       "status_priority": {
         "validated": 1.0,
@@ -112,14 +112,14 @@
     },
     "local_scene": {
       "selection_weights": {
-        "canon": 0.9,
-        "lore": 0.7,
+        "canon": 0.8,
+        "lore": 0.62,
         "voice": 0.8,
-        "characters": 0.8,
-        "scenes": 1.0,
-        "chapters": 0.95,
+        "characters": 0.9,
+        "scenes": 1.15,
+        "chapters": 1.05,
         "timeline": 0.4,
-        "outline": 0.6
+        "outline": 0.5
       },
       "status_priority": {
         "validated": 1.0,
@@ -127,10 +127,10 @@
         "proposed": 0.5
       },
       "section_budgets": {
-        "hard_constraints": 900,
-        "narrative_context": 2200,
+        "hard_constraints": 700,
+        "narrative_context": 2400,
         "voice_context": 500,
-        "evidence": 400
+        "evidence": 500
       },
       "literality_by_artifact_type": {
         "decision": 0.65,

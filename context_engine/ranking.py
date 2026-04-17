@@ -67,6 +67,10 @@ def _scope_bonus(candidate: Candidate, scope: ResolvedScope, policy: ContextPoli
         bonus += 0.5
     if candidate.category in {"canon", "lore", "voice"} and not candidate.chapter_ref:
         bonus += 0.15
+    if scope.narrative_scope in {"scene", "fragment"} and candidate.category in {"scenes", "chapters"}:
+        bonus += 0.15
+    if scope.narrative_scope in {"scene", "chapter"} and candidate.category in {"outline", "timeline"}:
+        bonus -= 0.1
     return round(bonus, 4)
 
 
@@ -77,6 +81,9 @@ def _query_bonus(candidate: Candidate, query_text: str | None) -> float:
     haystack = f"{candidate.title}\n{candidate.content}".lower()
     if lowered in haystack:
         return 0.45
+    words = [word for word in lowered.split() if len(word) > 3]
+    if words and any(word in haystack for word in words):
+        return 0.15
     return 0.0
 
 
@@ -86,6 +93,8 @@ def _target_bonus(candidate: Candidate, scope: ResolvedScope) -> float:
         bonuses += 0.4
     if scope.target_id.lower() in candidate.title.lower():
         bonuses += 0.25
+    if scope.character_ids and set(scope.character_ids).intersection(set(candidate.character_ids)):
+        bonuses += 0.2
     return round(bonuses, 4)
 
 

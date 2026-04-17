@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 
 from context_engine.contracts import ContextRequest
-from context_engine.service import build_context_pack
+from context_engine.service import build_context_pack, inspect_context
 from vault.bootstrap import bootstrap_vault
 from vault.notes import write_or_update_note
 
@@ -75,6 +75,7 @@ class ContextEngineTests(unittest.TestCase):
             self.assertGreaterEqual(len(pack.evidence), 1)
             self.assertTrue(all(entry.reason for entry in pack.hard_constraints))
             self.assertTrue(all("reason" in entry.score_breakdown for entry in pack.hard_constraints))
+            self.assertIn("budget_usage", pack.meta)
 
     def test_rejected_and_superseded_candidates_are_excluded(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -197,6 +198,104 @@ class ContextEngineTests(unittest.TestCase):
                 len(hard_by_type["decision"].content.split()),
                 len(hard_by_type["lore"].content.split()),
             )
+
+    def test_policies_produce_visible_scene_rewrite_differences(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            vault_root = Path(tmp) / "NovelVault"
+            bootstrap_vault(vault_root, title="My Vault Novel")
+            write_or_update_note(
+                vault_root,
+                note_type="decision",
+                slug="dec_magic_cost",
+                title="Magic Cost",
+                status="validated",
+                body="Every spell has a cost and strict limits.",
+            )
+            write_or_update_note(
+                vault_root,
+                note_type="scene",
+                slug="scene_010_a",
+                title="Scene 10A",
+                status="pending_revision",
+                body="POV: Sera\nSera prepares the ritual in the crypt.",
+                metadata={"chapter": 10},
+            )
+            write_or_update_note(
+                vault_root,
+                note_type="scene",
+                slug="scene_010_b",
+                title="Scene 10B",
+                status="pending_revision",
+                body="POV: Sera\nRen interrupts the ritual and forces a choice.",
+                metadata={"chapter": 10},
+            )
+            (vault_root / "05_Draft" / "Chapters" / "ch_10.md").write_text(
+                "# Chapter Ten\n\nSera begins the ritual before Ren intervenes."
+            )
+
+            strict_pack = build_context_pack(
+                str(vault_root),
+                ContextRequest(
+                    intent="scene_rewrite",
+                    target_id="scene_010_b",
+                    target_type="scene",
+                    policy_name="strict_canon",
+                    token_budget=2200,
+                ),
+            )
+            local_pack = build_context_pack(
+                str(vault_root),
+                ContextRequest(
+                    intent="scene_rewrite",
+                    target_id="scene_010_b",
+                    target_type="scene",
+                    policy_name="local_scene",
+                    token_budget=2200,
+                ),
+            )
+
+            self.assertGreaterEqual(len(strict_pack.hard_constraints), len(local_pack.hard_constraints))
+            local_ids = {entry.id for entry in local_pack.narrative_context + local_pack.evidence}
+            self.assertIn("scene_010_b", local_ids)
+            self.assertIn("ch_10", local_ids)
+
+    def test_debug_exposes_budget_usage_and_exclusions(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            vault_root = Path(tmp) / "NovelVault"
+            bootstrap_vault(vault_root, title="My Vault Novel")
+            write_or_update_note(
+                vault_root,
+                note_type="decision",
+                slug="dec_one",
+                title="Decision One",
+                status="validated",
+                body="A long canonical statement about rules, duties, costs, exceptions, and ritual consequences.",
+            )
+            write_or_update_note(
+                vault_root,
+                note_type="decision",
+                slug="dec_two",
+                title="Decision Two",
+                status="validated",
+                body="Another canonical statement that should compete for the same constrained section budget.",
+            )
+
+            debug = inspect_context(
+                str(vault_root),
+                ContextRequest(
+                    intent="consistency_check",
+                    target_id="dec_one",
+                    target_type="decision",
+                    policy_name="strict_canon",
+                    token_budget=400,
+                ),
+                debug_mode="summary",
+                max_candidates=5,
+            )
+
+            self.assertIn("budget_usage", debug.context_pack.meta)
+            self.assertIn("excluded_preview", debug.context_pack.meta["budget_usage"]["hard_constraints"])
+            self.assertLessEqual(len(debug.candidates), 5)
 
 
 if __name__ == "__main__":
