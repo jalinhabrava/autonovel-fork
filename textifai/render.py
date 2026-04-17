@@ -27,6 +27,13 @@ def render_help() -> str:
             "- bootstrap characters",
             "- bootstrap canon",
             "- bootstrap timeline",
+            "- context-debug",
+            "- policy",
+            "- policy <name>",
+            "- budget",
+            "- budget <int>",
+            "- request",
+            "- pack",
             "- mode",
             "- mode normal",
             "- mode advanced",
@@ -50,7 +57,9 @@ def render_status(session: TextifAISession) -> str:
             f"- policy: {session.policy_name}",
             f"- token_budget: {session.token_budget}",
             f"- last_result: {'present' if session.last_result is not None else 'empty'}",
+            f"- last_context_request: {'present' if session.last_context_request is not None else 'empty'}",
             f"- last_context_pack: {'present' if session.last_context_pack is not None else 'empty'}",
+            f"- last_context_debug: {'present' if session.last_context_debug is not None else 'empty'}",
         ]
     )
 
@@ -146,6 +155,77 @@ def render_bootstrap_result(bootstrap_type: str, result) -> str:
     highlights = [item.get("target_id") for item in items[:3] if item.get("target_id")]
     if highlights:
         lines.append(f"- highlights: {', '.join(highlights)}")
+    return "\n".join(lines)
+
+
+def render_policy_info(active: str, available: list[str]) -> str:
+    return "\n".join(
+        [
+            "TextifAI policy settings",
+            f"- active_policy: {active}",
+            f"- available_policies: {', '.join(available)}",
+        ]
+    )
+
+
+def render_budget_info(budget: int) -> str:
+    return f"Current token budget: {budget}"
+
+
+def render_request_summary(request: dict) -> str:
+    return "\n".join(
+        [
+            "TextifAI context request",
+            f"- intent: {request.get('intent', 'unknown')}",
+            f"- target_id: {request.get('target_id', 'unknown')}",
+            f"- target_type: {request.get('target_type', 'unknown')}",
+            f"- narrative_scope: {request.get('narrative_scope', 'unknown')}",
+            f"- retrieval_scope: {', '.join(request.get('retrieval_scope', [])) or 'none'}",
+            f"- policy: {request.get('policy', request.get('policy_name', 'default'))}",
+            f"- token_budget: {request.get('token_budget', 'unknown')}",
+        ]
+    )
+
+
+def render_pack_view(pack: dict) -> str:
+    voice_context = pack.get("voice_context", {})
+    project_voice = voice_context.get("project_voice", [])
+    character_voice = voice_context.get("character_voice", [])
+    lines = [
+        "TextifAI context pack",
+        f"- intent: {pack.get('intent', 'unknown')}",
+        f"- target: {pack.get('scope', {}).get('target_id', pack.get('target_id', 'unknown'))}",
+        f"- hard_constraints: {len(pack.get('hard_constraints', []))}",
+        f"- narrative_context: {len(pack.get('narrative_context', []))}",
+        f"- voice.project: {len(project_voice)}",
+        f"- voice.character: {len(character_voice)}",
+        f"- evidence: {len(pack.get('evidence', []))}",
+    ]
+    for label, entries in (
+        ("hard_constraints", pack.get("hard_constraints", [])),
+        ("narrative_context", pack.get("narrative_context", [])),
+        ("evidence", pack.get("evidence", [])),
+    ):
+        if entries:
+            top = entries[0]
+            lines.append(f"- top_{label}: {top.get('title', top.get('id', 'entry'))}")
+    return "\n".join(lines)
+
+
+def render_context_debug_summary(debug: dict) -> str:
+    candidates = debug.get("candidates", [])
+    lines = [
+        "TextifAI context debug",
+        f"- intent: {debug.get('resolved_intent', {}).get('name', debug.get('request', {}).get('intent', 'unknown'))}",
+        f"- target: {debug.get('request', {}).get('target_id', 'unknown')}",
+        f"- policy: {debug.get('policy', {}).get('name', 'default')}",
+        f"- candidates_shown: {len(candidates)}",
+    ]
+    for candidate in candidates[:3]:
+        score = candidate.get("score", {})
+        lines.append(
+            f"- candidate: {candidate.get('id', 'unknown')} | section={candidate.get('final_section', 'n/a')} | score={score.get('total', 'n/a')}"
+        )
     return "\n".join(lines)
 
 

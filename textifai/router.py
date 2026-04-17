@@ -7,10 +7,12 @@ from adapters.vault_adapter import VaultProjectAdapter
 from interactive.bootstrap_extract import extract_canon, extract_characters, extract_timeline, extract_voice
 from interactive.context_commands import (
     build_chapter_context,
+    debug_context,
     build_find_context,
     build_scene_context,
     build_world_context,
 )
+from interactive.context_requests import build_chapter_request, build_find_request, build_scene_request, build_world_request
 from interactive.payloads import validate_artifact_payload
 from interactive.persistence_commands import consistency_check, decide, reject, validate
 from interactive.query import parse_frontmatter, strip_frontmatter
@@ -18,9 +20,14 @@ from textifai.prompts import ask_optional, ask_required
 from textifai.render import (
     render_bootstrap_result,
     render_check_result,
+    render_context_debug_summary,
     render_context_pack_summary,
     render_decision_result,
+    render_budget_info,
+    render_pack_view,
     render_persistence_result,
+    render_policy_info,
+    render_request_summary,
 )
 from textifai.session import TextifAISession
 from vault.notes import NOTE_TYPE_DIRS
@@ -40,6 +47,8 @@ NOTE_TYPE_ALIASES = {
     "panel": "reader_panel",
 }
 
+AVAILABLE_POLICIES = ["default", "strict_canon", "local_scene"]
+
 
 def dispatch_command(
     session: TextifAISession,
@@ -54,27 +63,38 @@ def dispatch_command(
     command, *args = parts
 
     if command == "world":
-        return _run_context_command(session, build_world_context(str(session.vault_path), policy=session.policy_name, token_budget=session.token_budget))
+        request = build_world_request(policy=session.policy_name, token_budget=session.token_budget)
+        return _run_context_command(
+            session,
+            build_world_context(str(session.vault_path), policy=session.policy_name, token_budget=session.token_budget),
+            request=_request_to_dict(request),
+        )
 
     if command == "find":
         query = " ".join(args).strip() or ask_required(input_fn, "What do you want to find? ")
+        request = build_find_request(query, policy=session.policy_name, token_budget=session.token_budget)
         return _run_context_command(
             session,
             build_find_context(str(session.vault_path), query, policy=session.policy_name, token_budget=session.token_budget),
+            request=_request_to_dict(request),
         )
 
     if command == "scene":
         scene_id = args[0] if args else ask_required(input_fn, "Scene id: ")
+        request = build_scene_request(scene_id, policy=session.policy_name, token_budget=session.token_budget)
         return _run_context_command(
             session,
             build_scene_context(str(session.vault_path), scene_id, policy=session.policy_name, token_budget=session.token_budget),
+            request=_request_to_dict(request),
         )
 
     if command == "chapter":
         chapter_id = args[0] if args else ask_required(input_fn, "Chapter id: ")
+        request = build_chapter_request(chapter_id, policy=session.policy_name, token_budget=session.token_budget)
         return _run_context_command(
             session,
             build_chapter_context(str(session.vault_path), chapter_id, policy=session.policy_name, token_budget=session.token_budget),
+            request=_request_to_dict(request),
         )
 
     if command == "check":
@@ -100,12 +120,26 @@ def dispatch_command(
     if command == "bootstrap":
         return _run_bootstrap(session, args, input_fn=input_fn)
 
+    if command == "policy":
+        return _run_policy(session, args)
+
+    if command == "budget":
+        return _run_budget(session, args)
+
+    if command == "request":
+        return _run_request_view(session)
+
+    if command == "pack":
+        return _run_pack_view(session)
+
+    if command == "context-debug":
+        return _run_context_debug(session)
+
     return None
 
 
-def _run_context_command(session: TextifAISession, pack: dict) -> str:
-    session.last_context_pack = pack
-    session.last_result = pack
+def _run_context_command(session: TextifAISession, pack: dict, *, request: dict) -> str:
+    session.remember(pack, request=request)
     return render_context_pack_summary(pack)
 
 
@@ -114,8 +148,7 @@ def _run_check(session: TextifAISession, target: str) -> str:
     if payload is None:
         return "Could not resolve that target. Use check <type:slug> or a real note path inside the vault."
     report = consistency_check(str(session.vault_path), payload)
-    session.last_result = report
-    session.last_context_pack = report.get("context_pack")
+    session.remember(report)
     return render_check_result(report)
 
 
@@ -138,7 +171,7 @@ def _run_decide(session: TextifAISession, *, input_fn=input) -> str:
             },
         },
     )
-    session.last_result = result
+    session.remember(result)
     return render_decision_result(result)
 
 
@@ -157,7 +190,7 @@ def _run_state_change(session: TextifAISession, state: str, target: str) -> str:
         },
     }
     result = validate(str(session.vault_path), payload) if state == "validated" else reject(str(session.vault_path), payload)
-    session.last_result = result
+    session.remember(result)
     return render_persistence_result(result)
 
 
@@ -189,12 +222,74 @@ def _run_bootstrap(session: TextifAISession, args: list[str], *, input_fn=input)
     else:
         result = extract_timeline(vault_root, **kwargs)
 
-    session.last_result = {
+    session.remember(
+        {
         "type": "bootstrap_result",
         "bootstrap_type": subtype,
         "results": result if isinstance(result, list) else [result],
-    }
+        }
+    )
     return render_bootstrap_result(subtype, result)
+
+
+def _run_policy(session: TextifAISession, args: list[str]) -> str:
+    if not args:
+        return render_policy_info(session.policy_name, AVAILABLE_POLICIES)
+    candidate = args[0]
+    if candidate not in AVAILABLE_POLICIES:
+        return render_policy_info(session.policy_name, AVAILABLE_POLICIES)
+    session.policy_name = candidate
+    return f"Policy set to {candidate}."
+
+
+def _run_budget(session: TextifAISession, args: list[str]) -> str:
+    if not args:
+        return render_budget_info(session.token_budget)
+    try:
+        budget = int(args[0])
+    except ValueError:
+        return "Budget must be an integer."
+    if budget <= 0:
+        return "Budget must be a positive integer."
+    session.token_budget = budget
+    return f"Token budget set to {budget}."
+
+
+def _run_request_view(session: TextifAISession) -> str:
+    if not session.last_context_request:
+        return "No context request available yet. Run world, find, scene, chapter, or check first."
+    return render_request_summary(session.last_context_request)
+
+
+def _run_pack_view(session: TextifAISession) -> str:
+    if not session.last_context_pack:
+        return "No context pack available yet. Run world, find, scene, chapter, or check first."
+    return render_pack_view(session.last_context_pack)
+
+
+def _run_context_debug(session: TextifAISession) -> str:
+    if session.mode != "advanced":
+        return "context-debug is available in advanced mode. Run `mode advanced` first."
+    if not session.last_context_request:
+        return "No context request available yet. Run world, find, scene, chapter, or check first."
+    request = session.last_context_request
+    debug = debug_context(
+        str(session.vault_path),
+        intent=request["intent"],
+        narrative_scope=request["narrative_scope"],
+        retrieval_scope=list(request["retrieval_scope"]),
+        target_id=request["target_id"],
+        target_type=request["target_type"],
+        policy=request.get("policy_name", request.get("policy", session.policy_name)),
+        token_budget=request["token_budget"],
+        query_text=request.get("query_text"),
+        chapter_refs=list(request.get("chapter_refs", [])),
+        character_ids=list(request.get("character_ids", [])),
+        debug_mode="summary",
+        max_candidates=8,
+    )
+    session.remember(debug["context_pack"], request=request, debug=debug)
+    return render_context_debug_summary(debug)
 
 
 def _artifact_payload_from_target(session: TextifAISession, target: str) -> dict | None:
@@ -219,6 +314,21 @@ def _artifact_payload_from_target(session: TextifAISession, target: str) -> dict
         },
     }
     return validate_artifact_payload(payload)
+
+
+def _request_to_dict(request) -> dict:
+    return {
+        "intent": request.intent,
+        "target_id": request.target_id,
+        "target_type": request.target_type,
+        "narrative_scope": request.narrative_scope,
+        "retrieval_scope": list(request.retrieval_scope),
+        "query_text": request.query_text,
+        "chapter_refs": list(request.chapter_refs),
+        "character_ids": list(request.character_ids),
+        "policy_name": request.policy_name,
+        "token_budget": request.token_budget,
+    }
 
 
 def _select_bootstrap_subtype(input_fn=input) -> str | None:

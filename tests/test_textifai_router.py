@@ -36,6 +36,7 @@ class TextifAIRouterTests(unittest.TestCase):
         world_mock.assert_called_once()
         self.assertIn("TextifAI context result", response)
         self.assertEqual(self.session.last_context_pack["type"], "context_pack")
+        self.assertEqual(self.session.last_context_request["intent"], "world_lookup")
 
         with patch("textifai.router.build_find_context", return_value=_pack("find")) as find_mock:
             response = dispatch_command(self.session, "find hidden door")
