@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from textifai.i18n import Translator, get_translator
+from textifai.language_policy import LanguagePolicy
 from textifai.runtime_config import RuntimeEnvironment
 
 
@@ -15,7 +16,7 @@ class TextifAISession:
     backend: str
     provider: str | None
     writer_model: str | None
-    locale: str = "en"
+    language_policy: LanguagePolicy
     mode: str = "normal"
     policy_name: str = "default"
     token_budget: int = 4000
@@ -27,7 +28,11 @@ class TextifAISession:
 
     @property
     def translator(self) -> Translator:
-        return get_translator(self.locale)
+        return get_translator(self.language_policy.interface_language)
+
+    @property
+    def locale(self) -> str:
+        return self.language_policy.interface_language
 
     def remember(self, result, *, request: dict | None = None, debug: dict | None = None) -> None:
         self.last_result = result
@@ -51,5 +56,5 @@ def create_session(env: RuntimeEnvironment) -> TextifAISession:
         backend=env.backend or "vault",
         provider=env.provider,
         writer_model=env.writer_model,
-        locale=env.locale,
+        language_policy=env.language_policy,
     )

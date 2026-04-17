@@ -1,0 +1,27 @@
+{
+  "interface_language": "en",
+  "user_command_language": "en",
+  "internal_system_language": "en",
+  "project_default_language": "en",
+  "mixed_language_allowed": true,
+  "artifact_languages": {
+    "project": "en",
+    "seed": "en",
+    "mystery": "en",
+    "voice": "en",
+    "world": "en",
+    "characters": "en",
+    "outline": "en",
+    "canon": "en",
+    "manuscript": "en",
+    "arc_summary": "en",
+    "character": "en",
+    "lore": "en",
+    "scene": "en",
+    "decision": "en",
+    "chapter": "en",
+    "revision_brief": "en",
+    "review": "en",
+    "reader_panel": "en"
+  }
+}

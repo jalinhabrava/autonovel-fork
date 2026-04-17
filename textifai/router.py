@@ -71,7 +71,7 @@ def dispatch_command(
         )
 
     if command == "find":
-        query = " ".join(args).strip() or ask_required(input_fn, "What do you want to find? ")
+        query = " ".join(args).strip() or ask_required(input_fn, session.translator.t("shell.prompt.find"))
         request = build_find_request(query, policy=session.policy_name, token_budget=session.token_budget)
         return _run_context_command(
             session,
@@ -80,7 +80,7 @@ def dispatch_command(
         )
 
     if command == "scene":
-        scene_id = args[0] if args else ask_required(input_fn, "Scene id: ")
+        scene_id = args[0] if args else ask_required(input_fn, session.translator.t("shell.prompt.scene_id"))
         request = build_scene_request(scene_id, policy=session.policy_name, token_budget=session.token_budget)
         return _run_context_command(
             session,
@@ -89,7 +89,7 @@ def dispatch_command(
         )
 
     if command == "chapter":
-        chapter_id = args[0] if args else ask_required(input_fn, "Chapter id: ")
+        chapter_id = args[0] if args else ask_required(input_fn, session.translator.t("shell.prompt.chapter_id"))
         request = build_chapter_request(chapter_id, policy=session.policy_name, token_budget=session.token_budget)
         return _run_context_command(
             session,
@@ -99,22 +99,22 @@ def dispatch_command(
 
     if command == "check":
         if not args:
-            return "Usage: check <type:slug|note_path>\nExamples: check decision:magic_costs or check 06_Canon/Decisions/magic_costs.md"
+            return session.translator.t("shell.errors.check_usage")
         return _run_check(session, args[0])
 
     if command == "decide":
         return _run_decide(session, input_fn=input_fn)
 
     if command == "validate":
-        target = args[0] if args else ask_optional(input_fn, "Artifact id or note path: ")
+        target = args[0] if args else ask_optional(input_fn, session.translator.t("shell.prompt.artifact_target"))
         if not target:
-            return "Validation needs a target. Use validate <type:slug|note_path>."
+            return session.translator.t("shell.errors.validate_target")
         return _run_state_change(session, "validated", target)
 
     if command == "reject":
-        target = args[0] if args else ask_optional(input_fn, "Artifact id or note path: ")
+        target = args[0] if args else ask_optional(input_fn, session.translator.t("shell.prompt.artifact_target"))
         if not target:
-            return "Reject needs a target. Use reject <type:slug|note_path>."
+            return session.translator.t("shell.errors.reject_target")
         return _run_state_change(session, "rejected", target)
 
     if command == "bootstrap":
@@ -140,22 +140,23 @@ def dispatch_command(
 
 def _run_context_command(session: TextifAISession, pack: dict, *, request: dict) -> str:
     session.remember(pack, request=request)
-    return render_context_pack_summary(pack)
+    return render_context_pack_summary(pack, session.locale)
 
 
 def _run_check(session: TextifAISession, target: str) -> str:
     payload = _artifact_payload_from_target(session, target)
     if payload is None:
-        return "Could not resolve that target. Use check <type:slug> or a real note path inside the vault."
+        return session.translator.t("shell.errors.check_resolve")
     report = consistency_check(str(session.vault_path), payload)
+    report["locale"] = session.locale
     session.remember(report)
     return render_check_result(report)
 
 
 def _run_decide(session: TextifAISession, *, input_fn=input) -> str:
-    title = ask_required(input_fn, "Decision title: ")
-    body = ask_required(input_fn, "Decision body: ")
-    affects_raw = ask_optional(input_fn, "Affects (comma-separated, optional): ")
+    title = ask_required(input_fn, session.translator.t("shell.prompt.decision_title"))
+    body = ask_required(input_fn, session.translator.t("shell.prompt.decision_body"))
+    affects_raw = ask_optional(input_fn, session.translator.t("shell.prompt.decision_affects"))
     affects = [item.strip() for item in (affects_raw or "").split(",") if item.strip()]
     result = decide(
         str(session.vault_path),
@@ -171,6 +172,7 @@ def _run_decide(session: TextifAISession, *, input_fn=input) -> str:
             },
         },
     )
+    result["locale"] = session.locale
     session.remember(result)
     return render_decision_result(result)
 
@@ -178,7 +180,8 @@ def _run_decide(session: TextifAISession, *, input_fn=input) -> str:
 def _run_state_change(session: TextifAISession, state: str, target: str) -> str:
     resolved = _resolve_note_target(session, target)
     if resolved is None:
-        return f"Could not resolve that target. Use {state[:-1] if state.endswith('d') else state} <type:slug|note_path>."
+        command = "validate" if state == "validated" else "reject"
+        return session.translator.t("shell.errors.resolve_target", command=command)
     payload = {
         "type": "artifact_state_change",
         "target_type": resolved["target_type"],
@@ -190,6 +193,7 @@ def _run_state_change(session: TextifAISession, state: str, target: str) -> str:
         },
     }
     result = validate(str(session.vault_path), payload) if state == "validated" else reject(str(session.vault_path), payload)
+    result["locale"] = session.locale
     session.remember(result)
     return render_persistence_result(result)
 
@@ -197,14 +201,14 @@ def _run_state_change(session: TextifAISession, state: str, target: str) -> str:
 def _run_bootstrap(session: TextifAISession, args: list[str], *, input_fn=input) -> str:
     subtype = args[0].lower() if args else None
     if subtype not in {None, "voice", "characters", "canon", "timeline"}:
-        return "Unsupported bootstrap command. Use bootstrap voice|characters|canon|timeline."
+        return session.translator.t("shell.errors.bootstrap_unsupported")
 
     if subtype is None:
-        subtype = _select_bootstrap_subtype(input_fn)
+        subtype = _select_bootstrap_subtype(session, input_fn)
         if subtype is None:
-            return "Bootstrap cancelled."
+            return session.translator.t("shell.errors.bootstrap_cancelled")
 
-    chapter_ids, chapter_from, chapter_to = _collect_bootstrap_chapter_selection(args[1:], input_fn=input_fn)
+    chapter_ids, chapter_from, chapter_to = _collect_bootstrap_chapter_selection(session, args[1:], input_fn=input_fn)
 
     kwargs = {
         "chapter_ids": chapter_ids,
@@ -229,49 +233,49 @@ def _run_bootstrap(session: TextifAISession, args: list[str], *, input_fn=input)
         "results": result if isinstance(result, list) else [result],
         }
     )
-    return render_bootstrap_result(subtype, result)
+    return render_bootstrap_result(subtype, result, session.locale)
 
 
 def _run_policy(session: TextifAISession, args: list[str]) -> str:
     if not args:
-        return render_policy_info(session.policy_name, AVAILABLE_POLICIES)
+        return render_policy_info(session.policy_name, AVAILABLE_POLICIES, session.locale)
     candidate = args[0]
     if candidate not in AVAILABLE_POLICIES:
-        return render_policy_info(session.policy_name, AVAILABLE_POLICIES)
+        return render_policy_info(session.policy_name, AVAILABLE_POLICIES, session.locale)
     session.policy_name = candidate
-    return f"Policy set to {candidate}.\n- note: future context requests in this session will use it."
+    return session.translator.t("shell.policy.set", policy=candidate)
 
 
 def _run_budget(session: TextifAISession, args: list[str]) -> str:
     if not args:
-        return render_budget_info(session.token_budget)
+        return render_budget_info(session.token_budget, session.locale)
     try:
         budget = int(args[0])
     except ValueError:
-        return "Budget must be an integer."
+        return session.translator.t("shell.errors.budget_integer")
     if budget <= 0:
-        return "Budget must be a positive integer."
+        return session.translator.t("shell.errors.budget_positive")
     session.token_budget = budget
-    return f"Token budget set to {budget}.\n- note: future context requests in this session will use it."
+    return session.translator.t("shell.budget.set", budget=budget)
 
 
 def _run_request_view(session: TextifAISession) -> str:
     if not session.last_context_request:
-        return "No context request available yet. Run world, find, scene, chapter, or check first."
-    return render_request_summary(session.last_context_request)
+        return session.translator.t("shell.errors.no_request")
+    return render_request_summary(session.last_context_request, session.locale)
 
 
 def _run_pack_view(session: TextifAISession) -> str:
     if not session.last_context_pack:
-        return "No context pack available yet. Run world, find, scene, chapter, or check first."
-    return render_pack_view(session.last_context_pack)
+        return session.translator.t("shell.errors.no_pack")
+    return render_pack_view(session.last_context_pack, session.locale)
 
 
 def _run_context_debug(session: TextifAISession) -> str:
     if session.mode != "advanced":
-        return "context-debug is available in advanced mode. Run `mode advanced` first."
+        return session.translator.t("shell.errors.context_debug_mode")
     if not session.last_context_request:
-        return "No context request available yet. Run world, find, scene, chapter, or check first."
+        return session.translator.t("shell.errors.no_request")
     request = session.last_context_request
     debug = debug_context(
         str(session.vault_path),
@@ -289,7 +293,7 @@ def _run_context_debug(session: TextifAISession) -> str:
         max_candidates=8,
     )
     session.remember(debug["context_pack"], request=request, debug=debug)
-    return render_context_debug_summary(debug)
+    return render_context_debug_summary(debug, session.locale)
 
 
 def _artifact_payload_from_target(session: TextifAISession, target: str) -> dict | None:
@@ -331,10 +335,10 @@ def _request_to_dict(request) -> dict:
     }
 
 
-def _select_bootstrap_subtype(input_fn=input) -> str | None:
+def _select_bootstrap_subtype(session: TextifAISession, input_fn=input) -> str | None:
     choice = ask_optional(
         input_fn,
-        "Bootstrap type [voice|characters|canon|timeline] or `cancel`: ",
+        session.translator.t("shell.prompt.bootstrap_type"),
     )
     if choice is None:
         return None
@@ -346,18 +350,23 @@ def _select_bootstrap_subtype(input_fn=input) -> str | None:
     return None
 
 
-def _collect_bootstrap_chapter_selection(args: list[str], *, input_fn=input) -> tuple[list[str] | None, int | None, int | None]:
+def _collect_bootstrap_chapter_selection(
+    session: TextifAISession,
+    args: list[str],
+    *,
+    input_fn=input,
+) -> tuple[list[str] | None, int | None, int | None]:
     if args:
         chapter_ids = _parse_chapter_ids(",".join(args))
         return (chapter_ids or None, None, None)
 
-    chapter_ids_raw = ask_optional(input_fn, "Chapter ids (comma-separated, optional): ")
+    chapter_ids_raw = ask_optional(input_fn, session.translator.t("shell.prompt.chapter_ids"))
     chapter_ids = _parse_chapter_ids(chapter_ids_raw)
     if chapter_ids:
         return (chapter_ids, None, None)
 
-    chapter_from_raw = ask_optional(input_fn, "Chapter from (optional): ")
-    chapter_to_raw = ask_optional(input_fn, "Chapter to (optional): ")
+    chapter_from_raw = ask_optional(input_fn, session.translator.t("shell.prompt.chapter_from"))
+    chapter_to_raw = ask_optional(input_fn, session.translator.t("shell.prompt.chapter_to"))
     chapter_from = _parse_optional_int(chapter_from_raw)
     chapter_to = _parse_optional_int(chapter_to_raw)
     return (None, chapter_from, chapter_to)

@@ -11,7 +11,7 @@ def run_shell(
     input_fn=input,
     output_fn=print,
 ) -> int:
-    output_fn(render_banner())
+    output_fn(render_banner(session.locale))
     first_use_hint = render_first_use_hint(session)
     if first_use_hint:
         output_fn(first_use_hint)
@@ -27,21 +27,21 @@ def run_shell(
 
 def handle_command(session: TextifAISession, raw: str, *, input_fn=input) -> str:
     if raw == "help":
-        return render_help()
+        return render_help(session.locale)
     if raw == "status":
         return render_status(session)
     if raw == "mode":
         return render_mode(session)
     if raw in {"exit", "quit"}:
         session.running = False
-        return "Leaving TextifAI."
+        return session.translator.t("shell.exit")
     if raw == "mode normal":
         session.mode = "normal"
-        return "Mode set to normal.\n- hint: advanced inspection commands are now hidden behind `mode advanced`."
+        return session.translator.t("shell.mode.set.normal")
     if raw == "mode advanced":
         session.mode = "advanced"
-        return "Mode set to advanced.\n- hint: try `request`, `pack`, or `context-debug` after loading context."
+        return session.translator.t("shell.mode.set.advanced")
     routed = dispatch_command(session, raw, input_fn=input_fn)
     if routed is not None:
         return routed
-    return render_unknown_command(raw)
+    return render_unknown_command(raw, session.locale)

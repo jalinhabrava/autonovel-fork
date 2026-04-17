@@ -5,7 +5,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from textifai import PRODUCT_NAME
-from textifai.i18n import DEFAULT_LOCALE, SUPPORTED_LOCALES, get_translator, normalize_locale
+from textifai.i18n import DEFAULT_LOCALE, get_translator
+from textifai.language_policy import LanguagePolicy, load_language_policy
 
 
 DEFAULT_VAULT_DIRNAME = "TextifAIVault"
@@ -22,13 +23,18 @@ class RuntimeEnvironment:
     vault_root: str | None
     provider: str | None
     writer_model: str | None
-    locale: str
+    language_policy: LanguagePolicy
+
+    @property
+    def locale(self) -> str:
+        return self.language_policy.interface_language
 
 
 def load_runtime_environment(base_dir: str | Path = ".") -> RuntimeEnvironment:
     root = Path(base_dir).resolve()
     env_path = root / ENV_FILE_NAME
     values = _load_env_values(env_path)
+    language_policy = load_language_policy(root, env_values=values)
     return RuntimeEnvironment(
         base_dir=root,
         env_path=env_path,
@@ -37,7 +43,7 @@ def load_runtime_environment(base_dir: str | Path = ".") -> RuntimeEnvironment:
         vault_root=_clean(values.get("AUTONOVEL_VAULT_ROOT")),
         provider=_clean(values.get("AUTONOVEL_TEXT_PROVIDER")),
         writer_model=_clean(values.get("AUTONOVEL_WRITER_MODEL")),
-        locale=resolve_locale(values),
+        language_policy=language_policy,
     )
 
 
@@ -84,15 +90,6 @@ def runtime_banner(locale: str = DEFAULT_LOCALE) -> str:
     return get_translator(locale).t("shell.banner.title")
 
 
-def resolve_locale(values: dict[str, str] | None = None) -> str:
-    loaded = values or {}
-    explicit = _clean(loaded.get("TEXTIFAI_LOCALE"))
-    if explicit:
-        return normalize_locale(explicit)
-    detected = _detect_locale()
-    return normalize_locale(detected or DEFAULT_LOCALE)
-
-
 def _load_env_values(env_path: Path) -> dict[str, str]:
     values: dict[str, str] = {}
     if env_path.exists():
@@ -108,20 +105,16 @@ def _load_env_values(env_path: Path) -> dict[str, str]:
         "AUTONOVEL_TEXT_PROVIDER",
         "AUTONOVEL_WRITER_MODEL",
         "TEXTIFAI_LOCALE",
+        "TEXTIFAI_INTERFACE_LANGUAGE",
+        "TEXTIFAI_USER_COMMAND_LANGUAGE",
+        "TEXTIFAI_INTERNAL_SYSTEM_LANGUAGE",
+        "TEXTIFAI_PROJECT_DEFAULT_LANGUAGE",
+        "TEXTIFAI_MIXED_LANGUAGE_ALLOWED",
+        "TEXTIFAI_ARTIFACT_LANGUAGES",
     ):
         if key in os.environ and os.environ[key]:
             values[key] = os.environ[key]
     return values
-
-
-def _detect_locale() -> str | None:
-    for key in ("LC_ALL", "LANG"):
-        value = os.environ.get(key, "").strip()
-        if value:
-            primary = value.strip().lower().replace("-", "_").split("_", 1)[0]
-            if primary in SUPPORTED_LOCALES:
-                return primary
-    return None
 
 
 def _clean(value: str | None) -> str | None:

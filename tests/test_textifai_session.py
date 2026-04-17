@@ -30,6 +30,7 @@ class TextifAISessionTests(unittest.TestCase):
             self.assertEqual(session.backend, "vault")
             self.assertEqual(session.provider, "ollama")
             self.assertEqual(session.writer_model, "llama3.2")
+            self.assertEqual(session.language_policy.interface_language, "en")
             self.assertEqual(session.locale, "en")
             self.assertEqual(session.mode, "normal")
             self.assertEqual(session.policy_name, "default")

@@ -74,7 +74,14 @@ def run_doctor(*, base_dir: str | Path = ".") -> dict:
 
     return {
         "product": tr.t("common.product_name"),
-        "locale": env.locale,
+        "locale": env.language_policy.interface_language,
+        "language_policy": {
+            "interface_language": env.language_policy.interface_language,
+            "user_command_language": env.language_policy.user_command_language,
+            "internal_system_language": env.language_policy.internal_system_language,
+            "project_default_language": env.language_policy.project_default_language,
+            "mixed_language_allowed": env.language_policy.mixed_language_allowed,
+        },
         "overall": overall,
         "checks": checks,
         "recommended_next_step": _recommended_next_step(checks, tr),
