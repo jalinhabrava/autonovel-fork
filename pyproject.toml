@@ -1,7 +1,7 @@
 [project]
-name = "autonovel"
+name = "textifai"
 version = "0.1.0"
-description = "Add your description here"
+description = "TextifAI product runtime built on a fork of AutoNovel"
 requires-python = ">=3.12"
 dependencies = [
     "httpx>=0.28.1",
@@ -10,3 +10,4 @@ dependencies = [
 
 [project.scripts]
 autonovel = "main:main"
+textifai = "textifai.cli:main"

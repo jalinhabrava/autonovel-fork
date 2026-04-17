@@ -1,0 +1,103 @@
+from __future__ import annotations
+
+import os
+from dataclasses import dataclass
+from pathlib import Path
+
+from textifai import PRODUCT_NAME
+
+
+DEFAULT_VAULT_DIRNAME = "TextifAIVault"
+ENV_FILE_NAME = ".env"
+ENV_EXAMPLE_NAME = ".env.example"
+
+
+@dataclass(frozen=True)
+class RuntimeEnvironment:
+    base_dir: Path
+    env_path: Path
+    env_exists: bool
+    backend: str | None
+    vault_root: str | None
+    provider: str | None
+    writer_model: str | None
+
+
+def load_runtime_environment(base_dir: str | Path = ".") -> RuntimeEnvironment:
+    root = Path(base_dir).resolve()
+    env_path = root / ENV_FILE_NAME
+    values = _load_env_values(env_path)
+    return RuntimeEnvironment(
+        base_dir=root,
+        env_path=env_path,
+        env_exists=env_path.exists(),
+        backend=_clean(values.get("AUTONOVEL_PROJECT_BACKEND")),
+        vault_root=_clean(values.get("AUTONOVEL_VAULT_ROOT")),
+        provider=_clean(values.get("AUTONOVEL_TEXT_PROVIDER")),
+        writer_model=_clean(values.get("AUTONOVEL_WRITER_MODEL")),
+    )
+
+
+def default_vault_path(base_dir: str | Path = ".") -> Path:
+    return Path(base_dir).resolve() / DEFAULT_VAULT_DIRNAME
+
+
+def ensure_env_file(base_dir: str | Path = ".") -> Path:
+    root = Path(base_dir).resolve()
+    env_path = root / ENV_FILE_NAME
+    if env_path.exists():
+        return env_path
+    example_path = root / ENV_EXAMPLE_NAME
+    if example_path.exists():
+        env_path.write_text(example_path.read_text())
+    else:
+        env_path.write_text("")
+    return env_path
+
+
+def update_env_values(base_dir: str | Path, updates: dict[str, str]) -> Path:
+    env_path = ensure_env_file(base_dir)
+    lines = env_path.read_text().splitlines()
+    key_to_index: dict[str, int] = {}
+    for index, line in enumerate(lines):
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in line:
+            continue
+        key = line.split("=", 1)[0].strip()
+        key_to_index[key] = index
+
+    for key, value in updates.items():
+        rendered = f"{key}={value}"
+        if key in key_to_index:
+            lines[key_to_index[key]] = rendered
+        else:
+            lines.append(rendered)
+
+    env_path.write_text("\n".join(lines).rstrip() + "\n")
+    return env_path
+
+
+def runtime_banner() -> str:
+    return f"{PRODUCT_NAME} product runtime"
+
+
+def _load_env_values(env_path: Path) -> dict[str, str]:
+    values: dict[str, str] = {}
+    if env_path.exists():
+        for line in env_path.read_text().splitlines():
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#") or "=" not in stripped:
+                continue
+            key, value = stripped.split("=", 1)
+            values[key.strip()] = value.strip()
+    for key in values:
+        if key in os.environ and os.environ[key]:
+            values[key] = os.environ[key]
+    return values
+
+
+def _clean(value: str | None) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None

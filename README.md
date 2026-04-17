@@ -1,4 +1,8 @@
-# AutoNovel Fork
+# TextifAI
+
+TextifAI is the product/runtime identity of this repository. Under the hood,
+it is still based on a fork of AutoNovel, but the product layer is now being
+built and presented as TextifAI.
 
 This repository is a fork of AutoNovel. It keeps the original idea of an
 AI-assisted novel pipeline, but is being refactored into a persistent,
@@ -315,7 +319,7 @@ canonical judgment.
 
 ```bash
 git clone <repo-url>
-cd autonovel
+cd textifai
 cp .env.example .env
 uv sync
 ```
@@ -329,7 +333,16 @@ uv run python run_pipeline.py --from-scratch
 If you want a vault-backed project:
 
 ```bash
-uv run python main.py init-vault --path /tmp/MyNovelVault --title "My Novel"
+textifai setup
+```
+
+Product entrypoints:
+
+```bash
+textifai
+textifai chat
+textifai setup
+textifai doctor
 ```
 
 ## Main Commands
