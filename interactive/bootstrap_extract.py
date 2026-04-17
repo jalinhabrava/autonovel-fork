@@ -46,6 +46,7 @@ def extract_voice(
     chapter_ids: list[str] | None = None,
     chapter_from: int | None = None,
     chapter_to: int | None = None,
+    artifact_language: str | None = None,
 ) -> dict:
     adapter = VaultProjectAdapter(vault_root)
     records = select_chapter_records(adapter, chapter_ids=chapter_ids, chapter_from=chapter_from, chapter_to=chapter_to)
@@ -65,6 +66,7 @@ def extract_voice(
             "voice_layer": "project",
             "bootstrap_mode": "partial_manuscript_extraction",
             "chapter_paths": ",".join(chapter_path_strings(records)),
+            **({"artifact_language": artifact_language} if artifact_language else {}),
         },
         "origin": {
             "source": "manuscript_bootstrap",
@@ -80,6 +82,7 @@ def extract_characters(
     chapter_ids: list[str] | None = None,
     chapter_from: int | None = None,
     chapter_to: int | None = None,
+    artifact_language: str | None = None,
 ) -> list[dict]:
     adapter = VaultProjectAdapter(vault_root)
     records = select_chapter_records(adapter, chapter_ids=chapter_ids, chapter_from=chapter_from, chapter_to=chapter_to)
@@ -102,6 +105,7 @@ def extract_characters(
             "metadata": {
                 "bootstrap_mode": "manuscript_character_extraction",
                 "evidence_count": evidence["count"],
+                **({"artifact_language": artifact_language} if artifact_language else {}),
             },
             "origin": {
                 "source": "manuscript_bootstrap",
@@ -118,6 +122,7 @@ def extract_canon(
     chapter_ids: list[str] | None = None,
     chapter_from: int | None = None,
     chapter_to: int | None = None,
+    artifact_language: str | None = None,
 ) -> list[dict]:
     adapter = VaultProjectAdapter(vault_root)
     records = select_chapter_records(adapter, chapter_ids=chapter_ids, chapter_from=chapter_from, chapter_to=chapter_to)
@@ -139,6 +144,7 @@ def extract_canon(
                 "bootstrap_mode": "manuscript_canon_extraction",
                 "canon_source": "extracted_proposal",
                 "evidence_count": len(proposal["evidence"]),
+                **({"artifact_language": artifact_language} if artifact_language else {}),
             },
             "origin": {
                 "source": "manuscript_bootstrap",
@@ -155,6 +161,7 @@ def extract_timeline(
     chapter_ids: list[str] | None = None,
     chapter_from: int | None = None,
     chapter_to: int | None = None,
+    artifact_language: str | None = None,
 ) -> list[dict]:
     adapter = VaultProjectAdapter(vault_root)
     records = select_chapter_records(adapter, chapter_ids=chapter_ids, chapter_from=chapter_from, chapter_to=chapter_to)
@@ -182,6 +189,7 @@ def extract_timeline(
             "metadata": {
                 "bootstrap_mode": "manuscript_timeline_extraction",
                 "timeline_model": "provisional_lore_note",
+                **({"artifact_language": artifact_language} if artifact_language else {}),
             },
             "origin": {
                 "source": "manuscript_bootstrap",

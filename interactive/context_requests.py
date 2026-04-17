@@ -4,7 +4,17 @@ from context_engine.contracts import ContextRequest
 from interactive.payloads import validate_artifact_payload
 
 
-def build_world_request(*, policy: str = "default", token_budget: int = 4000) -> ContextRequest:
+def build_world_request(
+    *,
+    policy: str = "default",
+    token_budget: int = 4000,
+    interface_language: str | None = None,
+    user_command_language: str | None = None,
+    internal_system_language: str | None = None,
+    operation_language: str | None = None,
+    artifact_target_language: str | None = None,
+    mixed_language_allowed: bool | None = None,
+) -> ContextRequest:
     return ContextRequest(
         intent="world_lookup",
         target_id="world",
@@ -13,6 +23,12 @@ def build_world_request(*, policy: str = "default", token_budget: int = 4000) ->
         retrieval_scope=("canon", "lore", "voice", "characters", "timeline", "outline"),
         policy_name=policy,
         token_budget=token_budget,
+        interface_language=interface_language,
+        user_command_language=user_command_language,
+        internal_system_language=internal_system_language,
+        operation_language=operation_language,
+        artifact_target_language=artifact_target_language,
+        mixed_language_allowed=mixed_language_allowed,
     )
 
 
@@ -21,6 +37,12 @@ def build_find_request(
     *,
     policy: str = "default",
     token_budget: int = 3500,
+    interface_language: str | None = None,
+    user_command_language: str | None = None,
+    internal_system_language: str | None = None,
+    operation_language: str | None = None,
+    artifact_target_language: str | None = None,
+    mixed_language_allowed: bool | None = None,
 ) -> ContextRequest:
     return ContextRequest(
         intent="context_search",
@@ -31,6 +53,12 @@ def build_find_request(
         query_text=query,
         policy_name=policy,
         token_budget=token_budget,
+        interface_language=interface_language,
+        user_command_language=user_command_language,
+        internal_system_language=internal_system_language,
+        operation_language=operation_language,
+        artifact_target_language=artifact_target_language,
+        mixed_language_allowed=mixed_language_allowed,
     )
 
 
@@ -41,6 +69,12 @@ def build_load_request(
     chapter_ids: list[str] | None = None,
     policy: str = "default",
     token_budget: int = 4000,
+    interface_language: str | None = None,
+    user_command_language: str | None = None,
+    internal_system_language: str | None = None,
+    operation_language: str | None = None,
+    artifact_target_language: str | None = None,
+    mixed_language_allowed: bool | None = None,
 ) -> ContextRequest:
     retrieval_scope = []
     if artifacts:
@@ -60,10 +94,27 @@ def build_load_request(
         chapter_refs=tuple(chapter_ids or []),
         policy_name=policy,
         token_budget=token_budget,
+        interface_language=interface_language,
+        user_command_language=user_command_language,
+        internal_system_language=internal_system_language,
+        operation_language=operation_language,
+        artifact_target_language=artifact_target_language,
+        mixed_language_allowed=mixed_language_allowed,
     )
 
 
-def build_scene_request(scene_id: str, *, policy: str = "default", token_budget: int = 4000) -> ContextRequest:
+def build_scene_request(
+    scene_id: str,
+    *,
+    policy: str = "default",
+    token_budget: int = 4000,
+    interface_language: str | None = None,
+    user_command_language: str | None = None,
+    internal_system_language: str | None = None,
+    operation_language: str | None = None,
+    artifact_target_language: str | None = None,
+    mixed_language_allowed: bool | None = None,
+) -> ContextRequest:
     return ContextRequest(
         intent="scene_rewrite",
         target_id=scene_id,
@@ -72,10 +123,27 @@ def build_scene_request(scene_id: str, *, policy: str = "default", token_budget:
         retrieval_scope=("canon", "lore", "voice", "characters", "scenes", "chapters", "outline"),
         policy_name=policy,
         token_budget=token_budget,
+        interface_language=interface_language,
+        user_command_language=user_command_language,
+        internal_system_language=internal_system_language,
+        operation_language=operation_language,
+        artifact_target_language=artifact_target_language,
+        mixed_language_allowed=mixed_language_allowed,
     )
 
 
-def build_chapter_request(chapter_id: str, *, policy: str = "default", token_budget: int = 4000) -> ContextRequest:
+def build_chapter_request(
+    chapter_id: str,
+    *,
+    policy: str = "default",
+    token_budget: int = 4000,
+    interface_language: str | None = None,
+    user_command_language: str | None = None,
+    internal_system_language: str | None = None,
+    operation_language: str | None = None,
+    artifact_target_language: str | None = None,
+    mixed_language_allowed: bool | None = None,
+) -> ContextRequest:
     return ContextRequest(
         intent="chapter_context",
         target_id=chapter_id,
@@ -85,10 +153,27 @@ def build_chapter_request(chapter_id: str, *, policy: str = "default", token_bud
         chapter_refs=(chapter_id,),
         policy_name=policy,
         token_budget=token_budget,
+        interface_language=interface_language,
+        user_command_language=user_command_language,
+        internal_system_language=internal_system_language,
+        operation_language=operation_language,
+        artifact_target_language=artifact_target_language,
+        mixed_language_allowed=mixed_language_allowed,
     )
 
 
-def build_consistency_request(payload: dict, *, policy: str = "strict_canon", token_budget: int = 3200) -> ContextRequest:
+def build_consistency_request(
+    payload: dict,
+    *,
+    policy: str = "strict_canon",
+    token_budget: int = 3200,
+    interface_language: str | None = None,
+    user_command_language: str | None = None,
+    internal_system_language: str | None = None,
+    operation_language: str | None = None,
+    artifact_target_language: str | None = None,
+    mixed_language_allowed: bool | None = None,
+) -> ContextRequest:
     artifact = validate_artifact_payload(payload)
     text = f"{artifact['title']}\n{artifact['body']}"
     return ContextRequest(
@@ -100,6 +185,12 @@ def build_consistency_request(payload: dict, *, policy: str = "strict_canon", to
         query_text=text[:1000],
         policy_name=policy,
         token_budget=token_budget,
+        interface_language=interface_language,
+        user_command_language=user_command_language,
+        internal_system_language=internal_system_language,
+        operation_language=operation_language,
+        artifact_target_language=artifact_target_language or artifact.get("artifact_language"),
+        mixed_language_allowed=mixed_language_allowed,
     )
 
 
@@ -115,6 +206,12 @@ def build_explicit_request(
     query_text: str | None = None,
     chapter_refs: list[str] | None = None,
     character_ids: list[str] | None = None,
+    interface_language: str | None = None,
+    user_command_language: str | None = None,
+    internal_system_language: str | None = None,
+    operation_language: str | None = None,
+    artifact_target_language: str | None = None,
+    mixed_language_allowed: bool | None = None,
 ) -> ContextRequest:
     return ContextRequest(
         intent=intent,
@@ -127,6 +224,12 @@ def build_explicit_request(
         character_ids=tuple(character_ids or []),
         policy_name=policy,
         token_budget=token_budget,
+        interface_language=interface_language,
+        user_command_language=user_command_language,
+        internal_system_language=internal_system_language,
+        operation_language=operation_language,
+        artifact_target_language=artifact_target_language,
+        mixed_language_allowed=mixed_language_allowed,
     )
 
 

@@ -21,6 +21,9 @@ class TextifAIRouterTests(unittest.TestCase):
                     "AUTONOVEL_PROJECT_BACKEND=vault",
                     f"AUTONOVEL_VAULT_ROOT={self.vault_root}",
                     "AUTONOVEL_TEXT_PROVIDER=ollama",
+                    "TEXTIFAI_INTERFACE_LANGUAGE=es",
+                    "TEXTIFAI_USER_COMMAND_LANGUAGE=es",
+                    'TEXTIFAI_ARTIFACT_LANGUAGES={"chapter":"ja","scene":"ja","decision":"es","character":"ja","voice":"en","lore":"es","world":"es"}',
                 ]
             )
             + "\n"
@@ -34,25 +37,30 @@ class TextifAIRouterTests(unittest.TestCase):
         with patch("textifai.router.build_world_context", return_value=_pack("world")) as world_mock:
             response = dispatch_command(self.session, "world")
         world_mock.assert_called_once()
-        self.assertIn("TextifAI context result", response)
+        self.assertIn("resultado de contexto de textifai", response.lower())
         self.assertEqual(self.session.last_context_pack["type"], "context_pack")
         self.assertEqual(self.session.last_context_request["intent"], "world_lookup")
+        self.assertEqual(self.session.last_context_request["operation_language"], "es")
+        self.assertEqual(self.session.last_context_request["artifact_target_language"], "es")
 
         with patch("textifai.router.build_find_context", return_value=_pack("find")) as find_mock:
             response = dispatch_command(self.session, "find hidden door")
         find_mock.assert_called_once()
-        self.assertIn("intent", response)
+        self.assertIn("intent", response.lower())
         self.assertEqual(self.session.last_context_request["intent"], "context_search")
+        self.assertEqual(self.session.last_context_request["operation_language"], "es")
 
     def test_scene_and_chapter_prompt_for_missing_ids(self):
         prompts = iter(["scene_054_b", "ch_12"])
         with patch("textifai.router.build_scene_context", return_value=_pack("scene")) as scene_mock:
             dispatch_command(self.session, "scene", input_fn=lambda _: next(prompts))
         scene_mock.assert_called_once()
+        self.assertEqual(self.session.last_context_request["artifact_target_language"], "ja")
 
         with patch("textifai.router.build_chapter_context", return_value=_pack("chapter")) as chapter_mock:
             dispatch_command(self.session, "chapter", input_fn=lambda _: next(prompts))
         chapter_mock.assert_called_once()
+        self.assertEqual(self.session.last_context_request["artifact_target_language"], "ja")
 
     def test_check_is_limited_and_uses_consistency_check(self):
         decision_path = self.vault_root / "06_Canon" / "Decisions" / "magic_costs.md"
@@ -62,10 +70,13 @@ class TextifAIRouterTests(unittest.TestCase):
         with patch("textifai.router.consistency_check", return_value=_report()) as check_mock:
             response = dispatch_command(self.session, "check decision:magic_costs")
         check_mock.assert_called_once()
-        self.assertIn("consistency check", response.lower())
+        self.assertIn("comprobación de consistencia", response.lower())
+        payload = check_mock.call_args.args[1]
+        self.assertEqual(payload["artifact_language"], "es")
+        self.assertEqual(payload["operation_language"], "es")
 
         guidance = dispatch_command(self.session, "check")
-        self.assertIn("Usage: check", guidance)
+        self.assertIn("uso: check", guidance.lower())
 
     def test_decide_validate_and_reject_delegate_to_persistence(self):
         prompts = iter(["Costly Magic", "Magic always costs something.", "Sera,Ren"])
@@ -75,7 +86,10 @@ class TextifAIRouterTests(unittest.TestCase):
         ) as decide_mock:
             response = dispatch_command(self.session, "decide", input_fn=lambda _: next(prompts))
         decide_mock.assert_called_once()
-        self.assertIn("decision recorded", response.lower())
+        self.assertIn("decisión registrada", response.lower())
+        payload = decide_mock.call_args.args[1]
+        self.assertEqual(payload["artifact_language"], "es")
+        self.assertEqual(payload["operation_language"], "es")
 
         decision_path = self.vault_root / "06_Canon" / "Decisions" / "magic_costs.md"
         decision_path.write_text(
@@ -87,7 +101,7 @@ class TextifAIRouterTests(unittest.TestCase):
         ) as validate_mock:
             response = dispatch_command(self.session, "validate decision:magic_costs")
         validate_mock.assert_called_once()
-        self.assertIn("persistence result", response.lower())
+        self.assertIn("resultado de persistencia", response.lower())
         self.assertIn("next_step", response)
 
         with patch(

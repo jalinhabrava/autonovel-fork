@@ -30,6 +30,12 @@ class ContextRequest:
     character_ids: tuple[str, ...] = ()
     policy_name: str = "default"
     token_budget: int = 4000
+    interface_language: str | None = None
+    user_command_language: str | None = None
+    internal_system_language: str | None = None
+    operation_language: str | None = None
+    artifact_target_language: str | None = None
+    mixed_language_allowed: bool | None = None
 
 
 @dataclass(frozen=True)

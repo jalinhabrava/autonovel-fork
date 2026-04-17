@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from textifai.i18n import Translator, get_translator
+from textifai.language_resolution import OperationLanguageResolution, resolve_language_for_operation
 from textifai.language_policy import LanguagePolicy
 from textifai.runtime_config import RuntimeEnvironment
 
@@ -33,6 +34,22 @@ class TextifAISession:
     @property
     def locale(self) -> str:
         return self.language_policy.interface_language
+
+    def resolve_language(
+        self,
+        *,
+        artifact_type: str | None = None,
+        operation_origin: str = "user",
+        explicit_operation_language: str | None = None,
+        explicit_artifact_language: str | None = None,
+    ) -> OperationLanguageResolution:
+        return resolve_language_for_operation(
+            self.language_policy,
+            artifact_type=artifact_type,
+            operation_origin=operation_origin,
+            explicit_operation_language=explicit_operation_language,
+            explicit_artifact_language=explicit_artifact_language,
+        )
 
     def remember(self, result, *, request: dict | None = None, debug: dict | None = None) -> None:
         self.last_result = result

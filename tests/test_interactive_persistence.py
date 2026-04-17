@@ -22,6 +22,7 @@ class InteractivePersistenceTests(unittest.TestCase):
                     "title": "El kankan en Sundrael prioriza transmision emocional",
                     "body": "La evidencia de capitulos 12 y 13 favorece esta lectura.",
                     "affects": ["Liora", "Nael", "Kankan"],
+                    "artifact_language": "es",
                     "origin": {
                         "source": "interactive_cli",
                         "chapter_ids": ["ch_12", "ch_13"],
@@ -39,6 +40,7 @@ class InteractivePersistenceTests(unittest.TestCase):
             self.assertIn("source: interactive_cli", text)
             self.assertIn("chapter_ids: ch_12,ch_13", text)
             self.assertIn("affects: Liora,Nael,Kankan", text)
+            self.assertIn("artifact_language: es", text)
 
     def test_validate_updates_existing_artifact_status(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -121,6 +123,8 @@ class InteractivePersistenceTests(unittest.TestCase):
                     "title": "Ultimate Spell",
                     "body": "This spell makes the caster invincible and works without cost.",
                     "state": "proposed",
+                    "artifact_language": "es",
+                    "operation_language": "es",
                     "origin": {"source": "interactive_cli"},
                 },
             )
@@ -129,6 +133,9 @@ class InteractivePersistenceTests(unittest.TestCase):
             self.assertGreaterEqual(len(report["issues"]), 1)
             self.assertEqual(report["issues"][0]["blocking"], True)
             self.assertEqual(report["context_request"]["intent"], "consistency_check")
+            self.assertEqual(report["context_request"]["operation_language"], "es")
+            self.assertEqual(report["context_request"]["artifact_target_language"], "es")
+            self.assertEqual(report["artifact_language"], "es")
             self.assertEqual(report["context_pack"]["type"], "context_pack")
 
     def test_create_note_writes_when_consistency_check_passes(self):

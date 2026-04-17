@@ -113,6 +113,8 @@ def _persist_artifact_payload(
         }
 
     metadata = dict(artifact["metadata"])
+    if artifact.get("artifact_language"):
+        metadata["artifact_language"] = str(artifact["artifact_language"])
     metadata.update(_flatten_origin(artifact.get("origin", {})))
     path = write_artifact_payload(
         vault_root,
@@ -138,7 +140,16 @@ def _persist_artifact_payload(
 
 def _consistency_report(vault_root: str | Path, artifact: dict) -> dict:
     adapter = VaultProjectAdapter(vault_root)
-    request = build_consistency_request(artifact)
+    artifact_language = artifact.get("artifact_language") or artifact.get("metadata", {}).get("artifact_language")
+    request = build_consistency_request(
+        artifact,
+        interface_language=artifact.get("interface_language"),
+        user_command_language=artifact.get("user_command_language"),
+        internal_system_language=artifact.get("internal_system_language"),
+        operation_language=artifact.get("operation_language"),
+        artifact_target_language=artifact_language,
+        mixed_language_allowed=artifact.get("mixed_language_allowed"),
+    )
     debug = debug_context(
         str(vault_root),
         intent=request.intent,
@@ -262,7 +273,10 @@ def _consistency_report(vault_root: str | Path, artifact: dict) -> dict:
             "target_id": request.target_id,
             "policy": request.policy_name,
             "token_budget": request.token_budget,
+            "operation_language": request.operation_language,
+            "artifact_target_language": request.artifact_target_language or artifact_language,
         },
+        "artifact_language": artifact_language,
         "context_pack": pack,
     }
 

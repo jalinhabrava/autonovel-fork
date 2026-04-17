@@ -48,6 +48,12 @@ def inspect_context(
             "character_ids": request.character_ids,
             "policy_name": request.policy_name,
             "token_budget": request.token_budget,
+            "interface_language": request.interface_language,
+            "user_command_language": request.user_command_language,
+            "internal_system_language": request.internal_system_language,
+            "operation_language": request.operation_language,
+            "artifact_target_language": request.artifact_target_language,
+            "mixed_language_allowed": request.mixed_language_allowed,
         },
         resolved_intent={
             "name": intent.name,

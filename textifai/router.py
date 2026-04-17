@@ -16,6 +16,7 @@ from interactive.context_requests import build_chapter_request, build_find_reque
 from interactive.payloads import validate_artifact_payload
 from interactive.persistence_commands import consistency_check, decide, reject, validate
 from interactive.query import parse_frontmatter, strip_frontmatter
+from textifai.language_resolution import serialize_language_resolution
 from textifai.prompts import ask_optional, ask_required
 from textifai.render import (
     render_bootstrap_result,
@@ -63,7 +64,12 @@ def dispatch_command(
     command, *args = parts
 
     if command == "world":
-        request = build_world_request(policy=session.policy_name, token_budget=session.token_budget)
+        resolution = session.resolve_language(artifact_type="world", operation_origin="user")
+        request = build_world_request(
+            policy=session.policy_name,
+            token_budget=session.token_budget,
+            **_request_language_kwargs(resolution),
+        )
         return _run_context_command(
             session,
             build_world_context(str(session.vault_path), policy=session.policy_name, token_budget=session.token_budget),
@@ -72,7 +78,13 @@ def dispatch_command(
 
     if command == "find":
         query = " ".join(args).strip() or ask_required(input_fn, session.translator.t("shell.prompt.find"))
-        request = build_find_request(query, policy=session.policy_name, token_budget=session.token_budget)
+        resolution = session.resolve_language(operation_origin="user")
+        request = build_find_request(
+            query,
+            policy=session.policy_name,
+            token_budget=session.token_budget,
+            **_request_language_kwargs(resolution),
+        )
         return _run_context_command(
             session,
             build_find_context(str(session.vault_path), query, policy=session.policy_name, token_budget=session.token_budget),
@@ -81,7 +93,13 @@ def dispatch_command(
 
     if command == "scene":
         scene_id = args[0] if args else ask_required(input_fn, session.translator.t("shell.prompt.scene_id"))
-        request = build_scene_request(scene_id, policy=session.policy_name, token_budget=session.token_budget)
+        resolution = session.resolve_language(artifact_type="scene", operation_origin="user")
+        request = build_scene_request(
+            scene_id,
+            policy=session.policy_name,
+            token_budget=session.token_budget,
+            **_request_language_kwargs(resolution),
+        )
         return _run_context_command(
             session,
             build_scene_context(str(session.vault_path), scene_id, policy=session.policy_name, token_budget=session.token_budget),
@@ -90,7 +108,13 @@ def dispatch_command(
 
     if command == "chapter":
         chapter_id = args[0] if args else ask_required(input_fn, session.translator.t("shell.prompt.chapter_id"))
-        request = build_chapter_request(chapter_id, policy=session.policy_name, token_budget=session.token_budget)
+        resolution = session.resolve_language(artifact_type="chapter", operation_origin="user")
+        request = build_chapter_request(
+            chapter_id,
+            policy=session.policy_name,
+            token_budget=session.token_budget,
+            **_request_language_kwargs(resolution),
+        )
         return _run_context_command(
             session,
             build_chapter_context(str(session.vault_path), chapter_id, policy=session.policy_name, token_budget=session.token_budget),
@@ -147,6 +171,14 @@ def _run_check(session: TextifAISession, target: str) -> str:
     payload = _artifact_payload_from_target(session, target)
     if payload is None:
         return session.translator.t("shell.errors.check_resolve")
+    artifact_type = payload.get("artifact_type")
+    explicit_artifact_language = payload.get("artifact_language") or payload.get("metadata", {}).get("artifact_language")
+    resolution = session.resolve_language(
+        artifact_type=artifact_type,
+        operation_origin="user",
+        explicit_artifact_language=explicit_artifact_language,
+    )
+    payload.update(_artifact_language_context(resolution))
     report = consistency_check(str(session.vault_path), payload)
     report["locale"] = session.locale
     session.remember(report)
@@ -158,6 +190,7 @@ def _run_decide(session: TextifAISession, *, input_fn=input) -> str:
     body = ask_required(input_fn, session.translator.t("shell.prompt.decision_body"))
     affects_raw = ask_optional(input_fn, session.translator.t("shell.prompt.decision_affects"))
     affects = [item.strip() for item in (affects_raw or "").split(",") if item.strip()]
+    resolution = session.resolve_language(artifact_type="decision", operation_origin="user")
     result = decide(
         str(session.vault_path),
         {
@@ -166,6 +199,7 @@ def _run_decide(session: TextifAISession, *, input_fn=input) -> str:
             "title": title,
             "body": body,
             "affects": affects,
+            **_artifact_language_context(resolution),
             "origin": {
                 "source": "textifai_shell",
                 "user_action": "decide_from_shell",
@@ -215,6 +249,14 @@ def _run_bootstrap(session: TextifAISession, args: list[str], *, input_fn=input)
         "chapter_from": chapter_from,
         "chapter_to": chapter_to,
     }
+    artifact_type = {
+        "voice": "voice",
+        "characters": "character",
+        "canon": "decision",
+        "timeline": "lore",
+    }[subtype]
+    resolution = session.resolve_language(artifact_type=artifact_type, operation_origin="user")
+    kwargs["artifact_language"] = resolution.artifact_target_language
     vault_root = str(session.vault_path)
 
     if subtype == "voice":
@@ -332,6 +374,35 @@ def _request_to_dict(request) -> dict:
         "character_ids": list(request.character_ids),
         "policy_name": request.policy_name,
         "token_budget": request.token_budget,
+        "interface_language": request.interface_language,
+        "user_command_language": request.user_command_language,
+        "internal_system_language": request.internal_system_language,
+        "operation_language": request.operation_language,
+        "artifact_target_language": request.artifact_target_language,
+        "mixed_language_allowed": request.mixed_language_allowed,
+    }
+
+
+def _request_language_kwargs(resolution) -> dict:
+    return {
+        "interface_language": resolution.interface_language,
+        "user_command_language": resolution.user_command_language,
+        "internal_system_language": resolution.internal_system_language,
+        "operation_language": resolution.operation_language,
+        "artifact_target_language": resolution.artifact_target_language,
+        "mixed_language_allowed": resolution.mixed_language_allowed,
+    }
+
+
+def _artifact_language_context(resolution) -> dict:
+    language = serialize_language_resolution(resolution)
+    return {
+        "artifact_language": resolution.artifact_target_language,
+        "operation_language": language["operation_language"],
+        "user_command_language": language["user_command_language"],
+        "internal_system_language": language["internal_system_language"],
+        "interface_language": language["interface_language"],
+        "mixed_language_allowed": language["mixed_language_allowed"],
     }
 
 

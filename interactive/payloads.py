@@ -48,6 +48,9 @@ def validate_decision_canon_payload(payload: dict) -> dict:
     normalized["decision_id"] = payload.get("decision_id") or slugify(str(payload["title"]))
     normalized["affects"] = list(payload.get("affects", []))
     normalized["origin"] = dict(payload.get("origin", {}))
+    artifact_language = payload.get("artifact_language") or payload.get("metadata", {}).get("artifact_language")
+    if artifact_language:
+        normalized["artifact_language"] = str(artifact_language)
     return normalized
 
 
@@ -88,6 +91,12 @@ def validate_artifact_payload(payload: dict) -> dict:
         "state": state,
         "metadata": dict(payload.get("metadata", {})),
         "origin": dict(payload.get("origin", {})),
+        "artifact_language": payload.get("artifact_language") or payload.get("metadata", {}).get("artifact_language"),
+        "operation_language": payload.get("operation_language"),
+        "user_command_language": payload.get("user_command_language"),
+        "internal_system_language": payload.get("internal_system_language"),
+        "interface_language": payload.get("interface_language"),
+        "mixed_language_allowed": payload.get("mixed_language_allowed"),
     }
 
 
@@ -96,6 +105,8 @@ def decision_payload_to_artifact_payload(payload: dict) -> dict:
     metadata: dict[str, str] = {}
     if decision["affects"]:
         metadata["affects"] = ",".join(decision["affects"])
+    if decision.get("artifact_language"):
+        metadata["artifact_language"] = str(decision["artifact_language"])
     return {
         "type": "artifact_payload",
         "artifact_kind": "note",
@@ -106,6 +117,7 @@ def decision_payload_to_artifact_payload(payload: dict) -> dict:
         "state": decision["state"],
         "metadata": metadata,
         "origin": decision["origin"],
+        "artifact_language": decision.get("artifact_language"),
     }
 
 

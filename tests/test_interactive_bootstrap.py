@@ -30,6 +30,19 @@ class InteractiveBootstrapTests(unittest.TestCase):
             self.assertIn("## Project Overrides", voice_text)
             self.assertIn("## Manuscript Signals", voice_text)
 
+    def test_extract_voice_can_persist_artifact_language_metadata(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            vault_root = Path(tmp) / "NovelVault"
+            bootstrap_vault(vault_root, title="My Vault Novel")
+            (vault_root / "05_Draft" / "Chapters" / "ch_01.md").write_text(
+                "# Chapter One\n\nSera walked through the cold harbor."
+            )
+
+            extract_voice(vault_root, chapter_ids=["ch_01"], artifact_language="ja")
+
+            voice_text = (vault_root / "01_Voice" / "Voice.md").read_text()
+            self.assertIn("artifact_language: ja", voice_text)
+
     def test_extract_characters_creates_character_notes_with_origin(self):
         with tempfile.TemporaryDirectory() as tmp:
             vault_root = Path(tmp) / "NovelVault"

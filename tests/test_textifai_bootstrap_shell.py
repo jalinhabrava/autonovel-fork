@@ -43,6 +43,7 @@ class TextifAIBootstrapShellTests(unittest.TestCase):
         ) as voice_mock:
             response = dispatch_command(self.session, "bootstrap voice", input_fn=lambda _: next(prompts))
         voice_mock.assert_called_once()
+        self.assertEqual(voice_mock.call_args.kwargs["artifact_language"], "en")
         self.assertIn("bootstrap result", response.lower())
         self.assertIn("written: 1", response.lower())
 
@@ -57,6 +58,7 @@ class TextifAIBootstrapShellTests(unittest.TestCase):
         ) as characters_mock:
             response = dispatch_command(self.session, "bootstrap", input_fn=lambda _: next(prompts))
         characters_mock.assert_called_once()
+        self.assertEqual(characters_mock.call_args.kwargs["artifact_language"], "en")
         self.assertIn("type: characters", response.lower())
         self.assertIn("written: 2", response.lower())
 
