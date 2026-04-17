@@ -1,16 +1,14 @@
-import io
 import tempfile
 import unittest
-from contextlib import redirect_stdout
 from pathlib import Path
-from unittest.mock import patch
 
-from textifai.cli import main
+from textifai.runtime_config import load_runtime_environment
+from textifai.session import create_session
 from vault.bootstrap import bootstrap_vault
 
 
-class TextifAICliTests(unittest.TestCase):
-    def test_chat_uses_existing_runtime_environment(self):
+class TextifAISessionTests(unittest.TestCase):
+    def test_create_session_from_runtime_environment(self):
         with tempfile.TemporaryDirectory() as tmp:
             base_dir = Path(tmp)
             vault_root = base_dir / "Vault"
@@ -21,18 +19,20 @@ class TextifAICliTests(unittest.TestCase):
                         "AUTONOVEL_PROJECT_BACKEND=vault",
                         f"AUTONOVEL_VAULT_ROOT={vault_root}",
                         "AUTONOVEL_TEXT_PROVIDER=ollama",
+                        "AUTONOVEL_WRITER_MODEL=llama3.2",
                     ]
                 )
                 + "\n"
             )
 
-            buffer = io.StringIO()
-            with patch("textifai.cli.run_shell", return_value=0) as run_shell_mock, redirect_stdout(buffer):
-                code = main(["chat", "--base-dir", str(base_dir)])
+            session = create_session(load_runtime_environment(base_dir))
 
-            output = buffer.getvalue()
-            self.assertEqual(code, 0)
-            run_shell_mock.assert_called_once()
+            self.assertEqual(session.backend, "vault")
+            self.assertEqual(session.provider, "ollama")
+            self.assertEqual(session.writer_model, "llama3.2")
+            self.assertEqual(session.mode, "normal")
+            self.assertEqual(session.policy_name, "default")
+            self.assertEqual(session.token_budget, 4000)
 
 
 if __name__ == "__main__":

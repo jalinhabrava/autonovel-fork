@@ -8,6 +8,8 @@ from textifai import PRODUCT_NAME
 from textifai.doctor import format_doctor_report, run_doctor
 from textifai.onboarding import run_onboarding
 from textifai.runtime_config import load_runtime_environment, runtime_banner
+from textifai.session import create_session
+from textifai.shell import run_shell
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -50,19 +52,15 @@ def main(argv: list[str] | None = None) -> int:
 
 def _run_chat_entry(base_dir: str | Path) -> int:
     env = load_runtime_environment(base_dir)
-    print(runtime_banner())
     if not _is_environment_ready(env):
+        print(runtime_banner())
         print("TextifAI needs a valid vault-backed environment before chat can start.")
         summary = run_onboarding(base_dir=base_dir)
         print(json.dumps(summary, indent=2))
-        print("TextifAI environment is ready. The full interactive shell will arrive in the next runtime block.")
-        return 0
+        env = load_runtime_environment(base_dir)
 
-    print(f"Vault: {env.vault_root}")
-    print(f"Provider: {env.provider or 'not configured'}")
-    print("TextifAI chat entry is ready. The full interactive shell lands in the next runtime block.")
-    print("For now, use `textifai doctor` to validate the environment or continue with the next runtime phase.")
-    return 0
+    session = create_session(env)
+    return run_shell(session)
 
 
 def _is_environment_ready(env) -> bool:
