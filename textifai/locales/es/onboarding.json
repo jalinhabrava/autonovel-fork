@@ -1,0 +1,17 @@
+{
+  "onboarding.title": "Configuración de TextifAI",
+  "onboarding.prompt.vault_path": "Ruta del vault [{suggested_vault}]: ",
+  "onboarding.prompt.invalid_vault_create": "La ruta existe pero no es un vault válido. ¿Crear un vault nuevo aquí? [Y/n]: ",
+  "onboarding.errors.invalid_vault_abort": "Configuración de TextifAI cancelada: ruta de vault no válida {vault_path}",
+  "onboarding.prompt.project_title": "Título del proyecto [TextifAI Project]: ",
+  "onboarding.prompt.create_vault": "¿Crear un vault nuevo? [Y/n]: ",
+  "onboarding.errors.vault_missing_abort": "Configuración de TextifAI cancelada: la ruta del vault no existe {vault_path}",
+  "onboarding.prompt.start_mode": "¿Empezar desde un vault [e]mpty o importación de [m]anuscript? [e/m]: ",
+  "onboarding.prompt.manuscript_dir": "Directorio de capítulos del manuscrito: ",
+  "onboarding.prompt.provider": "Provider de texto principal [anthropic/openai/lmstudio/ollama] (por defecto: anthropic): ",
+  "onboarding.prompt.writer_model": "Override del writer model (déjalo vacío para usar el default): ",
+  "onboarding.complete": "Configuración de TextifAI completada.",
+  "onboarding.summary.vault": "Vault: {vault_path}",
+  "onboarding.summary.provider": "Provider: {provider}",
+  "onboarding.summary.env_path": "Archivo env: {env_path}"
+}

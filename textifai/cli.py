@@ -6,6 +6,7 @@ from pathlib import Path
 
 from textifai import PRODUCT_NAME
 from textifai.doctor import format_doctor_report, run_doctor
+from textifai.i18n import get_translator
 from textifai.onboarding import run_onboarding
 from textifai.runtime_config import load_runtime_environment, runtime_banner
 from textifai.session import create_session
@@ -52,9 +53,10 @@ def main(argv: list[str] | None = None) -> int:
 
 def _run_chat_entry(base_dir: str | Path) -> int:
     env = load_runtime_environment(base_dir)
+    tr = get_translator(env.locale)
     if not _is_environment_ready(env):
-        print(runtime_banner())
-        print("TextifAI needs a valid vault-backed environment before chat can start.")
+        print(runtime_banner(env.locale))
+        print(tr.t("shell.chat.requires_environment"))
         summary = run_onboarding(base_dir=base_dir)
         print(json.dumps(summary, indent=2))
         env = load_runtime_environment(base_dir)

@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from textifai import PRODUCT_NAME
+from textifai.i18n import DEFAULT_LOCALE, SUPPORTED_LOCALES, get_translator, normalize_locale
 
 
 DEFAULT_VAULT_DIRNAME = "TextifAIVault"
@@ -21,6 +22,7 @@ class RuntimeEnvironment:
     vault_root: str | None
     provider: str | None
     writer_model: str | None
+    locale: str
 
 
 def load_runtime_environment(base_dir: str | Path = ".") -> RuntimeEnvironment:
@@ -35,6 +37,7 @@ def load_runtime_environment(base_dir: str | Path = ".") -> RuntimeEnvironment:
         vault_root=_clean(values.get("AUTONOVEL_VAULT_ROOT")),
         provider=_clean(values.get("AUTONOVEL_TEXT_PROVIDER")),
         writer_model=_clean(values.get("AUTONOVEL_WRITER_MODEL")),
+        locale=resolve_locale(values),
     )
 
 
@@ -77,8 +80,17 @@ def update_env_values(base_dir: str | Path, updates: dict[str, str]) -> Path:
     return env_path
 
 
-def runtime_banner() -> str:
-    return f"{PRODUCT_NAME} product runtime"
+def runtime_banner(locale: str = DEFAULT_LOCALE) -> str:
+    return get_translator(locale).t("shell.banner.title")
+
+
+def resolve_locale(values: dict[str, str] | None = None) -> str:
+    loaded = values or {}
+    explicit = _clean(loaded.get("TEXTIFAI_LOCALE"))
+    if explicit:
+        return normalize_locale(explicit)
+    detected = _detect_locale()
+    return normalize_locale(detected or DEFAULT_LOCALE)
 
 
 def _load_env_values(env_path: Path) -> dict[str, str]:
@@ -90,10 +102,26 @@ def _load_env_values(env_path: Path) -> dict[str, str]:
                 continue
             key, value = stripped.split("=", 1)
             values[key.strip()] = value.strip()
-    for key in values:
+    for key in (
+        "AUTONOVEL_PROJECT_BACKEND",
+        "AUTONOVEL_VAULT_ROOT",
+        "AUTONOVEL_TEXT_PROVIDER",
+        "AUTONOVEL_WRITER_MODEL",
+        "TEXTIFAI_LOCALE",
+    ):
         if key in os.environ and os.environ[key]:
             values[key] = os.environ[key]
     return values
+
+
+def _detect_locale() -> str | None:
+    for key in ("LC_ALL", "LANG"):
+        value = os.environ.get(key, "").strip()
+        if value:
+            primary = value.strip().lower().replace("-", "_").split("_", 1)[0]
+            if primary in SUPPORTED_LOCALES:
+                return primary
+    return None
 
 
 def _clean(value: str | None) -> str | None:

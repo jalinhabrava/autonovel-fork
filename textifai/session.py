@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from textifai.i18n import Translator, get_translator
 from textifai.runtime_config import RuntimeEnvironment
 
 
@@ -14,6 +15,7 @@ class TextifAISession:
     backend: str
     provider: str | None
     writer_model: str | None
+    locale: str = "en"
     mode: str = "normal"
     policy_name: str = "default"
     token_budget: int = 4000
@@ -22,6 +24,10 @@ class TextifAISession:
     last_context_pack: dict | None = None
     last_context_debug: dict | None = None
     running: bool = True
+
+    @property
+    def translator(self) -> Translator:
+        return get_translator(self.locale)
 
     def remember(self, result, *, request: dict | None = None, debug: dict | None = None) -> None:
         self.last_result = result
@@ -45,4 +51,5 @@ def create_session(env: RuntimeEnvironment) -> TextifAISession:
         backend=env.backend or "vault",
         provider=env.provider,
         writer_model=env.writer_model,
+        locale=env.locale,
     )

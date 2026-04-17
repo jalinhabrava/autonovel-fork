@@ -1,0 +1,17 @@
+{
+  "onboarding.title": "TextifAI setup",
+  "onboarding.prompt.vault_path": "Vault path [{suggested_vault}]: ",
+  "onboarding.prompt.invalid_vault_create": "The path exists but is not a valid vault. Create a new vault here? [Y/n]: ",
+  "onboarding.errors.invalid_vault_abort": "TextifAI setup aborted: invalid vault path {vault_path}",
+  "onboarding.prompt.project_title": "Project title [TextifAI Project]: ",
+  "onboarding.prompt.create_vault": "Create a new vault? [Y/n]: ",
+  "onboarding.errors.vault_missing_abort": "TextifAI setup aborted: vault path does not exist {vault_path}",
+  "onboarding.prompt.start_mode": "Start from [e]mpty vault or [m]anuscript import? [e/m]: ",
+  "onboarding.prompt.manuscript_dir": "Manuscript chapters directory: ",
+  "onboarding.prompt.provider": "Primary text provider [anthropic/openai/lmstudio/ollama] (default: anthropic): ",
+  "onboarding.prompt.writer_model": "Writer model override (leave blank for default): ",
+  "onboarding.complete": "TextifAI setup complete.",
+  "onboarding.summary.vault": "Vault: {vault_path}",
+  "onboarding.summary.provider": "Provider: {provider}",
+  "onboarding.summary.env_path": "Env file: {env_path}"
+}

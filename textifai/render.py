@@ -1,47 +1,46 @@
 from __future__ import annotations
 
-from textifai import PRODUCT_NAME
+from textifai.i18n import get_translator
 from textifai.session import TextifAISession
 
 
-def render_banner() -> str:
-    return f"{PRODUCT_NAME} terminal runtime\nType `help` to see available commands."
+def render_banner(locale: str = "en") -> str:
+    tr = get_translator(locale)
+    return f"{tr.t('shell.banner.title')}\n{tr.t('shell.banner.hint')}"
 
 
 def render_first_use_hint(session: TextifAISession) -> str:
     if session.last_result is not None:
         return ""
-    return (
-        "Getting started: try `world`, `find <query>`, or `bootstrap`.\n"
-        "When you want to inspect context internals, switch to `mode advanced`."
-    )
+    return session.translator.t("shell.first_use")
 
 
-def render_help() -> str:
+def render_help(locale: str = "en") -> str:
+    tr = get_translator(locale)
     return "\n".join(
         [
-            "TextifAI shell help",
+            tr.t("shell.help.title"),
             "",
-            "Getting started:",
+            tr.t("shell.help.getting_started"),
             "- world",
             "- find <query>",
             "- scene <scene_id>",
             "- chapter <chapter_id>",
             "",
-            "Review and decisions:",
+            tr.t("shell.help.review"),
             "- check <type:slug|note_path>",
             "- decide",
             "- validate <type:slug|note_path>",
             "- reject <type:slug|note_path>",
             "",
-            "Bootstrap:",
+            tr.t("shell.help.bootstrap"),
             "- bootstrap",
             "- bootstrap voice",
             "- bootstrap characters",
             "- bootstrap canon",
             "- bootstrap timeline",
             "",
-            "Advanced inspection:",
+            tr.t("shell.help.advanced"),
             "- context-debug",
             "- policy",
             "- policy <name>",
@@ -50,7 +49,7 @@ def render_help() -> str:
             "- request",
             "- pack",
             "",
-            "Shell:",
+            tr.t("shell.help.shell"),
             "- help",
             "- status",
             "- mode",
@@ -59,7 +58,7 @@ def render_help() -> str:
             "- exit",
             "- quit",
             "",
-            "Examples:",
+            tr.t("shell.help.examples"),
             "- find Sera",
             "- scene scene_054_b",
             "- check decision:magic_costs",
@@ -69,14 +68,17 @@ def render_help() -> str:
 
 
 def render_status(session: TextifAISession) -> str:
-    next_step = "Try `world`, `find <query>`, or `bootstrap` to start working."
+    tr = session.translator
+    next_step = tr.t("shell.status.next_step.start")
     if session.last_context_pack is not None:
-        next_step = "You already have context loaded. Try `pack`, `request`, or `check`."
+        next_step = tr.t("shell.status.next_step.context_loaded")
     if session.mode == "advanced":
-        next_step = "Advanced mode is active. You can inspect with `context-debug`, `request`, and `pack`."
+        next_step = tr.t("shell.status.next_step.advanced")
+    elif session.last_context_pack is None:
+        next_step = tr.t("shell.status.next_step.start")
     return "\n".join(
         [
-            "TextifAI session status",
+            tr.t("shell.status.title"),
             f"- vault: {session.vault_path}",
             f"- backend: {session.backend}",
             f"- provider: {session.provider or 'not configured'}",
@@ -94,16 +96,18 @@ def render_status(session: TextifAISession) -> str:
 
 
 def render_mode(session: TextifAISession) -> str:
-    hint = "Use `mode advanced` to inspect requests and packs." if session.mode == "normal" else "Advanced inspection commands are available."
-    return f"Current mode: {session.mode}\n- hint: {hint}"
+    tr = session.translator
+    hint = tr.t("shell.mode.hint.normal") if session.mode == "normal" else tr.t("shell.mode.hint.advanced")
+    return f"{tr.t('shell.mode.current', mode=session.mode)}\n- hint: {hint}"
 
 
-def render_context_pack_summary(pack: dict) -> str:
+def render_context_pack_summary(pack: dict, locale: str = "en") -> str:
+    tr = get_translator(locale)
     voice_context = pack.get("voice_context", {})
     project_voice = voice_context.get("project_voice", [])
     character_voice = voice_context.get("character_voice", [])
     lines = [
-        "TextifAI context result",
+        tr.t("shell.context.title"),
         f"- intent: {pack.get('intent', 'unknown')}",
         f"- target: {pack.get('scope', {}).get('target_id', pack.get('target_id', 'unknown'))}",
         f"- policy: {pack.get('policy', {}).get('name', 'default')}",
@@ -122,8 +126,9 @@ def render_context_pack_summary(pack: dict) -> str:
 
 
 def render_check_result(report: dict) -> str:
+    tr = get_translator(report.get("locale", "en"))
     lines = [
-        "TextifAI consistency check",
+        tr.t("shell.check.title"),
         f"- target: {report.get('target_type')}:{report.get('target_id')}",
         f"- ok: {'yes' if report.get('ok') else 'no'}",
         f"- summary: {report.get('summary', 'No summary')}",
@@ -144,36 +149,39 @@ def render_check_result(report: dict) -> str:
 
 
 def render_decision_result(result: dict) -> str:
+    tr = get_translator(result.get("locale", "en"))
     return "\n".join(
         [
-            "TextifAI decision recorded",
+            tr.t("shell.decision.title"),
             f"- state: {result.get('state')}",
             f"- target: {result.get('target_type')}:{result.get('target_id')}",
             f"- path: {result.get('path', 'n/a')}",
-            "- next_step: review with `check <type:slug>` or continue writing.",
+            f"- next_step: {tr.t('shell.decision.next_step')}",
         ]
     )
 
 
 def render_persistence_result(result: dict) -> str:
+    tr = get_translator(result.get("locale", "en"))
     return "\n".join(
         [
-            "TextifAI persistence result",
+            tr.t("shell.persistence.title"),
             f"- state: {result.get('state')}",
             f"- target: {result.get('target_type')}:{result.get('target_id')}",
             f"- path: {result.get('path', 'n/a')}",
-            "- next_step: use `check`, `request`, or `pack` if you want to inspect related context.",
+            f"- next_step: {tr.t('shell.persistence.next_step')}",
         ]
     )
 
 
-def render_bootstrap_result(bootstrap_type: str, result) -> str:
+def render_bootstrap_result(bootstrap_type: str, result, locale: str = "en") -> str:
+    tr = get_translator(locale)
     items = result if isinstance(result, list) else [result]
     written = [item for item in items if item.get("status") == "written"]
     blocked = [item for item in items if item.get("status") == "blocked"]
     skipped = [item for item in items if item.get("status") == "skipped"]
     lines = [
-        "TextifAI bootstrap result",
+        tr.t("shell.bootstrap.title"),
         f"- type: {bootstrap_type}",
         f"- total_results: {len(items)}",
         f"- written: {len(written)}",
@@ -181,33 +189,35 @@ def render_bootstrap_result(bootstrap_type: str, result) -> str:
         f"- skipped: {len(skipped)}",
     ]
     if bootstrap_type == "canon":
-        lines.append("- note: canon bootstrap creates extracted proposals, not validated canon.")
+        lines.append(f"- note: {tr.t('shell.bootstrap.note.canon')}")
     if bootstrap_type == "timeline":
-        lines.append("- note: timeline bootstrap is currently stored as provisional lore notes.")
+        lines.append(f"- note: {tr.t('shell.bootstrap.note.timeline')}")
     highlights = [item.get("target_id") for item in items[:3] if item.get("target_id")]
     if highlights:
         lines.append(f"- highlights: {', '.join(highlights)}")
     return "\n".join(lines)
 
 
-def render_policy_info(active: str, available: list[str]) -> str:
+def render_policy_info(active: str, available: list[str], locale: str = "en") -> str:
+    tr = get_translator(locale)
     return "\n".join(
         [
-            "TextifAI policy settings",
+            tr.t("shell.policy.title"),
             f"- active_policy: {active}",
             f"- available_policies: {', '.join(available)}",
         ]
     )
 
 
-def render_budget_info(budget: int) -> str:
-    return f"Current token budget: {budget}\n- note: this affects future context requests in the current session."
+def render_budget_info(budget: int, locale: str = "en") -> str:
+    return get_translator(locale).t("shell.budget.current", budget=budget)
 
 
-def render_request_summary(request: dict) -> str:
+def render_request_summary(request: dict, locale: str = "en") -> str:
+    tr = get_translator(locale)
     return "\n".join(
         [
-            "TextifAI context request",
+            tr.t("shell.request.title"),
             f"- intent: {request.get('intent', 'unknown')}",
             f"- target_id: {request.get('target_id', 'unknown')}",
             f"- target_type: {request.get('target_type', 'unknown')}",
@@ -219,12 +229,13 @@ def render_request_summary(request: dict) -> str:
     )
 
 
-def render_pack_view(pack: dict) -> str:
+def render_pack_view(pack: dict, locale: str = "en") -> str:
+    tr = get_translator(locale)
     voice_context = pack.get("voice_context", {})
     project_voice = voice_context.get("project_voice", [])
     character_voice = voice_context.get("character_voice", [])
     lines = [
-        "TextifAI context pack",
+        tr.t("shell.pack.title"),
         f"- intent: {pack.get('intent', 'unknown')}",
         f"- target: {pack.get('scope', {}).get('target_id', pack.get('target_id', 'unknown'))}",
         f"- hard_constraints: {len(pack.get('hard_constraints', []))}",
@@ -244,10 +255,11 @@ def render_pack_view(pack: dict) -> str:
     return "\n".join(lines)
 
 
-def render_context_debug_summary(debug: dict) -> str:
+def render_context_debug_summary(debug: dict, locale: str = "en") -> str:
+    tr = get_translator(locale)
     candidates = debug.get("candidates", [])
     lines = [
-        "TextifAI context debug",
+        tr.t("shell.debug.title"),
         f"- intent: {debug.get('resolved_intent', {}).get('name', debug.get('request', {}).get('intent', 'unknown'))}",
         f"- target: {debug.get('request', {}).get('target_id', 'unknown')}",
         f"- policy: {debug.get('policy', {}).get('name', 'default')}",
@@ -261,11 +273,12 @@ def render_context_debug_summary(debug: dict) -> str:
     return "\n".join(lines)
 
 
-def render_unknown_command(raw: str) -> str:
+def render_unknown_command(raw: str, locale: str = "en") -> str:
+    tr = get_translator(locale)
     return "\n".join(
         [
-            f"TextifAI does not recognize `{raw}`.",
-            "Try `help` to see commands, or start with `world`, `find <query>`, or `bootstrap`.",
+            tr.t("shell.unknown.title", command=raw),
+            tr.t("shell.unknown.hint"),
         ]
     )
 
