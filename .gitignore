@@ -5,6 +5,10 @@ __pycache__/
 *.pyc
 .env
 .venv/
+.codex
+results.tsv
+state.json
+seed.txt
 typeset/*.pdf
 typeset/chapters_content.tex
 *.pdf
