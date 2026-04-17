@@ -3,6 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 
 from adapters.vault_adapter import VaultProjectAdapter
+from interactive.context_commands import debug_context
+from interactive.context_requests import build_consistency_request
 from interactive.payloads import (
     decision_payload_to_artifact_payload,
     validate_artifact_payload,
@@ -136,16 +138,33 @@ def _persist_artifact_payload(
 
 def _consistency_report(vault_root: str | Path, artifact: dict) -> dict:
     adapter = VaultProjectAdapter(vault_root)
+    request = build_consistency_request(artifact)
+    debug = debug_context(
+        str(vault_root),
+        intent=request.intent,
+        narrative_scope=request.narrative_scope or "fragment",
+        retrieval_scope=list(request.retrieval_scope),
+        target_id=request.target_id,
+        target_type=request.target_type,
+        policy=request.policy_name,
+        token_budget=request.token_budget,
+        query_text=request.query_text,
+        chapter_refs=list(request.chapter_refs),
+        character_ids=list(request.character_ids),
+        debug_mode="summary",
+        max_candidates=12,
+    )
+    pack = debug["context_pack"]
     character_titles = list_character_titles(adapter)
-    lore_records = filter_records_by_status(list_note_records(adapter.world_lore_dir, "lore"), {"validated"})
-    canon_records = filter_records_by_status(list_note_records(adapter.canon_decisions_dir, "decision"), {"validated"})
-    combined_validated_context = "\n".join(
-        [adapter.read_artifact("world"), adapter.read_artifact("canon"), adapter.read_artifact("characters")]
-    ).lower()
+    combined_validated_context = _combined_context_from_pack(pack).lower()
     text = f"{artifact['title']}\n{artifact['body']}"
     implied_characters = infer_characters(text, character_titles)
-    canon_refs = infer_refs(text, canon_records)
-    lore_refs = infer_refs(text, lore_records)
+    canon_refs = [entry["id"] for entry in pack["hard_constraints"] if entry["artifact_type"] in {"canon", "decision"}]
+    lore_refs = [
+        entry["id"]
+        for entry in pack["hard_constraints"] + pack["narrative_context"]
+        if entry["artifact_type"] in {"world", "lore", "timeline"}
+    ]
 
     issues: list[dict] = []
     suggestions: list[str] = []
@@ -236,6 +255,15 @@ def _consistency_report(vault_root: str | Path, artifact: dict) -> dict:
         "issues": issues,
         "implications": implications,
         "suggested_actions": _unique(suggestions),
+        "context_request": {
+            "intent": request.intent,
+            "narrative_scope": request.narrative_scope,
+            "retrieval_scope": list(request.retrieval_scope),
+            "target_id": request.target_id,
+            "policy": request.policy_name,
+            "token_budget": request.token_budget,
+        },
+        "context_pack": pack,
     }
 
 
@@ -277,3 +305,18 @@ def _unique(items: list[str]) -> list[str]:
             seen.add(item)
             result.append(item)
     return result
+
+
+def _combined_context_from_pack(pack: dict) -> str:
+    parts = []
+    for entry in pack["hard_constraints"]:
+        parts.append(entry["content"])
+    for entry in pack["narrative_context"]:
+        parts.append(entry["content"])
+    for entry in pack["voice_context"]["project_voice"]:
+        parts.append(entry["content"])
+    for entry in pack["voice_context"]["character_voice"]:
+        parts.append(entry["content"])
+    for entry in pack["evidence"]:
+        parts.append(entry["content"])
+    return "\n".join(parts)

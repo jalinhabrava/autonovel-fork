@@ -4,10 +4,10 @@ import argparse
 import json
 from pathlib import Path
 
-from adapters.vault_adapter import VaultProjectAdapter
 from interactive.bootstrap_extract import extract_canon, extract_characters, extract_timeline, extract_voice
 from interactive.context_commands import (
     build_chapter_context,
+    debug_context,
     build_find_context,
     build_load_context,
     build_scene_context,
@@ -58,6 +58,13 @@ def _add_chapter_selection_arguments(parser):
     parser.add_argument("--chapter-to", type=int, default=None, help="Last chapter number to include")
 
 
+def _add_context_engine_arguments(parser, *, include_query: bool = False):
+    parser.add_argument("--policy", default="default", help="Context policy name")
+    parser.add_argument("--token-budget", type=int, default=4000, help="Approximate context token budget")
+    if include_query:
+        parser.add_argument("--query", default=None, help="Optional query text")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Autonovel utility entrypoints")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -104,6 +111,7 @@ def main():
         help="Assemble a world-level context_pack from the vault",
     )
     interactive_world_parser.add_argument("--path", required=True, help="Vault path")
+    _add_context_engine_arguments(interactive_world_parser)
 
     interactive_find_parser = subparsers.add_parser(
         "interactive-find",
@@ -111,6 +119,8 @@ def main():
     )
     interactive_find_parser.add_argument("--path", required=True, help="Vault path")
     interactive_find_parser.add_argument("--query", required=True, help="Case-insensitive text query")
+    interactive_find_parser.add_argument("--policy", default="default", help="Context policy name")
+    interactive_find_parser.add_argument("--token-budget", type=int, default=3500, help="Approximate context token budget")
 
     interactive_load_parser = subparsers.add_parser(
         "interactive-load-context",
@@ -120,6 +130,7 @@ def main():
     interactive_load_parser.add_argument("--artifact", action="append", default=[], help="Artifact name to load")
     interactive_load_parser.add_argument("--scene-id", action="append", default=[], help="Scene slug to load")
     interactive_load_parser.add_argument("--chapter-id", action="append", default=[], help="Chapter ref to load")
+    _add_context_engine_arguments(interactive_load_parser)
 
     interactive_scene_parser = subparsers.add_parser(
         "interactive-scene-context",
@@ -127,6 +138,7 @@ def main():
     )
     interactive_scene_parser.add_argument("--path", required=True, help="Vault path")
     interactive_scene_parser.add_argument("--scene-id", required=True, help="Scene slug")
+    _add_context_engine_arguments(interactive_scene_parser)
 
     interactive_chapter_parser = subparsers.add_parser(
         "interactive-chapter-context",
@@ -134,6 +146,7 @@ def main():
     )
     interactive_chapter_parser.add_argument("--path", required=True, help="Vault path")
     interactive_chapter_parser.add_argument("--chapter-id", required=True, help="Chapter ref like ch_01 or 1")
+    _add_context_engine_arguments(interactive_chapter_parser)
 
     decide_parser = subparsers.add_parser(
         "interactive-decide",
@@ -162,6 +175,30 @@ def main():
     )
     consistency_parser.add_argument("--path", required=True, help="Vault path")
     consistency_parser.add_argument("--json", required=True, help="Path to an artifact_payload JSON payload")
+
+    context_debug_parser = subparsers.add_parser(
+        "interactive-context-debug",
+        help="Inspect Context Engine request resolution, candidates, scores, and final context_pack",
+    )
+    context_debug_parser.add_argument("--path", required=True, help="Vault path")
+    context_debug_parser.add_argument("--intent", required=True, help="Context intent")
+    context_debug_parser.add_argument("--narrative-scope", required=True, choices=["project", "arc", "chapter", "scene", "fragment"])
+    context_debug_parser.add_argument(
+        "--retrieval-scope",
+        action="append",
+        required=True,
+        choices=["canon", "lore", "voice", "characters", "scenes", "chapters", "timeline", "outline"],
+        help="Retrieval category to include; can be repeated",
+    )
+    context_debug_parser.add_argument("--target-id", required=True, help="Target identifier")
+    context_debug_parser.add_argument("--target-type", required=True, help="Target type")
+    context_debug_parser.add_argument("--policy", default="default", help="Context policy name")
+    context_debug_parser.add_argument("--token-budget", type=int, default=4000, help="Approximate context token budget")
+    context_debug_parser.add_argument("--query", default=None, help="Optional query text")
+    context_debug_parser.add_argument("--chapter-id", action="append", default=[], help="Chapter ref")
+    context_debug_parser.add_argument("--character-id", action="append", default=[], help="Character id")
+    context_debug_parser.add_argument("--debug-mode", default="summary", choices=["summary", "full"], help="How much candidate detail to return")
+    context_debug_parser.add_argument("--max-candidates", type=int, default=10, help="Maximum number of candidates to display")
 
     create_note_parser = subparsers.add_parser(
         "interactive-create-note",
@@ -273,6 +310,29 @@ def main():
         print(json.dumps(consistency_check(args.path, _load_json_payload(args.json)), indent=2))
         return
 
+    if args.command == "interactive-context-debug":
+        print(
+            json.dumps(
+                debug_context(
+                    args.path,
+                    intent=args.intent,
+                    narrative_scope=args.narrative_scope,
+                    retrieval_scope=args.retrieval_scope,
+                    target_id=args.target_id,
+                    target_type=args.target_type,
+                    policy=args.policy,
+                    token_budget=args.token_budget,
+                    query_text=args.query,
+                    chapter_refs=args.chapter_id,
+                    character_ids=args.character_id,
+                    debug_mode=args.debug_mode,
+                    max_candidates=args.max_candidates,
+                ),
+                indent=2,
+            )
+        )
+        return
+
     if args.command == "interactive-create-note":
         print(json.dumps(create_note(args.path, _load_json_payload(args.json)), indent=2))
         return
@@ -338,31 +398,37 @@ def main():
         return
 
     if args.command.startswith("interactive-"):
-        adapter = VaultProjectAdapter(args.path)
         if args.command == "interactive-world":
-            print(json.dumps(build_world_context(adapter), indent=2))
+            print(json.dumps(build_world_context(args.path, policy=args.policy, token_budget=args.token_budget), indent=2))
             return
         if args.command == "interactive-find":
-            print(json.dumps(build_find_context(adapter, args.query), indent=2))
+            print(json.dumps(build_find_context(args.path, args.query, policy=args.policy, token_budget=args.token_budget), indent=2))
             return
         if args.command == "interactive-load-context":
             print(
                 json.dumps(
                     build_load_context(
-                        adapter,
+                        args.path,
                         artifacts=args.artifact,
                         scene_ids=args.scene_id,
                         chapter_ids=args.chapter_id,
+                        policy=args.policy,
+                        token_budget=args.token_budget,
                     ),
                     indent=2,
                 )
             )
             return
         if args.command == "interactive-scene-context":
-            print(json.dumps(build_scene_context(adapter, args.scene_id), indent=2))
+            print(json.dumps(build_scene_context(args.path, args.scene_id, policy=args.policy, token_budget=args.token_budget), indent=2))
             return
         if args.command == "interactive-chapter-context":
-            print(json.dumps(build_chapter_context(adapter, args.chapter_id), indent=2))
+            print(
+                json.dumps(
+                    build_chapter_context(args.path, args.chapter_id, policy=args.policy, token_budget=args.token_budget),
+                    indent=2,
+                )
+            )
             return
 
 

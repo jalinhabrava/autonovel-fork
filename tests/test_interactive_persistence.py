@@ -128,6 +128,8 @@ class InteractivePersistenceTests(unittest.TestCase):
             self.assertFalse(report["ok"])
             self.assertGreaterEqual(len(report["issues"]), 1)
             self.assertEqual(report["issues"][0]["blocking"], True)
+            self.assertEqual(report["context_request"]["intent"], "consistency_check")
+            self.assertEqual(report["context_pack"]["type"], "context_pack")
 
     def test_create_note_writes_when_consistency_check_passes(self):
         with tempfile.TemporaryDirectory() as tmp:

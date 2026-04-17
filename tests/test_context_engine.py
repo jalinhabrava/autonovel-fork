@@ -61,6 +61,7 @@ class ContextEngineTests(unittest.TestCase):
                     target_type="scene",
                     character_ids=("sera",),
                     policy_name="default",
+                    token_budget=4000,
                 ),
             )
 
@@ -111,6 +112,7 @@ class ContextEngineTests(unittest.TestCase):
                     target_id="world",
                     target_type="project",
                     policy_name="default",
+                    token_budget=4000,
                 ),
             )
 
@@ -149,6 +151,7 @@ class ContextEngineTests(unittest.TestCase):
                     target_id="scene_001_a",
                     target_type="scene",
                     policy_name="strict_canon",
+                    token_budget=3000,
                 ),
             )
 
@@ -183,6 +186,7 @@ class ContextEngineTests(unittest.TestCase):
                     target_id="world",
                     target_type="project",
                     policy_name="default",
+                    token_budget=4000,
                 ),
             )
 

@@ -14,6 +14,7 @@ IntentName = Literal[
     "canon_decision",
     "bootstrap_extract",
     "world_lookup",
+    "context_search",
 ]
 ArtifactKind = Literal["note", "root_artifact", "chapter"]
 SectionName = Literal["hard_constraints", "narrative_context", "voice_context", "evidence"]
@@ -28,6 +29,7 @@ class ContextRequest:
     chapter_refs: tuple[str, ...] = ()
     character_ids: tuple[str, ...] = ()
     policy_name: str = "default"
+    token_budget: int = 4000
 
 
 @dataclass(frozen=True)
@@ -136,3 +138,13 @@ class ContextPack:
     voice_context: dict[str, tuple[ContextEntry, ...]]
     evidence: tuple[ContextEntry, ...]
     meta: dict
+
+
+@dataclass(frozen=True)
+class ContextDebugResult:
+    request: dict
+    resolved_intent: dict
+    resolved_scope: dict
+    policy: dict
+    candidates: tuple[dict, ...]
+    context_pack: ContextPack

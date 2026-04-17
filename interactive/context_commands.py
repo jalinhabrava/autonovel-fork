@@ -1,177 +1,155 @@
 from __future__ import annotations
 
-from adapters.vault_adapter import VaultProjectAdapter
-from interactive.payloads import build_context_pack
-from interactive.query import (
-    chapter_ref,
-    extract_summary,
-    infer_characters,
-    infer_pov,
-    infer_refs,
-    line_span,
-    list_character_titles,
-    list_note_records,
-    note_record,
-    read_markdown,
-    search_records,
+from context_engine.service import build_context_pack, inspect_context
+from interactive.context_requests import (
+    build_chapter_request,
+    build_explicit_request,
+    build_find_request,
+    build_load_request,
+    build_scene_request,
+    build_world_request,
 )
 
 
-def build_world_context(adapter: VaultProjectAdapter) -> dict:
-    world_text = adapter.read_artifact("world")
-    canon_records = list_note_records(adapter.canon_decisions_dir, "decision")
-    lore_records = list_note_records(adapter.world_lore_dir, "lore")
-    summary = extract_summary(world_text, "Global world context assembled from vault artifacts.")
-    return build_context_pack(
-        scope="world",
-        target_id="world",
-        summary=summary,
-        lore_refs=[record["id"] for record in lore_records],
-        canon_refs=[record["id"] for record in canon_records],
-        selected_fragment=line_span(world_text),
-    )
+def build_world_context(
+    vault_root: str,
+    *,
+    policy: str = "default",
+    token_budget: int = 4000,
+) -> dict:
+    request = build_world_request(policy=policy, token_budget=token_budget)
+    return _pack_to_dict(build_context_pack(vault_root, request))
 
 
-def build_find_context(adapter: VaultProjectAdapter, query: str) -> dict:
-    records = _all_searchable_records(adapter)
-    matches = search_records(records, query)
-
-    lore_records = list_note_records(adapter.world_lore_dir, "lore")
-    canon_records = list_note_records(adapter.canon_decisions_dir, "decision")
-    characters = list_character_titles(adapter)
-    chapter_refs = sorted(
-        {
-            record["id"]
-            for record in matches
-            if record["kind"] == "chapter" and str(record["id"]).startswith("ch_")
-        }
-    )
-    summary = f"Found {len(matches)} matches for '{query}' across the vault."
-    return build_context_pack(
-        scope="find",
-        target_id=query,
-        summary=summary,
-        characters=infer_characters(query, characters),
-        canon_refs=[record["id"] for record in canon_records if record["id"] in _match_ids(matches)],
-        lore_refs=[record["id"] for record in lore_records if record["id"] in _match_ids(matches)],
-        chapter_refs=chapter_refs,
-        selected_fragment=matches[0]["selected_fragment"] if matches else {"start_line": 1, "end_line": 1},
-        matches=matches,
-    )
+def build_find_context(
+    vault_root: str,
+    query: str,
+    *,
+    policy: str = "default",
+    token_budget: int = 3500,
+) -> dict:
+    request = build_find_request(query, policy=policy, token_budget=token_budget)
+    return _pack_to_dict(build_context_pack(vault_root, request))
 
 
 def build_load_context(
-    adapter: VaultProjectAdapter,
+    vault_root: str,
     *,
     artifacts: list[str] | None = None,
     scene_ids: list[str] | None = None,
     chapter_ids: list[str] | None = None,
+    policy: str = "default",
+    token_budget: int = 4000,
 ) -> dict:
-    artifacts = artifacts or []
-    scene_ids = scene_ids or []
-    chapter_ids = chapter_ids or []
-
-    loaded_texts: list[str] = []
-    for artifact in artifacts:
-        loaded_texts.append(adapter.read_artifact(artifact))
-    for scene_id in scene_ids:
-        scene_path = adapter.note_path("scene", scene_id)
-        loaded_texts.append(read_markdown(scene_path))
-    for chapter_id in chapter_ids:
-        loaded_texts.append(_read_chapter(adapter, chapter_id)["text"])
-
-    combined_text = "\n\n".join(text for text in loaded_texts if text).strip()
-    lore_records = list_note_records(adapter.world_lore_dir, "lore")
-    canon_records = list_note_records(adapter.canon_decisions_dir, "decision")
-    characters = list_character_titles(adapter)
-
-    return build_context_pack(
-        scope="load",
-        target_id="load-context",
-        summary=extract_summary(combined_text, "Combined context pack assembled from explicit vault targets."),
-        pov=infer_pov(combined_text, characters),
-        characters=infer_characters(combined_text, characters),
-        canon_refs=infer_refs(combined_text, canon_records),
-        lore_refs=infer_refs(combined_text, lore_records),
-        chapter_refs=[chapter_ref(chapter_id) or str(chapter_id) for chapter_id in chapter_ids],
-        selected_fragment=line_span(combined_text),
+    request = build_load_request(
+        artifacts=artifacts,
+        scene_ids=scene_ids,
+        chapter_ids=chapter_ids,
+        policy=policy,
+        token_budget=token_budget,
     )
+    return _pack_to_dict(build_context_pack(vault_root, request))
 
 
-def build_scene_context(adapter: VaultProjectAdapter, scene_id: str) -> dict:
-    scene = note_record(adapter.note_path("scene", scene_id), "scene")
-    scene_text = scene["text"]
-    lore_records = list_note_records(adapter.world_lore_dir, "lore")
-    canon_records = list_note_records(adapter.canon_decisions_dir, "decision")
-    characters = list_character_titles(adapter)
-    related_chapter = chapter_ref(scene["chapter"])
+def build_scene_context(
+    vault_root: str,
+    scene_id: str,
+    *,
+    policy: str = "default",
+    token_budget: int = 4000,
+) -> dict:
+    request = build_scene_request(scene_id, policy=policy, token_budget=token_budget)
+    return _pack_to_dict(build_context_pack(vault_root, request))
 
-    return build_context_pack(
-        scope="scene",
-        target_id=scene_id,
-        summary=extract_summary(scene_text, f"Scene context for {scene_id}."),
-        pov=infer_pov(scene_text, characters),
-        characters=infer_characters(scene_text, characters),
-        canon_refs=infer_refs(scene_text, canon_records),
-        lore_refs=infer_refs(scene_text, lore_records),
-        chapter_refs=[related_chapter] if related_chapter else [],
-        selected_fragment=line_span(scene_text),
+
+def build_chapter_context(
+    vault_root: str,
+    chapter_id: str,
+    *,
+    policy: str = "default",
+    token_budget: int = 4000,
+) -> dict:
+    request = build_chapter_request(chapter_id, policy=policy, token_budget=token_budget)
+    return _pack_to_dict(build_context_pack(vault_root, request))
+
+
+def debug_context(
+    vault_root: str,
+    *,
+    intent: str,
+    narrative_scope: str,
+    retrieval_scope: list[str],
+    target_id: str,
+    target_type: str,
+    policy: str = "default",
+    token_budget: int = 4000,
+    query_text: str | None = None,
+    chapter_refs: list[str] | None = None,
+    character_ids: list[str] | None = None,
+    debug_mode: str = "summary",
+    max_candidates: int = 10,
+) -> dict:
+    request = build_explicit_request(
+        intent=intent,
+        narrative_scope=narrative_scope,
+        retrieval_scope=retrieval_scope,
+        target_id=target_id,
+        target_type=target_type,
+        policy=policy,
+        token_budget=token_budget,
+        query_text=query_text,
+        chapter_refs=chapter_refs,
+        character_ids=character_ids,
     )
-
-
-def build_chapter_context(adapter: VaultProjectAdapter, chapter_id: str) -> dict:
-    chapter = _read_chapter(adapter, chapter_id)
-    chapter_text = chapter["text"]
-    lore_records = list_note_records(adapter.world_lore_dir, "lore")
-    canon_records = list_note_records(adapter.canon_decisions_dir, "decision")
-    scene_records = list_note_records(adapter.outline_scenes_dir, "scene")
-    characters = list_character_titles(adapter)
-    chapter_key = chapter["id"]
-
-    scene_text = "\n\n".join(
-        record["text"] for record in scene_records if chapter_ref(record["chapter"]) == chapter_key
+    result = inspect_context(
+        vault_root,
+        request,
+        debug_mode=debug_mode,
+        max_candidates=max_candidates,
     )
-    combined_text = "\n\n".join(part for part in [chapter_text, scene_text] if part).strip()
-    return build_context_pack(
-        scope="chapter",
-        target_id=chapter_key,
-        summary=extract_summary(combined_text, f"Chapter context for {chapter_key}."),
-        pov=infer_pov(combined_text, characters),
-        characters=infer_characters(combined_text, characters),
-        canon_refs=infer_refs(combined_text, canon_records),
-        lore_refs=infer_refs(combined_text, lore_records),
-        chapter_refs=[chapter_key],
-        selected_fragment=line_span(chapter_text),
-    )
+    return _debug_to_dict(result)
 
 
-def _all_searchable_records(adapter: VaultProjectAdapter) -> list[dict]:
-    records = [
-        note_record(adapter.artifact_path("world"), "artifact"),
-        note_record(adapter.artifact_path("characters"), "artifact"),
-        note_record(adapter.artifact_path("outline"), "artifact"),
-        note_record(adapter.artifact_path("canon"), "artifact"),
-    ]
-    records.extend(list_note_records(adapter.world_lore_dir, "lore"))
-    records.extend(list_note_records(adapter.character_profiles_dir, "character"))
-    records.extend(list_note_records(adapter.outline_scenes_dir, "scene"))
-    records.extend(list_note_records(adapter.canon_decisions_dir, "decision"))
-    for path in adapter.list_chapter_paths():
-        records.append(note_record(path, "chapter"))
-        records[-1]["id"] = path.stem
-    return records
+def _pack_to_dict(pack) -> dict:
+    return {
+        "type": pack.type,
+        "intent": pack.intent,
+        "scope": pack.scope,
+        "policy": pack.policy,
+        "hard_constraints": [_entry_to_dict(entry) for entry in pack.hard_constraints],
+        "narrative_context": [_entry_to_dict(entry) for entry in pack.narrative_context],
+        "voice_context": {
+            "project_voice": [_entry_to_dict(entry) for entry in pack.voice_context["project_voice"]],
+            "character_voice": [_entry_to_dict(entry) for entry in pack.voice_context["character_voice"]],
+        },
+        "evidence": [_entry_to_dict(entry) for entry in pack.evidence],
+        "meta": pack.meta,
+    }
 
 
-def _match_ids(matches: list[dict]) -> set[str]:
-    return {str(match["id"]) for match in matches}
+def _debug_to_dict(result) -> dict:
+    return {
+        "request": result.request,
+        "resolved_intent": result.resolved_intent,
+        "resolved_scope": result.resolved_scope,
+        "policy": result.policy,
+        "candidates": list(result.candidates),
+        "context_pack": _pack_to_dict(result.context_pack),
+    }
 
 
-def _read_chapter(adapter: VaultProjectAdapter, chapter_id: str) -> dict:
-    chapter_key = chapter_ref(chapter_id) or str(chapter_id)
-    if chapter_key.startswith("ch_"):
-        path = adapter.resolve(f"05_Draft/Chapters/{chapter_key}.md")
-    else:
-        path = adapter.resolve(f"05_Draft/Chapters/{chapter_key}.md")
-    record = note_record(path, "chapter")
-    record["id"] = chapter_key
-    return record
+def _entry_to_dict(entry) -> dict:
+    return {
+        "id": entry.id,
+        "artifact_kind": entry.artifact_kind,
+        "artifact_type": entry.artifact_type,
+        "title": entry.title,
+        "status": entry.status,
+        "reason": entry.reason,
+        "content": entry.content,
+        "path": entry.path,
+        "score": entry.score,
+        "score_breakdown": entry.score_breakdown,
+        "source_refs": list(entry.source_refs),
+        "line_span": entry.line_span,
+    }

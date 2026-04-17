@@ -11,6 +11,7 @@ DEFAULT_RETRIEVAL_SCOPE: dict[IntentName, tuple[str, ...]] = {
     "canon_decision": ("canon", "lore", "characters", "chapters", "outline"),
     "bootstrap_extract": ("chapters", "voice", "characters", "canon", "lore", "timeline"),
     "world_lookup": ("canon", "lore", "voice", "characters", "timeline", "outline"),
+    "context_search": ("canon", "lore", "voice", "characters", "scenes", "chapters", "timeline", "outline"),
 }
 
 
@@ -22,6 +23,7 @@ DEFAULT_NARRATIVE_SCOPE: dict[IntentName, str] = {
     "canon_decision": "chapter",
     "bootstrap_extract": "chapter",
     "world_lookup": "project",
+    "context_search": "fragment",
 }
 
 
@@ -38,6 +40,9 @@ INTENT_ALIASES: dict[str, IntentName] = {
     "bootstrap_extract": "bootstrap_extract",
     "world_lookup": "world_lookup",
     "world": "world_lookup",
+    "context_search": "context_search",
+    "artifact_search": "context_search",
+    "lookup": "context_search",
 }
 
 

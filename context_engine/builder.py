@@ -11,25 +11,26 @@ def build_context_pack(
     policy: ContextPolicy,
     ranked_candidates: list[ScoredCandidate],
 ) -> ContextPack:
+    budgets = _effective_budgets(policy, request.token_budget)
     hard_constraints = _consume_section(
         [candidate for candidate in ranked_candidates if candidate.section == "hard_constraints"],
-        policy.section_budgets.hard_constraints,
+        budgets["hard_constraints"],
     )
     narrative_context = _consume_section(
         [candidate for candidate in ranked_candidates if candidate.section == "narrative_context"],
-        policy.section_budgets.narrative_context,
+        budgets["narrative_context"],
     )
     evidence = _consume_section(
         [candidate for candidate in ranked_candidates if candidate.section == "evidence"],
-        policy.section_budgets.evidence,
+        budgets["evidence"],
     )
 
     voice_candidates = [candidate for candidate in ranked_candidates if candidate.section == "voice_context"]
     project_voice = _consume_section(
         [candidate for candidate in voice_candidates if candidate.candidate.artifact_kind == "root_artifact"],
-        int(policy.section_budgets.voice_context * 0.7),
+        int(budgets["voice_context"] * 0.7),
     )
-    remaining_voice_budget = max(policy.section_budgets.voice_context - _entry_cost_total(project_voice), 0)
+    remaining_voice_budget = max(budgets["voice_context"] - _entry_cost_total(project_voice), 0)
     character_voice = _consume_section(
         [candidate for candidate in voice_candidates if candidate.candidate.artifact_type == "character"],
         remaining_voice_budget,
@@ -48,11 +49,12 @@ def build_context_pack(
         },
         policy={
             "name": policy.name,
+            "token_budget": request.token_budget,
             "section_budgets": {
-                "hard_constraints": policy.section_budgets.hard_constraints,
-                "narrative_context": policy.section_budgets.narrative_context,
-                "voice_context": policy.section_budgets.voice_context,
-                "evidence": policy.section_budgets.evidence,
+                "hard_constraints": budgets["hard_constraints"],
+                "narrative_context": budgets["narrative_context"],
+                "voice_context": budgets["voice_context"],
+                "evidence": budgets["evidence"],
             },
         },
         hard_constraints=tuple(hard_constraints),
@@ -137,3 +139,18 @@ def _truncate_words(text: str, limit: int) -> str:
     if len(words) <= limit:
         return text
     return " ".join(words[:limit]).rstrip() + "..."
+
+
+def _effective_budgets(policy: ContextPolicy, token_budget: int) -> dict[str, int]:
+    base = {
+        "hard_constraints": policy.section_budgets.hard_constraints,
+        "narrative_context": policy.section_budgets.narrative_context,
+        "voice_context": policy.section_budgets.voice_context,
+        "evidence": policy.section_budgets.evidence,
+    }
+    base_total = sum(base.values())
+    if token_budget <= 0 or token_budget == base_total:
+        return base
+    ratio = token_budget / base_total
+    scaled = {key: max(1, int(value * ratio)) for key, value in base.items()}
+    return scaled

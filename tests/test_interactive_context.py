@@ -2,14 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from adapters.vault_adapter import VaultProjectAdapter
-from interactive.context_commands import (
-    build_chapter_context,
-    build_find_context,
-    build_load_context,
-    build_scene_context,
-    build_world_context,
-)
+from interactive.context_commands import build_chapter_context, build_find_context, build_load_context, build_scene_context, build_world_context, debug_context
 from vault.bootstrap import bootstrap_vault
 from vault.notes import write_or_update_note
 
@@ -36,12 +29,13 @@ class InteractiveContextTests(unittest.TestCase):
                 body="The kankan also transmits emotion.",
             )
 
-            payload = build_world_context(VaultProjectAdapter(vault_root))
+            payload = build_world_context(str(vault_root))
 
             self.assertEqual(payload["type"], "context_pack")
-            self.assertEqual(payload["scope"], "world")
-            self.assertIn("kankan", payload["lore_refs"])
-            self.assertIn("dec_kankan_014", payload["canon_refs"])
+            self.assertEqual(payload["scope"]["narrative_scope"], "project")
+            ids = [entry["id"] for entry in payload["hard_constraints"] + payload["narrative_context"]]
+            self.assertIn("kankan", ids)
+            self.assertIn("dec_kankan_014", ids)
 
     def test_find_context_returns_matches(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -56,11 +50,11 @@ class InteractiveContextTests(unittest.TestCase):
                 body="Sera suspects Ren is hiding something.",
             )
 
-            payload = build_find_context(VaultProjectAdapter(vault_root), "Sera")
+            payload = build_find_context(str(vault_root), "Sera")
 
             self.assertEqual(payload["type"], "context_pack")
-            self.assertEqual(payload["scope"], "find")
-            self.assertGreaterEqual(len(payload.get("matches", [])), 1)
+            self.assertEqual(payload["intent"], "context_search")
+            self.assertGreaterEqual(len(payload["narrative_context"]) + len(payload["evidence"]), 1)
 
     def test_scene_context_infers_links(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -91,16 +85,14 @@ class InteractiveContextTests(unittest.TestCase):
                 metadata={"chapter": 54},
             )
 
-            payload = build_scene_context(VaultProjectAdapter(vault_root), "scene_054_b")
+            payload = build_scene_context(str(vault_root), "scene_054_b")
 
-            self.assertEqual(payload["scope"], "scene")
-            self.assertEqual(payload["target_id"], "scene_054_b")
-            self.assertEqual(payload["pov"], "Sera")
-            self.assertIn("Sera", payload["characters"])
-            self.assertIn("Ren", payload["characters"])
-            self.assertIn("sundrael_bond", payload["lore_refs"])
-            self.assertIn("dec_sundrael_003", payload["canon_refs"])
-            self.assertIn("ch_54", payload["chapter_refs"])
+            self.assertEqual(payload["scope"]["narrative_scope"], "scene")
+            self.assertEqual(payload["scope"]["target_id"], "scene_054_b")
+            self.assertIn("ch_54", payload["scope"]["chapter_refs"])
+            joined = " ".join(entry["content"] for entry in payload["hard_constraints"] + payload["narrative_context"])
+            self.assertIn("Sera", joined)
+            self.assertIn("sundrael bond", joined.lower())
 
     def test_chapter_context_resolves_scene_context(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -125,14 +117,14 @@ class InteractiveContextTests(unittest.TestCase):
             chapter_path = vault_root / "05_Draft" / "Chapters" / "ch_01.md"
             chapter_path.write_text("# Chapter One\n\nSera crosses the market carrying a kankan token.")
 
-            payload = build_chapter_context(VaultProjectAdapter(vault_root), "ch_01")
+            payload = build_chapter_context(str(vault_root), "ch_01")
 
-            self.assertEqual(payload["scope"], "chapter")
-            self.assertEqual(payload["target_id"], "ch_01")
-            self.assertEqual(payload["pov"], "Sera")
-            self.assertIn("Sera", payload["characters"])
-            self.assertIn("kankan", payload["lore_refs"])
-            self.assertEqual(payload["chapter_refs"], ["ch_01"])
+            self.assertEqual(payload["scope"]["narrative_scope"], "chapter")
+            self.assertEqual(payload["scope"]["target_id"], "ch_01")
+            self.assertEqual(list(payload["scope"]["chapter_refs"]), ["ch_01"])
+            evidence_text = " ".join(entry["content"] for entry in payload["evidence"] + payload["narrative_context"])
+            self.assertIn("Sera", evidence_text)
+            self.assertIn("kankan", evidence_text.lower())
 
     def test_load_context_combines_explicit_targets(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -151,16 +143,48 @@ class InteractiveContextTests(unittest.TestCase):
             chapter_path.write_text("# Chapter One\n\nSera returns home.")
 
             payload = build_load_context(
-                VaultProjectAdapter(vault_root),
+                str(vault_root),
                 artifacts=["world"],
                 scene_ids=["scene_001_a"],
                 chapter_ids=["ch_01"],
             )
 
             self.assertEqual(payload["type"], "context_pack")
-            self.assertEqual(payload["scope"], "load")
-            self.assertIn("Sera", payload["characters"])
-            self.assertIn("ch_01", payload["chapter_refs"])
+            self.assertEqual(payload["scope"]["target_id"], "scene_001_a")
+            self.assertIn("ch_01", payload["scope"]["chapter_refs"])
+            text = " ".join(entry["content"] for entry in payload["narrative_context"] + payload["evidence"])
+            self.assertIn("Sera", text)
+
+    def test_context_debug_returns_request_candidates_and_pack(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            vault_root = Path(tmp) / "NovelVault"
+            bootstrap_vault(vault_root, title="My Vault Novel")
+            write_or_update_note(
+                vault_root,
+                note_type="decision",
+                slug="dec_magic_cost",
+                title="Magic Cost",
+                status="validated",
+                body="Every spell has a cost.",
+            )
+
+            payload = debug_context(
+                str(vault_root),
+                intent="consistency_check",
+                narrative_scope="fragment",
+                retrieval_scope=["canon", "lore", "voice", "characters"],
+                target_id="test_target",
+                target_type="scene",
+                policy="strict_canon",
+                token_budget=2500,
+                debug_mode="summary",
+                max_candidates=5,
+            )
+
+            self.assertEqual(payload["resolved_intent"]["name"], "consistency_check")
+            self.assertEqual(payload["policy"]["name"], "strict_canon")
+            self.assertLessEqual(len(payload["candidates"]), 5)
+            self.assertEqual(payload["context_pack"]["type"], "context_pack")
 
 
 if __name__ == "__main__":
