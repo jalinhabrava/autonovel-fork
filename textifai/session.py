@@ -3,11 +3,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from typing import TYPE_CHECKING
 
 from textifai.i18n import Translator, get_translator
 from textifai.language_resolution import OperationLanguageResolution, resolve_language_for_operation
 from textifai.language_policy import LanguagePolicy
 from textifai.runtime_config import RuntimeEnvironment
+
+if TYPE_CHECKING:
+    from textifai.conversation.state import ConversationState
 
 
 @dataclass
@@ -25,6 +29,7 @@ class TextifAISession:
     last_context_request: dict | None = None
     last_context_pack: dict | None = None
     last_context_debug: dict | None = None
+    conversation_state: "ConversationState | None" = None
     running: bool = True
 
     @property

@@ -35,6 +35,7 @@ class TextifAISessionTests(unittest.TestCase):
             self.assertEqual(session.mode, "normal")
             self.assertEqual(session.policy_name, "default")
             self.assertEqual(session.token_budget, 4000)
+            self.assertIsNone(session.conversation_state)
 
 
 if __name__ == "__main__":
