@@ -31,6 +31,7 @@ class TextifAIShellTests(unittest.TestCase):
             self.assertIn("Available commands", handle_command(session, "help"))
             self.assertIn("TextifAI session status", handle_command(session, "status"))
             self.assertIn("world", handle_command(session, "help"))
+            self.assertIn("bootstrap voice", handle_command(session, "help"))
             self.assertIn("Current mode: normal", handle_command(session, "mode"))
             self.assertIn("Mode set to advanced", handle_command(session, "mode advanced"))
             self.assertEqual(session.mode, "advanced")

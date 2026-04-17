@@ -4,6 +4,7 @@ from pathlib import Path
 import shlex
 
 from adapters.vault_adapter import VaultProjectAdapter
+from interactive.bootstrap_extract import extract_canon, extract_characters, extract_timeline, extract_voice
 from interactive.context_commands import (
     build_chapter_context,
     build_find_context,
@@ -15,6 +16,7 @@ from interactive.persistence_commands import consistency_check, decide, reject, 
 from interactive.query import parse_frontmatter, strip_frontmatter
 from textifai.prompts import ask_optional, ask_required
 from textifai.render import (
+    render_bootstrap_result,
     render_check_result,
     render_context_pack_summary,
     render_decision_result,
@@ -95,6 +97,9 @@ def dispatch_command(
             return "Reject needs a target. Use reject <type:slug|note_path>."
         return _run_state_change(session, "rejected", target)
 
+    if command == "bootstrap":
+        return _run_bootstrap(session, args, input_fn=input_fn)
+
     return None
 
 
@@ -156,6 +161,42 @@ def _run_state_change(session: TextifAISession, state: str, target: str) -> str:
     return render_persistence_result(result)
 
 
+def _run_bootstrap(session: TextifAISession, args: list[str], *, input_fn=input) -> str:
+    subtype = args[0].lower() if args else None
+    if subtype not in {None, "voice", "characters", "canon", "timeline"}:
+        return "Unsupported bootstrap command. Use bootstrap voice|characters|canon|timeline."
+
+    if subtype is None:
+        subtype = _select_bootstrap_subtype(input_fn)
+        if subtype is None:
+            return "Bootstrap cancelled."
+
+    chapter_ids, chapter_from, chapter_to = _collect_bootstrap_chapter_selection(args[1:], input_fn=input_fn)
+
+    kwargs = {
+        "chapter_ids": chapter_ids,
+        "chapter_from": chapter_from,
+        "chapter_to": chapter_to,
+    }
+    vault_root = str(session.vault_path)
+
+    if subtype == "voice":
+        result = extract_voice(vault_root, **kwargs)
+    elif subtype == "characters":
+        result = extract_characters(vault_root, **kwargs)
+    elif subtype == "canon":
+        result = extract_canon(vault_root, **kwargs)
+    else:
+        result = extract_timeline(vault_root, **kwargs)
+
+    session.last_result = {
+        "type": "bootstrap_result",
+        "bootstrap_type": subtype,
+        "results": result if isinstance(result, list) else [result],
+    }
+    return render_bootstrap_result(subtype, result)
+
+
 def _artifact_payload_from_target(session: TextifAISession, target: str) -> dict | None:
     resolved = _resolve_note_target(session, target)
     if resolved is None:
@@ -178,6 +219,53 @@ def _artifact_payload_from_target(session: TextifAISession, target: str) -> dict
         },
     }
     return validate_artifact_payload(payload)
+
+
+def _select_bootstrap_subtype(input_fn=input) -> str | None:
+    choice = ask_optional(
+        input_fn,
+        "Bootstrap type [voice|characters|canon|timeline] or `cancel`: ",
+    )
+    if choice is None:
+        return None
+    normalized = choice.strip().lower()
+    if normalized in {"cancel", "abort", "exit", "quit"}:
+        return None
+    if normalized in {"voice", "characters", "canon", "timeline"}:
+        return normalized
+    return None
+
+
+def _collect_bootstrap_chapter_selection(args: list[str], *, input_fn=input) -> tuple[list[str] | None, int | None, int | None]:
+    if args:
+        chapter_ids = _parse_chapter_ids(",".join(args))
+        return (chapter_ids or None, None, None)
+
+    chapter_ids_raw = ask_optional(input_fn, "Chapter ids (comma-separated, optional): ")
+    chapter_ids = _parse_chapter_ids(chapter_ids_raw)
+    if chapter_ids:
+        return (chapter_ids, None, None)
+
+    chapter_from_raw = ask_optional(input_fn, "Chapter from (optional): ")
+    chapter_to_raw = ask_optional(input_fn, "Chapter to (optional): ")
+    chapter_from = _parse_optional_int(chapter_from_raw)
+    chapter_to = _parse_optional_int(chapter_to_raw)
+    return (None, chapter_from, chapter_to)
+
+
+def _parse_chapter_ids(raw: str | None) -> list[str]:
+    if not raw:
+        return []
+    return [item.strip() for item in raw.split(",") if item.strip()]
+
+
+def _parse_optional_int(raw: str | None) -> int | None:
+    if not raw:
+        return None
+    try:
+        return int(raw)
+    except ValueError:
+        return None
 
 
 def _resolve_note_target(session: TextifAISession, target: str) -> dict | None:

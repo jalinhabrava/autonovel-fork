@@ -22,6 +22,11 @@ def render_help() -> str:
             "- decide",
             "- validate <type:slug|note_path>",
             "- reject <type:slug|note_path>",
+            "- bootstrap",
+            "- bootstrap voice",
+            "- bootstrap characters",
+            "- bootstrap canon",
+            "- bootstrap timeline",
             "- mode",
             "- mode normal",
             "- mode advanced",
@@ -119,6 +124,29 @@ def render_persistence_result(result: dict) -> str:
             f"- path: {result.get('path', 'n/a')}",
         ]
     )
+
+
+def render_bootstrap_result(bootstrap_type: str, result) -> str:
+    items = result if isinstance(result, list) else [result]
+    written = [item for item in items if item.get("status") == "written"]
+    blocked = [item for item in items if item.get("status") == "blocked"]
+    skipped = [item for item in items if item.get("status") == "skipped"]
+    lines = [
+        "TextifAI bootstrap result",
+        f"- type: {bootstrap_type}",
+        f"- total_results: {len(items)}",
+        f"- written: {len(written)}",
+        f"- blocked: {len(blocked)}",
+        f"- skipped: {len(skipped)}",
+    ]
+    if bootstrap_type == "canon":
+        lines.append("- note: canon bootstrap creates extracted proposals, not validated canon.")
+    if bootstrap_type == "timeline":
+        lines.append("- note: timeline bootstrap is currently stored as provisional lore notes.")
+    highlights = [item.get("target_id") for item in items[:3] if item.get("target_id")]
+    if highlights:
+        lines.append(f"- highlights: {', '.join(highlights)}")
+    return "\n".join(lines)
 
 
 def _entry_highlights(pack: dict) -> list[str]:
