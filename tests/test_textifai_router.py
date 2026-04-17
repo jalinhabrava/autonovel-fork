@@ -42,6 +42,7 @@ class TextifAIRouterTests(unittest.TestCase):
             response = dispatch_command(self.session, "find hidden door")
         find_mock.assert_called_once()
         self.assertIn("intent", response)
+        self.assertEqual(self.session.last_context_request["intent"], "context_search")
 
     def test_scene_and_chapter_prompt_for_missing_ids(self):
         prompts = iter(["scene_054_b", "ch_12"])
@@ -87,6 +88,7 @@ class TextifAIRouterTests(unittest.TestCase):
             response = dispatch_command(self.session, "validate decision:magic_costs")
         validate_mock.assert_called_once()
         self.assertIn("persistence result", response.lower())
+        self.assertIn("next_step", response)
 
         with patch(
             "textifai.router.reject",

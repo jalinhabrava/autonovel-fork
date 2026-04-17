@@ -28,7 +28,7 @@ class TextifAIShellTests(unittest.TestCase):
             )
             session = create_session(load_runtime_environment(base_dir))
 
-            self.assertIn("Available commands", handle_command(session, "help"))
+            self.assertIn("TextifAI shell help", handle_command(session, "help"))
             self.assertIn("TextifAI session status", handle_command(session, "status"))
             self.assertIn("world", handle_command(session, "help"))
             self.assertIn("bootstrap voice", handle_command(session, "help"))
@@ -66,6 +66,7 @@ class TextifAIShellTests(unittest.TestCase):
             self.assertEqual(code, 0)
             joined = "\n".join(outputs)
             self.assertIn("TextifAI terminal runtime", joined)
+            self.assertIn("Getting started: try `world`", joined)
             self.assertIn("TextifAI session status", joined)
             self.assertIn("Mode set to advanced", joined)
 
@@ -94,6 +95,26 @@ class TextifAIShellTests(unittest.TestCase):
 
             router_mock.assert_called_once()
             self.assertIn("context result", response.lower())
+
+    def test_unknown_command_returns_guidance(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base_dir = Path(tmp)
+            vault_root = base_dir / "Vault"
+            bootstrap_vault(vault_root, title="Test Project")
+            (base_dir / ".env").write_text(
+                "\n".join(
+                    [
+                        "AUTONOVEL_PROJECT_BACKEND=vault",
+                        f"AUTONOVEL_VAULT_ROOT={vault_root}",
+                        "AUTONOVEL_TEXT_PROVIDER=ollama",
+                    ]
+                )
+                + "\n"
+            )
+            session = create_session(load_runtime_environment(base_dir))
+            response = handle_command(session, "nonsense")
+            self.assertIn("does not recognize", response)
+            self.assertIn("help", response)
 
 
 if __name__ == "__main__":

@@ -239,7 +239,7 @@ def _run_policy(session: TextifAISession, args: list[str]) -> str:
     if candidate not in AVAILABLE_POLICIES:
         return render_policy_info(session.policy_name, AVAILABLE_POLICIES)
     session.policy_name = candidate
-    return f"Policy set to {candidate}."
+    return f"Policy set to {candidate}.\n- note: future context requests in this session will use it."
 
 
 def _run_budget(session: TextifAISession, args: list[str]) -> str:
@@ -252,7 +252,7 @@ def _run_budget(session: TextifAISession, args: list[str]) -> str:
     if budget <= 0:
         return "Budget must be a positive integer."
     session.token_budget = budget
-    return f"Token budget set to {budget}."
+    return f"Token budget set to {budget}.\n- note: future context requests in this session will use it."
 
 
 def _run_request_view(session: TextifAISession) -> str:

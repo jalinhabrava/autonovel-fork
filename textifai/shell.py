@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from textifai.render import render_banner, render_help, render_mode, render_status
+from textifai.render import render_banner, render_first_use_hint, render_help, render_mode, render_status, render_unknown_command
 from textifai.router import dispatch_command
 from textifai.session import TextifAISession
 
@@ -12,6 +12,9 @@ def run_shell(
     output_fn=print,
 ) -> int:
     output_fn(render_banner())
+    first_use_hint = render_first_use_hint(session)
+    if first_use_hint:
+        output_fn(first_use_hint)
     while session.running:
         raw = input_fn("textifai> ").strip()
         if not raw:
@@ -34,11 +37,11 @@ def handle_command(session: TextifAISession, raw: str, *, input_fn=input) -> str
         return "Leaving TextifAI."
     if raw == "mode normal":
         session.mode = "normal"
-        return "Mode set to normal."
+        return "Mode set to normal.\n- hint: advanced inspection commands are now hidden behind `mode advanced`."
     if raw == "mode advanced":
         session.mode = "advanced"
-        return "Mode set to advanced."
+        return "Mode set to advanced.\n- hint: try `request`, `pack`, or `context-debug` after loading context."
     routed = dispatch_command(session, raw, input_fn=input_fn)
     if routed is not None:
         return routed
-    return "Unknown command. Type `help`."
+    return render_unknown_command(raw)

@@ -345,6 +345,64 @@ textifai setup
 textifai doctor
 ```
 
+## Terminal Quick Start
+
+The terminal runtime is the recommended product entrypoint today.
+
+Typical first-use flow:
+
+```bash
+textifai
+```
+
+If the environment is not ready yet, TextifAI will guide you through setup.
+Once you are inside the shell, a practical order is:
+
+```text
+world
+find Sera
+scene scene_054_b
+check decision:magic_costs
+bootstrap canon
+mode advanced
+request
+pack
+context-debug
+```
+
+Normal mode is for everyday use:
+
+- load context
+- run checks
+- validate or reject notes
+- launch bootstrap flows
+
+Advanced mode is for inspection:
+
+- inspect the current request
+- inspect the current pack
+- inspect context debug output
+- switch policy or budget for the current session
+
+Useful shell commands:
+
+- `help`
+- `status`
+- `mode normal`
+- `mode advanced`
+- `world`
+- `find <query>`
+- `scene <scene_id>`
+- `chapter <chapter_id>`
+- `check <type:slug|note_path>`
+- `decide`
+- `validate <type:slug|note_path>`
+- `reject <type:slug|note_path>`
+- `bootstrap`
+- `request`
+- `pack`
+- `context-debug`
+
 ## Main Commands
 
 Pipeline:

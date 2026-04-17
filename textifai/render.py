@@ -8,25 +8,40 @@ def render_banner() -> str:
     return f"{PRODUCT_NAME} terminal runtime\nType `help` to see available commands."
 
 
+def render_first_use_hint(session: TextifAISession) -> str:
+    if session.last_result is not None:
+        return ""
+    return (
+        "Getting started: try `world`, `find <query>`, or `bootstrap`.\n"
+        "When you want to inspect context internals, switch to `mode advanced`."
+    )
+
+
 def render_help() -> str:
     return "\n".join(
         [
-            "Available commands:",
-            "- help",
-            "- status",
+            "TextifAI shell help",
+            "",
+            "Getting started:",
             "- world",
             "- find <query>",
             "- scene <scene_id>",
             "- chapter <chapter_id>",
+            "",
+            "Review and decisions:",
             "- check <type:slug|note_path>",
             "- decide",
             "- validate <type:slug|note_path>",
             "- reject <type:slug|note_path>",
+            "",
+            "Bootstrap:",
             "- bootstrap",
             "- bootstrap voice",
             "- bootstrap characters",
             "- bootstrap canon",
             "- bootstrap timeline",
+            "",
+            "Advanced inspection:",
             "- context-debug",
             "- policy",
             "- policy <name>",
@@ -34,18 +49,31 @@ def render_help() -> str:
             "- budget <int>",
             "- request",
             "- pack",
+            "",
+            "Shell:",
+            "- help",
+            "- status",
             "- mode",
             "- mode normal",
             "- mode advanced",
             "- exit",
             "- quit",
             "",
-            "This TextifAI shell supports the first guided domain commands.",
+            "Examples:",
+            "- find Sera",
+            "- scene scene_054_b",
+            "- check decision:magic_costs",
+            "- bootstrap canon",
         ]
     )
 
 
 def render_status(session: TextifAISession) -> str:
+    next_step = "Try `world`, `find <query>`, or `bootstrap` to start working."
+    if session.last_context_pack is not None:
+        next_step = "You already have context loaded. Try `pack`, `request`, or `check`."
+    if session.mode == "advanced":
+        next_step = "Advanced mode is active. You can inspect with `context-debug`, `request`, and `pack`."
     return "\n".join(
         [
             "TextifAI session status",
@@ -60,12 +88,14 @@ def render_status(session: TextifAISession) -> str:
             f"- last_context_request: {'present' if session.last_context_request is not None else 'empty'}",
             f"- last_context_pack: {'present' if session.last_context_pack is not None else 'empty'}",
             f"- last_context_debug: {'present' if session.last_context_debug is not None else 'empty'}",
+            f"- next_step: {next_step}",
         ]
     )
 
 
 def render_mode(session: TextifAISession) -> str:
-    return f"Current mode: {session.mode}"
+    hint = "Use `mode advanced` to inspect requests and packs." if session.mode == "normal" else "Advanced inspection commands are available."
+    return f"Current mode: {session.mode}\n- hint: {hint}"
 
 
 def render_context_pack_summary(pack: dict) -> str:
@@ -120,6 +150,7 @@ def render_decision_result(result: dict) -> str:
             f"- state: {result.get('state')}",
             f"- target: {result.get('target_type')}:{result.get('target_id')}",
             f"- path: {result.get('path', 'n/a')}",
+            "- next_step: review with `check <type:slug>` or continue writing.",
         ]
     )
 
@@ -131,6 +162,7 @@ def render_persistence_result(result: dict) -> str:
             f"- state: {result.get('state')}",
             f"- target: {result.get('target_type')}:{result.get('target_id')}",
             f"- path: {result.get('path', 'n/a')}",
+            "- next_step: use `check`, `request`, or `pack` if you want to inspect related context.",
         ]
     )
 
@@ -169,7 +201,7 @@ def render_policy_info(active: str, available: list[str]) -> str:
 
 
 def render_budget_info(budget: int) -> str:
-    return f"Current token budget: {budget}"
+    return f"Current token budget: {budget}\n- note: this affects future context requests in the current session."
 
 
 def render_request_summary(request: dict) -> str:
@@ -227,6 +259,15 @@ def render_context_debug_summary(debug: dict) -> str:
             f"- candidate: {candidate.get('id', 'unknown')} | section={candidate.get('final_section', 'n/a')} | score={score.get('total', 'n/a')}"
         )
     return "\n".join(lines)
+
+
+def render_unknown_command(raw: str) -> str:
+    return "\n".join(
+        [
+            f"TextifAI does not recognize `{raw}`.",
+            "Try `help` to see commands, or start with `world`, `find <query>`, or `bootstrap`.",
+        ]
+    )
 
 
 def _entry_highlights(pack: dict) -> list[str]:
