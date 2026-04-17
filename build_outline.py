@@ -4,42 +4,32 @@ Rebuild outline.md from the actual chapters.
 Reads each chapter, calls the LLM for a structured summary,
 and assembles into an outline that reflects the novel as-written.
 """
-import os
 import sys
 import json
 import re
 from pathlib import Path
 from dotenv import load_dotenv
+from providers.text_provider import TextGenerationRequest, TextMessage, get_text_provider
+from stores.project_store import ProjectStore
 
 BASE_DIR = Path(__file__).parent
 load_dotenv(BASE_DIR / ".env")
-
-JUDGE_MODEL = os.environ.get("AUTONOVEL_JUDGE_MODEL", "claude-sonnet-4-6")
-API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
-API_BASE = os.environ.get("AUTONOVEL_API_BASE_URL", "https://api.anthropic.com")
-CHAPTERS_DIR = BASE_DIR / "chapters"
+STORE = ProjectStore(BASE_DIR)
+CHAPTERS_DIR = STORE.chapters_dir
+TEXT_PROVIDER = get_text_provider("build_outline")
 
 def call_model(prompt, max_tokens=1500):
-    import httpx
-    headers = {
-        "x-api-key": API_KEY,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-    }
-    payload = {
-        "model": JUDGE_MODEL,
-        "max_tokens": max_tokens,
-        "temperature": 0.1,
-        "system": (
+    request = TextGenerationRequest(
+        task="build_outline",
+        max_tokens=max_tokens,
+        system=(
             "You produce structured outline entries for novel chapters. "
             "Be precise about what HAPPENS, what CHANGES, and what threads are planted/harvested. "
             "Output valid JSON only."
         ),
-        "messages": [{"role": "user", "content": prompt}],
-    }
-    resp = httpx.post(f"{API_BASE}/v1/messages", headers=headers, json=payload, timeout=120)
-    resp.raise_for_status()
-    text = resp.json()["content"][0]["text"]
+        messages=[TextMessage(role="user", content=prompt)],
+    )
+    text = TEXT_PROVIDER.generate(request).text
     # Extract JSON from response
     text = text.strip()
     if text.startswith("```"):
@@ -49,7 +39,7 @@ def call_model(prompt, max_tokens=1500):
 
 def main():
     # Load supporting docs for context
-    characters = (BASE_DIR / "characters.md").read_text()[:3000]
+    characters = STORE.read_characters()[:3000]
     
     entries = []
     
@@ -87,7 +77,7 @@ JSON only, no other text."""
         print(f"  {ch:2d}. {title_line} ({wc}w)")
     
     # Load existing outline header info
-    old_outline = (BASE_DIR / "outline.md").read_text()
+    old_outline = STORE.read_outline()
     
     # Build new outline
     lines = []
@@ -161,7 +151,7 @@ JSON only, no other text."""
     lines.append("*Outline rebuilt from actual chapters, Cycle 5.*")
     
     out = '\n'.join(lines)
-    (BASE_DIR / "outline.md").write_text(out)
+    STORE.write_text("outline.md", out)
     print(f"\nSaved outline.md ({len(out.split())} words)")
 
 if __name__ == "__main__":

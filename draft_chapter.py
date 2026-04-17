@@ -3,33 +3,23 @@
 Draft a single chapter using the writer model.
 Usage: python draft_chapter.py 1
 """
-import os
 import re
 import sys
 from pathlib import Path
 from dotenv import load_dotenv
+from providers.text_provider import TextGenerationRequest, TextMessage, get_text_provider
+from stores.project_store import ProjectStore
 
 BASE_DIR = Path(__file__).parent
 load_dotenv(BASE_DIR / ".env")
-
-WRITER_MODEL = os.environ.get("AUTONOVEL_WRITER_MODEL", "claude-sonnet-4-6")
-API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
-API_BASE = os.environ.get("AUTONOVEL_API_BASE_URL", "https://api.anthropic.com")
-CHAPTERS_DIR = BASE_DIR / "chapters"
+STORE = ProjectStore(BASE_DIR)
+TEXT_PROVIDER = get_text_provider("draft_chapter")
 
 def call_writer(prompt, max_tokens=16000):
-    import httpx
-    headers = {
-        "x-api-key": API_KEY,
-        "anthropic-version": "2023-06-01",
-        "anthropic-beta": "context-1m-2025-08-07",
-        "content-type": "application/json",
-    }
-    payload = {
-        "model": WRITER_MODEL,
-        "max_tokens": max_tokens,
-        "temperature": 0.8,
-        "system": (
+    request = TextGenerationRequest(
+        task="draft_chapter",
+        max_tokens=max_tokens,
+        system=(
             "You are a literary fiction writer drafting a fantasy novel chapter. "
             "You write in third-person limited past tense, locked to one POV character. "
             "You follow the voice definition exactly. You hit every beat in the outline. "
@@ -38,11 +28,9 @@ def call_writer(prompt, max_tokens=16000):
             "experience. You vary sentence length. You trust the reader. "
             "You write the FULL chapter -- do not truncate, summarize, or skip ahead."
         ),
-        "messages": [{"role": "user", "content": prompt}],
-    }
-    resp = httpx.post(f"{API_BASE}/v1/messages", headers=headers, json=payload, timeout=600)
-    resp.raise_for_status()
-    return resp.json()["content"][0]["text"]
+        messages=[TextMessage(role="user", content=prompt)],
+    )
+    return TEXT_PROVIDER.generate(request).text
 
 def load_file(path):
     try:
@@ -66,27 +54,28 @@ def extract_next_chapter_outline(outline_text, chapter_num):
 
 def main():
     chapter_num = int(sys.argv[1])
+    title = STORE.get_title()
     
     # Load all context
-    voice = load_file(BASE_DIR / "voice.md")
-    world = load_file(BASE_DIR / "world.md")
-    characters = load_file(BASE_DIR / "characters.md")
-    outline = load_file(BASE_DIR / "outline.md")
-    canon = load_file(BASE_DIR / "canon.md")
+    voice = STORE.read_voice()
+    world = STORE.read_world()
+    characters = STORE.read_characters()
+    outline = STORE.read_outline()
+    canon = STORE.read_canon()
     
     # Chapter-specific context
     chapter_outline = extract_chapter_outline(outline, chapter_num)
     next_chapter = extract_next_chapter_outline(outline, chapter_num)
     
     # Previous chapter (if exists)
-    prev_path = CHAPTERS_DIR / f"ch_{chapter_num - 1:02d}.md"
+    prev_path = STORE.chapter_path(chapter_num - 1)
     if prev_path.exists():
         prev_text = prev_path.read_text()
         prev_tail = prev_text[-2000:] if len(prev_text) > 2000 else prev_text
     else:
         prev_tail = "(first chapter -- no previous)"
     
-    prompt = f"""Write Chapter {chapter_num} of "The Second Son of the House of Bells."
+    prompt = f"""Write Chapter {chapter_num} of "{title}".
 
 VOICE DEFINITION (follow this exactly):
 {voice}
@@ -108,16 +97,16 @@ CHARACTER REGISTRY (reference for speech patterns and behavior):
 
 WRITING INSTRUCTIONS:
 1. Write the COMPLETE chapter. Target ~3,200 words. Do not truncate or summarize.
-2. Third-person limited, past tense, locked to Cass's POV.
+2. Third-person limited, past tense, locked to the POV character indicated by the outline.
 3. Hit ALL numbered beats from the outline in order.
 4. Plant ALL foreshadowing elements listed under "Plants."
-5. Show sensory detail: what Cass hears, smells, feels physically.
-6. The under-note causes specific physical pain (needle behind left eye, not vague discomfort).
+5. Show sensory detail grounded in the POV character's body and perception.
+6. When the chapter involves magic, gifts, wounds, or uncanny perception, render the cost as specific physical experience, not vague discomfort.
 7. Dialogue follows the speech patterns defined in characters.md.
 8. No banned words from voice.md Part 1 guardrails.
 9. No AI fiction tells: no "a sense of," no "couldn't help but feel," no "eyes widened."
 10. Vary sentence length. Short sentences for impact. Longer ones to build.
-11. Metaphors from Cass's experience: sound, bronze, craft, the body's response to pitch.
+11. Metaphors should arise from the POV character's lived experience, trade, obsessions, and body.
 12. Trust the reader. Don't explain what scenes mean. Let them land.
 13. Start the chapter in scene, not with exposition. End on a moment, not a summary.
 
@@ -137,9 +126,7 @@ PATTERNS TO AVOID (these have been flagged in previous chapters):
 20. VARY paragraph length deliberately. Never more than 3 consecutive
     paragraphs of similar length. Include at least one 1-2 sentence
     paragraph and one 6+ sentence paragraph.
-21. END the chapter differently from previous chapters. Do NOT end with
-    Cass outside listening to his father work. Find the ending that
-    belongs to THIS chapter specifically.
+21. END the chapter differently from previous chapters. Avoid defaulting to the same closing image or emotional cadence. Find the ending that belongs to THIS chapter specifically.
 22. INCLUDE at least one moment that surprises -- a character saying
     the wrong thing, an emotional beat arriving early or late, a detail
     that doesn't fit the expected pattern. Predictable excellence is
@@ -158,8 +145,7 @@ Write the chapter now. Full text, beginning to end.
     result = call_writer(prompt)
     
     # Save
-    out_path = CHAPTERS_DIR / f"ch_{chapter_num:02d}.md"
-    out_path.write_text(result)
+    out_path = STORE.write_chapter(chapter_num, result)
     print(f"Saved to {out_path}", file=sys.stderr)
     print(f"Word count: {len(result.split())}", file=sys.stderr)
     print(result)

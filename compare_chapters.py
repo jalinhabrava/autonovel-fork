@@ -7,45 +7,35 @@ Produces a true rank order from round-robin tournament.
 Usage: python compare_chapters.py          # full tournament
        python compare_chapters.py 1 10     # single matchup
 """
-import os
 import sys
 import json
 import re
 import random
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 from dotenv import load_dotenv
+from providers.text_provider import TextGenerationRequest, TextMessage, get_text_provider
+from stores.project_store import ProjectStore
 
 BASE_DIR = Path(__file__).parent
 load_dotenv(BASE_DIR / ".env")
 
-JUDGE_MODEL = os.environ.get("AUTONOVEL_JUDGE_MODEL", "claude-opus-4-6")
-API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
-API_BASE = os.environ.get("AUTONOVEL_API_BASE_URL", "https://api.anthropic.com")
-CHAPTERS_DIR = BASE_DIR / "chapters"
+TEXT_PROVIDER = get_text_provider("compare_chapters")
+STORE = ProjectStore(BASE_DIR)
 
 def call_judge(prompt, max_tokens=4000):
-    import httpx
-    headers = {
-        "x-api-key": API_KEY,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-    }
-    payload = {
-        "model": JUDGE_MODEL,
-        "max_tokens": max_tokens,
-        "temperature": 0.2,
-        "system": (
+    request = TextGenerationRequest(
+        task="compare_chapters",
+        max_tokens=max_tokens,
+        system=(
             "You are a literary editor comparing two chapters of the same novel. "
             "You pick the better one. You are not allowed to call it a tie. "
             "You quote specific passages to justify your choice. "
             "Respond with valid JSON only."
         ),
-        "messages": [{"role": "user", "content": prompt}],
-    }
-    resp = httpx.post(f"{API_BASE}/v1/messages", headers=headers, json=payload, timeout=300)
-    resp.raise_for_status()
-    return resp.json()["content"][0]["text"]
+        messages=[TextMessage(role="user", content=prompt)],
+    )
+    return TEXT_PROVIDER.generate(request).text
 
 def parse_json(text):
     text = text.strip()
@@ -107,8 +97,8 @@ Respond with JSON:
 """
 
 def compare(ch_a, ch_b):
-    text_a = (CHAPTERS_DIR / f"ch_{ch_a:02d}.md").read_text()
-    text_b = (CHAPTERS_DIR / f"ch_{ch_b:02d}.md").read_text()
+    text_a = STORE.read_chapter(ch_a)
+    text_b = STORE.read_chapter(ch_b)
     
     # Truncate to ~3000 words each to fit context
     words_a = text_a.split()
@@ -208,7 +198,7 @@ def main():
             "matchups": matchups,
             "timestamp": datetime.now().isoformat()
         }
-        out_path = BASE_DIR / "edit_logs" / "tournament_results.json"
+        out_path = STORE.edit_log_path("tournament_results.json")
         with open(out_path, "w") as f:
             json.dump(results, f, indent=2)
         print(f"\nSaved to {out_path}")

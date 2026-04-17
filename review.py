@@ -11,7 +11,6 @@ Usage:
   python review.py --output reviews.md  # Also save human-readable copy
   python review.py --parse            # Parse last review into actionable items
 """
-import os
 import sys
 import json
 import re
@@ -19,17 +18,21 @@ import argparse
 from pathlib import Path
 from datetime import datetime
 from dotenv import load_dotenv
+from providers.text_provider import (
+    TextGenerationRequest,
+    TextMessage,
+    get_text_provider,
+    get_text_provider_config_error,
+)
+from stores.project_store import ProjectStore
 
 BASE_DIR = Path(__file__).parent
 load_dotenv(BASE_DIR / ".env", override=True)
+STORE = ProjectStore(BASE_DIR)
+TEXT_PROVIDER = get_text_provider("review_full")
 
-# Use Opus for reviews — it's the best at literary analysis
-REVIEW_MODEL = os.environ.get("AUTONOVEL_REVIEW_MODEL", "claude-opus-4-6")
-API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
-API_BASE = os.environ.get("AUTONOVEL_API_BASE_URL", "https://api.anthropic.com")
-
-CHAPTERS_DIR = BASE_DIR / "chapters"
-LOGS_DIR = BASE_DIR / "edit_logs"
+CHAPTERS_DIR = STORE.chapters_dir
+LOGS_DIR = STORE.edit_logs_dir
 
 REVIEW_PROMPT = """Read the below novel, "{title}". Review it first as a literary critic (like a newspaper book review) and then as a professor of fiction. In the later review, give specific, actionable suggestions for any defects you find. Be fair but honest. You don't *have* to find defects.
 
@@ -38,46 +41,23 @@ REVIEW_PROMPT = """Read the below novel, "{title}". Review it first as a literar
 
 def call_opus(prompt, max_tokens=8000):
     """Call Opus with the full manuscript."""
-    import httpx
-    headers = {
-        "x-api-key": API_KEY,
-        "anthropic-version": "2023-06-01",
-        "anthropic-beta": "context-1m-2025-08-07",
-        "content-type": "application/json",
-    }
-    payload = {
-        "model": REVIEW_MODEL,
-        "max_tokens": max_tokens,
-        "temperature": 0.3,
-        "messages": [{"role": "user", "content": prompt}],
-    }
-    print(f"Sending to {REVIEW_MODEL} ({len(prompt):,} chars)...", file=sys.stderr)
-    resp = httpx.post(
-        f"{API_BASE}/v1/messages",
-        headers=headers, json=payload, timeout=600,
+    print(f"Sending review request ({len(prompt):,} chars)...", file=sys.stderr)
+    request = TextGenerationRequest(
+        task="review_full",
+        max_tokens=max_tokens,
+        messages=[TextMessage(role="user", content=prompt)],
     )
-    resp.raise_for_status()
-    return resp.json()["content"][0]["text"]
+    return TEXT_PROVIDER.generate(request).text
 
 
 def get_title():
     """Extract novel title from first chapter or outline."""
-    outline = BASE_DIR / "outline.md"
-    if outline.exists():
-        first_line = outline.read_text().split("\n")[0]
-        title = first_line.lstrip("# ").strip()
-        if title:
-            return title
-    ch1 = CHAPTERS_DIR / "ch_01.md"
-    if ch1.exists():
-        first_line = ch1.read_text().split("\n")[0]
-        return first_line.lstrip("# ").strip()
-    return "Untitled Novel"
+    return STORE.get_title()
 
 
 def build_manuscript():
     """Concatenate all chapters into a single text."""
-    chapters = sorted(CHAPTERS_DIR.glob("ch_*.md"))
+    chapters = STORE.list_chapter_paths()
     if not chapters:
         print("ERROR: No chapters found.", file=sys.stderr)
         sys.exit(1)
@@ -279,8 +259,9 @@ def main():
     
     args = parser.parse_args()
     
-    if not API_KEY:
-        print("ERROR: ANTHROPIC_API_KEY not set in .env", file=sys.stderr)
+    config_error = get_text_provider_config_error("review_full")
+    if config_error:
+        print(f"ERROR: {config_error}", file=sys.stderr)
         sys.exit(1)
     
     if args.parse:

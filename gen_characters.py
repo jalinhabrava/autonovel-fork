@@ -3,47 +3,37 @@
 One-shot characters.md generator for foundation phase.
 Reads seed.txt + voice.md + world.md + CRAFT.md, calls writer model.
 """
-import os
 import sys
 from pathlib import Path
 from dotenv import load_dotenv
+from providers.text_provider import TextGenerationRequest, TextMessage, get_text_provider
+from stores.project_store import ProjectStore
 
 BASE_DIR = Path(__file__).parent
 load_dotenv(BASE_DIR / ".env")
-
-WRITER_MODEL = os.environ.get("AUTONOVEL_WRITER_MODEL", "claude-sonnet-4-6")
-API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
-API_BASE = os.environ.get("AUTONOVEL_API_BASE_URL", "https://api.anthropic.com")
+STORE = ProjectStore(BASE_DIR)
+TEXT_PROVIDER = get_text_provider("gen_characters")
 
 def call_writer(prompt, max_tokens=16000):
-    import httpx
-    headers = {
-        "x-api-key": API_KEY,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-    }
-    payload = {
-        "model": WRITER_MODEL,
-        "max_tokens": max_tokens,
-        "temperature": 0.7,
-        "system": (
+    request = TextGenerationRequest(
+        task="gen_characters",
+        max_tokens=max_tokens,
+        system=(
             "You are a character designer for literary fiction with deep knowledge of "
             "wound/want/need/lie frameworks, Sanderson's three sliders, and dialogue "
             "distinctiveness. You create characters who feel like real people with "
             "contradictions, secrets, and speech patterns you can hear. "
             "You never use AI slop words. You write in clean, direct prose."
         ),
-        "messages": [{"role": "user", "content": prompt}],
-    }
-    resp = httpx.post(f"{API_BASE}/v1/messages", headers=headers, json=payload, timeout=300)
-    resp.raise_for_status()
-    return resp.json()["content"][0]["text"]
+        messages=[TextMessage(role="user", content=prompt)],
+    )
+    return TEXT_PROVIDER.generate(request).text
 
-seed = (BASE_DIR / "seed.txt").read_text()
-world = (BASE_DIR / "world.md").read_text()
+seed = STORE.read_seed()
+world = STORE.read_world()
 
 # Voice Part 2 only
-voice = (BASE_DIR / "voice.md").read_text()
+voice = STORE.read_voice()
 voice_lines = voice.split('\n')
 part2_start = next(i for i, l in enumerate(voice_lines) if 'Part 2' in l)
 voice_part2 = '\n'.join(voice_lines[part2_start:])
@@ -85,7 +75,7 @@ Test: Remove dialogue tags. Can you tell who's speaking?
 
 BUILD THE REGISTRY WITH AT LEAST THESE CHARACTERS:
 
-1. **Cass Bellwright** (protagonist, POV character)
+1. **The protagonist / primary POV character**
    - Full wound/want/need/lie chain
    - Three sliders with justification
    - Arc type (positive/negative/flat)
@@ -94,32 +84,32 @@ BUILD THE REGISTRY WITH AT LEAST THESE CHARACTERS:
    - At least 2 secrets
    - Key relationships mapped
 
-2. **Eddan Bellwright** (father)
-   - Same depth as Cass
-   - His relationship to the sealed journals, the shaking hands
-   - What he knows and what he's hiding
+2. **A core family member, mentor, or intimate tie**
+   - Same depth as the protagonist
+   - What this person knows and what they are hiding
+   - How their private history creates pressure on the present story
 
-3. **Perin Bellwright** (brother) 
-   - Even though he's absent for much of the story, he needs full depth
-   - What actually happened with the Corda contract
-   - His presence through absence
+3. **An absent or off-page character with major story gravity**
+   - Even if absent for much of the story, they need full depth
+   - What actually happened in the event or deal everyone circles around
+   - Their presence through absence
 
-4. **Maret Corda** (antagonist)
-   - Not a villain -- someone whose interests conflicts with Cass's
-   - Her own wound/want/need/lie (she should be understandable)
+4. **The primary antagonist or strongest counterforce**
+   - Not a villain by default -- someone whose interests conflict with the protagonist's
+   - Their own wound/want/need/lie (they should be understandable)
 
-5. **Rector Suvaine** (Academy Chancellor)
-   - The institutional antagonist -- the system personified
-   - She believes she's protecting Cantamura
+5. **An institutional power figure**
+   - The system personified
+   - They believe they are protecting something worth protecting
 
-6. **Torvald Hess** (Compact leader)
-   - The outsider perspective on the system
-   - What he represents thematically
+6. **An outsider, rival faction voice, or ideological challenger**
+   - The perspective that tests the story's dominant assumptions
+   - What they represent thematically
 
 7. **At least 1-2 additional characters** that the story needs
-   - A peer/friend for Cass at the Academy?
-   - Someone at the House of Corda who knows Perin?
-   - A Court Singer with divided loyalties?
+   - A peer, friend, confidant, or foil?
+   - Someone tied to the central conflict who knows more than they say?
+   - Someone with divided loyalties?
 
 FOR EACH CHARACTER INCLUDE:
 - Name, age, role
@@ -137,9 +127,9 @@ IMPORTANT:
 - Characters must INTERCONNECT. Their wants should conflict with each other.
 - Every secret should be something that would CHANGE the story if revealed.
 - Speech patterns must be distinct enough to pass the no-tags test.
-- Give Cass habits that come from his gift (the pain, the constant listening).
-- The father's shaking hands should connect to something specific.
-- Maret Corda should be as fully realized as Cass -- a worthy antagonist.
+- Give the protagonist habits that arise from their gift, wound, profession, or survival strategy.
+- If there is a parent/guardian figure, tie any recurring physical tell to something specific.
+- The antagonist should be as fully realized as the protagonist -- a worthy counterforce.
 - Target ~3000-4000 words. Dense character work, not padding.
 """
 

@@ -147,7 +147,8 @@ ART:
   landing/index.html     — Responsive landing page template
 
 CONFIG:
-  .env.example           — API keys (Anthropic, fal.ai, ElevenLabs)
+  .env.example           — Provider selection, API keys, local server settings
+  config/inference.json  — Central text-inference config by role and task
   pyproject.toml         — Python dependencies
 ```
 
@@ -193,18 +194,207 @@ loop continues until the reviewer's items are mostly qualified hedges rather tha
 
 ---
 
-## API Keys
+## Text Providers
 
-The pipeline uses three external services:
+Text generation is selected through `AUTONOVEL_TEXT_PROVIDER`.
+
+Supported values:
+
+| Value | Kind | Default base URL | Key required |
+|------|------|------------------|--------------|
+| `anthropic` | Hosted Anthropic Messages API | `https://api.anthropic.com` | Yes |
+| `openai` | Hosted OpenAI Chat Completions API | `https://api.openai.com/v1` | Yes |
+| `lmstudio` | Local LM Studio server via OpenAI-compatible API | `http://localhost:1234/v1` | No by default |
+| `ollama` | Local Ollama server via OpenAI-compatible API | `http://localhost:11434/v1` | No by default |
+| `anthropic_compatible` | Any Anthropic-compatible endpoint | configured by env | Usually |
+| `openai_compatible` | Any OpenAI-compatible endpoint | configured by env | Usually |
+
+The current provider layer lives in `providers/text_provider.py`. All migrated
+scripts call the same interface: `get_text_provider().generate(request)`.
+Task defaults live in `config/inference.json`, including role assignment,
+default provider, model env mapping, temperatures, token limits, retries, and
+timeouts.
+
+Important: this does not yet cover every text-generation script in the repo.
+Some legacy tools still call Anthropic-style endpoints directly and will need a
+later migration before the entire end-to-end pipeline can switch providers.
+The main remaining exceptions are art/image-side scripts, which are outside the
+scope of this text-inference phase.
+
+### Default behavior
+
+If you do nothing, the repo still behaves as before:
+
+```bash
+AUTONOVEL_TEXT_PROVIDER=anthropic
+ANTHROPIC_API_KEY=...
+AUTONOVEL_API_BASE_URL=https://api.anthropic.com
+```
+
+That keeps the current Anthropic-backed flow working for the scripts already
+moved onto the shared provider layer.
+
+### OpenAI
+
+```bash
+AUTONOVEL_TEXT_PROVIDER=openai
+OPENAI_API_KEY=...
+AUTONOVEL_OPENAI_API_BASE_URL=https://api.openai.com/v1
+AUTONOVEL_WRITER_MODEL=gpt-4.1
+AUTONOVEL_JUDGE_MODEL=gpt-4.1
+AUTONOVEL_REVIEW_MODEL=o4-mini
+```
+
+### LM Studio
+
+LM Studio can expose OpenAI-compatible endpoints on a local server. Point the
+repo at that server:
+
+```bash
+AUTONOVEL_TEXT_PROVIDER=lmstudio
+AUTONOVEL_LMSTUDIO_API_BASE_URL=http://localhost:1234/v1
+AUTONOVEL_LMSTUDIO_API_KEY=
+AUTONOVEL_WRITER_MODEL=openai/gpt-oss-20b
+AUTONOVEL_JUDGE_MODEL=openai/gpt-oss-20b
+AUTONOVEL_REVIEW_MODEL=openai/gpt-oss-20b
+```
+
+If you enable authentication in LM Studio, set `AUTONOVEL_LMSTUDIO_API_KEY`
+to that token.
+
+### Ollama
+
+Ollama can also expose OpenAI-compatible endpoints locally:
+
+```bash
+AUTONOVEL_TEXT_PROVIDER=ollama
+AUTONOVEL_OLLAMA_API_BASE_URL=http://localhost:11434/v1
+AUTONOVEL_OLLAMA_API_KEY=
+AUTONOVEL_WRITER_MODEL=llama3.2
+AUTONOVEL_JUDGE_MODEL=llama3.2
+AUTONOVEL_REVIEW_MODEL=llama3.2
+```
+
+You must have the model available locally before running the pipeline tools.
+
+### Add another online provider without code changes
+
+If a provider exposes an OpenAI-compatible API, use:
+
+```bash
+AUTONOVEL_TEXT_PROVIDER=openai_compatible
+AUTONOVEL_OPENAI_COMPATIBLE_API_BASE_URL=https://your-provider.example/v1
+AUTONOVEL_OPENAI_COMPATIBLE_API_KEY=...
+```
+
+If a provider exposes an Anthropic-compatible Messages API, use:
+
+```bash
+AUTONOVEL_TEXT_PROVIDER=anthropic_compatible
+AUTONOVEL_ANTHROPIC_COMPATIBLE_API_BASE_URL=https://your-provider.example
+AUTONOVEL_ANTHROPIC_COMPATIBLE_API_KEY=...
+```
+
+In both cases, keep using the same role-based model env vars:
+
+```bash
+AUTONOVEL_WRITER_MODEL=...
+AUTONOVEL_JUDGE_MODEL=...
+AUTONOVEL_REVIEW_MODEL=...
+```
+
+### Choose a provider per task
+
+The global env var sets the default:
+
+```bash
+AUTONOVEL_TEXT_PROVIDER=anthropic
+```
+
+If you want different tasks to use different providers, edit
+`config/inference.json` and set `tasks.<task>.provider`. Example:
+
+```json
+{
+  "tasks": {
+    "draft_chapter": {
+      "role": "writer",
+      "provider": "ollama"
+    },
+    "review_full": {
+      "role": "review",
+      "provider": "openai"
+    }
+  }
+}
+```
+
+That lets you draft locally, review online, and keep the pipeline scripts
+unchanged.
+
+### Add a provider in code
+
+Only add a new provider class when the remote API is not compatible with either
+OpenAI chat completions or Anthropic messages.
+
+1. Add a new adapter class in `providers/text_provider.py`.
+2. Keep the public contract the same: `TextProvider.generate(request)`.
+3. Map the provider name in `get_text_provider_name()`.
+4. Instantiate it in `get_text_provider()`.
+5. Add any provider-specific env vars to `.env.example`.
+6. If needed, assign it per task in `config/inference.json`.
+
+---
+
+## Vault Mode
+
+The core project store can now target either the classic workspace layout or an
+Obsidian vault.
+
+Environment selection:
+
+```bash
+AUTONOVEL_PROJECT_BACKEND=workspace
+```
+
+or:
+
+```bash
+AUTONOVEL_PROJECT_BACKEND=vault
+AUTONOVEL_VAULT_ROOT=/absolute/path/to/your/vault
+```
+
+Vault commands:
+
+```bash
+uv run python main.py init-vault --path /tmp/MyNovelVault --title "My Novel"
+uv run python main.py validate-vault --path /tmp/MyNovelVault
+uv run python main.py write-note --path /tmp/MyNovelVault --type character --slug cass --title "Cass" --status proposed --body "A difficult protagonist."
+uv run python main.py export-context --path /tmp/MyNovelVault --artifact all
+uv run python main.py import-existing-chapters --path /tmp/MyNovelVault --source-dir ./legacy_chapters
+uv run python main.py ingest-context --path /tmp/MyNovelVault --json ./digested_context.json
+```
+
+The official vault schema is documented in `docs/VAULT_SCHEMA.md`.
+
+The adapter layer stays storage-oriented. If you want semantic extraction from an
+existing manuscript, the intended path is an external Obsidian-facing CLI or
+interactive workflow that digests context first and then persists structured
+payloads through `ingest-context`.
+
+That keeps the pipeline and prompt-building code unchanged.
+
+## External Services
+
+The repo can also use non-text services:
 
 | Service | Key | Used for |
 |---------|-----|----------|
-| Anthropic | `ANTHROPIC_API_KEY` | Writing, evaluation, review (Sonnet + Opus) |
 | fal.ai | `FAL_KEY` | Cover art and ornament generation (Nano Banana 2) |
 | ElevenLabs | `ELEVENLABS_API_KEY` | Multi-voice audiobook generation |
 
-Copy `.env.example` to `.env` and fill in your keys. Only the Anthropic
-key is required for the core pipeline. Art and audiobook are optional.
+Copy `.env.example` to `.env` and fill in the settings you need. Art and
+audiobook remain optional.
 
 ---
 

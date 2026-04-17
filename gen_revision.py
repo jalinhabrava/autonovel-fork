@@ -3,62 +3,52 @@
 Revision chapter generator. Rewrites a chapter from a specific revision brief.
 Usage: python gen_revision.py <chapter_num> <brief_file>
 """
-import os
 import sys
 from pathlib import Path
 from dotenv import load_dotenv
+from providers.text_provider import TextGenerationRequest, TextMessage, get_text_provider
+from stores.project_store import ProjectStore
 
 BASE_DIR = Path(__file__).parent
 load_dotenv(BASE_DIR / ".env")
-
-WRITER_MODEL = os.environ.get("AUTONOVEL_WRITER_MODEL", "claude-sonnet-4-6")
-API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
-API_BASE = os.environ.get("AUTONOVEL_API_BASE_URL", "https://api.anthropic.com")
+STORE = ProjectStore(BASE_DIR)
+TEXT_PROVIDER = get_text_provider("gen_revision")
 
 def call_writer(prompt, max_tokens=16000):
-    import httpx
-    headers = {
-        "x-api-key": API_KEY,
-        "anthropic-version": "2023-06-01",
-        "anthropic-beta": "context-1m-2025-08-07",
-        "content-type": "application/json",
-    }
-    payload = {
-        "model": WRITER_MODEL,
-        "max_tokens": max_tokens,
-        "temperature": 0.8,
-        "system": (
+    request = TextGenerationRequest(
+        task="gen_revision",
+        max_tokens=max_tokens,
+        system=(
             "You are rewriting a fantasy novel chapter based on a specific revision brief. "
             "You follow the brief exactly. You preserve the voice, world, and characters "
             "from the existing draft while making the structural changes specified. "
             "You write the FULL chapter. Do not truncate or summarize."
         ),
-        "messages": [{"role": "user", "content": prompt}],
-    }
-    resp = httpx.post(f"{API_BASE}/v1/messages", headers=headers, json=payload, timeout=600)
-    resp.raise_for_status()
-    return resp.json()["content"][0]["text"]
+        messages=[TextMessage(role="user", content=prompt)],
+    )
+    return TEXT_PROVIDER.generate(request).text
 
 def main():
     ch_num = int(sys.argv[1])
     brief_file = sys.argv[2]
     
-    voice = (BASE_DIR / "voice.md").read_text()
-    characters = (BASE_DIR / "characters.md").read_text()
-    world = (BASE_DIR / "world.md").read_text()
+    voice = STORE.read_voice()
+    characters = STORE.read_characters()
+    world = STORE.read_world()
     brief = Path(brief_file).read_text()
+    title = STORE.get_title()
     
     # Load adjacent chapters for continuity
-    prev_path = BASE_DIR / "chapters" / f"ch_{ch_num - 1:02d}.md"
-    next_path = BASE_DIR / "chapters" / f"ch_{ch_num + 1:02d}.md"
+    prev_path = STORE.chapter_path(ch_num - 1)
+    next_path = STORE.chapter_path(ch_num + 1)
     prev_tail = prev_path.read_text()[-2000:] if prev_path.exists() else "(first chapter)"
     next_head = next_path.read_text()[:1500] if next_path.exists() else "(last chapter)"
     
     # Load old version if exists
-    old_path = BASE_DIR / "chapters" / f"ch_{ch_num:02d}.md"
+    old_path = STORE.chapter_path(ch_num)
     old_text = old_path.read_text() if old_path.exists() else "(no existing draft)"
     
-    prompt = f"""Rewrite Chapter {ch_num} of "The Second Son of the House of Bells."
+    prompt = f"""Rewrite Chapter {ch_num} of "{title}".
 
 REVISION BRIEF (follow this exactly):
 {brief}
@@ -98,8 +88,7 @@ Write the FULL revised chapter now."""
     print(f"Rewriting Chapter {ch_num}...", file=sys.stderr)
     result = call_writer(prompt)
     
-    out_path = BASE_DIR / "chapters" / f"ch_{ch_num:02d}.md"
-    out_path.write_text(result)
+    out_path = STORE.write_chapter(ch_num, result)
     print(f"Saved to {out_path}", file=sys.stderr)
     print(f"Word count: {len(result.split())}", file=sys.stderr)
 

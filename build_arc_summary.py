@@ -4,36 +4,26 @@ Build a condensed arc summary for full-novel evaluation.
 For each chapter: first 150 words, last 150 words, plus any dialogue.
 Gives the reader panel enough to evaluate the ARC without 72k tokens.
 """
-import os
 import re
 from pathlib import Path
 from dotenv import load_dotenv
+from providers.text_provider import TextGenerationRequest, TextMessage, get_text_provider
+from stores.project_store import ProjectStore
 
 BASE_DIR = Path(__file__).parent
 load_dotenv(BASE_DIR / ".env")
-
-WRITER_MODEL = os.environ.get("AUTONOVEL_WRITER_MODEL", "claude-sonnet-4-6")
-API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
-API_BASE = os.environ.get("AUTONOVEL_API_BASE_URL", "https://api.anthropic.com")
-CHAPTERS_DIR = BASE_DIR / "chapters"
+STORE = ProjectStore(BASE_DIR)
+CHAPTERS_DIR = STORE.chapters_dir
+TEXT_PROVIDER = get_text_provider("build_arc_summary")
 
 def call_writer(prompt, max_tokens=4000):
-    import httpx
-    headers = {
-        "x-api-key": API_KEY,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-    }
-    payload = {
-        "model": WRITER_MODEL,
-        "max_tokens": max_tokens,
-        "temperature": 0.1,
-        "system": "You summarize novel chapters precisely. State what HAPPENS, what CHANGES, and what QUESTIONS are left open. No evaluation. No praise. Just events and shifts.",
-        "messages": [{"role": "user", "content": prompt}],
-    }
-    resp = httpx.post(f"{API_BASE}/v1/messages", headers=headers, json=payload, timeout=120)
-    resp.raise_for_status()
-    return resp.json()["content"][0]["text"]
+    request = TextGenerationRequest(
+        task="build_arc_summary",
+        max_tokens=max_tokens,
+        system="You summarize novel chapters precisely. State what HAPPENS, what CHANGES, and what QUESTIONS are left open. No evaluation. No praise. Just events and shifts.",
+        messages=[TextMessage(role="user", content=prompt)],
+    )
+    return TEXT_PROVIDER.generate(request).text
 
 def extract_key_passages(text):
     """Get opening, closing, and best dialogue from a chapter."""
@@ -104,8 +94,7 @@ ever answered. Every binding in Cantamura is technically void.
 """
     full += '\n---\n\n'.join(summaries)
     
-    out_path = BASE_DIR / "arc_summary.md"
-    out_path.write_text(full)
+    out_path = STORE.write_artifact("arc_summary", full)
     print(f"\nSaved to {out_path} ({len(full.split())} words)")
 
 if __name__ == "__main__":

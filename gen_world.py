@@ -3,30 +3,22 @@
 One-shot world.md generator for foundation phase.
 Reads seed.txt + voice.md, calls the writer model, outputs world.md content.
 """
-import os
 import sys
 from pathlib import Path
 from dotenv import load_dotenv
+from providers.text_provider import TextGenerationRequest, TextMessage, get_text_provider
+from stores.project_store import ProjectStore
 
 BASE_DIR = Path(__file__).parent
 load_dotenv(BASE_DIR / ".env")
-
-WRITER_MODEL = os.environ.get("AUTONOVEL_WRITER_MODEL", "claude-sonnet-4-6")
-API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
-API_BASE = os.environ.get("AUTONOVEL_API_BASE_URL", "https://api.anthropic.com")
+STORE = ProjectStore(BASE_DIR)
+TEXT_PROVIDER = get_text_provider("gen_world")
 
 def call_writer(prompt, max_tokens=16000):
-    import httpx
-    headers = {
-        "x-api-key": API_KEY,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-    }
-    payload = {
-        "model": WRITER_MODEL,
-        "max_tokens": max_tokens,
-        "temperature": 0.7,
-        "system": (
+    request = TextGenerationRequest(
+        task="gen_world",
+        max_tokens=max_tokens,
+        system=(
             "You are a fantasy worldbuilder with deep knowledge of Sanderson's Laws, "
             "Le Guin's prose philosophy, and TTRPG-quality lore design. "
             "You write world bibles that are specific, interconnected, and imply depth "
@@ -34,15 +26,13 @@ def call_writer(prompt, max_tokens=16000):
             "You write in clean, direct prose. Every rule has a cost. Every cultural detail "
             "implies a history. Every location has a sensory signature."
         ),
-        "messages": [{"role": "user", "content": prompt}],
-    }
-    resp = httpx.post(f"{API_BASE}/v1/messages", headers=headers, json=payload, timeout=300)
-    resp.raise_for_status()
-    return resp.json()["content"][0]["text"]
+        messages=[TextMessage(role="user", content=prompt)],
+    )
+    return TEXT_PROVIDER.generate(request).text
 
-seed = (BASE_DIR / "seed.txt").read_text()
-voice = (BASE_DIR / "voice.md").read_text()
-craft = (BASE_DIR / "CRAFT.md").read_text()
+seed = STORE.read_seed()
+voice = STORE.read_voice()
+craft = STORE.read_text("CRAFT.md")
 
 # Extract voice Part 2 only (the novel-specific voice)
 voice_lines = voice.split('\n')
@@ -76,20 +66,20 @@ A timeline of major events. Focus on events that create PRESENT-DAY tensions.
 Include the founding myth, key turning points, and recent events that matter to the plot.
 
 ## Magic System
-### Hard Rules (Tonal Law)
-Specific, testable rules. What intervals do what. What progressions bind.
-What happens when you break the rules. Include COSTS and LIMITATIONS prominently.
+### Hard Rules
+Specific, testable rules for the story's primary magic or speculative system.
+What can be done, what the costs are, what the limits are, and what happens when rules break.
 
-### Soft Magic (Cass's Gift)
-What he perceives, how it works, what it costs HIM specifically.
-This should be mysterious but have consistent internal logic.
+### Exceptional or Intuitive Phenomena
+Any rarer, less formal, or more mysterious abilities that matter to the story.
+Explain how they are perceived, what they cost, and what internal logic they follow.
 
 ### Societal Implications
 How does tonal law shape: governance, commerce, education, class structure,
 crime, family life, childhood, aging, disability?
 
 ## Geography
-Cantamura's physical layout, districts, the natural amphitheater's acoustic properties.
+The core setting's physical layout, regions, and any defining environmental properties.
 Neighboring places (at least 2-3). Sensory signatures for each location.
 
 ## Factions & Politics
@@ -97,7 +87,7 @@ Who holds power, who wants it, who's being crushed by it.
 At least 3-4 factions with opposing interests.
 
 ## Bestiary / Flora / Natural World
-What's unique about the natural world in and around Cantamura?
+What's unique about the natural world in and around the story's core setting?
 
 ## Cultural Details
 Customs, taboos, festivals, food, clothing, coming-of-age rituals.

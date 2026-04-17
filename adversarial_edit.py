@@ -6,45 +6,34 @@ What gets cut reveals what's weakest. The cut list IS the revision plan.
 Usage: python adversarial_edit.py 1        # single chapter
        python adversarial_edit.py all      # all chapters
 """
-import os
 import sys
 import json
 import re
 from pathlib import Path
 from dotenv import load_dotenv
+from providers.text_provider import TextGenerationRequest, TextMessage, get_text_provider
+from stores.project_store import ProjectStore
 
 BASE_DIR = Path(__file__).parent
 load_dotenv(BASE_DIR / ".env")
 
-JUDGE_MODEL = os.environ.get("AUTONOVEL_JUDGE_MODEL", "claude-opus-4-6")
-API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
-API_BASE = os.environ.get("AUTONOVEL_API_BASE_URL", "https://api.anthropic.com")
-CHAPTERS_DIR = BASE_DIR / "chapters"
-EDIT_LOG_DIR = BASE_DIR / "edit_logs"
-EDIT_LOG_DIR.mkdir(exist_ok=True)
+TEXT_PROVIDER = get_text_provider("adversarial_edit")
+STORE = ProjectStore(BASE_DIR)
+STORE.ensure_runtime_dirs()
 
 def call_judge(prompt, max_tokens=8000):
-    import httpx
-    headers = {
-        "x-api-key": API_KEY,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-    }
-    payload = {
-        "model": JUDGE_MODEL,
-        "max_tokens": max_tokens,
-        "temperature": 0.3,
-        "system": (
+    request = TextGenerationRequest(
+        task="adversarial_edit",
+        max_tokens=max_tokens,
+        system=(
             "You are a ruthless literary editor. You cut fat from prose. "
             "You have no sentiment about good-enough sentences -- if a sentence "
             "isn't earning its place, it goes. You quote exactly from the text. "
             "You never invent or paraphrase. Always respond with valid JSON."
         ),
-        "messages": [{"role": "user", "content": prompt}],
-    }
-    resp = httpx.post(f"{API_BASE}/v1/messages", headers=headers, json=payload, timeout=300)
-    resp.raise_for_status()
-    return resp.json()["content"][0]["text"]
+        messages=[TextMessage(role="user", content=prompt)],
+    )
+    return TEXT_PROVIDER.generate(request).text
 
 def parse_json(text):
     text = text.strip()
@@ -131,8 +120,8 @@ Respond with JSON:
 """
 
 def edit_chapter(ch_num):
-    ch_path = CHAPTERS_DIR / f"ch_{ch_num:02d}.md"
-    text = ch_path.read_text()
+    ch_path = STORE.chapter_path(ch_num)
+    text = STORE.read_chapter(ch_num)
     word_count = len(text.split())
     
     prompt = EDIT_PROMPT.format(chapter_text=text, word_count=word_count)
@@ -140,7 +129,7 @@ def edit_chapter(ch_num):
     result = parse_json(raw)
     
     # Save log
-    log_path = EDIT_LOG_DIR / f"ch{ch_num:02d}_cuts.json"
+    log_path = STORE.edit_log_path(f"ch{ch_num:02d}_cuts.json")
     with open(log_path, "w") as f:
         json.dump(result, f, indent=2)
     

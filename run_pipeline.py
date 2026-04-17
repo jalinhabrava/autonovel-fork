@@ -17,24 +17,19 @@ Usage:
 
 import argparse
 import json
-import os
 import re
 import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
+from stores.project_store import ProjectStore
 
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
 
 BASE_DIR = Path(__file__).parent
-STATE_FILE = BASE_DIR / "state.json"
-RESULTS_FILE = BASE_DIR / "results.tsv"
-CHAPTERS_DIR = BASE_DIR / "chapters"
-BRIEFS_DIR = BASE_DIR / "briefs"
-EDIT_LOGS_DIR = BASE_DIR / "edit_logs"
-EVAL_LOGS_DIR = BASE_DIR / "eval_logs"
+STORE = ProjectStore(BASE_DIR)
 
 FOUNDATION_THRESHOLD = 7.5
 CHAPTER_THRESHOLD = 6.0
@@ -53,10 +48,7 @@ PHASE_ORDER = ["foundation", "drafting", "revision", "export"]
 
 def load_state() -> dict:
     """Load pipeline state from state.json, creating defaults if missing."""
-    if STATE_FILE.exists():
-        with open(STATE_FILE) as f:
-            return json.load(f)
-    return default_state()
+    return STORE.read_state(default_state())
 
 
 def default_state() -> dict:
@@ -76,8 +68,7 @@ def default_state() -> dict:
 
 def save_state(state: dict):
     """Write state to state.json."""
-    with open(STATE_FILE, "w") as f:
-        json.dump(state, f, indent=2)
+    STORE.write_state(state)
 
 
 # ---------------------------------------------------------------------------
@@ -87,13 +78,14 @@ def save_state(state: dict):
 def log_result(commit: str, phase: str, score, word_count: int,
                status: str, description: str):
     """Append a row to results.tsv."""
-    header = "commit\tphase\tscore\tword_count\tstatus\tdescription\n"
-    if not RESULTS_FILE.exists():
-        RESULTS_FILE.write_text(header)
-    elif RESULTS_FILE.stat().st_size == 0:
-        RESULTS_FILE.write_text(header)
-    with open(RESULTS_FILE, "a") as f:
-        f.write(f"{commit}\t{phase}\t{score}\t{word_count}\t{status}\t{description}\n")
+    STORE.append_result_row(
+        commit=commit,
+        phase=phase,
+        score=score,
+        word_count=word_count,
+        status=status,
+        description=description,
+    )
 
 
 def banner(text: str, char: str = "=", width: int = 60):
@@ -203,18 +195,12 @@ def parse_lore_score(stdout: str) -> float:
 
 def count_words_in_chapters() -> int:
     """Sum word count across all chapter files."""
-    total = 0
-    if CHAPTERS_DIR.exists():
-        for f in CHAPTERS_DIR.glob("ch_*.md"):
-            total += len(f.read_text().split())
-    return total
+    return STORE.count_words_in_chapters()
 
 
 def count_chapter_files() -> int:
     """Count the number of chapter files."""
-    if not CHAPTERS_DIR.exists():
-        return 0
-    return len(list(CHAPTERS_DIR.glob("ch_*.md")))
+    return STORE.count_chapters()
 
 
 def get_total_chapters(state: dict) -> int:
@@ -222,7 +208,7 @@ def get_total_chapters(state: dict) -> int:
     if state.get("chapters_total", 0) > 0:
         return state["chapters_total"]
     # Try to infer from outline.md
-    outline = BASE_DIR / "outline.md"
+    outline = STORE.artifact_path("outline")
     if outline.exists():
         text = outline.read_text()
         matches = re.findall(r'###\s*Ch(?:apter)?\s*(\d+)', text)
@@ -324,7 +310,7 @@ def run_drafting(state: dict) -> dict:
     total = get_total_chapters(state)
     start_chapter = state.get("chapters_drafted", 0) + 1
 
-    CHAPTERS_DIR.mkdir(exist_ok=True)
+    STORE.chapters_dir.mkdir(exist_ok=True)
 
     for ch in range(start_chapter, total + 1):
         banner(f"Drafting Chapter {ch}/{total}", "-")
@@ -340,7 +326,7 @@ def run_drafting(state: dict) -> dict:
                 continue
 
             # Check the chapter file exists and has content
-            ch_file = CHAPTERS_DIR / f"ch_{ch:02d}.md"
+            ch_file = STORE.chapter_path(ch)
             if not ch_file.exists() or ch_file.stat().st_size < 100:
                 step("Chapter file missing or too short, retrying...")
                 continue
@@ -368,13 +354,13 @@ def run_drafting(state: dict) -> dict:
                            "discard", f"Chapter {ch} attempt {attempt}")
                 # Remove the bad chapter file so next attempt starts fresh
                 if ch_file.exists():
-                    run_tool(f"git checkout -- chapters/ch_{ch:02d}.md 2>/dev/null || true")
+                    run_tool(f"git checkout -- {STORE.chapter_path(ch).relative_to(BASE_DIR)} 2>/dev/null || true")
 
         if not drafted:
             step(f"WARNING: Chapter {ch} failed all {MAX_CHAPTER_ATTEMPTS} attempts, "
                  f"keeping last attempt and moving on")
             # Keep whatever we have and commit it
-            ch_file = CHAPTERS_DIR / f"ch_{ch:02d}.md"
+            ch_file = STORE.chapter_path(ch)
             if ch_file.exists():
                 word_count = len(ch_file.read_text().split())
                 commit_hash = git_add_commit(
@@ -470,8 +456,7 @@ def run_revision(state: dict, max_cycles: int = MAX_REVISION_CYCLES) -> dict:
     """
     banner("PHASE 3: REVISION", "=")
 
-    BRIEFS_DIR.mkdir(exist_ok=True)
-    EDIT_LOGS_DIR.mkdir(exist_ok=True)
+    STORE.ensure_runtime_dirs()
 
     prev_score = state.get("novel_score", 0.0)
     start_cycle = state.get("revision_cycle", 0) + 1
@@ -498,7 +483,7 @@ def run_revision(state: dict, max_cycles: int = MAX_REVISION_CYCLES) -> dict:
         uv_run("reader_panel.py", timeout=600)
 
         # -- Step 4: Parse panel consensus --
-        panel_path = EDIT_LOGS_DIR / "reader_panel.json"
+        panel_path = STORE.edit_log_path("reader_panel.json")
         consensus_items = parse_panel_consensus(panel_path)
 
         if consensus_items:
@@ -520,14 +505,14 @@ def run_revision(state: dict, max_cycles: int = MAX_REVISION_CYCLES) -> dict:
             pre_score = parse_score(pre_eval.stdout, "overall_score")
 
             # Generate revision brief
-            brief_file = BRIEFS_DIR / f"ch{ch_num:02d}_cycle{cycle}_{question}.md"
+            brief_file = STORE.brief_path(f"ch{ch_num:02d}_cycle{cycle}_{question}.md")
             gen_brief = BASE_DIR / "gen_brief.py"
             if gen_brief.exists():
                 step(f"Generating brief for Ch {ch_num}...")
                 run_tool(f"uv run python gen_brief.py --panel {ch_num}", timeout=300)
                 # gen_brief.py may write to briefs/ — find the most recent brief
                 brief_candidates = sorted(
-                    BRIEFS_DIR.glob(f"ch{ch_num:02d}*.md"),
+                    STORE.briefs_dir.glob(f"ch{ch_num:02d}*.md"),
                     key=lambda p: p.stat().st_mtime, reverse=True)
                 if brief_candidates:
                     brief_file = brief_candidates[0]
@@ -555,7 +540,7 @@ def run_revision(state: dict, max_cycles: int = MAX_REVISION_CYCLES) -> dict:
             post_eval = uv_run(f"evaluate.py --chapter={ch_num}", timeout=300)
             post_score = parse_score(post_eval.stdout, "overall_score")
 
-            ch_file = CHAPTERS_DIR / f"ch_{ch_num:02d}.md"
+            ch_file = STORE.chapter_path(ch_num)
             word_count = len(ch_file.read_text().split()) if ch_file.exists() else 0
 
             step(f"Ch {ch_num}: {pre_score} -> {post_score}")
@@ -629,7 +614,7 @@ def run_revision(state: dict, max_cycles: int = MAX_REVISION_CYCLES) -> dict:
             
             # Step 3: Check stopping condition
             review_logs = sorted(
-                (EDIT_LOGS_DIR).glob("*_review.json"), reverse=True)
+                STORE.edit_logs_dir.glob("*_review.json"), reverse=True)
             if review_logs:
 
                 review_data = json.loads(review_logs[0].read_text())
@@ -658,7 +643,7 @@ def run_revision(state: dict, max_cycles: int = MAX_REVISION_CYCLES) -> dict:
                 
                 # Find any generated briefs and apply the top one
                 recent_briefs = sorted(
-                    BRIEFS_DIR.glob("*_auto.md"),
+                    STORE.briefs_dir.glob("*_auto.md"),
                     key=lambda p: p.stat().st_mtime, reverse=True)
                 if recent_briefs:
                     brief = recent_briefs[0]
@@ -718,8 +703,8 @@ def run_export(state: dict) -> dict:
 
     # 3. Concatenate chapters into manuscript.md
     step("Building manuscript.md...")
-    manuscript = BASE_DIR / "manuscript.md"
-    chapter_files = sorted(CHAPTERS_DIR.glob("ch_*.md"))
+    manuscript = STORE.artifact_path("manuscript")
+    chapter_files = STORE.list_chapter_paths()
 
     parts = []
     for ch_file in chapter_files:
@@ -780,7 +765,7 @@ def run_pipeline(args):
     # Load or initialize state
     if args.from_scratch:
         banner("STARTING FROM SCRATCH")
-        seed_file = BASE_DIR / "seed.txt"
+        seed_file = STORE.artifact_path("seed")
         if not seed_file.exists():
             print("ERROR: seed.txt not found. Cannot start from scratch without a seed.")
             sys.exit(1)
@@ -790,10 +775,7 @@ def run_pipeline(args):
         state = load_state()
 
     # Ensure directories exist
-    CHAPTERS_DIR.mkdir(exist_ok=True)
-    BRIEFS_DIR.mkdir(exist_ok=True)
-    EDIT_LOGS_DIR.mkdir(exist_ok=True)
-    EVAL_LOGS_DIR.mkdir(exist_ok=True)
+    STORE.ensure_runtime_dirs()
 
     # Apply max_cycles override
     max_cycles = args.max_cycles if args.max_cycles else MAX_REVISION_CYCLES

@@ -6,20 +6,19 @@ The disagreements between readers are where editorial decisions live.
 
 Usage: python reader_panel.py
 """
-import os
 import sys
 import json
 import re
 from pathlib import Path
 from datetime import datetime
 from dotenv import load_dotenv
+from providers.text_provider import TextGenerationRequest, TextMessage, get_text_provider
+from stores.project_store import ProjectStore
 
 BASE_DIR = Path(__file__).parent
 load_dotenv(BASE_DIR / ".env")
-
-JUDGE_MODEL = os.environ.get("AUTONOVEL_JUDGE_MODEL", "claude-opus-4-6")
-API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
-API_BASE = os.environ.get("AUTONOVEL_API_BASE_URL", "https://api.anthropic.com")
+STORE = ProjectStore(BASE_DIR)
+TEXT_PROVIDER = get_text_provider("reader_panel")
 
 READERS = {
     "editor": {
@@ -77,20 +76,19 @@ READERS = {
 }
 
 READER_PROMPT = """You have just read a complete fantasy novel in summary form.
-The summaries include chapter-by-chapter events, opening and closing passages
-from each chapter, and key dialogue. The full novel is 72,422 words across
-24 chapters.
+The summaries may include chapter-by-chapter events, opening and closing passages
+from each chapter, and key dialogue.
 
 {arc_summary}
 
 Now answer these questions about the NOVEL AS A WHOLE. Be specific.
-Quote passages when you can. Name chapter numbers.
+Quote passages when you can. Name chapter numbers when the summary supports it.
 
 Respond with JSON:
 {{
   "momentum_loss": "Where does the story lose momentum? Name the specific chapter(s) and what causes the drag. If it never loses momentum, say so and explain why.",
   
-  "earned_ending": "Does the ending feel earned by everything before it? Does Cass's choice in Ch 22 land? Does the final image in Ch 24 mirror Ch 1 in a way that satisfies? What, if anything, feels unearned?",
+  "earned_ending": "Does the ending feel earned by everything before it? Do the protagonist's final choices land? Does the final image echo the opening in a satisfying way? What, if anything, feels unearned?",
   
   "cut_candidate": "If the novel had to be 10% shorter (~7,000 words), which chapter or section would you cut first? Why? What would be lost?",
   
@@ -110,24 +108,19 @@ Respond with JSON:
 }}
 """
 
-def call_reader(reader_key, arc_summary):
-    import httpx
+def call_reader(reader_key, prompt_text):
     reader = READERS[reader_key]
-    headers = {
-        "x-api-key": API_KEY,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-    }
-    payload = {
-        "model": JUDGE_MODEL,
-        "max_tokens": 4000,
-        "temperature": 0.7,  # Higher temp for personality
-        "system": reader["system"],
-        "messages": [{"role": "user", "content": READER_PROMPT.format(arc_summary=arc_summary)}],
-    }
-    resp = httpx.post(f"{API_BASE}/v1/messages", headers=headers, json=payload, timeout=300)
-    resp.raise_for_status()
-    raw = resp.json()["content"][0]["text"]
+    request = TextGenerationRequest(
+        task="reader_panel",
+        system=reader["system"],
+        messages=[
+            TextMessage(
+                role="user",
+                content=prompt_text,
+            )
+        ],
+    )
+    raw = TEXT_PROVIDER.generate(request).text
     
     # Parse JSON
     raw = raw.strip()
@@ -184,7 +177,34 @@ def find_disagreements(results):
     return disagreements
 
 def main():
-    arc_summary = (BASE_DIR / "arc_summary.md").read_text()
+    arc_summary = STORE.read_arc_summary()
+    title = STORE.get_title()
+    chapter_count = STORE.count_chapters()
+    word_count = STORE.count_words_in_chapters()
+
+    prompt = (
+        f"You have just read a complete fantasy novel in summary form.\n"
+        f'The summaries cover the novel "{title}" as it currently exists.\n'
+        f"They may include chapter-by-chapter events, opening and closing passages,\n"
+        f"and key dialogue. The current draft is approximately {word_count:,} words"
+        f" across {chapter_count or 'an unknown number of'} chapters.\n\n"
+        f"{arc_summary}\n\n"
+        "Now answer these questions about the NOVEL AS A WHOLE. Be specific.\n"
+        "Quote passages when you can. Name chapter numbers when the summary supports it.\n\n"
+        "Respond with JSON:\n"
+        "{\n"
+        '  "momentum_loss": "Where does the story lose momentum? Name the specific chapter(s) and what causes the drag. If it never loses momentum, say so and explain why.",\n'
+        '  "earned_ending": "Does the ending feel earned by everything before it? Do the protagonist\'s final choices land? Does the final image echo the opening in a satisfying way? What, if anything, feels unearned?",\n'
+        '  "cut_candidate": "If the novel had to be 10% shorter, which chapter or section would you cut first? Why? What would be lost?",\n'
+        '  "missing_scene": "Is there a scene the novel NEEDS that it does not have? A conversation that should happen, a moment that is earned but never delivered, or a character who deserves more page time? Be specific about where it would go.",\n'
+        '  "thinnest_character": "Which character feels thinnest by the end? Who do you want to know more about? Who could be cut without the novel suffering?",\n'
+        '  "best_scene": "What is the single best scene in the novel? Quote the moment that made you feel something. Why does it work?",\n'
+        '  "worst_scene": "What is the single weakest scene? What goes wrong? How would you fix it?",\n'
+        '  "would_recommend": "Would you recommend this novel? To whom? What would you say about it in one sentence?",\n'
+        '  "haunts_you": "Is there a line or moment that stays with you after reading? Quote it.",\n'
+        '  "next_book": "Would you read the author\'s next book? Why or why not?"\n'
+        "}"
+    )
     
     results = {}
     for reader_key, reader_info in READERS.items():
@@ -193,7 +213,7 @@ def main():
         print(f"{'='*50}")
         
         try:
-            result = call_reader(reader_key, arc_summary)
+            result = call_reader(reader_key, prompt)
             results[reader_key] = result
             
             # Print highlights
@@ -235,7 +255,7 @@ def main():
         "disagreements": disagreements,
         "timestamp": datetime.now().isoformat()
     }
-    out_path = BASE_DIR / "edit_logs" / "reader_panel.json"
+    out_path = STORE.edit_log_path("reader_panel.json")
     with open(out_path, "w") as f:
         json.dump(output, f, indent=2)
     print(f"\nSaved to {out_path}")

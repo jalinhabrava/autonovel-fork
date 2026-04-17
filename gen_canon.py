@@ -2,44 +2,34 @@
 """
 Generate canon.md by extracting all hard facts from world.md + characters.md.
 """
-import os
 import sys
 from pathlib import Path
 from dotenv import load_dotenv
+from providers.text_provider import TextGenerationRequest, TextMessage, get_text_provider
+from stores.project_store import ProjectStore
 
 BASE_DIR = Path(__file__).parent
 load_dotenv(BASE_DIR / ".env")
-
-WRITER_MODEL = os.environ.get("AUTONOVEL_WRITER_MODEL", "claude-sonnet-4-6")
-API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
-API_BASE = os.environ.get("AUTONOVEL_API_BASE_URL", "https://api.anthropic.com")
+STORE = ProjectStore(BASE_DIR)
+TEXT_PROVIDER = get_text_provider("gen_canon")
 
 def call_writer(prompt, max_tokens=16000):
-    import httpx
-    headers = {
-        "x-api-key": API_KEY,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-    }
-    payload = {
-        "model": WRITER_MODEL,
-        "max_tokens": max_tokens,
-        "temperature": 0.2,  # Low temp for factual extraction
-        "system": (
+    request = TextGenerationRequest(
+        task="gen_canon",
+        max_tokens=max_tokens,
+        system=(
             "You are a continuity editor extracting hard facts from fantasy novel "
             "planning documents. You are precise, exhaustive, and never invent facts "
             "that aren't in the source material. Every entry must be traceable to a "
             "specific statement in the source documents."
         ),
-        "messages": [{"role": "user", "content": prompt}],
-    }
-    resp = httpx.post(f"{API_BASE}/v1/messages", headers=headers, json=payload, timeout=300)
-    resp.raise_for_status()
-    return resp.json()["content"][0]["text"]
+        messages=[TextMessage(role="user", content=prompt)],
+    )
+    return TEXT_PROVIDER.generate(request).text
 
-world = (BASE_DIR / "world.md").read_text()
-characters = (BASE_DIR / "characters.md").read_text()
-seed = (BASE_DIR / "seed.txt").read_text()
+world = STORE.read_world()
+characters = STORE.read_characters()
+seed = STORE.read_seed()
 
 prompt = f"""Extract EVERY hard fact from these planning documents into a structured canon database.
 A "hard fact" is anything a writer must not contradict: names, ages, dates, physical descriptions,
@@ -65,8 +55,8 @@ FORMAT THE OUTPUT AS CANON.MD with these categories:
 - Dated events, ages, durations
 
 ## Magic System Rules
-- Hard rules of Tonal Law (intervals, costs, limitations)
-- Cass's gift specifics
+- Hard rules of the story's primary magic or speculative system
+- Specifics of any exceptional gift, anomaly, curse, or rare ability
 
 ## Character Facts
 - Ages, physical descriptions, habits, relationships
@@ -80,7 +70,7 @@ FORMAT THE OUTPUT AS CANON.MD with these categories:
 
 ## Established In-Story
 - Events that have already happened in the story's past
-- The Perin contract, the Expansion Wars, etc.
+- The core disputes, losses, contracts, betrayals, wars, discoveries, or disappearances that already happened
 
 RULES:
 - One fact per bullet point. Short. Specific. Checkable.
