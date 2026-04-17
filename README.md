@@ -67,6 +67,7 @@ patches". The most important changes are:
 - text inference is now routed through a provider abstraction instead of being hard-wired to a single hosted API
 - project storage is abstracted behind a store/backend layer instead of assuming a fixed workspace layout everywhere
 - an Obsidian-compatible vault system now exists as a persistent project backend
+- a first TextifAI terminal runtime now exists with onboarding, doctor, shell modes, and product commands
 - an interactive layer now exists for:
   - context lookup
   - note creation/update
@@ -74,6 +75,8 @@ patches". The most important changes are:
   - consistency checks
   - manuscript bootstrap extraction
 - a first deterministic Context Engine now exists to assemble structured context packs from the vault
+- a first runtime i18n and language policy layer now exists for multilingual projects
+- a first conversational task layer now exists with typed contracts, short conversation state, and a hybrid intent recognizer
 
 ## Current Vision
 
@@ -178,6 +181,33 @@ Important limitation:
 replace full editorial review, reader review, or a future advanced consistency
 system.
 
+### TextifAI Runtime
+
+The repository now has a usable TextifAI product/runtime layer in terminal.
+
+Implemented:
+
+- `textifai` as the main entrypoint
+- `textifai setup`
+- `textifai chat`
+- `textifai doctor`
+- onboarding flow for vault/provider setup
+- terminal shell with:
+  - help and status
+  - normal vs advanced mode
+  - context lookup commands
+  - persistence commands
+  - bootstrap commands
+  - advanced request/pack/context inspection
+
+Key files:
+
+- [textifai/cli.py](/home/david/projects/autonovel-fork/textifai/cli.py)
+- [textifai/shell.py](/home/david/projects/autonovel-fork/textifai/shell.py)
+- [textifai/router.py](/home/david/projects/autonovel-fork/textifai/router.py)
+- [textifai/onboarding.py](/home/david/projects/autonovel-fork/textifai/onboarding.py)
+- [textifai/doctor.py](/home/david/projects/autonovel-fork/textifai/doctor.py)
+
 ### Context Engine V1
 
 A first internal Context Engine now exists.
@@ -212,6 +242,73 @@ Not implemented yet:
 - external chat integration
 - advanced compression profiles
 
+### Language And Multilingual Policy
+
+TextifAI now has a dedicated language layer that separates:
+
+- interface language
+- user command language
+- internal system language
+- project default language
+- mixed-language policy
+- language by artifact type
+
+Implemented:
+
+- runtime i18n with classic locale files and fallback to `en`
+- `LanguagePolicy` for runtime and project settings
+- multilingual content-flow propagation for:
+  - context requests
+  - consistency checks
+  - decisions
+  - bootstrap extraction
+- artifact-level persistence of `artifact_language` where it adds durable value
+
+Key files:
+
+- [textifai/i18n.py](/home/david/projects/autonovel-fork/textifai/i18n.py)
+- [textifai/language_policy.py](/home/david/projects/autonovel-fork/textifai/language_policy.py)
+- [textifai/language_resolution.py](/home/david/projects/autonovel-fork/textifai/language_resolution.py)
+- [config/language_policy.json](/home/david/projects/autonovel-fork/config/language_policy.json)
+
+Important limitation:
+
+This is not yet a full multilingual generation or retrieval system. The layer
+currently provides structured language policy and propagation, not advanced
+translation, semantic multilingual retrieval, or deep content-language
+enforcement.
+
+### Conversational Task Layer
+
+The repo now also has the first internal skeleton of a conversational task
+layer.
+
+Implemented:
+
+- typed conversation contracts
+- short conversational state
+- base conversation manager
+- controlled task catalog and flow catalog
+- hybrid intent recognizer architecture:
+  - rules first
+  - controlled LLM escalation when needed
+  - hard validation against the internal intent catalog
+
+Key files:
+
+- [textifai/conversation/contracts.py](/home/david/projects/autonovel-fork/textifai/conversation/contracts.py)
+- [textifai/conversation/state.py](/home/david/projects/autonovel-fork/textifai/conversation/state.py)
+- [textifai/conversation/manager.py](/home/david/projects/autonovel-fork/textifai/conversation/manager.py)
+- [textifai/conversation/recognizer.py](/home/david/projects/autonovel-fork/textifai/conversation/recognizer.py)
+- [textifai/conversation/hybrid_recognizer.py](/home/david/projects/autonovel-fork/textifai/conversation/hybrid_recognizer.py)
+
+Important limitation:
+
+This is still an orchestration layer in progress. It does not yet provide a
+full conversational executor, autonomous agent behavior, or an external chat
+UI. The Context Engine remains the main mechanism for structured context
+selection.
+
 ## What Is Already Implemented
 
 The following are real, present features in the repo today:
@@ -219,6 +316,7 @@ The following are real, present features in the repo today:
 - text provider abstraction with hosted and local backends
 - project store abstraction
 - vault bootstrap, schema, and adapter
+- TextifAI terminal runtime with onboarding, doctor, shell commands, and advanced inspection mode
 - interactive persistence primitives
 - manuscript bootstrap extractors:
   - `extract-voice`
@@ -227,6 +325,9 @@ The following are real, present features in the repo today:
   - `extract-timeline`
 - deterministic Context Engine v1
 - policy-driven context assembly
+- runtime i18n and language policy
+- multilingual content-flow propagation for key runtime operations
+- conversational contracts, base manager, and hybrid intent recognizer foundation
 - tests for providers, storage, vault, interactive layer, bootstrap, and context engine
 
 ## What Is Still Future Work
@@ -236,10 +337,12 @@ The project is intentionally mid-refactor. These areas are still future or only 
 - LibreChat integration
 - MCP integration
 - external conversational interface
+- richer conversational planning and execution beyond the current skeleton
 - advanced editorial review flows built on top of the interactive layer
 - richer voice preset system
 - full semantic bootstrap from an existing novel
 - embeddings / semantic retrieval
+- multilingual generation/review workflows beyond policy propagation
 - more advanced context policies and compression strategies
 - broader cleanup of remaining legacy scripts outside the main refactor path
 
