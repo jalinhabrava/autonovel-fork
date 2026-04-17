@@ -1,0 +1,169 @@
+{
+  "policies": {
+    "default": {
+      "selection_weights": {
+        "canon": 1.0,
+        "lore": 0.9,
+        "voice": 0.85,
+        "characters": 0.75,
+        "scenes": 0.8,
+        "chapters": 0.8,
+        "timeline": 0.6,
+        "outline": 0.7
+      },
+      "status_priority": {
+        "validated": 1.0,
+        "pending_revision": 0.7,
+        "proposed": 0.4
+      },
+      "section_budgets": {
+        "hard_constraints": 1200,
+        "narrative_context": 1600,
+        "voice_context": 600,
+        "evidence": 600
+      },
+      "literality_by_artifact_type": {
+        "decision": 0.95,
+        "lore": 0.6,
+        "voice": 0.9,
+        "character": 0.55,
+        "scene": 0.95,
+        "chapter": 0.65,
+        "timeline": 0.2,
+        "outline": 0.25
+      },
+      "scope_radius": {
+        "project": {
+          "scene_neighbors": 0,
+          "chapter_neighbors": 0
+        },
+        "arc": {
+          "scene_neighbors": 1,
+          "chapter_neighbors": 2
+        },
+        "chapter": {
+          "scene_neighbors": 2,
+          "chapter_neighbors": 1
+        },
+        "scene": {
+          "scene_neighbors": 1,
+          "chapter_neighbors": 0
+        },
+        "fragment": {
+          "scene_neighbors": 0,
+          "chapter_neighbors": 0
+        }
+      }
+    },
+    "strict_canon": {
+      "selection_weights": {
+        "canon": 1.2,
+        "lore": 1.0,
+        "voice": 0.7,
+        "characters": 0.7,
+        "scenes": 0.6,
+        "chapters": 0.6,
+        "timeline": 0.5,
+        "outline": 0.5
+      },
+      "status_priority": {
+        "validated": 1.0,
+        "pending_revision": 0.45,
+        "proposed": 0.2
+      },
+      "section_budgets": {
+        "hard_constraints": 1800,
+        "narrative_context": 900,
+        "voice_context": 300,
+        "evidence": 700
+      },
+      "literality_by_artifact_type": {
+        "decision": 1.0,
+        "lore": 0.9,
+        "voice": 0.55,
+        "character": 0.55,
+        "scene": 0.5,
+        "chapter": 0.25,
+        "timeline": 0.15,
+        "outline": 0.15
+      },
+      "scope_radius": {
+        "project": {
+          "scene_neighbors": 0,
+          "chapter_neighbors": 0
+        },
+        "arc": {
+          "scene_neighbors": 0,
+          "chapter_neighbors": 1
+        },
+        "chapter": {
+          "scene_neighbors": 1,
+          "chapter_neighbors": 0
+        },
+        "scene": {
+          "scene_neighbors": 0,
+          "chapter_neighbors": 0
+        },
+        "fragment": {
+          "scene_neighbors": 0,
+          "chapter_neighbors": 0
+        }
+      }
+    },
+    "local_scene": {
+      "selection_weights": {
+        "canon": 0.9,
+        "lore": 0.7,
+        "voice": 0.8,
+        "characters": 0.8,
+        "scenes": 1.0,
+        "chapters": 0.95,
+        "timeline": 0.4,
+        "outline": 0.6
+      },
+      "status_priority": {
+        "validated": 1.0,
+        "pending_revision": 0.8,
+        "proposed": 0.5
+      },
+      "section_budgets": {
+        "hard_constraints": 900,
+        "narrative_context": 2200,
+        "voice_context": 500,
+        "evidence": 400
+      },
+      "literality_by_artifact_type": {
+        "decision": 0.65,
+        "lore": 0.55,
+        "voice": 0.6,
+        "character": 0.6,
+        "scene": 1.0,
+        "chapter": 0.9,
+        "timeline": 0.15,
+        "outline": 0.5
+      },
+      "scope_radius": {
+        "project": {
+          "scene_neighbors": 0,
+          "chapter_neighbors": 0
+        },
+        "arc": {
+          "scene_neighbors": 1,
+          "chapter_neighbors": 1
+        },
+        "chapter": {
+          "scene_neighbors": 3,
+          "chapter_neighbors": 1
+        },
+        "scene": {
+          "scene_neighbors": 2,
+          "chapter_neighbors": 1
+        },
+        "fragment": {
+          "scene_neighbors": 1,
+          "chapter_neighbors": 0
+        }
+      }
+    }
+  }
+}
