@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from textifai.render import render_banner, render_help, render_mode, render_status
+from textifai.router import dispatch_command
 from textifai.session import TextifAISession
 
 
@@ -15,13 +16,13 @@ def run_shell(
         raw = input_fn("textifai> ").strip()
         if not raw:
             continue
-        response = handle_command(session, raw)
+        response = handle_command(session, raw, input_fn=input_fn)
         if response:
             output_fn(response)
     return 0
 
 
-def handle_command(session: TextifAISession, raw: str) -> str:
+def handle_command(session: TextifAISession, raw: str, *, input_fn=input) -> str:
     if raw == "help":
         return render_help()
     if raw == "status":
@@ -37,4 +38,7 @@ def handle_command(session: TextifAISession, raw: str) -> str:
     if raw == "mode advanced":
         session.mode = "advanced"
         return "Mode set to advanced."
+    routed = dispatch_command(session, raw, input_fn=input_fn)
+    if routed is not None:
+        return routed
     return "Unknown command. Type `help`."

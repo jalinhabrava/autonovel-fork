@@ -21,6 +21,13 @@ class TextifAISession:
     last_context_pack: dict | None = None
     running: bool = True
 
+    def remember(self, result) -> None:
+        self.last_result = result
+        if isinstance(result, dict) and result.get("type") == "context_pack":
+            self.last_context_pack = result
+        elif isinstance(result, dict) and result.get("type") == "consistency_report":
+            self.last_context_pack = result.get("context_pack")
+
 
 def create_session(env: RuntimeEnvironment) -> TextifAISession:
     vault_path = Path(env.vault_root).expanduser() if env.vault_root else env.base_dir

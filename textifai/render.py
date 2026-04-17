@@ -14,13 +14,21 @@ def render_help() -> str:
             "Available commands:",
             "- help",
             "- status",
+            "- world",
+            "- find <query>",
+            "- scene <scene_id>",
+            "- chapter <chapter_id>",
+            "- check <type:slug|note_path>",
+            "- decide",
+            "- validate <type:slug|note_path>",
+            "- reject <type:slug|note_path>",
             "- mode",
             "- mode normal",
             "- mode advanced",
             "- exit",
             "- quit",
             "",
-            "This is the base TextifAI shell. Domain commands arrive in the next runtime block.",
+            "This TextifAI shell supports the first guided domain commands.",
         ]
     )
 
@@ -44,3 +52,85 @@ def render_status(session: TextifAISession) -> str:
 
 def render_mode(session: TextifAISession) -> str:
     return f"Current mode: {session.mode}"
+
+
+def render_context_pack_summary(pack: dict) -> str:
+    voice_context = pack.get("voice_context", {})
+    project_voice = voice_context.get("project_voice", [])
+    character_voice = voice_context.get("character_voice", [])
+    lines = [
+        "TextifAI context result",
+        f"- intent: {pack.get('intent', 'unknown')}",
+        f"- target: {pack.get('scope', {}).get('target_id', pack.get('target_id', 'unknown'))}",
+        f"- policy: {pack.get('policy', {}).get('name', 'default')}",
+        f"- hard_constraints: {len(pack.get('hard_constraints', []))}",
+        f"- narrative_context: {len(pack.get('narrative_context', []))}",
+        f"- voice.project: {len(project_voice)}",
+        f"- voice.character: {len(character_voice)}",
+        f"- evidence: {len(pack.get('evidence', []))}",
+    ]
+    highlights = _entry_highlights(pack)
+    if highlights:
+        lines.append("- highlights:")
+        for item in highlights:
+            lines.append(f"  {item}")
+    return "\n".join(lines)
+
+
+def render_check_result(report: dict) -> str:
+    lines = [
+        "TextifAI consistency check",
+        f"- target: {report.get('target_type')}:{report.get('target_id')}",
+        f"- ok: {'yes' if report.get('ok') else 'no'}",
+        f"- summary: {report.get('summary', 'No summary')}",
+        f"- canon_refs: {', '.join(report.get('canon_refs', [])) or 'none'}",
+        f"- lore_refs: {', '.join(report.get('lore_refs', [])) or 'none'}",
+    ]
+    issues = report.get("issues", [])
+    if issues:
+        lines.append("- issues:")
+        for issue in issues[:4]:
+            lines.append(f"  - [{issue.get('severity', 'info')}] {issue.get('message', '')}")
+    suggestions = report.get("suggested_actions", [])
+    if suggestions:
+        lines.append("- suggested_actions:")
+        for suggestion in suggestions[:4]:
+            lines.append(f"  - {suggestion}")
+    return "\n".join(lines)
+
+
+def render_decision_result(result: dict) -> str:
+    return "\n".join(
+        [
+            "TextifAI decision recorded",
+            f"- state: {result.get('state')}",
+            f"- target: {result.get('target_type')}:{result.get('target_id')}",
+            f"- path: {result.get('path', 'n/a')}",
+        ]
+    )
+
+
+def render_persistence_result(result: dict) -> str:
+    return "\n".join(
+        [
+            "TextifAI persistence result",
+            f"- state: {result.get('state')}",
+            f"- target: {result.get('target_type')}:{result.get('target_id')}",
+            f"- path: {result.get('path', 'n/a')}",
+        ]
+    )
+
+
+def _entry_highlights(pack: dict) -> list[str]:
+    highlights: list[str] = []
+    sections = (
+        ("hard_constraints", pack.get("hard_constraints", [])),
+        ("narrative_context", pack.get("narrative_context", [])),
+        ("evidence", pack.get("evidence", [])),
+    )
+    for section_name, entries in sections:
+        if not entries:
+            continue
+        top = entries[0]
+        highlights.append(f"{section_name}: {top.get('title', top.get('id', 'entry'))}")
+    return highlights[:3]
