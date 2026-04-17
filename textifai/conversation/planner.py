@@ -18,6 +18,8 @@ class TaskPlanner:
         target_type = intent.target_type or _resolve_target_type(intent, state)
 
         mapping = {
+            "confirm_pending": ("conversation_control", "confirm_pending_flow", True, False, False, True, ["confirm_operation", "return_response"]),
+            "cancel_pending": ("conversation_control", "cancel_pending_flow", True, False, False, False, ["cancel_operation", "return_response"]),
             "conversation_help": ("respond", "help_flow", True, False, False, False, ["return_response"]),
             "lookup_world": ("context_lookup", "world_lookup_flow", True, False, True, False, ["build_context", "return_response"]),
             "search_context": ("context_lookup", "context_search_flow", True, False, True, False, ["build_context", "return_response"]),
@@ -50,6 +52,7 @@ class TaskPlanner:
                 "intent_name": intent.intent_name,
                 "query_text": _derive_query_text(request, intent),
                 "target_resolution_source": _target_resolution_source(request, intent, state),
+                "confirmation_required": flow_name in {"decision_persistence_flow", "validate_artifact_flow", "reject_artifact_flow"},
             },
         )
 

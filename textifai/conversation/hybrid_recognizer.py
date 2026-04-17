@@ -73,6 +73,8 @@ class HybridIntentRecognizer:
         if not lowered:
             return False
         known_prefixes = (
+            "confirm",
+            "cancel",
             "help",
             "world",
             "find ",

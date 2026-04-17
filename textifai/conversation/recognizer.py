@@ -27,6 +27,10 @@ class RuleBasedIntentRecognizer:
                 },
             )
 
+        if lowered == "confirm":
+            return self._intent("confirm_pending", confidence=0.99, signals=["confirm_control"])
+        if lowered == "cancel":
+            return self._intent("cancel_pending", confidence=0.99, signals=["cancel_control"])
         if lowered == "help":
             return self._intent("conversation_help", confidence=0.95, signals=["help_command"])
         if lowered == "world":
@@ -52,13 +56,39 @@ class RuleBasedIntentRecognizer:
                 signals=["chapter_command"],
             )
         if lowered.startswith("check "):
-            return self._intent("consistency_check", confidence=0.9, requires_target=True, signals=["check_command"])
+            target_type, target_id = _parse_target_reference(raw.split(maxsplit=1)[1].strip())
+            return self._intent(
+                "consistency_check",
+                confidence=0.9,
+                target_type=target_type,
+                target_id=target_id,
+                requires_target=True,
+                signals=["check_command"],
+            )
         if lowered == "decide" or lowered.startswith("decide "):
             return self._intent("persist_decision", confidence=0.9, persistent_hint=True, signals=["decide_command"])
         if lowered.startswith("validate "):
-            return self._intent("validate_artifact", confidence=0.9, requires_target=True, persistent_hint=True, signals=["validate_command"])
+            target_type, target_id = _parse_target_reference(raw.split(maxsplit=1)[1].strip())
+            return self._intent(
+                "validate_artifact",
+                confidence=0.9,
+                target_type=target_type,
+                target_id=target_id,
+                requires_target=True,
+                persistent_hint=True,
+                signals=["validate_command"],
+            )
         if lowered.startswith("reject "):
-            return self._intent("reject_artifact", confidence=0.9, requires_target=True, persistent_hint=True, signals=["reject_command"])
+            target_type, target_id = _parse_target_reference(raw.split(maxsplit=1)[1].strip())
+            return self._intent(
+                "reject_artifact",
+                confidence=0.9,
+                target_type=target_type,
+                target_id=target_id,
+                requires_target=True,
+                persistent_hint=True,
+                signals=["reject_command"],
+            )
         if lowered.startswith("bootstrap"):
             return self._intent("bootstrap_extract", confidence=0.9, persistent_hint=True, signals=["bootstrap_command"])
 
@@ -102,3 +132,10 @@ class RuleBasedIntentRecognizer:
                 "classification_note": f"Recognized directly by rules as {intent_name}.",
             },
         )
+
+
+def _parse_target_reference(raw: str) -> tuple[str | None, str | None]:
+    if ":" not in raw or raw.endswith(".md"):
+        return (None, raw or None)
+    target_type, target_id = raw.split(":", 1)
+    return (target_type.strip().lower() or None, target_id.strip() or None)

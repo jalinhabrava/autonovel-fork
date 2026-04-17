@@ -3,6 +3,7 @@ import unittest
 from textifai.conversation.contracts import (
     ConversationRequest,
     ConversationTurn,
+    PendingConversationOperation,
     PlannedTask,
     RecognizedIntent,
 )
@@ -86,6 +87,24 @@ class TextifAIConversationContractsTests(unittest.TestCase):
         )
         self.assertEqual(state.turn_count, 0)
         self.assertEqual(turn.turn_index, 1)
+
+    def test_pending_operation_has_explicit_kind_and_payload(self):
+        pending = PendingConversationOperation(
+            operation_id="op-1",
+            operation_kind="persist_decision",
+            task_type="artifact_persistence",
+            flow_name="decision_persistence_flow",
+            target_type="decision",
+            target_id=None,
+            artifact_target_language="es",
+            explanation_language="es",
+            payload={"type": "decision_canon", "title": "Magic Costs"},
+            summary="persist decision 'Magic Costs'",
+            executable=True,
+            created_from_turn=2,
+        )
+        self.assertEqual(pending.operation_kind, "persist_decision")
+        self.assertEqual(pending.payload["type"], "decision_canon")
 
 
 if __name__ == "__main__":

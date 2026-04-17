@@ -6,6 +6,8 @@ from typing import Any, Literal
 
 INTENT_CATALOG = (
     "unknown",
+    "confirm_pending",
+    "cancel_pending",
     "conversation_help",
     "lookup_world",
     "search_context",
@@ -21,6 +23,7 @@ INTENT_CATALOG = (
 TASK_TYPE_CATALOG = (
     "noop",
     "respond",
+    "conversation_control",
     "context_lookup",
     "consistency_validation",
     "artifact_persistence",
@@ -29,6 +32,8 @@ TASK_TYPE_CATALOG = (
 
 FLOW_NAME_CATALOG = (
     "noop_flow",
+    "confirm_pending_flow",
+    "cancel_pending_flow",
     "help_flow",
     "world_lookup_flow",
     "context_search_flow",
@@ -44,6 +49,8 @@ FLOW_NAME_CATALOG = (
 STEP_KIND_CATALOG = (
     "recognize_intent",
     "resolve_target",
+    "confirm_operation",
+    "cancel_operation",
     "build_context",
     "call_llm",
     "run_consistency_check",
@@ -123,6 +130,23 @@ class ConversationTurn:
 
 
 @dataclass(frozen=True)
+class PendingConversationOperation:
+    operation_id: str
+    operation_kind: str
+    task_type: str
+    flow_name: str
+    target_type: str | None
+    target_id: str | None
+    artifact_target_language: str | None
+    explanation_language: str
+    payload: dict[str, Any]
+    summary: str
+    executable: bool
+    missing_fields: list[str] = field(default_factory=list)
+    created_from_turn: int = 0
+
+
+@dataclass(frozen=True)
 class ExecutionResult:
     type: str
     flow_name: str
@@ -134,6 +158,8 @@ class ExecutionResult:
     artifacts_touched: list[str] = field(default_factory=list)
     persisted: bool = False
     missing_target: bool = False
+    pending_operation: PendingConversationOperation | None = None
+    clear_pending_operation: bool = False
 
 
 def _ensure_catalog_value(field_name: str, value: str, catalog: tuple[str, ...]) -> None:

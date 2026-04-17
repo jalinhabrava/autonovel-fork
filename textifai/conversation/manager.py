@@ -32,6 +32,24 @@ class ConversationManager:
             )
         intent = self.recognizer.recognize(request, self.state)
         task = self.planner.plan(request, intent, self.state)
+        if self._has_pending_conflict(task):
+            turn = ConversationTurn(
+                turn_index=self.state.turn_count + 1,
+                request=request,
+                recognized_intent=intent,
+                planned_task=task,
+                result_type="pending_operation_conflict",
+                result_summary=(
+                    "There is already a pending operation. Confirm or cancel it before starting another persistent action."
+                ),
+                artifacts_touched=[],
+                context_used=False,
+                persisted=False,
+            )
+            self.state = apply_turn_to_state(self.state, turn)
+            if self.session is not None:
+                self.session.conversation_state = self.state
+            return turn
         execution = self.executor.execute(task, request, self.state)
         turn = ConversationTurn(
             turn_index=self.state.turn_count + 1,
@@ -49,7 +67,18 @@ class ConversationManager:
             turn,
             context_request=execution.context_request,
             context_pack=execution.context_pack,
+            pending_operation=execution.pending_operation,
+            clear_pending_operation=execution.clear_pending_operation,
         )
         if self.session is not None:
             self.session.conversation_state = self.state
         return turn
+
+    def _has_pending_conflict(self, task) -> bool:
+        if self.state is None or self.state.pending_operation is None:
+            return False
+        return task.flow_name in {
+            "decision_persistence_flow",
+            "validate_artifact_flow",
+            "reject_artifact_flow",
+        }

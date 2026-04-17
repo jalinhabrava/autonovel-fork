@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from uuid import uuid4
 
-from textifai.conversation.contracts import ConversationTurn
+from textifai.conversation.contracts import ConversationTurn, PendingConversationOperation
 
 
 @dataclass(frozen=True)
@@ -20,6 +20,7 @@ class ConversationState:
     artifact_target_language: str | None
     last_operation_ephemeral: bool | None
     last_operation_persistent: bool | None
+    pending_operation: PendingConversationOperation | None
 
 
 def create_conversation_state(
@@ -40,6 +41,7 @@ def create_conversation_state(
         artifact_target_language=artifact_target_language,
         last_operation_ephemeral=None,
         last_operation_persistent=None,
+        pending_operation=None,
     )
 
 
@@ -49,6 +51,8 @@ def apply_turn_to_state(
     *,
     context_request: dict | None = None,
     context_pack: dict | None = None,
+    pending_operation: PendingConversationOperation | None = None,
+    clear_pending_operation: bool = False,
 ) -> ConversationState:
     planned = turn.planned_task
     return replace(
@@ -70,4 +74,11 @@ def apply_turn_to_state(
         ),
         last_operation_ephemeral=(planned.ephemeral if planned is not None else state.last_operation_ephemeral),
         last_operation_persistent=(planned.persistent if planned is not None else state.last_operation_persistent),
+        pending_operation=(
+            None
+            if clear_pending_operation
+            else pending_operation
+            if pending_operation is not None
+            else state.pending_operation
+        ),
     )
