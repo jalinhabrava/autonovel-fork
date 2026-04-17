@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from textifai.conversation.contracts import ConversationRequest, ConversationTurn
 from textifai.conversation.executor import StubExecutionLayer
+from textifai.conversation.hybrid_recognizer import HybridIntentRecognizer
 from textifai.conversation.planner import TaskPlanner
-from textifai.conversation.recognizer import RuleBasedIntentRecognizer
 from textifai.conversation.state import ConversationState, apply_turn_to_state, create_conversation_state
 
 
@@ -12,12 +12,12 @@ class ConversationManager:
         self,
         *,
         state: ConversationState | None = None,
-        recognizer: RuleBasedIntentRecognizer | None = None,
+        recognizer: HybridIntentRecognizer | None = None,
         planner: TaskPlanner | None = None,
         executor: StubExecutionLayer | None = None,
     ) -> None:
         self.state = state
-        self.recognizer = recognizer or RuleBasedIntentRecognizer()
+        self.recognizer = recognizer or HybridIntentRecognizer()
         self.planner = planner or TaskPlanner()
         self.executor = executor or StubExecutionLayer()
 

@@ -6,7 +6,7 @@ from textifai.conversation.state import ConversationState
 
 class RuleBasedIntentRecognizer:
     kind = "rule_based"
-    future_kind = "hybrid_stub"
+    future_kind = "hybrid_llm"
 
     def recognize(
         self,
@@ -21,7 +21,10 @@ class RuleBasedIntentRecognizer:
                 confidence=0.0,
                 signals=["empty_input"],
                 recognizer_kind="rule_based",
-                metadata={"next_recognizer": self.future_kind},
+                metadata={
+                    "next_recognizer": self.future_kind,
+                    "classification_note": "No rule matched because the request was empty.",
+                },
             )
 
         if lowered == "help":
@@ -66,7 +69,10 @@ class RuleBasedIntentRecognizer:
             target_id=fallback_target,
             signals=["no_rule_match"],
             recognizer_kind="rule_based",
-            metadata={"next_recognizer": self.future_kind},
+            metadata={
+                "next_recognizer": self.future_kind,
+                "classification_note": "Rules could not confidently classify the request.",
+            },
         )
 
     def _intent(
@@ -91,5 +97,8 @@ class RuleBasedIntentRecognizer:
             persistent_hint=persistent_hint,
             signals=signals or [],
             recognizer_kind="rule_based",
-            metadata={"next_recognizer": self.future_kind},
+            metadata={
+                "next_recognizer": self.future_kind,
+                "classification_note": f"Recognized directly by rules as {intent_name}.",
+            },
         )

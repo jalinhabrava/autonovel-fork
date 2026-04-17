@@ -1,6 +1,7 @@
 import unittest
 
 from textifai.conversation.contracts import ConversationRequest
+from textifai.conversation.hybrid_recognizer import HybridIntentRecognizer
 from textifai.conversation.manager import ConversationManager
 
 
@@ -29,6 +30,44 @@ class TextifAIConversationManagerTests(unittest.TestCase):
         self.assertEqual(manager.state.last_target_id, "scene_054_b")
         self.assertEqual(manager.state.explanation_language, "es")
         self.assertEqual(manager.state.artifact_target_language, "ja")
+
+    def test_manager_can_use_hybrid_recognizer_and_preserve_trace(self):
+        recognizer = HybridIntentRecognizer(
+            llm_classifier=_StubClassifier(
+                {
+                    "intent_name": "inspect_scene",
+                    "confidence": 0.88,
+                    "target_type": "scene",
+                    "target_id": "scene_054_b",
+                    "classification_note": "LLM disambiguated a freeform scene request.",
+                }
+            )
+        )
+        manager = ConversationManager(recognizer=recognizer)
+        request = ConversationRequest(
+            raw_text="quiero ver esta escena",
+            source="user",
+            mode="normal",
+            interface_language="es",
+            user_command_language="es",
+            internal_system_language="en",
+            project_default_language="ja",
+            mixed_language_allowed=True,
+            artifact_target_language="ja",
+            explanation_language="es",
+        )
+        turn = manager.handle_request(request)
+        self.assertEqual(turn.recognized_intent.recognizer_kind, "hybrid_llm")
+        self.assertEqual(turn.recognized_intent.metadata["recognition_source"], "hybrid_llm")
+        self.assertEqual(turn.planned_task.flow_name, "scene_context_flow")
+
+
+class _StubClassifier:
+    def __init__(self, result):
+        self.result = result
+
+    def classify_intent(self, *, request, rule_intent, state):
+        return dict(self.result)
 
 
 if __name__ == "__main__":

@@ -78,7 +78,7 @@ class RecognizedIntent:
     ephemeral_hint: bool | None = None
     persistent_hint: bool | None = None
     signals: list[str] = field(default_factory=list)
-    recognizer_kind: Literal["rule_based", "hybrid_stub"] = "rule_based"
+    recognizer_kind: Literal["rule_based", "hybrid_stub", "hybrid_llm"] = "rule_based"
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
