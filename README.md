@@ -127,13 +127,13 @@ The current workflow is:
 
 This is intentionally not a fully autonomous authoring loop. The human remains the authorial center.
 
-## Core Open Source vs Future Premium
+## Repository Scope
 
-The current repository should be read as the open core of TextifAI.
+This repository contains the current open core of TextifAI. It is the working
+codebase for the product as it exists today, and it is intentionally local-first
+and vault-aware.
 
-### Core Open Source
-
-The core includes:
+The scope here includes:
 
 - terminal runtime
 - conversational interpretation
@@ -144,17 +144,18 @@ The core includes:
 - persistence and validation primitives
 - core pipeline orchestration
 
-### Future Premium Or Private Layer
-
-The following belong more naturally to a later premium/private layer, if they appear at all:
+Some later layers may live outside this repository or in adjacent private
+workflows, depending on how the product evolves. Those future layers may cover
+things like:
 
 - richer collaborative UX
 - advanced hosted workflows
 - more opinionated editorial automation
-- premium orchestration surfaces
 - private deployment-specific enhancements
 
-That future layer is not implemented here. The current repo is the core.
+That future work is not part of the present core. The current repository should
+be read on its own terms, as the product layer that already exists and runs
+today.
 
 ## Current Architecture At A Glance
 
