@@ -305,6 +305,17 @@ def _classify_natural_request(
             skip_llm_escalation=True,
         )
 
+    if _looks_like_editorial_structuring_request(lowered, narrative_signals):
+        return _natural_intent(
+            "editorial_structuring",
+            confidence=0.71,
+            target_type=state_target_type,
+            target_id=target_hint or state_target_id,
+            signals=["editorial_structuring_request"],
+            narrative_signals=narrative_signals,
+            skip_llm_escalation=True,
+        )
+
     return None
 
 
@@ -536,3 +547,42 @@ def _matches_pending_cancel(raw: str, state: ConversationState | None) -> bool:
         "olvídalo",
         "olvidalo",
     }
+
+
+def _looks_like_editorial_structuring_request(
+    lowered: str,
+    narrative_signals: NarrativeSignals | None,
+) -> bool:
+    if any(
+        phrase in lowered
+        for phrase in (
+            "beat by beat",
+            "beat a beat",
+            "beats",
+            "estructura",
+            "outline",
+            "quiero que",
+            "la escena funciona hasta",
+            "prepara la narración",
+            "prepara la narracion",
+        )
+    ):
+        return True
+    if narrative_signals is None:
+        return False
+    if narrative_signals.issue_types and any(
+        phrase in lowered
+        for phrase in (
+            "no me gusta",
+            "debería",
+            "deberia",
+            "acepta demasiado rápido",
+            "acepta demasiado rapido",
+            "cede demasiado",
+            "quiero que",
+        )
+    ):
+        return True
+    if narrative_signals.mentioned_entities and (lowered.count(",") >= 1 or len(narrative_signals.mentioned_entities) >= 2):
+        return True
+    return False

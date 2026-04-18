@@ -22,12 +22,26 @@ from interactive.query import parse_frontmatter, strip_frontmatter
 from textifai.conversation.contracts import (
     ConversationRequest,
     ExecutionResult,
+    NarrativeSignals,
     PendingConversationOperation,
     PlannedTask,
 )
+from textifai.editorial.contracts import (
+    BeatItem,
+    BeatOutline,
+    EditorialStructuringResult,
+    RevisionIntent,
+    StoryFactItem,
+    StoryFacts,
+)
+from textifai.editorial.narration_prep import build_narration_prep
+from textifai.editorial.entity_resolution import resolve_entities
+from textifai.editorial.structuring import build_editorial_structuring_result
+from textifai.editorial_intent.contracts import CandidateTarget, EditorialIntent
 from textifai.render import render_help
 from textifai.session import TextifAISession
 from textifai.conversation.state import ConversationState
+from textifai.vaerl.contracts import EntityCandidate, EntityMention, EntityResolutionResult, RelatedArtifactSuggestion
 
 
 class MinimalExecutionLayer:
@@ -83,6 +97,8 @@ class MinimalExecutionLayer:
             return self._confirm_pending(task, state)
         if task.flow_name == "cancel_pending_flow":
             return self._cancel_pending(task, state)
+        if task.flow_name == "editorial_structuring_flow":
+            return self._execute_editorial_structuring(task, request)
         if task.flow_name == "world_lookup_flow":
             return self._execute_world(task)
         if task.flow_name == "context_search_flow":
@@ -105,6 +121,149 @@ class MinimalExecutionLayer:
             flow_name=task.flow_name,
             success=False,
             result_summary=f"Executor stub prepared {task.flow_name}.",
+        )
+
+    def _execute_editorial_structuring(self, task: PlannedTask, request: ConversationRequest) -> ExecutionResult:
+        narrative_signals = _narrative_signals_from_metadata(task.metadata.get("narrative_signals"))
+        editorial_intent = _editorial_intent_from_metadata(task.metadata.get("editorial_intent"))
+        entity_results = _entity_results_from_metadata(task.metadata.get("vaerl_results"))
+        if not entity_results:
+            entity_results = resolve_entities(
+                text=request.raw_text,
+                vault_path=self.session.vault_path,
+                known_characters=request.metadata.get("known_characters", []),
+                entity_hints=list((narrative_signals.mentioned_entities if narrative_signals else []) or []),
+            )
+        source_text = _editorial_source_text(request.raw_text, editorial_intent)
+        base_result = _last_editorial_result(self.session.last_result)
+
+        if editorial_intent is not None and source_text is None:
+            if editorial_intent.request_type == "narration_preparation" and base_result is not None:
+                narration_prep = build_narration_prep(
+                    target_language=task.artifact_target_language or request.project_default_language,
+                    explanation_language=task.explanation_language,
+                    entity_results=base_result.entity_resolution_results or entity_results,
+                    beat_outline=base_result.beat_outline,
+                    story_facts=base_result.story_facts,
+                    revision_intent=base_result.revision_intent,
+                )
+                result = EditorialStructuringResult(
+                    entity_resolution_results=base_result.entity_resolution_results or entity_results,
+                    story_facts=base_result.story_facts,
+                    beat_outline=base_result.beat_outline,
+                    revision_intent=base_result.revision_intent,
+                    narration_prep=narration_prep,
+                    result_kind="narration_prep",
+                    ready_for_validation=base_result.ready_for_validation,
+                )
+                return ExecutionResult(
+                    type="editorial_structuring",
+                    flow_name=task.flow_name,
+                    success=True,
+                    result_summary="Prepared editorial structure: narration prep",
+                    result=result,
+                    artifacts_touched=[
+                        f"{entity.resolved_entity_type}:{entity.resolved_entity_id}"
+                        for entity in result.entity_resolution_results
+                        if entity.resolved and entity.resolved_entity_type and entity.resolved_entity_id
+                    ],
+                )
+            return self._editorial_followup_clarification(task, editorial_intent, entity_results)
+
+        result = build_editorial_structuring_result(
+            source_text=source_text,
+            language=request.user_command_language or request.interface_language,
+            entity_results=entity_results,
+            narrative_signals=narrative_signals,
+            artifact_target_language=task.artifact_target_language,
+        )
+        narration_prep = build_narration_prep(
+            target_language=task.artifact_target_language or request.project_default_language,
+            explanation_language=task.explanation_language,
+            entity_results=entity_results,
+            beat_outline=result.beat_outline,
+            story_facts=result.story_facts,
+            revision_intent=result.revision_intent,
+        )
+        result = EditorialStructuringResult(
+            entity_resolution_results=result.entity_resolution_results,
+            story_facts=result.story_facts,
+            beat_outline=result.beat_outline,
+            revision_intent=result.revision_intent,
+            narration_prep=narration_prep,
+            result_kind=result.result_kind,
+            ready_for_validation=result.ready_for_validation,
+        )
+        summaries = []
+        if result.story_facts is not None:
+            summaries.append(f"{len(result.story_facts.explicit_facts)} facts")
+        if result.beat_outline is not None:
+            summaries.append(f"{len(result.beat_outline.beats)} beats")
+        if result.revision_intent is not None:
+            summaries.append("revision intent")
+        if result.narration_prep is not None and editorial_intent is not None and editorial_intent.request_type == "narration_preparation":
+            summaries.append("narration prep")
+        return ExecutionResult(
+            type="editorial_structuring",
+            flow_name=task.flow_name,
+            success=True,
+            result_summary="Prepared editorial structure: " + ", ".join(summaries or ["editorial result"]),
+            result=result,
+            artifacts_touched=[
+                f"{entity.resolved_entity_type}:{entity.resolved_entity_id}"
+                for entity in result.entity_resolution_results
+                if entity.resolved and entity.resolved_entity_type and entity.resolved_entity_id
+            ],
+        )
+
+    def _editorial_followup_clarification(
+        self,
+        task: PlannedTask,
+        editorial_intent: EditorialIntent,
+        entity_results,
+    ) -> ExecutionResult:
+        candidate_targets = [
+            {
+                "target_id": candidate.target_id,
+                "target_type": candidate.target_type,
+                "confidence": candidate.confidence,
+            }
+            for candidate in editorial_intent.candidate_targets
+        ]
+        resolved = {
+            "target_id": editorial_intent.resolved_target_id,
+            "target_type": editorial_intent.resolved_target_type,
+        }
+        artifact_type = editorial_intent.target_scope or resolved["target_type"]
+        reason = "Need clearer narrative facts before structuring."
+        if editorial_intent.request_type == "contextual_followup":
+            reason = "This follow-up is anchored to a target, but it still needs a clearer note, scene, or narrative fact before we can structure it."
+        elif editorial_intent.request_type in {"structuring_request", "mixed_editorial_request"}:
+            reason = "This request is editorial, but the current turn does not include enough narrative facts to build a trustworthy structure."
+        elif editorial_intent.request_type == "editorial_revision":
+            reason = "This revision is editorial, but it needs a concrete narrative passage or fact set to revise safely."
+        return ExecutionResult(
+            type="conversation_clarification",
+            flow_name=task.flow_name,
+            success=False,
+            result_summary=reason,
+            result={
+                "request_type": editorial_intent.request_type,
+                "artifact_type": artifact_type,
+                "resolved_target": resolved,
+                "candidate_targets": candidate_targets,
+                "related_artifacts": [
+                    {
+                        "target_type": candidate["target_type"],
+                        "target_id": candidate["target_id"],
+                        "confidence": candidate["confidence"],
+                    }
+                    for candidate in candidate_targets[:3]
+                ],
+                "next_step": "Provide the scene facts, name the note explicitly, or choose one of the candidate targets above.",
+                "has_narrative_facts": False,
+            },
+            artifacts_touched=[],
         )
 
     def _execute_world(self, task: PlannedTask) -> ExecutionResult:
@@ -526,3 +685,134 @@ def _resolve_note_target(session: TextifAISession, target_type: str, target_id: 
         "target_id": path.stem,
         "path": path,
     }
+
+
+def _narrative_signals_from_metadata(value) -> NarrativeSignals | None:
+    if not value:
+        return None
+    return NarrativeSignals(**value)
+
+
+def _editorial_intent_from_metadata(value) -> EditorialIntent | None:
+    if not value:
+        return None
+    candidate_targets = [CandidateTarget(**item) for item in value.get("candidate_targets", [])]
+    return EditorialIntent(
+        request_type=value["request_type"],
+        confidence=value["confidence"],
+        target_scope=value.get("target_scope"),
+        resolved_target_type=value.get("resolved_target_type"),
+        resolved_target_id=value.get("resolved_target_id"),
+        candidate_targets=candidate_targets,
+        followup_mode=value.get("followup_mode", "none"),
+        preserve_constraints=list(value.get("preserve_constraints", [])),
+        editorial_goals=list(value.get("editorial_goals", [])),
+        metadata=dict(value.get("metadata", {})),
+    )
+
+
+def _entity_results_from_metadata(items) -> list[EntityResolutionResult]:
+    if not items:
+        return []
+    results: list[EntityResolutionResult] = []
+    for item in items:
+        mention = EntityMention(**item["mention"])
+        candidates = [EntityCandidate(**candidate) for candidate in item.get("candidate_entities", [])]
+        related = [RelatedArtifactSuggestion(**suggestion) for suggestion in item.get("related_artifacts_suggested", [])]
+        results.append(
+            EntityResolutionResult(
+                query_text=item["query_text"],
+                mention=mention,
+                candidate_entities=candidates,
+                resolved=item["resolved"],
+                resolution_confidence=item["resolution_confidence"],
+                resolution_source=item.get("resolution_source"),
+                resolved_entity_id=item.get("resolved_entity_id"),
+                resolved_entity_type=item.get("resolved_entity_type"),
+                related_artifacts_suggested=related,
+                metadata=dict(item.get("metadata", {})),
+            )
+        )
+    return results
+
+
+def _editorial_source_text(raw_text: str, editorial_intent: EditorialIntent | None) -> str | None:
+    if editorial_intent is None:
+        return raw_text
+    source_text = editorial_intent.metadata.get("narrative_source_text")
+    if source_text is None:
+        return None
+    return source_text
+
+
+def _last_editorial_result(last_result) -> EditorialStructuringResult | None:
+    if not isinstance(last_result, dict) or last_result.get("type") != "editorial_structuring":
+        return None
+    data = last_result.get("data")
+    if not isinstance(data, dict):
+        return None
+    entity_results = _entity_results_from_metadata(data.get("entity_resolution_results"))
+    story_facts = _story_facts_from_dict(data.get("story_facts"))
+    beat_outline = _beat_outline_from_dict(data.get("beat_outline"))
+    revision_intent = _revision_intent_from_dict(data.get("revision_intent"))
+    narration_prep = None
+    return EditorialStructuringResult(
+        entity_resolution_results=entity_results,
+        story_facts=story_facts,
+        beat_outline=beat_outline,
+        revision_intent=revision_intent,
+        narration_prep=narration_prep,
+        result_kind=data.get("result_kind", "mixed"),
+        ready_for_validation=bool(data.get("ready_for_validation", False)),
+    )
+
+
+def _story_facts_from_dict(value) -> StoryFacts | None:
+    if not value:
+        return None
+    explicit_facts = [StoryFactItem(**item) for item in value.get("explicit_facts", [])]
+    inferred_facts = [StoryFactItem(**item) for item in value.get("inferred_facts", [])]
+    return StoryFacts(
+        source_text=value["source_text"],
+        language=value["language"],
+        characters_involved=list(value.get("characters_involved", [])),
+        locations_involved=list(value.get("locations_involved", [])),
+        objects_involved=list(value.get("objects_involved", [])),
+        premise=value.get("premise"),
+        core_conflict=value.get("core_conflict"),
+        goals=list(value.get("goals", [])),
+        constraints=list(value.get("constraints", [])),
+        canon_constraints=list(value.get("canon_constraints", [])),
+        explicit_facts=explicit_facts,
+        inferred_facts=inferred_facts,
+        open_questions=list(value.get("open_questions", [])),
+    )
+
+
+def _beat_outline_from_dict(value) -> BeatOutline | None:
+    if not value:
+        return None
+    beats = [BeatItem(**item) for item in value.get("beats", [])]
+    return BeatOutline(
+        source_kind=value["source_kind"],
+        title=value.get("title"),
+        beats=beats,
+        emotional_arc=list(value.get("emotional_arc", [])),
+        target_language=value.get("target_language"),
+        continuity_notes=list(value.get("continuity_notes", [])),
+        canon_checks=list(value.get("canon_checks", [])),
+    )
+
+
+def _revision_intent_from_dict(value) -> RevisionIntent | None:
+    if not value:
+        return None
+    return RevisionIntent(
+        source_text=value["source_text"],
+        target_scope=value.get("target_scope"),
+        issue_types=list(value.get("issue_types", [])),
+        desired_changes=list(value.get("desired_changes", [])),
+        must_preserve=list(value.get("must_preserve", [])),
+        priority=value.get("priority"),
+        target_hint=value.get("target_hint"),
+    )

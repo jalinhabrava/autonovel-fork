@@ -1,0 +1,72 @@
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import Any
+
+
+EDITORIAL_REQUEST_TYPE_CATALOG = (
+    "narrative_facts",
+    "structuring_request",
+    "editorial_revision",
+    "narration_preparation",
+    "contextual_followup",
+    "mixed_editorial_request",
+)
+
+FOLLOWUP_MODE_CATALOG = (
+    "none",
+    "reuse_recent_target",
+    "prefer_candidate_targets",
+    "require_clarification",
+)
+
+PRESERVE_CONSTRAINT_CATALOG = (
+    "preserve_character_voice",
+    "preserve_validated_canon",
+    "preserve_character_empathy",
+    "preserve_scene_conflict",
+)
+
+EDITORIAL_GOAL_CATALOG = (
+    "extract_story_facts",
+    "structure_scene",
+    "prepare_for_narration",
+    "extend_conflict",
+    "align_tone",
+    "clarify_motivation",
+    "anchor_canon",
+)
+
+
+@dataclass(frozen=True)
+class CandidateTarget:
+    target_id: str
+    target_type: str
+    confidence: float
+
+
+@dataclass(frozen=True)
+class EditorialIntent:
+    request_type: str
+    confidence: float
+    target_scope: str | None = None
+    resolved_target_type: str | None = None
+    resolved_target_id: str | None = None
+    candidate_targets: list[CandidateTarget] = field(default_factory=list)
+    followup_mode: str = "none"
+    preserve_constraints: list[str] = field(default_factory=list)
+    editorial_goals: list[str] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        _ensure_catalog_value("request_type", self.request_type, EDITORIAL_REQUEST_TYPE_CATALOG)
+        _ensure_catalog_value("followup_mode", self.followup_mode, FOLLOWUP_MODE_CATALOG)
+        for constraint in self.preserve_constraints:
+            _ensure_catalog_value("preserve_constraint", constraint, PRESERVE_CONSTRAINT_CATALOG)
+        for goal in self.editorial_goals:
+            _ensure_catalog_value("editorial_goal", goal, EDITORIAL_GOAL_CATALOG)
+
+
+def _ensure_catalog_value(field_name: str, value: str, catalog: tuple[str, ...]) -> None:
+    if value not in catalog:
+        raise ValueError(f"Unsupported {field_name}: {value}")

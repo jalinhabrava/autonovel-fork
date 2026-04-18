@@ -3,9 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
+from textifai.editorial_intent.contracts import EditorialIntent
 
 INTENT_CATALOG = (
     "unknown",
+    "editorial_structuring",
     "confirm_pending",
     "cancel_pending",
     "conversation_help",
@@ -46,10 +48,12 @@ TASK_TYPE_CATALOG = (
     "consistency_validation",
     "artifact_persistence",
     "bootstrap_operation",
+    "editorial_structuring",
 )
 
 FLOW_NAME_CATALOG = (
     "noop_flow",
+    "editorial_structuring_flow",
     "confirm_pending_flow",
     "cancel_pending_flow",
     "help_flow",
@@ -67,9 +71,12 @@ FLOW_NAME_CATALOG = (
 STEP_KIND_CATALOG = (
     "recognize_intent",
     "resolve_target",
+    "resolve_entities",
     "confirm_operation",
     "cancel_operation",
     "build_context",
+    "structure_editorial",
+    "prepare_narration_context",
     "call_llm",
     "run_consistency_check",
     "persist_artifact",
@@ -121,6 +128,7 @@ class RecognizedIntent:
     persistent_hint: bool | None = None
     signals: list[str] = field(default_factory=list)
     narrative_signals: NarrativeSignals | None = None
+    editorial_intent: EditorialIntent | None = None
     recognizer_kind: Literal["rule_based", "hybrid_stub", "hybrid_llm"] = "rule_based"
     metadata: dict[str, Any] = field(default_factory=dict)
 

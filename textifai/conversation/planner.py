@@ -22,6 +22,7 @@ class TaskPlanner:
         target_type = _resolve_target_type(intent, state)
 
         mapping = {
+            "editorial_structuring": ("editorial_structuring", "editorial_structuring_flow", True, False, False, False, ["resolve_entities", "structure_editorial", "prepare_narration_context", "return_response"]),
             "confirm_pending": ("conversation_control", "confirm_pending_flow", True, False, False, True, ["confirm_operation", "return_response"]),
             "cancel_pending": ("conversation_control", "cancel_pending_flow", True, False, False, False, ["cancel_operation", "return_response"]),
             "conversation_help": ("respond", "help_flow", True, False, False, False, ["return_response"]),
@@ -71,7 +72,10 @@ class TaskPlanner:
                 "confirmation_required": flow_name in {"decision_persistence_flow", "validate_artifact_flow", "reject_artifact_flow"},
                 "planner_reason": planner_reason,
                 "narrative_signals": asdict(intent.narrative_signals) if intent.narrative_signals is not None else None,
+                "editorial_intent": asdict(intent.editorial_intent) if intent.editorial_intent is not None else None,
+                "vaerl_results": intent.metadata.get("vaerl_results"),
                 "unsupported_capability": unsupported_capability,
+                "editorial_structuring_requested": effective_intent_name == "editorial_structuring",
             },
         )
 
@@ -94,8 +98,23 @@ def _derive_query_text(request: ConversationRequest, intent: RecognizedIntent) -
 
 
 def _resolve_target_type(intent: RecognizedIntent, state: ConversationState | None) -> str | None:
+    editorial_intent = intent.editorial_intent
+    if editorial_intent and editorial_intent.metadata.get("multi_target") and editorial_intent.request_type in {
+        "narrative_facts",
+        "structuring_request",
+        "editorial_revision",
+        "narration_preparation",
+        "mixed_editorial_request",
+    }:
+        return None
+    if editorial_intent and editorial_intent.resolved_target_type:
+        return editorial_intent.resolved_target_type
+    if editorial_intent and editorial_intent.followup_mode == "prefer_candidate_targets" and editorial_intent.candidate_targets:
+        return editorial_intent.candidate_targets[0].target_type
     if intent.target_type:
         return intent.target_type
+    if editorial_intent and editorial_intent.followup_mode == "reuse_recent_target":
+        return state.last_target_type if state else None
     if (
         intent.intent_name == "consistency_check"
         and intent.narrative_signals is not None
@@ -113,6 +132,21 @@ def _resolve_target_id(
     intent: RecognizedIntent,
     state: ConversationState | None,
 ) -> str | None:
+    editorial_intent = intent.editorial_intent
+    if editorial_intent and editorial_intent.metadata.get("multi_target") and editorial_intent.request_type in {
+        "narrative_facts",
+        "structuring_request",
+        "editorial_revision",
+        "narration_preparation",
+        "mixed_editorial_request",
+    }:
+        return None
+    if editorial_intent and editorial_intent.resolved_target_id:
+        return editorial_intent.resolved_target_id
+    if editorial_intent and editorial_intent.followup_mode == "prefer_candidate_targets" and editorial_intent.candidate_targets:
+        return editorial_intent.candidate_targets[0].target_id
+    if editorial_intent and editorial_intent.followup_mode == "reuse_recent_target":
+        return state.last_target_id if state else None
     if intent.target_id:
         return intent.target_id
     if (
@@ -132,6 +166,21 @@ def _target_resolution_source(
     intent: RecognizedIntent,
     state: ConversationState | None,
 ) -> str:
+    editorial_intent = intent.editorial_intent
+    if editorial_intent and editorial_intent.metadata.get("multi_target") and editorial_intent.request_type in {
+        "narrative_facts",
+        "structuring_request",
+        "editorial_revision",
+        "narration_preparation",
+        "mixed_editorial_request",
+    }:
+        return "editorial_intent_multi_target"
+    if editorial_intent and editorial_intent.resolved_target_id:
+        return "editorial_intent_resolved"
+    if editorial_intent and editorial_intent.followup_mode == "prefer_candidate_targets" and editorial_intent.candidate_targets:
+        return "editorial_intent_candidate"
+    if editorial_intent and editorial_intent.followup_mode == "reuse_recent_target":
+        return "editorial_intent_followup"
     if intent.target_id:
         return "recognized_intent"
     if (
@@ -151,6 +200,31 @@ def _target_resolution_source(
 
 
 def _resolve_effective_intent_name(intent: RecognizedIntent, state: ConversationState | None) -> str:
+    editorial_intent = intent.editorial_intent
+    if editorial_intent is not None:
+        if editorial_intent.metadata.get("multi_target") and editorial_intent.request_type in {
+            "narrative_facts",
+            "structuring_request",
+            "editorial_revision",
+            "narration_preparation",
+            "mixed_editorial_request",
+        }:
+            return "editorial_structuring"
+        if intent.intent_name == "consistency_check" and editorial_intent.request_type in {
+            "editorial_revision",
+            "contextual_followup",
+            "structuring_request",
+        } and not editorial_intent.resolved_target_id:
+            return "editorial_structuring"
+        if intent.intent_name in {"unknown", "inspect_scene"} and editorial_intent.request_type in {
+            "narrative_facts",
+            "structuring_request",
+            "editorial_revision",
+            "narration_preparation",
+            "mixed_editorial_request",
+            "contextual_followup",
+        }:
+            return "editorial_structuring"
     if intent.intent_name != "unknown":
         return intent.intent_name
     signals = intent.narrative_signals
@@ -170,6 +244,8 @@ def _resolve_effective_intent_name(intent: RecognizedIntent, state: Conversation
 def _planner_reason(intent: RecognizedIntent, effective_intent_name: str) -> str:
     if intent.metadata.get("unsupported_capability"):
         return "unsupported_capability"
+    if intent.editorial_intent is not None and effective_intent_name == "editorial_structuring":
+        return "editorial_intent_routing"
     if effective_intent_name == intent.intent_name:
         return "direct_intent_mapping"
     return "narrative_signal_inference"
