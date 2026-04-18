@@ -129,6 +129,24 @@ class TextifAIConversationalRuntimeTests(unittest.TestCase):
             narration = handle_conversational_runtime_input(session, "déjalo listo para narrar")
             self.assertIn("Prepared narration handoff", narration)
 
+    def test_runtime_bridge_treats_prepare_without_execution_as_editorial_followup(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            session = _make_session(Path(tmp))
+            response = handle_conversational_runtime_input(session, "todavía no lo escribas, pero sí déjalo preparado")
+            self.assertNotIn("could not map", response)
+            self.assertNotIn("noop", response.lower())
+            self.assertTrue(
+                any(
+                    phrase in response.lower()
+                    for phrase in (
+                        "clarif",
+                        "prepare",
+                        "narrat",
+                        "estructura",
+                    )
+                )
+            )
+
 
 def _make_session(base_dir: Path):
     vault_root = base_dir / "Vault"

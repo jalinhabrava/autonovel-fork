@@ -20,6 +20,12 @@ AUTHOR_INTENT_TYPE_CATALOG = (
     "mixed_request",
 )
 
+AUTHOR_UNDERSTANDING_ROUTE_CATALOG = (
+    "expert_bypass",
+    "trivial_contextual_case",
+    "freeform_author_request",
+)
+
 MIXED_PART_TYPE_CATALOG = (
     "narrative_content",
     "revision",
@@ -66,7 +72,7 @@ class DisambiguationResult:
 
 
 @dataclass(frozen=True)
-class LLMInterpretationResult:
+class LLMAuthorUnderstandingPayload:
     raw_text: str
     provider_name: str | None
     model: str | None
@@ -94,6 +100,9 @@ class LLMInterpretationResult:
             _ensure_catalog_value("secondary_intent_type", item, AUTHOR_INTENT_TYPE_CATALOG)
         for part in self.parts:
             _ensure_catalog_value("part_type", part.part_type, MIXED_PART_TYPE_CATALOG)
+
+
+LLMInterpretationResult = LLMAuthorUnderstandingPayload
 
 
 @dataclass(frozen=True)

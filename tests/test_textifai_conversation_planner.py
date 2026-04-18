@@ -56,6 +56,33 @@ class TextifAIConversationPlannerTests(unittest.TestCase):
         self.assertEqual(task.flow_name, "noop_flow")
         self.assertEqual(task.step_kinds, ["return_response"])
 
+    def test_planner_routes_unknown_narration_preparation_followups_to_editorial_structuring(self):
+        request = ConversationRequest(
+            raw_text="prepáralo para escribir",
+            source="user",
+            mode="normal",
+            interface_language="es",
+            user_command_language="es",
+            internal_system_language="en",
+            project_default_language="ja",
+            mixed_language_allowed=True,
+            explanation_language="es",
+        )
+        intent = RecognizedIntent(
+            intent_name="unknown",
+            confidence=0.28,
+            editorial_intent=EditorialIntent(
+                request_type="narration_preparation",
+                confidence=0.84,
+                followup_mode="none",
+                metadata={"author_understanding": {"primary_intent_type": "narration_preparation"}},
+            ),
+        )
+        task = self.planner.plan(request, intent, self.state)
+        self.assertEqual(task.flow_name, "editorial_structuring_flow")
+        self.assertEqual(task.task_type, "editorial_structuring")
+        self.assertEqual(task.metadata["planner_reason"], "editorial_intent_routing")
+
     def test_planner_can_promote_unknown_intent_from_controlled_narrative_signals(self):
         state = create_conversation_state(explanation_language="es", artifact_target_language="ja")
         state = state.__class__(

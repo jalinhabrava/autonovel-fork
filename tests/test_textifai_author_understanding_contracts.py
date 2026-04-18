@@ -3,6 +3,7 @@ import unittest
 from textifai.author_understanding.contracts import (
     AuthorIntentInterpretation,
     DisambiguationResult,
+    LLMAuthorUnderstandingPayload,
     LLMInterpretationResult,
     MixedRequestAnalysis,
     MixedRequestPart,
@@ -72,6 +73,7 @@ class TextifAIAuthorUnderstandingContractTests(unittest.TestCase):
             raw_payload={"primary_intent_type": "editorial_revision"},
         )
         self.assertEqual(result.primary_intent_type, "editorial_revision")
+        self.assertIs(LLMInterpretationResult, LLMAuthorUnderstandingPayload)
         with self.assertRaises(ValueError):
             LLMInterpretationResult(
                 raw_text="x",

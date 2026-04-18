@@ -43,6 +43,31 @@ class TextifAIAuthorUnderstandingHybridAnalysisTests(unittest.TestCase):
         self.assertEqual(interpretation.followup_reference_text, "esta nota")
         self.assertFalse(interpretation.has_mixed_request)
 
+    def test_rule_based_analysis_treats_prepare_without_execution_as_narration_prep(self):
+        analyzer = HybridAuthorUnderstandingAnalyzer(config=HybridAuthorUnderstandingConfig(llm_enabled=False))
+        request = ConversationRequest(
+            raw_text="todavía no lo escribas, pero sí déjalo preparado",
+            source="user",
+            mode="normal",
+            interface_language="es",
+            user_command_language="es",
+            internal_system_language="en",
+            project_default_language="ja",
+            mixed_language_allowed=True,
+            explanation_language="es",
+        )
+        interpretation = analyzer.analyze(
+            request=request,
+            rule_intent=_rule_intent("unknown", confidence=0.22),
+            narrative_signals=None,
+            entity_results=[],
+            state=create_conversation_state(explanation_language="es", artifact_target_language="ja"),
+        )
+        self.assertEqual(interpretation.primary_intent_type, "narration_preparation")
+        self.assertEqual(interpretation.source, "rule_based")
+        self.assertTrue(interpretation.needs_clarification)
+        self.assertIn("prepare_for_narration", interpretation.change_signals)
+
     def test_llm_assisted_analysis_separates_revision_and_preservation(self):
         llm = _StubLLMInterpreter(
             LLMInterpretationResult(

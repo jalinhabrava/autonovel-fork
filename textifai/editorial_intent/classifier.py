@@ -444,11 +444,19 @@ def _is_narration_preparation(lowered: str) -> bool:
             "prepáralo para narrar",
             "preparalo para narrar",
             "prepare it for narration",
+            "prepáralo para escribir",
+            "preparalo para escribir",
             "versión narrable",
             "version narrable",
             "lista para narrar",
             "déjalo listo para narrar",
             "dejalo listo para narrar",
+            "déjalo preparado",
+            "dejalo preparado",
+            "todavía no lo escribas",
+            "todavia no lo escribas",
+            "sin cerrarlo todavía",
+            "sin cerrarlo todavia",
         )
     )
 

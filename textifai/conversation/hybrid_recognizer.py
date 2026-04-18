@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol
 
+from textifai.author_understanding.gating import classify_author_understanding_route
 from textifai.conversation.contracts import (
     CONSTRAINT_HINT_CATALOG,
     ConversationRequest,
@@ -53,7 +54,7 @@ class HybridIntentRecognizer:
         state: ConversationState | None = None,
     ) -> RecognizedIntent:
         rule_intent = self.rule_recognizer.recognize(request, state)
-        if not self._should_escalate(request, rule_intent):
+        if not self._should_escalate(request, rule_intent, state):
             return self._with_rule_metadata(rule_intent)
 
         if self.llm_classifier is None:
@@ -66,48 +67,29 @@ class HybridIntentRecognizer:
         )
         return self._normalize_llm_result(request, rule_intent, llm_result)
 
-    def _should_escalate(self, request: ConversationRequest, rule_intent: RecognizedIntent) -> bool:
+    def _should_escalate(
+        self,
+        request: ConversationRequest,
+        rule_intent: RecognizedIntent,
+        state: ConversationState | None,
+    ) -> bool:
+        route = classify_author_understanding_route(
+            request=request,
+            rule_intent=rule_intent,
+            state=state,
+            narrative_signals=rule_intent.narrative_signals,
+        )
         if rule_intent.metadata.get("unsupported_capability"):
             return False
-        if rule_intent.metadata.get("skip_llm_escalation") and not _looks_like_author_understanding_case(request.raw_text):
-            return False
-        if _is_direct_command_result(rule_intent) and rule_intent.confidence >= self.config.llm_escalation_threshold:
+        if route.route_type in {"expert_bypass", "trivial_contextual_case"}:
             return False
         if rule_intent.intent_name == "unknown":
             return True
         if rule_intent.confidence < self.config.llm_escalation_threshold:
             return True
-        if _looks_like_author_understanding_case(request.raw_text):
-            return True
-        if self._looks_less_structured(request):
+        if route.route_type == "freeform_author_request":
             return True
         return False
-
-    def _looks_less_structured(self, request: ConversationRequest) -> bool:
-        lowered = request.raw_text.strip().lower()
-        if not lowered:
-            return False
-        known_prefixes = (
-            "confirm",
-            "cancel",
-            "help",
-            "world",
-            "find ",
-            "scene ",
-            "chapter ",
-            "check ",
-            "decide",
-            "validate ",
-            "reject ",
-            "bootstrap",
-        )
-        if lowered.startswith(known_prefixes):
-            return False
-        if request.user_command_language != request.interface_language:
-            return True
-        if request.mixed_language_allowed and request.artifact_target_language:
-            return True
-        return len(lowered.split()) >= 4
 
     def _with_rule_metadata(self, intent: RecognizedIntent) -> RecognizedIntent:
         metadata = dict(intent.metadata)
@@ -237,10 +219,6 @@ def _coerce_signals(value) -> list[str]:
     return [str(item) for item in value if item]
 
 
-def _is_direct_command_result(intent: RecognizedIntent) -> bool:
-    return any(signal.endswith("_command") or signal.endswith("_control") for signal in intent.signals)
-
-
 def _normalize_narrative_signals(
     value,
     existing: NarrativeSignals | None,
@@ -285,30 +263,3 @@ def _normalize_narrative_signals(
         confidence=confidence,
     )
 
-
-def _looks_like_author_understanding_case(raw_text: str) -> bool:
-    lowered = raw_text.casefold().strip()
-    if not lowered:
-        return False
-    return any(
-        phrase in lowered
-        for phrase in (
-            "pero sin",
-            "sin perder",
-            "sin romper",
-            "quédate con",
-            "quedate con",
-            "de lo anterior",
-            "de la anterior",
-            "prepáralo para narrar",
-            "preparalo para narrar",
-            "déjalo listo para revisión",
-            "dejalo listo para revision",
-            "más contenida",
-            "mas contenida",
-            "lista para revisar",
-            "listo para revisar",
-            "luego",
-            "y luego",
-        )
-    )

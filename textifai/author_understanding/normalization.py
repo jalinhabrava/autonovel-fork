@@ -11,6 +11,7 @@ from textifai.author_understanding.contracts import (
     MIXED_PART_TYPE_CATALOG,
     AuthorIntentInterpretation,
     DisambiguationResult,
+    LLMAuthorUnderstandingPayload,
     LLMInterpretationResult,
     MixedRequestAnalysis,
     MixedRequestPart,
@@ -21,6 +22,8 @@ from textifai.editorial_intent.contracts import CandidateTarget
 _INTENT_SYNONYMS = {
     "narration_prep": "narration_preparation",
     "prepare_narration": "narration_preparation",
+    "prepare_for_writing": "narration_preparation",
+    "writing_prep": "narration_preparation",
     "prepare review": "review_handoff",
     "prepare_review": "review_handoff",
     "review": "review_handoff",
@@ -130,13 +133,13 @@ def normalize_disambiguation_result(value: Any) -> DisambiguationResult | None:
     )
 
 
-def normalize_llm_interpretation_result(
+def normalize_author_understanding_payload(
     *,
     raw_text: str,
     payload: dict[str, Any],
     provider_name: str | None,
     model: str | None,
-) -> LLMInterpretationResult | None:
+) -> LLMAuthorUnderstandingPayload | None:
     if not isinstance(payload, dict):
         return None
 
@@ -163,7 +166,7 @@ def normalize_llm_interpretation_result(
     if preferred_target is not None and preferred_target not in candidate_targets:
         candidate_targets = [preferred_target, *candidate_targets]
     raw_payload = dict(payload)
-    return LLMInterpretationResult(
+    return LLMAuthorUnderstandingPayload(
         raw_text=raw_text,
         provider_name=provider_name,
         model=model,
@@ -185,6 +188,21 @@ def normalize_llm_interpretation_result(
         preferred_target=preferred_target,
         disambiguation_reason=_clean_text(payload.get("disambiguation_reason")),
         raw_payload=raw_payload,
+    )
+
+
+def normalize_llm_interpretation_result(
+    *,
+    raw_text: str,
+    payload: dict[str, Any],
+    provider_name: str | None,
+    model: str | None,
+) -> LLMInterpretationResult | None:
+    return normalize_author_understanding_payload(
+        raw_text=raw_text,
+        payload=payload,
+        provider_name=provider_name,
+        model=model,
     )
 
 

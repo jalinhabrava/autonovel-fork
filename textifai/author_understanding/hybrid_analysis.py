@@ -14,6 +14,7 @@ from textifai.author_understanding.contracts import (
     MixedRequestPart,
 )
 from textifai.author_understanding.disambiguation import disambiguate_targets
+from textifai.author_understanding.gating import AuthorUnderstandingRoute, classify_author_understanding_route
 from textifai.author_understanding.llm_interpreter import (
     AuthorUnderstandingLLMConfig,
     AuthorUnderstandingLLMInterpreter,
@@ -92,37 +93,27 @@ class HybridAuthorUnderstandingAnalyzer:
             entity_results=entity_results,
             state=state,
         )
-        if not self._should_use_llm(request, rule_intent, rule_interpretation):
-            return rule_interpretation
+        route = classify_author_understanding_route(
+            request=request,
+            rule_intent=rule_intent,
+            state=state,
+            narrative_signals=narrative_signals,
+        )
+        if route.route_type == "expert_bypass":
+            return _annotate_interpretation(route=route, interpretation=rule_interpretation, source="rule_based")
+        if route.route_type == "trivial_contextual_case":
+            return _build_trivial_contextual_interpretation(
+                request=request,
+                rule_interpretation=rule_interpretation,
+                route=route,
+                entity_results=entity_results,
+                state=state,
+            )
+        if not route.should_use_llm:
+            return _annotate_interpretation(route=route, interpretation=rule_interpretation, source="rule_based")
 
         if self.llm_interpreter is None:
-            metadata = dict(rule_interpretation.metadata)
-            metadata.update(
-                {
-                    "gating_reason": "llm_unavailable",
-                    "llm_used": False,
-                    "analysis_source": "fallback",
-                }
-            )
-            return rule_interpretation.__class__(
-                primary_intent_type=rule_interpretation.primary_intent_type,
-                secondary_intent_types=list(rule_interpretation.secondary_intent_types),
-                confidence=rule_interpretation.confidence,
-                has_mixed_request=rule_interpretation.has_mixed_request,
-                author_goal_signals=list(rule_interpretation.author_goal_signals),
-                preserve_signals=list(rule_interpretation.preserve_signals),
-                change_signals=list(rule_interpretation.change_signals),
-                followup_reference_text=rule_interpretation.followup_reference_text,
-                narrative_content_text=rule_interpretation.narrative_content_text,
-                meta_instruction_text=rule_interpretation.meta_instruction_text,
-                needs_clarification=rule_interpretation.needs_clarification,
-                clarification_reason=rule_interpretation.clarification_reason,
-                mixed_request_analysis=rule_interpretation.mixed_request_analysis,
-                llm_interpretation=None,
-                disambiguation=rule_interpretation.disambiguation,
-                source="fallback" if rule_interpretation.needs_clarification else "rule_based",
-                metadata=metadata,
-            )
+            return _annotate_interpretation(route=route, interpretation=rule_interpretation, source="rule_based")
 
         llm_result = self.llm_interpreter.interpret(
             request=request,
@@ -132,48 +123,24 @@ class HybridAuthorUnderstandingAnalyzer:
             state=state,
         )
         if llm_result is None:
-            metadata = dict(rule_interpretation.metadata)
-            metadata.update(
-                {
-                    "gating_reason": "llm_result_unavailable",
-                    "llm_used": False,
-                    "analysis_source": "fallback",
-                }
-            )
-            return rule_interpretation.__class__(
-                primary_intent_type=rule_interpretation.primary_intent_type,
-                secondary_intent_types=list(rule_interpretation.secondary_intent_types),
-                confidence=rule_interpretation.confidence,
-                has_mixed_request=rule_interpretation.has_mixed_request,
-                author_goal_signals=list(rule_interpretation.author_goal_signals),
-                preserve_signals=list(rule_interpretation.preserve_signals),
-                change_signals=list(rule_interpretation.change_signals),
-                followup_reference_text=rule_interpretation.followup_reference_text,
-                narrative_content_text=rule_interpretation.narrative_content_text,
-                meta_instruction_text=rule_interpretation.meta_instruction_text,
-                needs_clarification=rule_interpretation.needs_clarification,
-                clarification_reason=rule_interpretation.clarification_reason,
-                mixed_request_analysis=rule_interpretation.mixed_request_analysis,
-                llm_interpretation=None,
-                disambiguation=rule_interpretation.disambiguation,
-                source="fallback" if rule_interpretation.needs_clarification else "rule_based",
-                metadata=metadata,
-            )
+            return _annotate_interpretation(route=route, interpretation=rule_interpretation, source="rule_based")
 
         disambiguation = disambiguate_targets(_candidate_targets_from_entity_results(entity_results))
         merged = _merge_interpretations(
             rule_interpretation=rule_interpretation,
             llm_interpretation=llm_result,
             disambiguation=disambiguation,
+            route=route,
         )
         metadata = dict(merged.metadata)
         metadata.update(
             {
-                "gating_reason": "llm_used",
+                "gating_reason": route.reason,
                 "llm_used": True,
                 "analysis_source": "hybrid",
                 "llm_provider_name": llm_result.provider_name,
                 "llm_model": llm_result.model,
+                "author_understanding_route": route.route_type,
             }
         )
         return merged.__class__(
@@ -195,33 +162,6 @@ class HybridAuthorUnderstandingAnalyzer:
             source="hybrid",
             metadata=metadata,
         )
-
-    def _should_use_llm(
-        self,
-        request: ConversationRequest,
-        rule_intent: RecognizedIntent,
-        interpretation: AuthorIntentInterpretation,
-    ) -> bool:
-        if not self.config.llm_enabled:
-            return False
-        if rule_intent.metadata.get("unsupported_capability"):
-            return False
-        if rule_intent.metadata.get("skip_llm_escalation"):
-            if not _looks_like_author_understanding_case(request.raw_text):
-                return False
-        if interpretation.has_mixed_request:
-            return True
-        if interpretation.needs_clarification:
-            return True
-        if _looks_like_author_understanding_case(request.raw_text):
-            return True
-        if rule_intent.intent_name in {"unknown", "editorial_structuring"} and rule_intent.confidence <= self.config.llm_trigger_threshold:
-            return True
-        if rule_intent.confidence < self.config.llm_trigger_threshold:
-            return True
-        if interpretation.followup_reference_text and not interpretation.narrative_content_text:
-            return True
-        return False
 
 
 def _build_rule_interpretation(
@@ -291,11 +231,116 @@ def _build_rule_interpretation(
     )
 
 
+def _build_trivial_contextual_interpretation(
+    *,
+    request: ConversationRequest,
+    rule_interpretation: AuthorIntentInterpretation,
+    route: AuthorUnderstandingRoute,
+    entity_results: list[EntityResolutionResult],
+    state: ConversationState | None,
+) -> AuthorIntentInterpretation:
+    candidate_targets = _candidate_targets_from_entity_results(entity_results)
+    recent_target = None
+    if state is not None and state.last_target_id and state.last_target_type:
+        recent_target = CandidateTarget(
+            target_id=state.last_target_id,
+            target_type=state.last_target_type,
+            confidence=0.58,
+        )
+    if candidate_targets:
+        disambiguation = disambiguate_targets(candidate_targets)
+    elif recent_target is not None:
+        disambiguation = DisambiguationResult(
+            candidate_targets=[recent_target],
+            preferred_target=recent_target,
+            confidence=recent_target.confidence,
+            reason="Recent conversation state provides a safe contextual anchor.",
+            requires_user_confirmation=False,
+        )
+    else:
+        disambiguation = rule_interpretation.disambiguation
+    metadata = dict(rule_interpretation.metadata)
+    metadata.update(
+        {
+            "analysis_source": "rule_based",
+            "gating_reason": route.reason,
+            "llm_used": False,
+            "author_understanding_route": route.route_type,
+            "recent_context_reused": recent_target is not None,
+        }
+    )
+    followup_reference_text = request.raw_text.strip()
+    needs_clarification = False
+    clarification_reason = None
+    if (state is None or state.last_target_id is None) and not candidate_targets:
+        needs_clarification = True
+        clarification_reason = "The follow-up is short but still lacks a recent anchor."
+    if candidate_targets and disambiguation.requires_user_confirmation and not disambiguation.preferred_target:
+        needs_clarification = True
+        clarification_reason = disambiguation.reason
+    return rule_interpretation.__class__(
+        primary_intent_type="contextual_followup",
+        secondary_intent_types=list(rule_interpretation.secondary_intent_types),
+        confidence=max(rule_interpretation.confidence, 0.55),
+        has_mixed_request=False,
+        author_goal_signals=list(rule_interpretation.author_goal_signals),
+        preserve_signals=list(rule_interpretation.preserve_signals),
+        change_signals=list(rule_interpretation.change_signals),
+        followup_reference_text=followup_reference_text,
+        narrative_content_text=None,
+        meta_instruction_text=None,
+        needs_clarification=needs_clarification,
+        clarification_reason=clarification_reason,
+        mixed_request_analysis=rule_interpretation.mixed_request_analysis,
+        llm_interpretation=None,
+        disambiguation=disambiguation,
+        source="rule_based",
+        metadata=metadata,
+    )
+
+
+def _annotate_interpretation(
+    *,
+    route: AuthorUnderstandingRoute,
+    interpretation: AuthorIntentInterpretation,
+    source: str,
+) -> AuthorIntentInterpretation:
+    metadata = dict(interpretation.metadata)
+    metadata.update(
+        {
+            "analysis_source": source,
+            "gating_reason": route.reason,
+            "llm_used": False,
+            "author_understanding_route": route.route_type,
+        }
+    )
+    return interpretation.__class__(
+        primary_intent_type=interpretation.primary_intent_type,
+        secondary_intent_types=list(interpretation.secondary_intent_types),
+        confidence=interpretation.confidence,
+        has_mixed_request=interpretation.has_mixed_request,
+        author_goal_signals=list(interpretation.author_goal_signals),
+        preserve_signals=list(interpretation.preserve_signals),
+        change_signals=list(interpretation.change_signals),
+        followup_reference_text=interpretation.followup_reference_text,
+        narrative_content_text=interpretation.narrative_content_text,
+        meta_instruction_text=interpretation.meta_instruction_text,
+        needs_clarification=interpretation.needs_clarification,
+        clarification_reason=interpretation.clarification_reason,
+        mixed_request_analysis=interpretation.mixed_request_analysis,
+        llm_interpretation=interpretation.llm_interpretation,
+        disambiguation=interpretation.disambiguation,
+        source=source if source in ANALYSIS_SOURCE_CATALOG else "rule_based",
+        metadata=metadata,
+    )
+
+
 def _merge_interpretations(
     *,
     rule_interpretation: AuthorIntentInterpretation,
     llm_interpretation,
     disambiguation: DisambiguationResult,
+    route: AuthorUnderstandingRoute,
 ) -> AuthorIntentInterpretation:
     primary = llm_interpretation.primary_intent_type
     if primary == "unknown":
@@ -372,6 +417,7 @@ def _merge_interpretations(
             "llm_confidence": llm_interpretation.confidence,
             "llm_needs_clarification": llm_interpretation.needs_clarification,
             "disambiguation_requires_confirmation": disambiguation.requires_user_confirmation,
+            "author_understanding_route": route.route_type,
         },
     )
 
@@ -602,34 +648,6 @@ def _rule_confidence(
     return confidence
 
 
-def _looks_like_author_understanding_case(raw_text: str) -> bool:
-    lowered = raw_text.casefold().strip()
-    if not lowered:
-        return False
-    return any(
-        phrase in lowered
-        for phrase in (
-            "pero sin",
-            "sin perder",
-            "sin romper",
-            "quédate con",
-            "quedate con",
-            "de lo anterior",
-            "de la anterior",
-            "prepáralo para narrar",
-            "preparalo para narrar",
-            "déjalo listo para revisión",
-            "dejalo listo para revision",
-            "más contenida",
-            "mas contenida",
-            "lista para revisar",
-            "listo para revisar",
-            "luego",
-            "y luego",
-        )
-    )
-
-
 def _looks_like_followup_request(lowered: str) -> bool:
     return any(
         phrase in lowered
@@ -776,12 +794,20 @@ def _looks_like_narration_prep(lowered: str) -> bool:
         for phrase in (
             "prepáralo para narrar",
             "preparalo para narrar",
+            "prepáralo para escribir",
+            "preparalo para escribir",
             "déjalo listo para narrar",
             "dejalo listo para narrar",
+            "déjalo preparado",
+            "dejalo preparado",
             "lista para narrar",
             "listo para narrar",
             "preparada para narrar",
             "preparado para narrar",
+            "todavía no lo escribas",
+            "todavia no lo escribas",
+            "sin cerrarlo todavía",
+            "sin cerrarlo todavia",
         )
     )
 
@@ -841,8 +867,16 @@ def _looks_like_pure_meta_instruction(lowered: str) -> bool:
             "ordena esto",
             "prepáralo para narrar",
             "preparalo para narrar",
+            "prepáralo para escribir",
+            "preparalo para escribir",
             "prepáralo para revisión",
             "preparalo para revision",
+            "déjalo preparado",
+            "dejalo preparado",
+            "todavía no lo escribas",
+            "todavia no lo escribas",
+            "sin cerrarlo todavía",
+            "sin cerrarlo todavia",
             "déjame",
             "dejame",
             "déjalo",

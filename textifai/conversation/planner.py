@@ -288,6 +288,8 @@ def _resolve_effective_intent_name(intent: RecognizedIntent, state: Conversation
             return "editorial_structuring"
         if editorial_intent.metadata.get("multi_target") and editorial_intent.request_type == "structured_followup":
             return "editorial_structuring"
+        if editorial_intent.request_type in {"narration_preparation", "review_handoff"} and intent.intent_name == "unknown":
+            return "editorial_structuring"
         if editorial_intent.request_type in FOLLOWTHROUGH_REQUEST_TYPES:
             return intent.intent_name if intent.intent_name != "unknown" else "structured_followup"
         if editorial_intent.metadata.get("multi_target") and editorial_intent.request_type in {
