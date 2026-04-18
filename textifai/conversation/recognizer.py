@@ -110,6 +110,54 @@ class RuleBasedIntentRecognizer:
                 persistent_hint=True,
                 signals=["reject_command"],
             )
+        if lowered in {
+            "valido esta estructura",
+            "valida esta estructura",
+            "validate this structure",
+            "valida la estructura",
+        }:
+            return self._intent(
+                "validate_structure",
+                confidence=0.96,
+                signals=["validation_command"],
+            )
+        if lowered in {
+            "déjalo listo para narrar",
+            "dejalo listo para narrar",
+            "prepáralo para narrar",
+            "preparalo para narrar",
+            "lista para narrar",
+        }:
+            return self._intent(
+                "prepare_narration",
+                confidence=0.95,
+                signals=["narration_handoff_command"],
+            )
+        if lowered in {
+            "déjalo listo para revisión",
+            "dejalo listo para revision",
+            "prepáralo para revisión",
+            "preparalo para revision",
+            "lista para revisión",
+            "lista para revision",
+        }:
+            return self._intent(
+                "prepare_review",
+                confidence=0.95,
+                signals=["review_handoff_command"],
+            )
+        if lowered in {
+            "sí, esa",
+            "si, esa",
+            "usa la anterior",
+            "prepáralo con esa estructura",
+            "preparalo con esa estructura",
+        }:
+            return self._intent(
+                "structured_followup",
+                confidence=0.9,
+                signals=["structured_followup_command"],
+            )
         if lowered.startswith("bootstrap"):
             return self._intent("bootstrap_extract", confidence=0.9, persistent_hint=True, signals=["bootstrap_command"])
         if "bootstrap" in lowered:

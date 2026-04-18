@@ -107,6 +107,28 @@ class TextifAIConversationalRuntimeTests(unittest.TestCase):
             response = handle_conversational_runtime_input(session, "haz bootstrap del canon de los capítulos 1 a 3")
             self.assertIn("not supported yet", response)
 
+    def test_runtime_bridge_handles_followthrough_validation_and_narration_handoff(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            session = _make_session(Path(tmp))
+            write_or_update_note(
+                session.vault_path,
+                note_type="character",
+                slug="sera",
+                title="Sera",
+                body="A stubborn courier.",
+                status="validated",
+            )
+            session.conversation_state = create_conversation_state(explanation_language="es", artifact_target_language="ja")
+            response = handle_conversational_runtime_input(
+                session,
+                "Sera llega tarde al puerto, Toma la acusa de mentir y ella revela que perdió el mapa",
+            )
+            self.assertIn("Prepared editorial structure", response)
+            validated = handle_conversational_runtime_input(session, "valido esta estructura")
+            self.assertIn("Validated structured editorial state", validated)
+            narration = handle_conversational_runtime_input(session, "déjalo listo para narrar")
+            self.assertIn("Prepared narration handoff", narration)
+
 
 def _make_session(base_dir: Path):
     vault_root = base_dir / "Vault"

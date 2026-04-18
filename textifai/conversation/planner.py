@@ -5,6 +5,20 @@ from dataclasses import asdict
 from textifai.conversation.contracts import ConversationRequest, PlannedTask, RecognizedIntent
 from textifai.conversation.state import ConversationState
 
+FOLLOWTHROUGH_REQUEST_TYPES = {
+    "validation_request",
+    "narration_handoff",
+    "review_handoff",
+    "structured_followup",
+}
+
+FOLLOWTHROUGH_INTENTS = {
+    "validate_structure",
+    "prepare_narration",
+    "prepare_review",
+    "structured_followup",
+}
+
 
 class TaskPlanner:
     def plan(
@@ -20,6 +34,40 @@ class TaskPlanner:
         artifact_target_language = request.artifact_target_language or (state.artifact_target_language if state else None)
         target_id = _resolve_target_id(request, intent, state)
         target_type = _resolve_target_type(intent, state)
+        followthrough_action = _followthrough_action(intent, effective_intent_name)
+
+        if followthrough_action is not None:
+            task_type, flow_name, step_kinds = followthrough_action
+            planner_reason = _planner_reason(intent, effective_intent_name)
+            return PlannedTask(
+                task_type=task_type,
+                flow_name=flow_name,
+                target_type=target_type,
+                target_id=target_id,
+                ephemeral=True,
+                persistent=False,
+                operation_language=operation_language,
+                artifact_target_language=artifact_target_language,
+                explanation_language=explanation_language,
+                requires_context=False,
+                requires_llm=False,
+                requires_persistence=False,
+                step_kinds=step_kinds,
+                metadata={
+                    "intent_name": effective_intent_name,
+                    "recognized_intent_name": intent.intent_name,
+                    "query_text": _derive_query_text(request, intent),
+                    "target_resolution_source": _target_resolution_source(request, intent, state),
+                    "confirmation_required": False,
+                    "planner_reason": planner_reason,
+                    "narrative_signals": asdict(intent.narrative_signals) if intent.narrative_signals is not None else None,
+                    "editorial_intent": asdict(intent.editorial_intent) if intent.editorial_intent is not None else None,
+                    "vaerl_results": intent.metadata.get("vaerl_results"),
+                    "unsupported_capability": intent.metadata.get("unsupported_capability"),
+                    "editorial_structuring_requested": False,
+                    "followthrough_action": intent.editorial_intent.metadata.get("followthrough_action") if intent.editorial_intent else effective_intent_name,
+                },
+            )
 
         mapping = {
             "editorial_structuring": ("editorial_structuring", "editorial_structuring_flow", True, False, False, False, ["resolve_entities", "structure_editorial", "prepare_narration_context", "return_response"]),
@@ -76,6 +124,7 @@ class TaskPlanner:
                 "vaerl_results": intent.metadata.get("vaerl_results"),
                 "unsupported_capability": unsupported_capability,
                 "editorial_structuring_requested": effective_intent_name == "editorial_structuring",
+                "followthrough_action": intent.editorial_intent.metadata.get("followthrough_action") if intent.editorial_intent else None,
             },
         )
 
@@ -201,7 +250,11 @@ def _target_resolution_source(
 
 def _resolve_effective_intent_name(intent: RecognizedIntent, state: ConversationState | None) -> str:
     editorial_intent = intent.editorial_intent
+    if intent.intent_name in FOLLOWTHROUGH_INTENTS:
+        return intent.intent_name
     if editorial_intent is not None:
+        if editorial_intent.request_type in FOLLOWTHROUGH_REQUEST_TYPES:
+            return intent.intent_name if intent.intent_name != "unknown" else "structured_followup"
         if editorial_intent.metadata.get("multi_target") and editorial_intent.request_type in {
             "narrative_facts",
             "structuring_request",
@@ -239,6 +292,39 @@ def _resolve_effective_intent_name(intent: RecognizedIntent, state: Conversation
     if target_type == "chapter" and signals.target_hint:
         return "inspect_chapter"
     return intent.intent_name
+
+
+def _followthrough_action(
+    intent: RecognizedIntent,
+    effective_intent_name: str,
+) -> tuple[str, str, list[str]] | None:
+    editorial_intent = intent.editorial_intent
+    request_type = editorial_intent.request_type if editorial_intent is not None else None
+    if effective_intent_name == "validate_structure" or request_type == "validation_request":
+        return (
+            "editorial_followthrough",
+            "validate_structuring_flow",
+            ["resolve_followthrough_source", "validate_structuring", "return_response"],
+        )
+    if effective_intent_name == "prepare_narration" or request_type == "narration_handoff":
+        return (
+            "editorial_followthrough",
+            "narration_handoff_flow",
+            ["resolve_followthrough_source", "prepare_narration_handoff", "return_response"],
+        )
+    if effective_intent_name == "prepare_review" or request_type == "review_handoff":
+        return (
+            "editorial_followthrough",
+            "review_handoff_flow",
+            ["resolve_followthrough_source", "prepare_review_handoff", "return_response"],
+        )
+    if effective_intent_name == "structured_followup" or request_type == "structured_followup":
+        return (
+            "editorial_followthrough",
+            "structured_followup_flow",
+            ["resolve_followthrough_source", "resume_structured_followup", "return_response"],
+        )
+    return None
 
 
 def _planner_reason(intent: RecognizedIntent, effective_intent_name: str) -> str:

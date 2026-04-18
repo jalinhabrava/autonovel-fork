@@ -11,6 +11,10 @@ EDITORIAL_REQUEST_TYPE_CATALOG = (
     "narration_preparation",
     "contextual_followup",
     "mixed_editorial_request",
+    "validation_request",
+    "narration_handoff",
+    "review_handoff",
+    "structured_followup",
 )
 
 FOLLOWUP_MODE_CATALOG = (

@@ -30,6 +30,7 @@ from textifai.editorial.contracts import (
     BeatItem,
     BeatOutline,
     EditorialStructuringResult,
+    NarrationPrep,
     RevisionIntent,
     StoryFactItem,
     StoryFacts,
@@ -38,6 +39,10 @@ from textifai.editorial.narration_prep import build_narration_prep
 from textifai.editorial.entity_resolution import resolve_entities
 from textifai.editorial.structuring import build_editorial_structuring_result
 from textifai.editorial_intent.contracts import CandidateTarget, EditorialIntent
+from textifai.followthrough.contracts import FollowThroughResult, NarrationRequest, ReviewReadyPackage, ValidatedStructuringState
+from textifai.followthrough.narration_handoff import build_narration_prep as build_followthrough_narration_prep, build_narration_request
+from textifai.followthrough.review_handoff import build_review_ready_package
+from textifai.followthrough.validation import build_followthrough_result, build_validated_structuring_state, extract_followthrough_state
 from textifai.render import render_help
 from textifai.session import TextifAISession
 from textifai.conversation.state import ConversationState
@@ -99,6 +104,13 @@ class MinimalExecutionLayer:
             return self._cancel_pending(task, state)
         if task.flow_name == "editorial_structuring_flow":
             return self._execute_editorial_structuring(task, request)
+        if task.flow_name in {
+            "validate_structuring_flow",
+            "narration_handoff_flow",
+            "review_handoff_flow",
+            "structured_followup_flow",
+        }:
+            return self._execute_followthrough(task, request)
         if task.flow_name == "world_lookup_flow":
             return self._execute_world(task)
         if task.flow_name == "context_search_flow":
@@ -214,6 +226,137 @@ class MinimalExecutionLayer:
                 for entity in result.entity_resolution_results
                 if entity.resolved and entity.resolved_entity_type and entity.resolved_entity_id
             ],
+        )
+
+    def _execute_followthrough(self, task: PlannedTask, request: ConversationRequest) -> ExecutionResult:
+        source_result, validated_state = _latest_structuring_state(self.session.last_result)
+        followthrough_action = task.metadata.get("followthrough_action") or _followthrough_action_from_flow(task.flow_name)
+        target_language = task.artifact_target_language or request.project_default_language
+
+        if followthrough_action == "validate_structure":
+            validated_state, clarification = _ensure_validated_state(
+                source_result,
+                validated_state=validated_state,
+                explicit_validation=True,
+                allow_conservative_promotion=False,
+                request_text=request.raw_text,
+                flow_name=task.flow_name,
+            )
+            if clarification is not None:
+                return clarification
+            followthrough = build_followthrough_result(
+                validated_structuring_state=validated_state,
+                narration_request=None,
+                narration_prep=None,
+                review_ready_package=None,
+                next_recommended_step=_next_step_for_state(validated_state, default="prepare_narration"),
+                ready_for_user_confirmation=True,
+            )
+            return _followthrough_execution_result(
+                task=task,
+                followthrough=followthrough,
+                summary="Validated structured editorial state.",
+            )
+
+        if followthrough_action == "prepare_narration":
+            validated_state, clarification = _ensure_validated_state(
+                source_result,
+                validated_state=validated_state,
+                explicit_validation=False,
+                allow_conservative_promotion=True,
+                request_text=request.raw_text,
+                flow_name=task.flow_name,
+            )
+            if clarification is not None:
+                return clarification
+            narration_request = build_narration_request(
+                validated_structuring_state=validated_state,
+                target_language=target_language,
+            )
+            narration_prep = build_followthrough_narration_prep(
+                validated_structuring_state=validated_state,
+                target_language=target_language,
+                explanation_language=task.explanation_language,
+            )
+            review_ready_package = None
+            if validated_state.ready_for_review_handoff:
+                review_ready_package = build_review_ready_package(
+                    validated_structuring_state=validated_state,
+                    narration_prep=narration_prep,
+                )
+            followthrough = build_followthrough_result(
+                validated_structuring_state=validated_state,
+                narration_request=narration_request,
+                narration_prep=narration_prep,
+                review_ready_package=review_ready_package,
+                next_recommended_step=_next_step_for_state(
+                    validated_state,
+                    default="prepare_review" if review_ready_package is not None else "done",
+                ),
+                ready_for_user_confirmation=True,
+            )
+            return _followthrough_execution_result(
+                task=task,
+                followthrough=followthrough,
+                summary="Prepared narration handoff from validated editorial structure.",
+            )
+
+        if followthrough_action == "prepare_review":
+            validated_state, clarification = _ensure_validated_state(
+                source_result,
+                validated_state=validated_state,
+                explicit_validation=False,
+                allow_conservative_promotion=True,
+                request_text=request.raw_text,
+                flow_name=task.flow_name,
+            )
+            if clarification is not None:
+                return clarification
+            narration_prep = build_followthrough_narration_prep(
+                validated_structuring_state=validated_state,
+                target_language=target_language,
+                explanation_language=task.explanation_language,
+            )
+            review_ready_package = build_review_ready_package(
+                validated_structuring_state=validated_state,
+                narration_prep=narration_prep,
+            )
+            followthrough = build_followthrough_result(
+                validated_structuring_state=validated_state,
+                narration_request=None,
+                narration_prep=narration_prep,
+                review_ready_package=review_ready_package,
+                next_recommended_step="done",
+                ready_for_user_confirmation=True,
+            )
+            return _followthrough_execution_result(
+                task=task,
+                followthrough=followthrough,
+                summary="Prepared review handoff from validated editorial structure.",
+            )
+
+        validated_state, clarification = _ensure_validated_state(
+            source_result,
+            validated_state=validated_state,
+            explicit_validation=False,
+            allow_conservative_promotion=False,
+            request_text=request.raw_text,
+            flow_name=task.flow_name,
+        )
+        if clarification is not None:
+            return clarification
+        followthrough = build_followthrough_result(
+            validated_structuring_state=validated_state,
+            narration_request=None,
+            narration_prep=None,
+            review_ready_package=None,
+            next_recommended_step=_next_step_for_state(validated_state, default="continue_followup"),
+            ready_for_user_confirmation=True,
+        )
+        return _followthrough_execution_result(
+            task=task,
+            followthrough=followthrough,
+            summary="Continued the prior structured editorial follow-up.",
         )
 
     def _editorial_followup_clarification(
@@ -815,4 +958,223 @@ def _revision_intent_from_dict(value) -> RevisionIntent | None:
         must_preserve=list(value.get("must_preserve", [])),
         priority=value.get("priority"),
         target_hint=value.get("target_hint"),
+    )
+
+
+def _latest_structuring_state(last_result) -> tuple[EditorialStructuringResult | None, FollowThroughResult | None]:
+    followthrough_result = _last_followthrough_result(last_result)
+    if followthrough_result is not None and followthrough_result.validated_structuring_state is not None:
+        return followthrough_result.validated_structuring_state.source_structuring_result, followthrough_result
+    return _last_editorial_result(last_result), followthrough_result
+
+
+def _last_followthrough_result(last_result) -> FollowThroughResult | None:
+    if not isinstance(last_result, dict) or last_result.get("type") != "followthrough":
+        return None
+    data = last_result.get("data")
+    if not isinstance(data, dict):
+        return None
+    validated_state = data.get("validated_structuring_state")
+    narration_request = data.get("narration_request")
+    narration_prep = data.get("narration_prep")
+    review_ready_package = data.get("review_ready_package")
+    return FollowThroughResult(
+        validated_structuring_state=_validated_state_from_dict(validated_state) if isinstance(validated_state, dict) else None,
+        narration_request=_narration_request_from_dict(narration_request) if isinstance(narration_request, dict) else None,
+        narration_prep=_narration_prep_from_dict(narration_prep) if isinstance(narration_prep, dict) else None,
+        review_ready_package=_review_ready_package_from_dict(review_ready_package) if isinstance(review_ready_package, dict) else None,
+        next_recommended_step=data.get("next_recommended_step", "done"),
+        ready_for_user_confirmation=bool(data.get("ready_for_user_confirmation", False)),
+    )
+
+
+def _validated_state_from_dict(value: dict) -> ValidatedStructuringState:
+    source_result = _editorial_structuring_result_from_dict(
+        value.get("source_structuring_result"),
+        fallback_kind=value.get("source_result_kind", "mixed"),
+    )
+    return ValidatedStructuringState(
+        source_result_kind=value.get("source_result_kind", "mixed"),
+        source_structuring_result=source_result,
+        validation_status=value.get("validation_status", "pending_validation"),
+        validated_by_user=bool(value.get("validated_by_user", False)),
+        validation_notes=list(value.get("validation_notes", [])),
+        validated_story_facts=_story_facts_from_dict(value.get("validated_story_facts")),
+        validated_beat_outline=_beat_outline_from_dict(value.get("validated_beat_outline")),
+        validated_revision_intent=_revision_intent_from_dict(value.get("validated_revision_intent")),
+        ready_for_narration_prep=bool(value.get("ready_for_narration_prep", False)),
+        ready_for_review_handoff=bool(value.get("ready_for_review_handoff", False)),
+    )
+
+
+def _editorial_structuring_result_from_dict(value, *, fallback_kind: str) -> EditorialStructuringResult:
+    if not isinstance(value, dict):
+        return EditorialStructuringResult(
+            entity_resolution_results=[],
+            story_facts=None,
+            beat_outline=None,
+            revision_intent=None,
+            narration_prep=None,
+            result_kind=fallback_kind,
+            ready_for_validation=False,
+        )
+    return EditorialStructuringResult(
+        entity_resolution_results=_entity_results_from_metadata(value.get("entity_resolution_results")),
+        story_facts=_story_facts_from_dict(value.get("story_facts")),
+        beat_outline=_beat_outline_from_dict(value.get("beat_outline")),
+        revision_intent=_revision_intent_from_dict(value.get("revision_intent")),
+        narration_prep=None,
+        result_kind=value.get("result_kind", fallback_kind),
+        ready_for_validation=bool(value.get("ready_for_validation", False)),
+    )
+
+
+def _ensure_validated_state(
+    source_result: EditorialStructuringResult | None,
+    *,
+    validated_state: FollowThroughResult | ValidatedStructuringState | None,
+    explicit_validation: bool,
+    allow_conservative_promotion: bool,
+    request_text: str,
+    flow_name: str,
+) -> tuple[ValidatedStructuringState | None, ExecutionResult | None]:
+    if isinstance(validated_state, FollowThroughResult):
+        validated_state = validated_state.validated_structuring_state
+    if isinstance(validated_state, ValidatedStructuringState) and validated_state.validation_status in {"validated", "validated_with_notes"}:
+        if explicit_validation and not validated_state.validated_by_user and source_result is not None:
+            rebuilt = build_validated_structuring_state(
+                source_result,
+                validated_by_user=True,
+                validation_notes=list(validated_state.validation_notes),
+                allow_conservative_promotion=False,
+            )
+            return rebuilt, None
+        return validated_state, None
+    if not explicit_validation and not allow_conservative_promotion:
+        return None, _followthrough_clarification(request_text, followthrough_action="continue_followup", flow_name=flow_name)
+    if source_result is None:
+        return None, _followthrough_clarification(request_text, followthrough_action="validate_structure", flow_name=flow_name)
+    built = build_validated_structuring_state(
+        source_result,
+        validated_by_user=explicit_validation,
+        validation_notes=[],
+        allow_conservative_promotion=allow_conservative_promotion,
+    )
+    if built.validation_status == "insufficient_structure":
+        return None, _followthrough_clarification(request_text, followthrough_action="clarify_structure", flow_name=flow_name)
+    return built, None
+
+
+def _followthrough_clarification(request_text: str, *, followthrough_action: str, flow_name: str) -> ExecutionResult:
+    if followthrough_action == "clarify_structure":
+        summary = "I need a clearer validated structure before I can continue this handoff."
+    elif followthrough_action == "validate_structure":
+        summary = "I can validate this only if there is a recent structured result with real facts, beats, or revision intent."
+    elif followthrough_action == "continue_followup":
+        summary = "I need a previously validated structure before I can continue this follow-up."
+    else:
+        summary = "I need a recent structured result before I can continue this handoff."
+    return ExecutionResult(
+        type="conversation_clarification",
+        flow_name=flow_name,
+        success=False,
+        result_summary=summary,
+        result={
+            "request_text": request_text,
+            "next_step": "validate_structure",
+        },
+        artifacts_touched=[],
+    )
+
+
+def _next_step_for_state(state: ValidatedStructuringState, *, default: str) -> str:
+    if state.ready_for_narration_prep:
+        return "prepare_narration"
+    if state.ready_for_review_handoff:
+        return "prepare_review"
+    if state.validation_status in {"validated", "validated_with_notes"}:
+        return default
+    return "clarify_structure"
+
+
+def _followthrough_action_from_flow(flow_name: str) -> str:
+    mapping = {
+        "validate_structuring_flow": "validate_structure",
+        "narration_handoff_flow": "prepare_narration",
+        "review_handoff_flow": "prepare_review",
+        "structured_followup_flow": "continue_followup",
+    }
+    return mapping.get(flow_name, "continue_followup")
+
+
+def _followthrough_execution_result(*, task: PlannedTask, followthrough: FollowThroughResult, summary: str) -> ExecutionResult:
+    artifacts = _followthrough_artifacts(followthrough)
+    return ExecutionResult(
+        type="followthrough",
+        flow_name=task.flow_name,
+        success=True,
+        result_summary=summary,
+        result=followthrough,
+        artifacts_touched=artifacts,
+    )
+
+
+def _followthrough_artifacts(followthrough: FollowThroughResult) -> list[str]:
+    artifacts: list[str] = []
+    state = followthrough.validated_structuring_state
+    if state is None:
+        return artifacts
+    source = state.source_structuring_result
+    for entity in source.entity_resolution_results:
+        if entity.resolved and entity.resolved_entity_type and entity.resolved_entity_id:
+            artifacts.append(f"{entity.resolved_entity_type}:{entity.resolved_entity_id}")
+        for suggestion in entity.related_artifacts_suggested:
+            artifacts.append(f"{suggestion.artifact_type}:{suggestion.artifact_id}")
+    return list(dict.fromkeys(artifacts))
+
+
+def _narration_request_from_dict(value) -> NarrationRequest | None:
+    if not value:
+        return None
+    return NarrationRequest(
+        source_kind=value["source_kind"],
+        validated_structuring_state=_validated_state_from_dict(value["validated_structuring_state"]),
+        target_language=value.get("target_language"),
+        voice_mode=value.get("voice_mode", "inherit_project_voice"),
+        continuity_scope=value.get("continuity_scope", "scene_only"),
+        canon_mode=value.get("canon_mode", "validated_only"),
+        constraints=list(value.get("constraints", [])),
+    )
+
+
+def _review_ready_package_from_dict(value) -> ReviewReadyPackage | None:
+    if not value:
+        return None
+    return ReviewReadyPackage(
+        source_kind=value["source_kind"],
+        validated_structuring_state=_validated_state_from_dict(value["validated_structuring_state"]),
+        narration_prep=_narration_prep_from_dict(value.get("narration_prep")) if isinstance(value.get("narration_prep"), dict) else None,
+        review_focus=list(value.get("review_focus", [])),
+        preserve_constraints=list(value.get("preserve_constraints", [])),
+        related_artifacts=list(value.get("related_artifacts", [])),
+        open_questions=list(value.get("open_questions", [])),
+    )
+
+
+def _narration_prep_from_dict(value) -> NarrationPrep | None:
+    if not value:
+        return None
+    return NarrationPrep(
+        source_kind=value["source_kind"],
+        target_language=value["target_language"],
+        explanation_language=value["explanation_language"],
+        voice_artifacts=list(value.get("voice_artifacts", [])),
+        canon_artifacts=list(value.get("canon_artifacts", [])),
+        continuity_artifacts=list(value.get("continuity_artifacts", [])),
+        character_artifacts=list(value.get("character_artifacts", [])),
+        outline_reference=value.get("outline_reference"),
+        beat_outline=_beat_outline_from_dict(value.get("beat_outline")),
+        story_facts=_story_facts_from_dict(value.get("story_facts")),
+        revision_intent=_revision_intent_from_dict(value.get("revision_intent")),
+        narration_constraints=list(value.get("narration_constraints", [])),
     )

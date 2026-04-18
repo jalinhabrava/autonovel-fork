@@ -297,6 +297,27 @@ class TextifAIConversationPlannerTests(unittest.TestCase):
         self.assertIsNone(task.target_type)
         self.assertEqual(task.metadata["target_resolution_source"], "editorial_intent_multi_target")
 
+    def test_planner_routes_validate_structure_to_followthrough_flow(self):
+        request = ConversationRequest(
+            raw_text="valido esta estructura",
+            source="user",
+            mode="normal",
+            interface_language="es",
+            user_command_language="es",
+            internal_system_language="en",
+            project_default_language="ja",
+            mixed_language_allowed=True,
+            explanation_language="es",
+        )
+        intent = RecognizedIntent(
+            intent_name="validate_structure",
+            confidence=0.96,
+        )
+        task = self.planner.plan(request, intent, self.state)
+        self.assertEqual(task.task_type, "editorial_followthrough")
+        self.assertEqual(task.flow_name, "validate_structuring_flow")
+        self.assertEqual(task.step_kinds, ["resolve_followthrough_source", "validate_structuring", "return_response"])
+
 
 if __name__ == "__main__":
     unittest.main()

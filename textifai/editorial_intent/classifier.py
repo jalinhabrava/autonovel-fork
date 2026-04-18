@@ -16,15 +16,34 @@ def classify_editorial_intent(
     multi_target = _is_multi_target_request(lowered, candidate_targets)
     resolved_target = None if multi_target else next((item for item in candidate_targets if item.confidence >= 0.9), None)
     preserve_constraints, editorial_goals = _editorial_guidance(lowered, narrative_signals)
+    followup_mode = _followup_mode(
+        lowered,
+        candidate_targets,
+        state,
+        recognized_intent_name=recognized_intent_name,
+    )
+
+    if _is_validation_request(lowered):
+        validation_followup_mode = followup_mode
+        if validation_followup_mode == "none":
+            validation_followup_mode = "reuse_recent_target" if state and state.last_target_id else "require_clarification"
+        return EditorialIntent(
+            request_type="validation_request",
+            confidence=0.9,
+            target_scope=_target_scope(candidate_targets, state),
+            resolved_target_type=None if multi_target else (resolved_target.target_type if resolved_target else None),
+            resolved_target_id=None if multi_target else (resolved_target.target_id if resolved_target else None),
+            candidate_targets=candidate_targets,
+            followup_mode=validation_followup_mode,
+            preserve_constraints=preserve_constraints,
+            editorial_goals=_dedupe(editorial_goals + ["structure_scene"]),
+            metadata={"narrative_source_text": None, "multi_target": multi_target, "followthrough_action": "validate_structure"},
+        )
 
     if _is_narration_preparation(lowered):
-        followup_mode = _followup_mode(
-            lowered,
-            candidate_targets,
-            state,
-            recognized_intent_name=recognized_intent_name,
-        )
         request_type = "mixed_editorial_request" if _is_structuring_request(lowered) else "narration_preparation"
+        if _is_handoff_request(lowered):
+            request_type = "narration_handoff"
         return EditorialIntent(
             request_type=request_type,
             confidence=0.82,
@@ -35,15 +54,37 @@ def classify_editorial_intent(
             followup_mode=followup_mode,
             preserve_constraints=preserve_constraints,
             editorial_goals=_dedupe(editorial_goals + ["prepare_for_narration"]),
-            metadata={"narrative_source_text": _extract_narrative_source_text(raw_text), "multi_target": multi_target},
+            metadata={"narrative_source_text": _extract_narrative_source_text(raw_text), "multi_target": multi_target, "followthrough_action": "prepare_narration"},
         )
 
-    followup_mode = _followup_mode(
-        lowered,
-        candidate_targets,
-        state,
-        recognized_intent_name=recognized_intent_name,
-    )
+    if _is_review_handoff(lowered):
+        return EditorialIntent(
+            request_type="review_handoff",
+            confidence=0.84,
+            target_scope=_target_scope(candidate_targets, state),
+            resolved_target_type=None if multi_target else (resolved_target.target_type if resolved_target else None),
+            resolved_target_id=None if multi_target else (resolved_target.target_id if resolved_target else None),
+            candidate_targets=candidate_targets,
+            followup_mode=followup_mode,
+            preserve_constraints=preserve_constraints,
+            editorial_goals=_dedupe(editorial_goals),
+            metadata={"narrative_source_text": None, "multi_target": multi_target, "followthrough_action": "prepare_review"},
+        )
+
+    if _is_structured_followup(lowered):
+        structured_followup_mode = followup_mode if followup_mode != "none" else "require_clarification"
+        return EditorialIntent(
+            request_type="structured_followup",
+            confidence=0.8,
+            target_scope=_target_scope(candidate_targets, state),
+            resolved_target_type=None if multi_target else (resolved_target.target_type if resolved_target else None),
+            resolved_target_id=None if multi_target else (resolved_target.target_id if resolved_target else None),
+            candidate_targets=candidate_targets,
+            followup_mode=structured_followup_mode,
+            preserve_constraints=preserve_constraints,
+            editorial_goals=_dedupe(editorial_goals),
+            metadata={"narrative_source_text": None, "multi_target": multi_target, "followthrough_action": "resume_followup"},
+        )
 
     if _is_followup_only(lowered) and not (
         _is_structuring_request(lowered)
@@ -229,7 +270,7 @@ def _target_scope(candidate_targets: list[CandidateTarget], state) -> str | None
 
 
 def _is_followup_only(lowered: str) -> bool:
-    if lowered in {"esta nota", "esta escena", "este capítulo", "este capitulo"}:
+    if lowered in {"esta nota", "esta escena", "este capítulo", "este capitulo", "sí, esa", "si, esa", "usa la anterior"}:
         return True
     return lowered.startswith("lo del ")
 
@@ -244,6 +285,59 @@ def _is_narration_preparation(lowered: str) -> bool:
             "versión narrable",
             "version narrable",
             "lista para narrar",
+            "déjalo listo para narrar",
+            "dejalo listo para narrar",
+        )
+    )
+
+
+def _is_validation_request(lowered: str) -> bool:
+    return any(
+        phrase in lowered
+        for phrase in (
+            "valido esta estructura",
+            "valida esta estructura",
+            "validate this structure",
+            "valida la estructura",
+        )
+    )
+
+
+def _is_review_handoff(lowered: str) -> bool:
+    return any(
+        phrase in lowered
+        for phrase in (
+            "déjalo listo para revisión",
+            "dejalo listo para revision",
+            "prepáralo para revisión",
+            "preparalo para revision",
+            "listo para revisión",
+            "listo para revision",
+        )
+    )
+
+
+def _is_structured_followup(lowered: str) -> bool:
+    return any(
+        phrase in lowered
+        for phrase in (
+            "prepáralo con esa estructura",
+            "preparalo con esa estructura",
+            "usa la anterior",
+            "sí, esa",
+            "si, esa",
+        )
+    )
+
+
+def _is_handoff_request(lowered: str) -> bool:
+    return any(
+        phrase in lowered
+        for phrase in (
+            "déjalo listo para narrar",
+            "dejalo listo para narrar",
+            "preparalo para narrar",
+            "prepáralo para narrar",
         )
     )
 

@@ -370,11 +370,11 @@ class TextifAIConversationManagerTests(unittest.TestCase):
                 },
             )
             second_turn = manager.handle_request(second_request)
-            self.assertEqual(second_turn.result_type, "editorial_structuring")
+            self.assertEqual(second_turn.result_type, "followthrough")
             remembered = session.last_result["data"]
-            self.assertEqual(remembered["result_kind"], "narration_prep")
+            self.assertIsNotNone(remembered["narration_request"])
             self.assertIsNotNone(remembered["narration_prep"])
-            self.assertIsNotNone(remembered["story_facts"])
+            self.assertEqual(remembered["narration_prep"]["source_kind"], "beat_outline")
 
     def test_manager_anchors_canon_contradiction_to_lore_target_with_vaerl(self):
         with tempfile.TemporaryDirectory() as tmp:
