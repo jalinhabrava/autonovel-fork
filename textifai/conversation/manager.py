@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from textifai.conversation.contracts import ConversationRequest, ConversationTurn
+from textifai.conversation.contracts import ConversationRequest, ConversationTurn, ExecutionResult
 from textifai.conversation.executor import MinimalExecutionLayer
 from textifai.conversation.hybrid_recognizer import HybridIntentRecognizer
 from textifai.conversation.planner import TaskPlanner
@@ -23,6 +23,7 @@ class ConversationManager:
         self.recognizer = recognizer or HybridIntentRecognizer()
         self.planner = planner or TaskPlanner()
         self.executor = executor or MinimalExecutionLayer(session=session)
+        self.last_execution_result: ExecutionResult | None = None
 
     def handle_request(self, request: ConversationRequest) -> ConversationTurn:
         if self.state is None:
@@ -33,6 +34,12 @@ class ConversationManager:
         intent = self.recognizer.recognize(request, self.state)
         task = self.planner.plan(request, intent, self.state)
         if self._has_pending_conflict(task):
+            self.last_execution_result = ExecutionResult(
+                type="pending_operation_conflict",
+                flow_name=task.flow_name,
+                success=False,
+                result_summary="There is already a pending operation. Confirm or cancel it before starting another persistent action.",
+            )
             turn = ConversationTurn(
                 turn_index=self.state.turn_count + 1,
                 request=request,
@@ -51,6 +58,7 @@ class ConversationManager:
                 self.session.conversation_state = self.state
             return turn
         execution = self.executor.execute(task, request, self.state)
+        self.last_execution_result = execution
         turn = ConversationTurn(
             turn_index=self.state.turn_count + 1,
             request=request,
@@ -72,6 +80,8 @@ class ConversationManager:
         )
         if self.session is not None:
             self.session.conversation_state = self.state
+            remembered = execution.result if isinstance(execution.result, dict) else {"type": execution.type, "summary": execution.result_summary}
+            self.session.remember(remembered, request=execution.context_request)
         return turn
 
     def _has_pending_conflict(self, task) -> bool:

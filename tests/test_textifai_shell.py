@@ -3,6 +3,7 @@ import tempfile
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
+from unittest import mock
 
 from textifai.runtime_config import load_runtime_environment
 from textifai.session import create_session
@@ -87,7 +88,7 @@ class TextifAIShellTests(unittest.TestCase):
             )
             session = create_session(load_runtime_environment(base_dir))
 
-            with unittest.mock.patch(
+            with mock.patch(
                 "textifai.shell.dispatch_command",
                 return_value="TextifAI context result\n- target: world",
             ) as router_mock:
@@ -113,8 +114,33 @@ class TextifAIShellTests(unittest.TestCase):
             )
             session = create_session(load_runtime_environment(base_dir))
             response = handle_command(session, "nonsense")
-            self.assertIn("does not recognize", response)
-            self.assertIn("help", response)
+            self.assertIn("could not map", response)
+            self.assertIn("consistency check", response)
+
+    def test_normal_mode_routes_natural_language_through_conversation_runtime(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base_dir = Path(tmp)
+            vault_root = base_dir / "Vault"
+            bootstrap_vault(vault_root, title="Test Project")
+            (base_dir / ".env").write_text(
+                "\n".join(
+                    [
+                        "AUTONOVEL_PROJECT_BACKEND=vault",
+                        f"AUTONOVEL_VAULT_ROOT={vault_root}",
+                        "AUTONOVEL_TEXT_PROVIDER=ollama",
+                    ]
+                )
+                + "\n"
+            )
+            session = create_session(load_runtime_environment(base_dir))
+            with mock.patch(
+                "textifai.shell.handle_conversational_runtime_input",
+                return_value="Conversational runtime response",
+            ) as bridge_mock:
+                response = handle_command(session, "quiero revisar esta escena")
+
+            bridge_mock.assert_called_once()
+            self.assertEqual(response, "Conversational runtime response")
 
 
 if __name__ == "__main__":

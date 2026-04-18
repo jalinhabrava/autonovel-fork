@@ -46,6 +46,15 @@ class TextifAIConversationManagerTests(unittest.TestCase):
                     "target_type": "scene",
                     "target_id": "scene_054_b",
                     "classification_note": "LLM disambiguated a freeform scene request.",
+                    "narrative_signals": {
+                        "mentioned_entities": ["Sera"],
+                        "mentioned_character_ids": ["sera"],
+                        "target_hint": "scene_054_b",
+                        "target_inference_source": "conversation_state",
+                        "issue_types": ["character_voice_mismatch"],
+                        "constraint_hints": ["check_character_voice"],
+                        "confidence": 0.82,
+                    },
                 }
             )
         )
@@ -61,11 +70,13 @@ class TextifAIConversationManagerTests(unittest.TestCase):
             mixed_language_allowed=True,
             artifact_target_language="ja",
             explanation_language="es",
+            metadata={"known_characters": [{"id": "sera", "names": ["Sera"]}]},
         )
         turn = manager.handle_request(request)
         self.assertEqual(turn.recognized_intent.recognizer_kind, "hybrid_llm")
         self.assertEqual(turn.recognized_intent.metadata["recognition_source"], "hybrid_llm")
         self.assertEqual(turn.planned_task.flow_name, "scene_context_flow")
+        self.assertEqual(turn.recognized_intent.narrative_signals.issue_types, ["character_voice_mismatch"])
 
     def test_manager_syncs_real_execution_context_into_state(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -100,6 +111,37 @@ class TextifAIConversationManagerTests(unittest.TestCase):
             self.assertIsNotNone(manager.state.last_context_request)
             self.assertIsNotNone(manager.state.last_context_pack)
             self.assertIs(session.conversation_state, manager.state)
+
+    def test_manager_returns_unsupported_flow_for_natural_bootstrap(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base_dir = Path(tmp)
+            vault_root = base_dir / "Vault"
+            bootstrap_vault(vault_root, title="Test Project")
+            (base_dir / ".env").write_text(
+                "\n".join(
+                    [
+                        "AUTONOVEL_PROJECT_BACKEND=vault",
+                        f"AUTONOVEL_VAULT_ROOT={vault_root}",
+                        "AUTONOVEL_TEXT_PROVIDER=ollama",
+                    ]
+                )
+                + "\n"
+            )
+            session = create_session(load_runtime_environment(base_dir))
+            manager = ConversationManager(session=session, executor=MinimalExecutionLayer(session=session))
+            request = ConversationRequest(
+                raw_text="haz bootstrap del canon de los capítulos 1 a 3",
+                source="user",
+                mode="normal",
+                interface_language="es",
+                user_command_language="es",
+                internal_system_language="en",
+                project_default_language="ja",
+                mixed_language_allowed=True,
+                explanation_language="es",
+            )
+            turn = manager.handle_request(request)
+            self.assertEqual(turn.result_type, "unsupported_flow")
 
 
 class _StubClassifier:

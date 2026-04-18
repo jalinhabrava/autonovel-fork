@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import asdict
+
 from textifai.conversation.contracts import ConversationRequest, PlannedTask, RecognizedIntent
 from textifai.conversation.state import ConversationState
 
@@ -11,11 +13,13 @@ class TaskPlanner:
         intent: RecognizedIntent,
         state: ConversationState | None = None,
     ) -> PlannedTask:
+        effective_intent_name = _resolve_effective_intent_name(intent, state)
+        unsupported_capability = intent.metadata.get("unsupported_capability")
         operation_language = _resolve_operation_language(request)
         explanation_language = request.explanation_language or request.interface_language
         artifact_target_language = request.artifact_target_language or (state.artifact_target_language if state else None)
         target_id = _resolve_target_id(request, intent, state)
-        target_type = intent.target_type or _resolve_target_type(intent, state)
+        target_type = _resolve_target_type(intent, state)
 
         mapping = {
             "confirm_pending": ("conversation_control", "confirm_pending_flow", True, False, False, True, ["confirm_operation", "return_response"]),
@@ -32,7 +36,18 @@ class TaskPlanner:
             "bootstrap_extract": ("bootstrap_operation", "bootstrap_extract_flow", False, True, False, True, ["resolve_target", "persist_artifact", "return_response"]),
             "unknown": ("noop", "noop_flow", True, False, False, False, ["return_response"]),
         }
-        task_type, flow_name, ephemeral, persistent, requires_context, requires_persistence, step_kinds = mapping[intent.intent_name]
+        task_type, flow_name, ephemeral, persistent, requires_context, requires_persistence, step_kinds = mapping[effective_intent_name]
+        if unsupported_capability:
+            task_type, flow_name, ephemeral, persistent, requires_context, requires_persistence, step_kinds = (
+                "noop",
+                "noop_flow",
+                True,
+                False,
+                False,
+                False,
+                ["return_response"],
+            )
+        planner_reason = _planner_reason(intent, effective_intent_name)
 
         return PlannedTask(
             task_type=task_type,
@@ -49,10 +64,14 @@ class TaskPlanner:
             requires_persistence=requires_persistence,
             step_kinds=step_kinds,
             metadata={
-                "intent_name": intent.intent_name,
+                "intent_name": effective_intent_name,
+                "recognized_intent_name": intent.intent_name,
                 "query_text": _derive_query_text(request, intent),
                 "target_resolution_source": _target_resolution_source(request, intent, state),
                 "confirmation_required": flow_name in {"decision_persistence_flow", "validate_artifact_flow", "reject_artifact_flow"},
+                "planner_reason": planner_reason,
+                "narrative_signals": asdict(intent.narrative_signals) if intent.narrative_signals is not None else None,
+                "unsupported_capability": unsupported_capability,
             },
         )
 
@@ -69,11 +88,24 @@ def _derive_query_text(request: ConversationRequest, intent: RecognizedIntent) -
         return lowered.split(maxsplit=1)[1].strip()
     if intent.intent_name == "search_context":
         return lowered
+    if intent.intent_name == "unknown" and intent.narrative_signals and intent.narrative_signals.mentioned_entities:
+        return ", ".join(intent.narrative_signals.mentioned_entities)
     return None
 
 
 def _resolve_target_type(intent: RecognizedIntent, state: ConversationState | None) -> str | None:
-    return intent.target_type or (state.last_target_type if state else None)
+    if intent.target_type:
+        return intent.target_type
+    if (
+        intent.intent_name == "consistency_check"
+        and intent.narrative_signals is not None
+        and "canon_issue" in intent.narrative_signals.issue_types
+        and intent.narrative_signals.mentioned_entities
+    ):
+        return None
+    if intent.narrative_signals and intent.narrative_signals.target_hint:
+        return state.last_target_type if state else None
+    return state.last_target_type if state else None
 
 
 def _resolve_target_id(
@@ -81,7 +113,18 @@ def _resolve_target_id(
     intent: RecognizedIntent,
     state: ConversationState | None,
 ) -> str | None:
-    return intent.target_id or request.target_hint or (state.last_target_id if state else None)
+    if intent.target_id:
+        return intent.target_id
+    if (
+        intent.intent_name == "consistency_check"
+        and intent.narrative_signals is not None
+        and "canon_issue" in intent.narrative_signals.issue_types
+        and intent.narrative_signals.mentioned_entities
+    ):
+        return None
+    if intent.narrative_signals and intent.narrative_signals.target_hint:
+        return intent.narrative_signals.target_hint
+    return request.target_hint or (state.last_target_id if state else None)
 
 
 def _target_resolution_source(
@@ -91,8 +134,42 @@ def _target_resolution_source(
 ) -> str:
     if intent.target_id:
         return "recognized_intent"
+    if (
+        intent.intent_name == "consistency_check"
+        and intent.narrative_signals is not None
+        and "canon_issue" in intent.narrative_signals.issue_types
+        and intent.narrative_signals.mentioned_entities
+    ):
+        return "conservative_none"
+    if intent.narrative_signals and intent.narrative_signals.target_hint:
+        return intent.narrative_signals.target_inference_source or "narrative_signals"
     if request.target_hint:
         return "request_hint"
     if state and state.last_target_id:
         return "conversation_state"
     return "none"
+
+
+def _resolve_effective_intent_name(intent: RecognizedIntent, state: ConversationState | None) -> str:
+    if intent.intent_name != "unknown":
+        return intent.intent_name
+    signals = intent.narrative_signals
+    if signals is None:
+        return intent.intent_name
+    issue_types = set(signals.issue_types)
+    target_type = intent.target_type or (state.last_target_type if state else None)
+    if issue_types & {"canon_issue", "continuity_issue"} and (signals.target_hint or (state and state.last_target_id)):
+        return "consistency_check"
+    if target_type == "scene" and signals.target_hint:
+        return "inspect_scene"
+    if target_type == "chapter" and signals.target_hint:
+        return "inspect_chapter"
+    return intent.intent_name
+
+
+def _planner_reason(intent: RecognizedIntent, effective_intent_name: str) -> str:
+    if intent.metadata.get("unsupported_capability"):
+        return "unsupported_capability"
+    if effective_intent_name == intent.intent_name:
+        return "direct_intent_mapping"
+    return "narrative_signal_inference"

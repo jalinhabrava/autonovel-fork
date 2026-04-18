@@ -20,6 +20,24 @@ INTENT_CATALOG = (
     "bootstrap_extract",
 )
 
+ISSUE_TYPE_CATALOG = (
+    "character_voice_mismatch",
+    "canon_issue",
+    "continuity_issue",
+    "tone_issue",
+    "motivation_issue",
+    "clarity_issue",
+)
+
+CONSTRAINT_HINT_CATALOG = (
+    "check_character_voice",
+    "check_validated_canon",
+    "check_recent_continuity",
+    "check_tone_alignment",
+    "check_character_motivation",
+    "check_clarity",
+)
+
 TASK_TYPE_CATALOG = (
     "noop",
     "respond",
@@ -76,6 +94,23 @@ class ConversationRequest:
 
 
 @dataclass(frozen=True)
+class NarrativeSignals:
+    mentioned_entities: list[str] = field(default_factory=list)
+    mentioned_character_ids: list[str] = field(default_factory=list)
+    target_hint: str | None = None
+    target_inference_source: str | None = None
+    issue_types: list[str] = field(default_factory=list)
+    constraint_hints: list[str] = field(default_factory=list)
+    confidence: float = 0.0
+
+    def __post_init__(self) -> None:
+        for issue_type in self.issue_types:
+            _ensure_catalog_value("issue_type", issue_type, ISSUE_TYPE_CATALOG)
+        for constraint_hint in self.constraint_hints:
+            _ensure_catalog_value("constraint_hint", constraint_hint, CONSTRAINT_HINT_CATALOG)
+
+
+@dataclass(frozen=True)
 class RecognizedIntent:
     intent_name: str
     confidence: float
@@ -85,6 +120,7 @@ class RecognizedIntent:
     ephemeral_hint: bool | None = None
     persistent_hint: bool | None = None
     signals: list[str] = field(default_factory=list)
+    narrative_signals: NarrativeSignals | None = None
     recognizer_kind: Literal["rule_based", "hybrid_stub", "hybrid_llm"] = "rule_based"
     metadata: dict[str, Any] = field(default_factory=dict)
 

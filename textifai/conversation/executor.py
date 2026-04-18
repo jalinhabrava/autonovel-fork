@@ -40,6 +40,27 @@ class MinimalExecutionLayer:
         request: ConversationRequest,
         state: ConversationState | None = None,
     ) -> ExecutionResult:
+        if task.flow_name == "noop_flow":
+            unsupported_capability = task.metadata.get("unsupported_capability")
+            if unsupported_capability:
+                return ExecutionResult(
+                    type="unsupported_flow",
+                    flow_name=task.flow_name,
+                    success=False,
+                    result_summary=(
+                        f"I understood that you want to use {unsupported_capability}, "
+                        "but that conversational flow is not supported yet. Use the explicit command path for now."
+                    ),
+                )
+            return ExecutionResult(
+                type="conversation_clarification",
+                flow_name=task.flow_name,
+                success=False,
+                result_summary=(
+                    "I could not map that request to a supported runtime flow yet. "
+                    "Try asking for help, context, a scene/chapter inspection, or a consistency check."
+                ),
+            )
         if task.flow_name == "help_flow":
             locale = self.session.locale if self.session is not None else request.interface_language
             return ExecutionResult(

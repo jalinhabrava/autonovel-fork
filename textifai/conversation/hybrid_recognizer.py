@@ -3,7 +3,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol
 
-from textifai.conversation.contracts import ConversationRequest, INTENT_CATALOG, RecognizedIntent
+from textifai.conversation.contracts import (
+    CONSTRAINT_HINT_CATALOG,
+    ConversationRequest,
+    INTENT_CATALOG,
+    ISSUE_TYPE_CATALOG,
+    NarrativeSignals,
+    RecognizedIntent,
+)
 from textifai.conversation.recognizer import RuleBasedIntentRecognizer
 from textifai.conversation.state import ConversationState
 
@@ -60,6 +67,12 @@ class HybridIntentRecognizer:
         return self._normalize_llm_result(request, rule_intent, llm_result)
 
     def _should_escalate(self, request: ConversationRequest, rule_intent: RecognizedIntent) -> bool:
+        if rule_intent.metadata.get("unsupported_capability"):
+            return False
+        if rule_intent.metadata.get("skip_llm_escalation"):
+            return False
+        if _is_direct_command_result(rule_intent) and rule_intent.confidence >= self.config.llm_escalation_threshold:
+            return False
         if rule_intent.intent_name == "unknown":
             return True
         if rule_intent.confidence < self.config.llm_escalation_threshold:
@@ -118,6 +131,7 @@ class HybridIntentRecognizer:
             ephemeral_hint=intent.ephemeral_hint,
             persistent_hint=intent.persistent_hint,
             signals=list(intent.signals),
+            narrative_signals=intent.narrative_signals,
             recognizer_kind="rule_based",
             metadata=metadata,
         )
@@ -146,6 +160,7 @@ class HybridIntentRecognizer:
             ephemeral_hint=rule_intent.ephemeral_hint,
             persistent_hint=rule_intent.persistent_hint,
             signals=list(rule_intent.signals),
+            narrative_signals=rule_intent.narrative_signals,
             recognizer_kind="rule_based",
             metadata=metadata,
         )
@@ -164,6 +179,11 @@ class HybridIntentRecognizer:
         target_type = result.get("target_type") or rule_intent.target_type
         target_id = result.get("target_id") or rule_intent.target_id or request.target_hint
         signals = list(dict.fromkeys(list(rule_intent.signals) + _coerce_signals(result.get("signals")) + ["llm_classification"]))
+        narrative_signals = _normalize_narrative_signals(
+            result.get("narrative_signals"),
+            rule_intent.narrative_signals,
+            request=request,
+        )
 
         metadata = {
             "recognition_source": "hybrid_llm",
@@ -195,6 +215,7 @@ class HybridIntentRecognizer:
             ephemeral_hint=result.get("ephemeral_hint", rule_intent.ephemeral_hint),
             persistent_hint=result.get("persistent_hint", rule_intent.persistent_hint),
             signals=signals,
+            narrative_signals=narrative_signals,
             recognizer_kind="hybrid_llm",
             metadata=metadata,
         )
@@ -212,3 +233,52 @@ def _coerce_signals(value) -> list[str]:
     if not isinstance(value, list):
         return []
     return [str(item) for item in value if item]
+
+
+def _is_direct_command_result(intent: RecognizedIntent) -> bool:
+    return any(signal.endswith("_command") or signal.endswith("_control") for signal in intent.signals)
+
+
+def _normalize_narrative_signals(
+    value,
+    existing: NarrativeSignals | None,
+    *,
+    request: ConversationRequest,
+) -> NarrativeSignals | None:
+    if not isinstance(value, dict):
+        return existing
+
+    known_character_ids = {
+        str(entry.get("id"))
+        for entry in request.metadata.get("known_characters", [])
+        if str(entry.get("id") or "").strip()
+    }
+    issue_types = [
+        str(item)
+        for item in value.get("issue_types", [])
+        if str(item) in ISSUE_TYPE_CATALOG
+    ]
+    constraint_hints = [
+        str(item)
+        for item in value.get("constraint_hints", [])
+        if str(item) in CONSTRAINT_HINT_CATALOG
+    ]
+    mentioned_entities = [str(item) for item in value.get("mentioned_entities", []) if str(item)]
+    mentioned_character_ids = [
+        str(item)
+        for item in value.get("mentioned_character_ids", [])
+        if str(item) and str(item) in known_character_ids
+    ]
+    target_hint = value.get("target_hint") or (existing.target_hint if existing else request.target_hint)
+    target_inference_source = value.get("target_inference_source") or (existing.target_inference_source if existing else None)
+    confidence = _coerce_confidence(value.get("confidence"), default=existing.confidence if existing else 0.55)
+
+    return NarrativeSignals(
+        mentioned_entities=list(dict.fromkeys((existing.mentioned_entities if existing else []) + mentioned_entities)),
+        mentioned_character_ids=list(dict.fromkeys((existing.mentioned_character_ids if existing else []) + mentioned_character_ids)),
+        target_hint=target_hint,
+        target_inference_source=target_inference_source,
+        issue_types=list(dict.fromkeys((existing.issue_types if existing else []) + issue_types)),
+        constraint_hints=list(dict.fromkeys((existing.constraint_hints if existing else []) + constraint_hints)),
+        confidence=confidence,
+    )

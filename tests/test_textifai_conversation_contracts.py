@@ -1,8 +1,11 @@
 import unittest
 
 from textifai.conversation.contracts import (
+    CONSTRAINT_HINT_CATALOG,
     ConversationRequest,
     ConversationTurn,
+    ISSUE_TYPE_CATALOG,
+    NarrativeSignals,
     PendingConversationOperation,
     PlannedTask,
     RecognizedIntent,
@@ -31,6 +34,22 @@ class TextifAIConversationContractsTests(unittest.TestCase):
         self.assertEqual(intent.intent_name, "inspect_scene")
         with self.assertRaises(ValueError):
             RecognizedIntent(intent_name="scene_magic", confidence=0.5)
+
+    def test_narrative_signals_use_controlled_issue_and_constraint_catalogs(self):
+        signals = NarrativeSignals(
+            mentioned_entities=["Sera"],
+            mentioned_character_ids=["sera"],
+            target_hint="scene_001",
+            target_inference_source="conversation_state",
+            issue_types=["character_voice_mismatch"],
+            constraint_hints=["check_character_voice"],
+            confidence=0.81,
+        )
+        self.assertIn("character_voice_mismatch", ISSUE_TYPE_CATALOG)
+        self.assertIn("check_character_voice", CONSTRAINT_HINT_CATALOG)
+        self.assertEqual(signals.mentioned_character_ids, ["sera"])
+        with self.assertRaises(ValueError):
+            NarrativeSignals(issue_types=["made_up_issue"])
 
     def test_planned_task_uses_controlled_flow_and_steps(self):
         task = PlannedTask(

@@ -1,9 +1,12 @@
 from textifai.conversation.contracts import (
+    CONSTRAINT_HINT_CATALOG,
     ConversationRequest,
     ConversationTurn,
     ExecutionResult,
     FLOW_NAME_CATALOG,
     INTENT_CATALOG,
+    ISSUE_TYPE_CATALOG,
+    NarrativeSignals,
     PendingConversationOperation,
     PlannedTask,
     RecognizedIntent,
@@ -20,6 +23,7 @@ from textifai.conversation.state import ConversationState, create_conversation_s
 
 __all__ = [
     "ConversationManager",
+    "NarrativeSignals",
     "ConversationRequest",
     "ConversationState",
     "ConversationTurn",
@@ -28,6 +32,8 @@ __all__ = [
     "RecognizedIntent",
     "PlannedTask",
     "INTENT_CATALOG",
+    "ISSUE_TYPE_CATALOG",
+    "CONSTRAINT_HINT_CATALOG",
     "TASK_TYPE_CATALOG",
     "FLOW_NAME_CATALOG",
     "STEP_KIND_CATALOG",
