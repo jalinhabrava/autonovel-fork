@@ -5,6 +5,16 @@ from pathlib import Path
 
 VAULT_SCHEMA_VERSION = "1.0"
 NOTE_STATUSES = ("proposed", "pending_revision", "validated", "rejected", "superseded")
+IMPORT_STAGING_ROOT = "99_Import_Staging"
+IMPORT_STAGING_DIRS = {
+    "root": IMPORT_STAGING_ROOT,
+    "manifests": f"{IMPORT_STAGING_ROOT}/_manifests",
+    "characters": f"{IMPORT_STAGING_ROOT}/characters",
+    "lore": f"{IMPORT_STAGING_ROOT}/lore",
+    "scenes": f"{IMPORT_STAGING_ROOT}/scenes",
+    "chapters": f"{IMPORT_STAGING_ROOT}/chapters",
+    "mixed": f"{IMPORT_STAGING_ROOT}/mixed",
+}
 
 VAULT_DIRS = {
     "project": "00_Project",

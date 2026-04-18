@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from textifai.i18n import Translator, get_translator
 from textifai.language_resolution import OperationLanguageResolution, resolve_language_for_operation
 from textifai.language_policy import LanguagePolicy
-from textifai.runtime_config import RuntimeEnvironment
+from textifai.runtime_config import RuntimeEnvironment, default_import_staging_path
 
 if TYPE_CHECKING:
     from textifai.conversation.state import ConversationState
@@ -39,6 +39,10 @@ class TextifAISession:
     @property
     def locale(self) -> str:
         return self.language_policy.interface_language
+
+    @property
+    def import_staging_path(self) -> Path:
+        return default_import_staging_path(self.vault_path)
 
     def resolve_language(
         self,

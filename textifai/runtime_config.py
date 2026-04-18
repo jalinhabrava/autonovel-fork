@@ -10,6 +10,7 @@ from textifai.language_policy import LanguagePolicy, load_language_policy
 
 
 DEFAULT_VAULT_DIRNAME = "TextifAIVault"
+DEFAULT_IMPORT_STAGING_DIRNAME = "99_Import_Staging"
 ENV_FILE_NAME = ".env"
 ENV_EXAMPLE_NAME = ".env.example"
 
@@ -49,6 +50,10 @@ def load_runtime_environment(base_dir: str | Path = ".") -> RuntimeEnvironment:
 
 def default_vault_path(base_dir: str | Path = ".") -> Path:
     return Path(base_dir).resolve() / DEFAULT_VAULT_DIRNAME
+
+
+def default_import_staging_path(vault_root: str | Path) -> Path:
+    return Path(vault_root).expanduser().resolve() / DEFAULT_IMPORT_STAGING_DIRNAME
 
 
 def ensure_env_file(base_dir: str | Path = ".") -> Path:

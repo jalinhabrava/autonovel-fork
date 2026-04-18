@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from vault.schema import ROOT_NOTES, TEMPLATE_ROOT, VAULT_DIRS
+from vault.schema import IMPORT_STAGING_DIRS, ROOT_NOTES, TEMPLATE_ROOT, VAULT_DIRS
 from vault.templates import render_template
 
 
@@ -16,6 +16,8 @@ def bootstrap_vault(destination: str | Path, title: str = "Untitled Novel Projec
     (root / ".obsidian").mkdir(exist_ok=True)
 
     for relative_dir in VAULT_DIRS.values():
+        (root / relative_dir).mkdir(parents=True, exist_ok=True)
+    for relative_dir in IMPORT_STAGING_DIRS.values():
         (root / relative_dir).mkdir(parents=True, exist_ok=True)
 
     template_files = {
@@ -88,3 +90,10 @@ def validate_vault(destination: str | Path) -> list[str]:
             errors.append(f"Missing root artifact: {artifact_name} -> {relative_path}")
 
     return errors
+
+
+def create_import_staging_structure(destination: str | Path) -> Path:
+    root = Path(destination)
+    for relative_dir in IMPORT_STAGING_DIRS.values():
+        (root / relative_dir).mkdir(parents=True, exist_ok=True)
+    return root / IMPORT_STAGING_DIRS["root"]
