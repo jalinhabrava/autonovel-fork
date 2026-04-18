@@ -35,6 +35,7 @@ EDITORIAL_GOAL_CATALOG = (
     "extract_story_facts",
     "structure_scene",
     "prepare_for_narration",
+    "prepare_for_review",
     "extend_conflict",
     "align_tone",
     "clarify_motivation",

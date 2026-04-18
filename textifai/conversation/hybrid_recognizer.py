@@ -69,13 +69,15 @@ class HybridIntentRecognizer:
     def _should_escalate(self, request: ConversationRequest, rule_intent: RecognizedIntent) -> bool:
         if rule_intent.metadata.get("unsupported_capability"):
             return False
-        if rule_intent.metadata.get("skip_llm_escalation"):
+        if rule_intent.metadata.get("skip_llm_escalation") and not _looks_like_author_understanding_case(request.raw_text):
             return False
         if _is_direct_command_result(rule_intent) and rule_intent.confidence >= self.config.llm_escalation_threshold:
             return False
         if rule_intent.intent_name == "unknown":
             return True
         if rule_intent.confidence < self.config.llm_escalation_threshold:
+            return True
+        if _looks_like_author_understanding_case(request.raw_text):
             return True
         if self._looks_less_structured(request):
             return True
@@ -281,4 +283,32 @@ def _normalize_narrative_signals(
         issue_types=list(dict.fromkeys((existing.issue_types if existing else []) + issue_types)),
         constraint_hints=list(dict.fromkeys((existing.constraint_hints if existing else []) + constraint_hints)),
         confidence=confidence,
+    )
+
+
+def _looks_like_author_understanding_case(raw_text: str) -> bool:
+    lowered = raw_text.casefold().strip()
+    if not lowered:
+        return False
+    return any(
+        phrase in lowered
+        for phrase in (
+            "pero sin",
+            "sin perder",
+            "sin romper",
+            "quédate con",
+            "quedate con",
+            "de lo anterior",
+            "de la anterior",
+            "prepáralo para narrar",
+            "preparalo para narrar",
+            "déjalo listo para revisión",
+            "dejalo listo para revision",
+            "más contenida",
+            "mas contenida",
+            "lista para revisar",
+            "listo para revisar",
+            "luego",
+            "y luego",
+        )
     )

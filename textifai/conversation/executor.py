@@ -138,6 +138,7 @@ class MinimalExecutionLayer:
     def _execute_editorial_structuring(self, task: PlannedTask, request: ConversationRequest) -> ExecutionResult:
         narrative_signals = _narrative_signals_from_metadata(task.metadata.get("narrative_signals"))
         editorial_intent = _editorial_intent_from_metadata(task.metadata.get("editorial_intent"))
+        author_understanding = _author_understanding_from_metadata(task.metadata.get("author_understanding"))
         entity_results = _entity_results_from_metadata(task.metadata.get("vaerl_results"))
         if not entity_results:
             entity_results = resolve_entities(
@@ -148,9 +149,13 @@ class MinimalExecutionLayer:
             )
         source_text = _editorial_source_text(request.raw_text, editorial_intent)
         base_result = _last_editorial_result(self.session.last_result)
+        wants_narration_prep = _author_understanding_requests_narration_prep(author_understanding)
+
+        if editorial_intent is not None and editorial_intent.metadata.get("multi_target") and editorial_intent.request_type == "structured_followup":
+            return self._editorial_followup_clarification(task, editorial_intent, entity_results)
 
         if editorial_intent is not None and source_text is None:
-            if editorial_intent.request_type == "narration_preparation" and base_result is not None:
+            if wants_narration_prep and base_result is not None:
                 narration_prep = build_narration_prep(
                     target_language=task.artifact_target_language or request.project_default_language,
                     explanation_language=task.explanation_language,
@@ -189,14 +194,16 @@ class MinimalExecutionLayer:
             narrative_signals=narrative_signals,
             artifact_target_language=task.artifact_target_language,
         )
-        narration_prep = build_narration_prep(
-            target_language=task.artifact_target_language or request.project_default_language,
-            explanation_language=task.explanation_language,
-            entity_results=entity_results,
-            beat_outline=result.beat_outline,
-            story_facts=result.story_facts,
-            revision_intent=result.revision_intent,
-        )
+        narration_prep = None
+        if wants_narration_prep or (editorial_intent is not None and editorial_intent.request_type == "narration_preparation"):
+            narration_prep = build_narration_prep(
+                target_language=task.artifact_target_language or request.project_default_language,
+                explanation_language=task.explanation_language,
+                entity_results=entity_results,
+                beat_outline=result.beat_outline,
+                story_facts=result.story_facts,
+                revision_intent=result.revision_intent,
+            )
         result = EditorialStructuringResult(
             entity_resolution_results=result.entity_resolution_results,
             story_facts=result.story_facts,
@@ -382,7 +389,10 @@ class MinimalExecutionLayer:
         if editorial_intent.request_type == "contextual_followup":
             reason = "This follow-up is anchored to a target, but it still needs a clearer note, scene, or narrative fact before we can structure it."
         elif editorial_intent.request_type in {"structuring_request", "mixed_editorial_request"}:
-            reason = "This request is editorial, but the current turn does not include enough narrative facts to build a trustworthy structure."
+            reason = (
+                "This request is editorial, but it still needs a concrete narrative passage or fact set "
+                "before we can build a trustworthy structure."
+            )
         elif editorial_intent.request_type == "editorial_revision":
             reason = "This revision is editorial, but it needs a concrete narrative passage or fact set to revise safely."
         return ExecutionResult(
@@ -854,6 +864,29 @@ def _editorial_intent_from_metadata(value) -> EditorialIntent | None:
     )
 
 
+def _author_understanding_from_metadata(value) -> dict | None:
+    if not value:
+        return None
+    if isinstance(value, dict):
+        return value
+    return None
+
+
+def _author_understanding_requests_narration_prep(value: dict | None) -> bool:
+    if not value:
+        return False
+    if value.get("primary_intent_type") == "narration_preparation":
+        return True
+    if value.get("primary_intent_type") == "mixed_request":
+        secondary = set(str(item) for item in value.get("secondary_intent_types", []) if str(item))
+        if "narration_preparation" in secondary:
+            return True
+    signals = set(str(item) for item in value.get("author_goal_signals", []) if str(item))
+    if "prepare_for_narration" in signals:
+        return True
+    return False
+
+
 def _entity_results_from_metadata(items) -> list[EntityResolutionResult]:
     if not items:
         return []
@@ -882,10 +915,15 @@ def _entity_results_from_metadata(items) -> list[EntityResolutionResult]:
 def _editorial_source_text(raw_text: str, editorial_intent: EditorialIntent | None) -> str | None:
     if editorial_intent is None:
         return raw_text
+    author_understanding = _author_understanding_from_metadata(editorial_intent.metadata.get("author_understanding"))
+    if author_understanding is not None:
+        narrative_content_text = author_understanding.get("narrative_content_text")
+        if narrative_content_text is not None:
+            return narrative_content_text
+        if author_understanding.get("meta_instruction_text") is not None:
+            return None
     source_text = editorial_intent.metadata.get("narrative_source_text")
-    if source_text is None:
-        return None
-    return source_text
+    return source_text if source_text is not None else None
 
 
 def _last_editorial_result(last_result) -> EditorialStructuringResult | None:

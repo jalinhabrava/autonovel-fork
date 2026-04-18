@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict
+from types import SimpleNamespace
 
 from textifai.conversation.contracts import ConversationRequest, PlannedTask, RecognizedIntent
 from textifai.conversation.state import ConversationState
@@ -61,6 +62,7 @@ class TaskPlanner:
                     "confirmation_required": False,
                     "planner_reason": planner_reason,
                     "narrative_signals": asdict(intent.narrative_signals) if intent.narrative_signals is not None else None,
+                    "author_understanding": intent.metadata.get("author_understanding"),
                     "editorial_intent": asdict(intent.editorial_intent) if intent.editorial_intent is not None else None,
                     "vaerl_results": intent.metadata.get("vaerl_results"),
                     "unsupported_capability": intent.metadata.get("unsupported_capability"),
@@ -114,17 +116,18 @@ class TaskPlanner:
             step_kinds=step_kinds,
             metadata={
                 "intent_name": effective_intent_name,
-                "recognized_intent_name": intent.intent_name,
-                "query_text": _derive_query_text(request, intent),
-                "target_resolution_source": _target_resolution_source(request, intent, state),
-                "confirmation_required": flow_name in {"decision_persistence_flow", "validate_artifact_flow", "reject_artifact_flow"},
-                "planner_reason": planner_reason,
-                "narrative_signals": asdict(intent.narrative_signals) if intent.narrative_signals is not None else None,
-                "editorial_intent": asdict(intent.editorial_intent) if intent.editorial_intent is not None else None,
-                "vaerl_results": intent.metadata.get("vaerl_results"),
-                "unsupported_capability": unsupported_capability,
-                "editorial_structuring_requested": effective_intent_name == "editorial_structuring",
-                "followthrough_action": intent.editorial_intent.metadata.get("followthrough_action") if intent.editorial_intent else None,
+            "recognized_intent_name": intent.intent_name,
+            "query_text": _derive_query_text(request, intent),
+            "target_resolution_source": _target_resolution_source(request, intent, state),
+            "confirmation_required": flow_name in {"decision_persistence_flow", "validate_artifact_flow", "reject_artifact_flow"},
+            "planner_reason": planner_reason,
+            "narrative_signals": asdict(intent.narrative_signals) if intent.narrative_signals is not None else None,
+            "author_understanding": intent.metadata.get("author_understanding"),
+            "editorial_intent": asdict(intent.editorial_intent) if intent.editorial_intent is not None else None,
+            "vaerl_results": intent.metadata.get("vaerl_results"),
+            "unsupported_capability": unsupported_capability,
+            "editorial_structuring_requested": effective_intent_name == "editorial_structuring",
+            "followthrough_action": intent.editorial_intent.metadata.get("followthrough_action") if intent.editorial_intent else None,
             },
         )
 
@@ -148,14 +151,21 @@ def _derive_query_text(request: ConversationRequest, intent: RecognizedIntent) -
 
 def _resolve_target_type(intent: RecognizedIntent, state: ConversationState | None) -> str | None:
     editorial_intent = intent.editorial_intent
+    author_understanding = _author_understanding_from_intent(intent)
     if editorial_intent and editorial_intent.metadata.get("multi_target") and editorial_intent.request_type in {
         "narrative_facts",
         "structuring_request",
         "editorial_revision",
         "narration_preparation",
         "mixed_editorial_request",
+        "structured_followup",
     }:
         return None
+    if author_understanding is not None and _author_understanding_requires_clarification(author_understanding) and not _intent_has_explicit_target(intent):
+        return None
+    preferred_target = _preferred_target_from_author_understanding(author_understanding)
+    if preferred_target is not None:
+        return preferred_target.target_type
     if editorial_intent and editorial_intent.resolved_target_type:
         return editorial_intent.resolved_target_type
     if editorial_intent and editorial_intent.followup_mode == "prefer_candidate_targets" and editorial_intent.candidate_targets:
@@ -182,14 +192,22 @@ def _resolve_target_id(
     state: ConversationState | None,
 ) -> str | None:
     editorial_intent = intent.editorial_intent
+    author_understanding = _author_understanding_from_intent(intent)
     if editorial_intent and editorial_intent.metadata.get("multi_target") and editorial_intent.request_type in {
         "narrative_facts",
         "structuring_request",
         "editorial_revision",
         "narration_preparation",
         "mixed_editorial_request",
+        "structured_followup",
     }:
         return None
+    if author_understanding is not None:
+        if _author_understanding_requires_clarification(author_understanding) and not _intent_has_explicit_target(intent):
+            return None
+        preferred_target = _preferred_target_from_author_understanding(author_understanding)
+        if preferred_target is not None:
+            return preferred_target.target_id
     if editorial_intent and editorial_intent.resolved_target_id:
         return editorial_intent.resolved_target_id
     if editorial_intent and editorial_intent.followup_mode == "prefer_candidate_targets" and editorial_intent.candidate_targets:
@@ -216,14 +234,21 @@ def _target_resolution_source(
     state: ConversationState | None,
 ) -> str:
     editorial_intent = intent.editorial_intent
+    author_understanding = _author_understanding_from_intent(intent)
     if editorial_intent and editorial_intent.metadata.get("multi_target") and editorial_intent.request_type in {
         "narrative_facts",
         "structuring_request",
         "editorial_revision",
         "narration_preparation",
         "mixed_editorial_request",
+        "structured_followup",
     }:
         return "editorial_intent_multi_target"
+    if author_understanding is not None:
+        if _author_understanding_requires_clarification(author_understanding):
+            return "author_understanding_clarification"
+        if _preferred_target_from_author_understanding(author_understanding) is not None:
+            return "author_understanding_disambiguation"
     if editorial_intent and editorial_intent.resolved_target_id:
         return "editorial_intent_resolved"
     if editorial_intent and editorial_intent.followup_mode == "prefer_candidate_targets" and editorial_intent.candidate_targets:
@@ -251,8 +276,18 @@ def _target_resolution_source(
 def _resolve_effective_intent_name(intent: RecognizedIntent, state: ConversationState | None) -> str:
     editorial_intent = intent.editorial_intent
     if intent.intent_name in FOLLOWTHROUGH_INTENTS:
+        if (
+            intent.intent_name == "structured_followup"
+            and editorial_intent is not None
+            and editorial_intent.metadata.get("multi_target")
+        ):
+            return "editorial_structuring"
         return intent.intent_name
     if editorial_intent is not None:
+        if editorial_intent.request_type == "contextual_followup" and intent.intent_name in {"unknown", "inspect_scene"}:
+            return "editorial_structuring"
+        if editorial_intent.metadata.get("multi_target") and editorial_intent.request_type == "structured_followup":
+            return "editorial_structuring"
         if editorial_intent.request_type in FOLLOWTHROUGH_REQUEST_TYPES:
             return intent.intent_name if intent.intent_name != "unknown" else "structured_followup"
         if editorial_intent.metadata.get("multi_target") and editorial_intent.request_type in {
@@ -270,12 +305,10 @@ def _resolve_effective_intent_name(intent: RecognizedIntent, state: Conversation
         } and not editorial_intent.resolved_target_id:
             return "editorial_structuring"
         if intent.intent_name in {"unknown", "inspect_scene"} and editorial_intent.request_type in {
-            "narrative_facts",
-            "structuring_request",
             "editorial_revision",
-            "narration_preparation",
+            "structuring_request",
             "mixed_editorial_request",
-            "contextual_followup",
+            "narration_preparation",
         }:
             return "editorial_structuring"
     if intent.intent_name != "unknown":
@@ -300,6 +333,12 @@ def _followthrough_action(
 ) -> tuple[str, str, list[str]] | None:
     editorial_intent = intent.editorial_intent
     request_type = editorial_intent.request_type if editorial_intent is not None else None
+    if (
+        request_type == "structured_followup"
+        and editorial_intent is not None
+        and editorial_intent.metadata.get("multi_target")
+    ):
+        return None
     if effective_intent_name == "validate_structure" or request_type == "validation_request":
         return (
             "editorial_followthrough",
@@ -330,8 +369,47 @@ def _followthrough_action(
 def _planner_reason(intent: RecognizedIntent, effective_intent_name: str) -> str:
     if intent.metadata.get("unsupported_capability"):
         return "unsupported_capability"
+    author_understanding = _author_understanding_from_intent(intent)
+    if author_understanding is not None and author_understanding.get("analysis_source") in {"hybrid", "llm_assisted"}:
+        return "author_understanding_routing"
     if intent.editorial_intent is not None and effective_intent_name == "editorial_structuring":
         return "editorial_intent_routing"
     if effective_intent_name == intent.intent_name:
         return "direct_intent_mapping"
     return "narrative_signal_inference"
+
+
+def _author_understanding_from_intent(intent: RecognizedIntent) -> dict | None:
+    value = intent.metadata.get("author_understanding")
+    return value if isinstance(value, dict) else None
+
+
+def _preferred_target_from_author_understanding(author_understanding: dict | None):
+    if not author_understanding:
+        return None
+    disambiguation = author_understanding.get("disambiguation")
+    if not isinstance(disambiguation, dict):
+        return None
+    preferred = disambiguation.get("preferred_target")
+    if not isinstance(preferred, dict):
+        return None
+    target_id = preferred.get("target_id")
+    target_type = preferred.get("target_type")
+    if not target_id or not target_type:
+        return None
+    return SimpleNamespace(target_id=target_id, target_type=target_type)
+
+
+def _author_understanding_requires_clarification(author_understanding: dict | None) -> bool:
+    if not author_understanding:
+        return False
+    if author_understanding.get("needs_clarification"):
+        return True
+    disambiguation = author_understanding.get("disambiguation")
+    if isinstance(disambiguation, dict):
+        return bool(disambiguation.get("requires_user_confirmation", False)) and disambiguation.get("preferred_target") is None
+    return False
+
+
+def _intent_has_explicit_target(intent: RecognizedIntent) -> bool:
+    return bool(intent.target_type and intent.target_id)

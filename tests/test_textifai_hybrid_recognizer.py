@@ -227,6 +227,32 @@ class TextifAIHybridRecognizerTests(unittest.TestCase):
         intent = recognizer.recognize(request, self.state)
         self.assertEqual(intent.intent_name, "persist_decision")
 
+    def test_escalates_mixed_editorial_nuance_requests_to_llm(self):
+        recognizer = HybridIntentRecognizer(
+            llm_classifier=_StubClassifier(
+                {
+                    "intent_name": "editorial_structuring",
+                    "confidence": 0.84,
+                    "classification_note": "LLM refined a mixed editorial request.",
+                }
+            )
+        )
+        request = ConversationRequest(
+            raw_text="quiero que aquí Sera suene más contenida, pero sin perder la tensión con Ren",
+            source="user",
+            mode="normal",
+            interface_language="es",
+            user_command_language="es",
+            internal_system_language="en",
+            project_default_language="ja",
+            mixed_language_allowed=True,
+            explanation_language="es",
+        )
+        intent = recognizer.recognize(request, self.state)
+        self.assertEqual(intent.recognizer_kind, "hybrid_llm")
+        self.assertTrue(intent.metadata["escalated_to_llm"])
+        self.assertEqual(intent.metadata["llm_raw_intent"], "editorial_structuring")
+
 
 class _StubClassifier:
     def __init__(self, result):

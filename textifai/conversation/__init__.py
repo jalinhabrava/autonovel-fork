@@ -18,11 +18,9 @@ from textifai.conversation.hybrid_recognizer import (
     HybridIntentRecognizer,
     HybridRecognizerConfig,
 )
-from textifai.conversation.manager import ConversationManager
 from textifai.conversation.state import ConversationState, create_conversation_state
 
 __all__ = [
-    "ConversationManager",
     "NarrativeSignals",
     "ConversationRequest",
     "ConversationState",

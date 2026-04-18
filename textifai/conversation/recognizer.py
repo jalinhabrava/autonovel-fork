@@ -613,6 +613,16 @@ def _looks_like_editorial_structuring_request(
             "la escena funciona hasta",
             "prepara la narración",
             "prepara la narracion",
+            "más contenida",
+            "mas contenida",
+            "sin perder",
+            "sin romper",
+            "quédate con",
+            "quedate con",
+            "lista para narrar",
+            "listo para narrar",
+            "lista para revisar",
+            "listo para revisar",
         )
     ):
         return True
@@ -628,6 +638,9 @@ def _looks_like_editorial_structuring_request(
             "acepta demasiado rapido",
             "cede demasiado",
             "quiero que",
+            "de lo anterior",
+            "prepáralo",
+            "preparalo",
         )
     ):
         return True

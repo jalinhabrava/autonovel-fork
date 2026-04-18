@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import asdict, is_dataclass
 
 from textifai.conversation.contracts import ConversationRequest, ConversationTurn, ExecutionResult
+from textifai.author_understanding.hybrid_analysis import HybridAuthorUnderstandingAnalyzer
 from textifai.conversation.executor import MinimalExecutionLayer
 from textifai.conversation.hybrid_recognizer import HybridIntentRecognizer
 from textifai.conversation.planner import TaskPlanner
@@ -21,12 +22,14 @@ class ConversationManager:
         recognizer: HybridIntentRecognizer | None = None,
         planner: TaskPlanner | None = None,
         executor: MinimalExecutionLayer | None = None,
+        author_understanding_analyzer: HybridAuthorUnderstandingAnalyzer | None = None,
     ) -> None:
         self.session = session
         self.state = state or (session.conversation_state if session is not None else None)
         self.recognizer = recognizer or HybridIntentRecognizer()
         self.planner = planner or TaskPlanner()
         self.executor = executor or MinimalExecutionLayer(session=session)
+        self.author_understanding_analyzer = author_understanding_analyzer or HybridAuthorUnderstandingAnalyzer.from_session(session)
         self.last_execution_result: ExecutionResult | None = None
 
     def handle_request(self, request: ConversationRequest) -> ConversationTurn:
@@ -95,13 +98,20 @@ class ConversationManager:
         return turn
 
     def _enrich_editorial_intent(self, intent, request: ConversationRequest):
-        if self.session is None:
-            return intent
-        entity_results = resolve_entities(
-            text=request.raw_text,
-            vault_path=self.session.vault_path,
-            known_characters=request.metadata.get("known_characters", []),
-            entity_hints=list((intent.narrative_signals.mentioned_entities if intent.narrative_signals else []) or []),
+        entity_results = []
+        if self.session is not None:
+            entity_results = resolve_entities(
+                text=request.raw_text,
+                vault_path=self.session.vault_path,
+                known_characters=request.metadata.get("known_characters", []),
+                entity_hints=list((intent.narrative_signals.mentioned_entities if intent.narrative_signals else []) or []),
+            )
+        author_understanding = self.author_understanding_analyzer.analyze(
+            request=request,
+            rule_intent=intent,
+            narrative_signals=intent.narrative_signals,
+            entity_results=entity_results,
+            state=self.state,
         )
         editorial_intent = classify_editorial_intent(
             raw_text=request.raw_text,
@@ -109,10 +119,28 @@ class ConversationManager:
             entity_results=entity_results,
             narrative_signals=intent.narrative_signals,
             state=self.state,
+            author_understanding=author_understanding,
         )
         if editorial_intent is None:
-            return intent
+            metadata = dict(intent.metadata)
+            metadata["author_understanding"] = asdict(author_understanding)
+            metadata["vaerl_results"] = [asdict(item) for item in entity_results]
+            return intent.__class__(
+                intent_name=intent.intent_name,
+                confidence=intent.confidence,
+                target_type=intent.target_type,
+                target_id=intent.target_id,
+                requires_target=intent.requires_target,
+                ephemeral_hint=intent.ephemeral_hint,
+                persistent_hint=intent.persistent_hint,
+                signals=list(intent.signals),
+                narrative_signals=intent.narrative_signals,
+                editorial_intent=None,
+                recognizer_kind=intent.recognizer_kind,
+                metadata=metadata,
+            )
         metadata = dict(intent.metadata)
+        metadata["author_understanding"] = asdict(author_understanding)
         metadata["editorial_intent"] = asdict(editorial_intent)
         metadata["vaerl_results"] = [asdict(item) for item in entity_results]
         return intent.__class__(
