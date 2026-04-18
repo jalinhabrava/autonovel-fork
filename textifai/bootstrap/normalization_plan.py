@@ -149,10 +149,16 @@ def _build_draft(
         source_id=document.source_id,
         source_path=document.path,
         source_checksum=document.checksum,
+        source_format=document.extension,
+        extraction_mode="native_text",
+        extraction_confidence=1.0,
+        structural_confidence=1.0,
         fragment_ids=[fragment.fragment_id],
         char_ranges=[{"start": fragment.char_start, "end": fragment.char_end}],
         import_mode="light_structural_normalization" if fragment.text.lstrip().startswith("#") or len(fragment.text.splitlines()) > 1 else "literal_segmented",
         llm_assisted=analysis is not None and bool(getattr(analysis, "raw_payload", {})),
+        warnings=list(getattr(analysis, "coverage_notes", [])),
+        loss_risk_flags=[],
         notes=list(getattr(analysis, "coverage_notes", [])),
     )
     detected_languages = list(

@@ -113,14 +113,24 @@ class ImportProvenance:
     source_id: str
     source_path: str
     source_checksum: str
+    source_format: str = "md"
+    extraction_mode: str = "native_text"
+    extraction_confidence: float = 1.0
+    structural_confidence: float = 1.0
     fragment_ids: list[str] = field(default_factory=list)
     char_ranges: list[dict[str, int]] = field(default_factory=list)
     import_mode: str = "literal_copy"
     llm_assisted: bool = False
+    warnings: list[str] = field(default_factory=list)
+    loss_risk_flags: list[str] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         _ensure_catalog_value("import_mode", self.import_mode, BOOTSTRAP_IMPORT_MODE_CATALOG)
+        if not 0.0 <= self.extraction_confidence <= 1.0:
+            raise ValueError("extraction_confidence must be between 0 and 1")
+        if not 0.0 <= self.structural_confidence <= 1.0:
+            raise ValueError("structural_confidence must be between 0 and 1")
 
 
 @dataclass(frozen=True)
