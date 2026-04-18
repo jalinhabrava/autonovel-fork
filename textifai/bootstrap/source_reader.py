@@ -25,14 +25,16 @@ def build_source_document_inventory(source_root: str | Path) -> SourceDocumentIn
     for path in sorted(root.rglob("*")):
         if not path.is_file():
             continue
-        if path.suffix.lower() not in {".md", ".txt"}:
+        source_format = _detect_source_format(path)
+        if source_format not in {"md", "txt", "docx", "pdf", "doc"}:
             continue
         if _should_skip_path(path):
             continue
-        text = _read_text(path)
+        text = _read_source_text(path)
         detection = detect_language_profile(text)
         likely_content_kinds = _guess_content_kinds(path, text)
         notes = []
+        notes.append(f"source_format:{source_format}")
         if detection.has_mixed_language:
             notes.append("mixed_language")
         if likely_content_kinds:
@@ -45,9 +47,9 @@ def build_source_document_inventory(source_root: str | Path) -> SourceDocumentIn
                 path=str(path),
                 relative_path=relative_path,
                 filename=path.name,
-                extension=path.suffix.lstrip(".").lower(),
+                extension=source_format,
                 size_bytes=path.stat().st_size,
-                checksum=_checksum(text),
+                checksum=_checksum(path.read_bytes()),
                 dominant_language=detection.dominant_language,
                 detected_languages=list(detection.detected_languages),
                 has_mixed_language=detection.has_mixed_language,
@@ -81,23 +83,30 @@ def build_source_document_inventory(source_root: str | Path) -> SourceDocumentIn
 def read_source_documents(inventory: SourceDocumentInventory) -> dict[str, str]:
     texts: dict[str, str] = {}
     for document in inventory.documents:
-        texts[document.source_id] = _read_text(Path(document.path))
+        texts[document.source_id] = _read_source_text(Path(document.path))
     return texts
 
 
-def _read_text(path: Path) -> str:
-    return path.read_text(encoding="utf-8", errors="replace")
+def _read_source_text(path: Path) -> str:
+    from textifai.derived_sources.extractors import extract_light_source
+
+    seed = extract_light_source(path)
+    if seed.raw_extracted_text.strip():
+        return seed.raw_extracted_text
+    if seed.source_format in {"md", "txt"}:
+        return path.read_text(encoding="utf-8", errors="replace")
+    return ""
 
 
 def _build_source_id(path: Path, text: str) -> str:
-    digest = _checksum(text)[:10]
+    digest = hashlib.sha256(f"{path.as_posix()}::{text}".encode("utf-8", errors="replace")).hexdigest()[:10]
     stem = "".join(ch for ch in path.stem.lower() if ch.isalnum())
     prefix = stem[:20] or "source"
     return f"{prefix}_{digest}"
 
 
-def _checksum(text: str) -> str:
-    return hashlib.sha256(text.encode("utf-8", errors="replace")).hexdigest()
+def _checksum(raw_bytes: bytes) -> str:
+    return hashlib.sha256(raw_bytes).hexdigest()
 
 
 def _should_skip_path(path: Path) -> bool:
@@ -129,3 +138,8 @@ def _dedupe(values: list[str]) -> list[str]:
         seen.add(value)
         result.append(value)
     return result
+
+
+def _detect_source_format(path: Path) -> str:
+    suffix = path.suffix.lstrip(".").casefold()
+    return suffix if suffix in {"md", "txt", "docx", "pdf", "doc"} else (suffix or "txt")

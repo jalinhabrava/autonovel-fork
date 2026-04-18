@@ -103,6 +103,28 @@ def prepare_bootstrap(
             if analysis is not None:
                 analyses_by_source[document.source_id] = analysis
 
+    recovered_source_ids: list[str] = []
+    for document in inventory.documents:
+        analysis = analyses_by_source.get(document.source_id)
+        recovered_text = getattr(analysis, "recognized_or_recovered_text", None) if analysis is not None else None
+        if recovered_text and recovered_text != source_texts.get(document.source_id, ""):
+            source_texts[document.source_id] = recovered_text
+            fragments_by_source[document.source_id] = segment_source_document(document, recovered_text)
+            recovered_source_ids.append(document.source_id)
+
+    if llm_analyzer is not None and recovered_source_ids:
+        for document in inventory.documents:
+            if document.source_id not in recovered_source_ids:
+                continue
+            analysis = llm_analyzer.analyze_document(
+                config=config,
+                document=document,
+                text=source_texts.get(document.source_id, ""),
+                fragments=fragments_by_source.get(document.source_id, []),
+            )
+            if analysis is not None:
+                analyses_by_source[document.source_id] = analysis
+
     language_profile = build_language_profile(
         inventory,
         fragments_by_source,

@@ -8,6 +8,7 @@ from providers.text_provider import TextGenerationRequest, TextMessage, get_text
 from textifai.author_understanding.normalization import extract_json_payload
 from textifai.bootstrap.contracts import BOOTSTRAP_ARTIFACT_TYPE_CATALOG, SourceDocumentRecord, SourceFragment
 from textifai.bootstrap.prompt_builder import BootstrapPrompt, build_bootstrap_prompt
+from textifai.bootstrap.segmenter import segment_source_document
 
 
 @dataclass(frozen=True)
@@ -27,6 +28,12 @@ class BootstrapFragmentAnalysis:
 class BootstrapDocumentAnalysis:
     source_id: str
     dominant_language: str | None
+    source_format: str = "md"
+    extraction_mode: str = "native_text"
+    extraction_confidence: float = 1.0
+    structural_confidence: float = 1.0
+    llm_used: bool = False
+    recognized_or_recovered_text: str | None = None
     detected_languages: list[str] = field(default_factory=list)
     has_mixed_language: bool = False
     fragment_analyses: list[BootstrapFragmentAnalysis] = field(default_factory=list)
@@ -63,6 +70,7 @@ class BootstrapLLMConfig:
 class ProviderBackedBootstrapAnalyzer:
     def __init__(self, *, config: BootstrapLLMConfig | None = None) -> None:
         self.config = config or BootstrapLLMConfig()
+        self.derived_config = None
 
     def analyze_document(
         self,
@@ -72,6 +80,8 @@ class ProviderBackedBootstrapAnalyzer:
         text: str,
         fragments: list[SourceFragment],
     ) -> BootstrapDocumentAnalysis | None:
+        if document.extension in {"docx", "pdf", "doc"}:
+            return self._analyze_derived_document(document=document, text=text, fragments=fragments)
         if get_text_provider_config_error(self.config.task_name, self.config.provider_name):
             return None
         prompt = build_bootstrap_prompt(config=config, document=document, text=text, fragments=fragments)
@@ -103,6 +113,169 @@ class ProviderBackedBootstrapAnalyzer:
         if raw_payload is None:
             return None
         return _normalize_analysis_payload(document=document, payload=raw_payload)
+
+    def _analyze_derived_document(
+        self,
+        *,
+        document: SourceDocumentRecord,
+        text: str,
+        fragments: list[SourceFragment],
+    ) -> BootstrapDocumentAnalysis:
+        from textifai.derived_sources import (
+            DerivedSourceLLMConfig,
+            ProviderBackedDerivedSourceInterpreter,
+            decide_llm_escalation,
+            extract_light_source,
+            review_derived_source,
+            validate_derived_extraction,
+        )
+
+        if self.derived_config is None:
+            self.derived_config = DerivedSourceLLMConfig(
+                task_name=self.config.task_name,
+                provider_name=self.config.provider_name,
+                model=self.config.model,
+                max_tokens=max(self.config.max_tokens, 1800),
+                temperature=self.config.temperature,
+                timeout_seconds=self.config.timeout_seconds,
+                retries=self.config.retries,
+            )
+        seed = extract_light_source(document.path)
+        escalation = decide_llm_escalation(seed)
+        llm_payload = None
+        validated_extraction = None
+        if not get_text_provider_config_error(self.derived_config.task_name, self.derived_config.provider_name) and escalation.required:
+            interpreter = ProviderBackedDerivedSourceInterpreter(config=self.derived_config)
+            llm_payload = interpreter.interpret(seed=seed, escalation=escalation)
+            validated_extraction = validate_derived_extraction(seed=seed, payload=llm_payload)
+        else:
+            validated_extraction = validate_derived_extraction(seed=seed, payload=None)
+
+        review = review_derived_source(
+            seed=seed,
+            escalation=escalation,
+            validated_extraction=validated_extraction,
+            llm_payload=llm_payload,
+        )
+        recognized_text = validated_extraction.recognized_or_recovered_text if validated_extraction else text
+        segmented = segment_source_document(document, recognized_text or text or seed.raw_extracted_text)
+        fragment_analyses = _derived_fragment_analyses(
+            document=document,
+            source_fragments=fragments,
+            llm_payload=llm_payload,
+        )
+        coverage_notes = list(dict.fromkeys([*seed.quality_signals, *seed.warnings, *review.notes]))
+        unmapped_fragment_ids = [fragment.fragment_id for fragment in segmented if fragment.needs_review]
+        ambiguous_fragment_ids = [
+            fragment.fragment_id
+            for fragment in segmented
+            if fragment.needs_review or fragment.kind_confidence < 0.65
+        ]
+        return BootstrapDocumentAnalysis(
+            source_id=document.source_id,
+            dominant_language=(validated_extraction.dominant_language if validated_extraction else seed.dominant_language)
+            or seed.dominant_language,
+            source_format=seed.source_format,
+            extraction_mode=(
+                "llm_first_derived"
+                if llm_payload is not None and not seed.raw_extracted_text.strip()
+                else "llm_assisted_derived"
+                if llm_payload is not None
+                else seed.format_profile.extraction_method
+                if seed.format_profile
+                else "derived_text_extraction"
+            ),
+            extraction_confidence=validated_extraction.confidence if validated_extraction else (seed.format_profile.extraction_confidence if seed.format_profile else 0.0),
+            structural_confidence=validated_extraction.structural_confidence if validated_extraction else (seed.format_profile.structural_fidelity_confidence if seed.format_profile else 0.0),
+            llm_used=llm_payload is not None,
+            recognized_or_recovered_text=validated_extraction.recognized_or_recovered_text if validated_extraction else seed.raw_extracted_text,
+            detected_languages=validated_extraction.detected_languages if validated_extraction else list(seed.detected_languages),
+            has_mixed_language=validated_extraction.has_mixed_language if validated_extraction else seed.has_mixed_language,
+            fragment_analyses=fragment_analyses,
+            coverage_notes=coverage_notes,
+            unmapped_fragment_ids=unmapped_fragment_ids if review.review_status != "usable" else [],
+            ambiguous_fragment_ids=ambiguous_fragment_ids,
+            requires_confirmation=review.strict_confirmation_required or review.review_status != "usable",
+            confidence=review.final_confidence,
+            raw_payload={
+                "seed": seed.metadata,
+                "escalation": {"required": escalation.required, "reasons": escalation.reasons},
+                "llm_used": llm_payload is not None,
+                "review_status": review.review_status,
+            },
+        )
+
+
+def _derived_fragment_analyses(
+    *,
+    document: SourceDocumentRecord,
+    source_fragments: list[SourceFragment],
+    llm_payload,
+) -> list[BootstrapFragmentAnalysis]:
+    analyses: list[BootstrapFragmentAnalysis] = []
+    llm_candidates = list(getattr(llm_payload, "segment_candidates", []) or [])
+    for index, fragment in enumerate(source_fragments):
+        candidate = llm_candidates[index] if index < len(llm_candidates) else None
+        artifact_type = fragment.detected_kind
+        confidence = fragment.kind_confidence
+        title_hint = fragment.text.strip().splitlines()[0].strip().lstrip("#").strip() if fragment.text.strip() else None
+        language = fragment.language or document.dominant_language
+        register_signals = list(fragment.register_signals)
+        needs_review = fragment.needs_review
+        notes: list[str] = []
+        if candidate is not None:
+            artifact_type = candidate.probable_kind or artifact_type
+            confidence = max(confidence, candidate.confidence)
+            title_hint = candidate.heading_text or title_hint
+            language = candidate.language or language
+            register_signals = list(dict.fromkeys([*register_signals, *candidate.boundary_hints, *candidate.notes]))
+            needs_review = needs_review or candidate.mixed_content or candidate.confidence < 0.55
+            if candidate.notes:
+                notes.extend(candidate.notes)
+        if artifact_type not in BOOTSTRAP_ARTIFACT_TYPE_CATALOG:
+            artifact_type = "mixed_note"
+        analyses.append(
+            BootstrapFragmentAnalysis(
+                fragment_id=fragment.fragment_id,
+                artifact_type=artifact_type,
+                confidence=confidence,
+                title_hint=title_hint,
+                language=language,
+                detected_languages=[language] if language else [],
+                register_signals=list(dict.fromkeys(register_signals)),
+                needs_review=needs_review,
+                notes=list(dict.fromkeys(notes)),
+            )
+        )
+    if len(llm_candidates) > len(source_fragments):
+        analyses.append(
+            BootstrapFragmentAnalysis(
+                fragment_id=f"{document.source_id}__derived_extra",
+                artifact_type="mixed_note",
+                confidence=0.1,
+                title_hint=None,
+                language=document.dominant_language,
+                detected_languages=[document.dominant_language] if document.dominant_language else [],
+                register_signals=["llm_candidate_overflow"],
+                needs_review=True,
+                notes=["llm_candidate_count_exceeds_source_fragments"],
+            )
+        )
+    if not analyses:
+        analyses.append(
+            BootstrapFragmentAnalysis(
+                fragment_id=f"{document.source_id}__frag_001",
+                artifact_type="mixed_note",
+                confidence=0.0,
+                title_hint=None,
+                language=document.dominant_language,
+                detected_languages=[document.dominant_language] if document.dominant_language else [],
+                register_signals=["empty"],
+                needs_review=True,
+                notes=["no_recovered_fragments"],
+            )
+        )
+    return analyses
 
 
 def _normalize_analysis_payload(*, document: SourceDocumentRecord, payload: dict[str, Any]) -> BootstrapDocumentAnalysis | None:
@@ -139,6 +312,11 @@ def _normalize_analysis_payload(*, document: SourceDocumentRecord, payload: dict
     return BootstrapDocumentAnalysis(
         source_id=document.source_id,
         dominant_language=dominant_language,
+        source_format=document.extension,
+        extraction_mode="native_text",
+        extraction_confidence=_coerce_confidence(payload.get("confidence")),
+        structural_confidence=_coerce_confidence(payload.get("confidence")),
+        llm_used=True,
         detected_languages=detected_languages,
         has_mixed_language=bool(payload.get("has_mixed_language", False)),
         fragment_analyses=fragment_analyses,

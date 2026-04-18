@@ -8,6 +8,14 @@ BOOTSTRAP_MODE_CATALOG = (
     "import_into_existing_vault",
 )
 
+BOOTSTRAP_SOURCE_FORMAT_CATALOG = (
+    "md",
+    "txt",
+    "docx",
+    "pdf",
+    "doc",
+)
+
 BOOTSTRAP_ARTIFACT_TYPE_CATALOG = (
     "character",
     "lore",
@@ -65,7 +73,7 @@ class SourceDocumentRecord:
     notes: list[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
-        if self.extension.lower() not in {"md", "txt"}:
+        if self.extension.lower() not in BOOTSTRAP_SOURCE_FORMAT_CATALOG:
             raise ValueError(f"Unsupported extension: {self.extension}")
         if self.size_bytes < 0:
             raise ValueError("size_bytes must be non-negative")
@@ -127,6 +135,8 @@ class ImportProvenance:
 
     def __post_init__(self) -> None:
         _ensure_catalog_value("import_mode", self.import_mode, BOOTSTRAP_IMPORT_MODE_CATALOG)
+        if self.source_format not in BOOTSTRAP_SOURCE_FORMAT_CATALOG:
+            raise ValueError(f"Unsupported source_format: {self.source_format}")
         if not 0.0 <= self.extraction_confidence <= 1.0:
             raise ValueError("extraction_confidence must be between 0 and 1")
         if not 0.0 <= self.structural_confidence <= 1.0:

@@ -68,6 +68,7 @@ def build_normalization_plan(
         fragments = fragments_by_source.get(document.source_id, [])
         text = source_texts.get(document.source_id, "")
         analysis = analyses_by_source.get(document.source_id)
+        document_requires_confirmation = bool(analysis and analysis.requires_confirmation)
         if document.has_mixed_language or len(document.detected_languages) > 1:
             coverage["multilingual_documents"] += 1
         coverage["total_fragments"] += len(fragments)
@@ -84,19 +85,24 @@ def build_normalization_plan(
             if fragment_analysis.needs_review or fragment.kind_confidence < 0.6 or fragment_analysis.confidence < 0.6:
                 ambiguous_fragments.append(fragment.fragment_id)
                 coverage["ambiguous_chars"] += len(fragment.text)
+            if document_requires_confirmation and fragment.fragment_id not in ambiguous_fragments:
+                coverage["pending_fragments"] += 1
             coverage["covered_chars"] += len(fragment.text)
             draft = _build_draft(
                 config=config,
                 document=document,
+                document_analysis=analysis,
                 fragment=fragment,
                 artifact_type=artifact_type,
-                analysis=fragment_analysis,
+                fragment_analysis=fragment_analysis,
                 fragment_index=index,
             )
             drafts.append(draft)
             coverage["staged_fragments"] += 1
         if not fragments:
             unmapped_fragments.append(document.source_id)
+        elif document_requires_confirmation:
+            coverage["pending_fragments"] += 0
 
     plan = NormalizationPlan(
         plan_id=uuid.uuid4().hex[:12],
@@ -106,7 +112,12 @@ def build_normalization_plan(
         unmapped_fragments=unmapped_fragments,
         ambiguous_fragments=ambiguous_fragments,
         coverage_summary=coverage,
-        requires_confirmation=bool(unmapped_fragments or ambiguous_fragments or any(doc.has_mixed_language for doc in inventory.documents)),
+        requires_confirmation=bool(
+            unmapped_fragments
+            or ambiguous_fragments
+            or any(doc.has_mixed_language for doc in inventory.documents)
+            or any(analysis.requires_confirmation for analysis in analyses_by_source.values())
+        ),
     )
     return plan, coverage
 
@@ -137,34 +148,41 @@ def _build_draft(
     *,
     config: VaultInitializationConfig,
     document: SourceDocumentRecord,
+    document_analysis: BootstrapDocumentAnalysis | None,
     fragment: SourceFragment,
     artifact_type: str,
-    analysis,
+    fragment_analysis,
     fragment_index: int,
 ) -> NormalizedArtifactDraft:
-    title = analysis.title_hint or _infer_title(document, fragment)
+    title = fragment_analysis.title_hint or _infer_title(document, fragment)
     slug = _build_draft_slug(document, fragment_index)
     target_path = _build_target_path(config.vault_root, artifact_type, slug)
+    source_format = document_analysis.source_format if document_analysis else document.extension
+    extraction_mode = document_analysis.extraction_mode if document_analysis else ("native_text" if document.extension in {"md", "txt"} else "light_structural_normalization")
+    extraction_confidence = document_analysis.extraction_confidence if document_analysis else fragment.kind_confidence
+    structural_confidence = document_analysis.structural_confidence if document_analysis else fragment.kind_confidence
     provenance = ImportProvenance(
         source_id=document.source_id,
         source_path=document.path,
         source_checksum=document.checksum,
-        source_format=document.extension,
-        extraction_mode="native_text",
-        extraction_confidence=1.0,
-        structural_confidence=1.0,
+        source_format=source_format,
+        extraction_mode=extraction_mode,
+        extraction_confidence=extraction_confidence,
+        structural_confidence=structural_confidence,
         fragment_ids=[fragment.fragment_id],
         char_ranges=[{"start": fragment.char_start, "end": fragment.char_end}],
-        import_mode="light_structural_normalization" if fragment.text.lstrip().startswith("#") or len(fragment.text.splitlines()) > 1 else "literal_segmented",
-        llm_assisted=analysis is not None and bool(getattr(analysis, "raw_payload", {})),
-        warnings=list(getattr(analysis, "coverage_notes", [])),
-        loss_risk_flags=[],
-        notes=list(getattr(analysis, "coverage_notes", [])),
+        import_mode="literal_copy"
+        if source_format in {"md", "txt"} and extraction_mode == "native_text"
+        else "light_structural_normalization",
+        llm_assisted=bool(document_analysis and document_analysis.llm_used),
+        warnings=list(document_analysis.coverage_notes if document_analysis else []),
+        loss_risk_flags=list(document_analysis.coverage_notes if document_analysis else []),
+        notes=list(document_analysis.coverage_notes if document_analysis else []),
     )
     detected_languages = list(
         dict.fromkeys(
             [
-                *([language for language in getattr(analysis, "detected_languages", []) if language]),
+                *([language for language in getattr(document_analysis, "detected_languages", []) if language]),
                 *([fragment.language] if fragment.language else []),
             ]
         )
@@ -176,13 +194,13 @@ def _build_draft(
         slug=slug,
         target_path=target_path,
         body=fragment.text.strip(),
-        dominant_language=analysis.language if analysis and analysis.language else fragment.language,
+        dominant_language=fragment_analysis.language if fragment_analysis and fragment_analysis.language else fragment.language,
         detected_languages=detected_languages,
-        register_signals=list(dict.fromkeys([*fragment.register_signals, *(analysis.register_signals if analysis else [])])),
+        register_signals=list(dict.fromkeys([*fragment.register_signals, *(fragment_analysis.register_signals if fragment_analysis else [])])),
         provenance=provenance,
-        normalization_notes=list(analysis.notes) if analysis else [],
-        confidence=analysis.confidence if analysis else fragment.kind_confidence,
-        status="needs_review" if fragment.needs_review or (analysis.needs_review if analysis else False) else "draft",
+        normalization_notes=list(fragment_analysis.notes) if fragment_analysis else [],
+        confidence=fragment_analysis.confidence if fragment_analysis else fragment.kind_confidence,
+        status="needs_review" if fragment.needs_review or (fragment_analysis.needs_review if fragment_analysis else False) else "draft",
     )
 
 
