@@ -1,564 +1,256 @@
 # TextifAI
 
-TextifAI is the product/runtime identity of this repository. Under the hood,
-it is still based on a fork of AutoNovel, but the product layer is now being
-built and presented as TextifAI.
+TextifAI is the core product/runtime of this repository. It was born from an AutoNovel fork, but it is no longer best described as "just a fork". The codebase now centers on a vault-aware narrative system with a terminal runtime, structured conversational interpretation, editorial structuring, and context preparation for later narration and review.
 
-This repository is a fork of AutoNovel. It keeps the original idea of an
-AI-assisted novel pipeline, but is being refactored into a persistent,
-modular, and eventually conversational narrative system.
+The project still preserves the original AutoNovel lineage and pipeline ideas, but the current product direction is broader and more explicit:
 
-The long-term goal is not only "generate a novel from a seed", but to build a
-story engine that combines:
-
-- text generation
+- a human-led writing workflow
 - persistent narrative memory
-- canon extraction and validation
-- vault-backed project storage
-- interactive editing and review workflows
-- configurable context assembly for future conversational interfaces
+- vault-backed source of truth
+- conservative resolution against real project artifacts
+- structured editorial outputs instead of raw prompt juggling
+- a runtime that can support future conversational and review loops without becoming magical
 
-## Mission And Creative Position
+## What TextifAI Is Today
 
-This fork prioritizes a `human-created, AI-assisted` model over a purely
-`AI-generated` one.
+TextifAI is the layer that sits above the vault and gives the author a usable workflow:
 
-The intended role of the system is to help a human author or editor:
+- it interprets author input
+- it resolves mentions against the vault
+- it selects and prepares context
+- it structures editorial output
+- it prepares context for narration later
+- it keeps the system conservative when it cannot resolve something safely
 
-- structure and persist narrative knowledge
-- inspect context and canon
-- draft or rewrite with assistance
-- review consistency and implications
-- bootstrap artifacts from existing material
-- accelerate editorial and production workflows
+Obsidian and the vault provide the durable project memory. TextifAI does the interpretation, anchoring, selection, and workflow control on top of that memory.
 
-The system can generate directly when asked, but that is not the core creative
-philosophy of the fork. The main aim is to support human-led storytelling,
-human original ideas, and human editorial judgment with stronger tooling and
-memory.
+## Vault And TextifAI
 
-In practice, this means the project is being shaped as narrative
-infrastructure for collaboration with AI, not as a machine for replacing the
-author.
+The vault is the single source of truth for project knowledge:
 
-## What This Fork Keeps From AutoNovel
+- notes
+- titles
+- slugs
+- aliases
+- links and backlinks
+- metadata
+- document structure
+- canonical artifacts
 
-Several important parts of the original project are still present:
+TextifAI does not replace that source of truth. It adds a working layer on top of it:
 
-- the phase-based pipeline driven by [run_pipeline.py](/home/david/projects/autonovel-fork/run_pipeline.py)
-- the layered artifact model:
-  - `voice.md`
-  - `world.md`
-  - `characters.md`
-  - `outline.md`
-  - `canon.md`
-  - `chapters/`
-- generation and revision tools for world, characters, outline, drafting, review, art, and audiobook
-- the original idea of iterating through generate -> evaluate -> revise loops
+- conversational context extraction
+- vault-aware entity resolution
+- editorial structuring
+- narration preparation
+- deterministic context assembly
+- controlled persistence and review flows
 
-This means the repo still works as a recognizable AutoNovel-derived codebase,
-even while the internals are being restructured.
+Obsidian/vault stores the facts and relationships. TextifAI interprets them and chooses what to do next.
 
-## What Has Changed
+## Core Layers
 
-This fork has already moved well beyond "the original pipeline plus a few
-patches". The most important changes are:
+### CCE
 
-- text inference is now routed through a provider abstraction instead of being hard-wired to a single hosted API
-- project storage is abstracted behind a store/backend layer instead of assuming a fixed workspace layout everywhere
-- an Obsidian-compatible vault system now exists as a persistent project backend
-- a first TextifAI terminal runtime now exists with onboarding, doctor, shell modes, and product commands
-- an interactive layer now exists for:
-  - context lookup
-  - note creation/update
-  - canon decisions
-  - consistency checks
-  - manuscript bootstrap extraction
-- a first deterministic Context Engine now exists to assemble structured context packs from the vault
-- a first runtime i18n and language policy layer now exists for multilingual projects
-- a first conversational task layer now exists with typed contracts, short conversation state, and a hybrid intent recognizer
+Conversational Context Extraction (CCE) is the part that reads the author input and identifies what kind of request it is.
 
-## Current Vision
+CCE looks for:
 
-The target system is a narrative infrastructure with three major properties:
+- intent
+- follow-up behavior
+- narrative signals
+- editorial signals
+- hints about the expected target or artifact type
 
-1. Persistent
-   Narrative knowledge should live in durable project artifacts, especially a vault-backed source of truth.
+CCE does not try to be the whole system. It interprets the input. VaERL and the editorial layers then act on that interpretation.
 
-2. Modular
-   Providers, storage backends, extraction flows, and context policies should be swappable without rewriting the whole pipeline.
+### VaERL
 
-3. Conversational
-   The future user experience is not just a batch run. It is an interactive environment where a user or editor can inspect context, issue commands, validate canon, and revise notes incrementally.
+The Vault-aware Entity Resolution Layer (VaERL) resolves or suggests anchors against the vault.
 
-Those three properties sit inside a larger creative principle:
+It separates:
 
-- the human remains the authorial center
-- AI acts as assistant, collaborator, critic, organizer, and accelerator
-- direct generation is available, but not treated as the only or ideal mode
+- detected mentions
+- candidate entities
+- final resolution
+- confidence
+- related artifact suggestions
 
-## Current Architecture
+VaERL is conservative by design. If it cannot resolve safely, it prefers candidates or no resolution over false certainty.
 
-### Inference Layer
+### Editorial Structuring
 
-Text generation now runs through a shared provider layer in [providers/text_provider.py](/home/david/projects/autonovel-fork/providers/text_provider.py).
+Editorial structuring turns author input into usable intermediate structures such as:
 
-Implemented:
+- `StoryFacts`
+- `BeatOutline`
+- `RevisionIntent`
+- `EditorialStructuringResult`
 
-- Anthropic
-- OpenAI
-- LM Studio
-- Ollama
-- Anthropic-compatible endpoints
-- OpenAI-compatible endpoints
+This layer is the bridge between raw language and a workflow the author can validate.
 
-Configuration lives in:
+### Narration Prep
 
-- [.env.example](/home/david/projects/autonovel-fork/.env.example)
-- [config/inference.json](/home/david/projects/autonovel-fork/config/inference.json)
+Narration prep prepares context for later narration. It does not narrate yet.
 
-This lets the core pipeline change provider without rewriting the scripts that call the model.
+It can be built from:
 
-### Project Storage Layer
+- `BeatOutline`
+- `StoryFacts`
+- `RevisionIntent`
+- previous editorial output
 
-Project persistence now goes through [stores/project_store.py](/home/david/projects/autonovel-fork/stores/project_store.py).
+Its job is to gather the right context, voice, canon, continuity, and language constraints before any stronger narration step happens.
 
-Implemented:
+### Context Engine
 
-- workspace adapter for the classic AutoNovel layout
-- vault adapter for Obsidian-style storage
-- abstraction of artifacts, chapters, and pipeline state away from direct path assumptions in the core
+The Context Engine assembles structured context packs from the vault.
 
-Key files:
-
-- [stores/project_store.py](/home/david/projects/autonovel-fork/stores/project_store.py)
-- [adapters/workspace_adapter.py](/home/david/projects/autonovel-fork/adapters/workspace_adapter.py)
-- [adapters/vault_adapter.py](/home/david/projects/autonovel-fork/adapters/vault_adapter.py)
-
-### Vault / Obsidian Layer
-
-The vault is now treated as a first-class backend and intended source of truth.
-
-Implemented:
-
-- official vault layout and templates
-- bootstrap wizard
-- layout validation
-- read/write support for structured notes
-- ingestion of structured payloads
-- manuscript bootstrap scaffolding
-
-Key files:
-
-- [vault/bootstrap.py](/home/david/projects/autonovel-fork/vault/bootstrap.py)
-- [vault/notes.py](/home/david/projects/autonovel-fork/vault/notes.py)
-- [vault/ingest.py](/home/david/projects/autonovel-fork/vault/ingest.py)
-- [docs/VAULT_SCHEMA.md](/home/david/projects/autonovel-fork/docs/VAULT_SCHEMA.md)
-
-### Interactive Layer
-
-The repo now has an internal interactive runtime. It is not yet LibreChat, MCP,
-or a public conversational UI, but the internal command layer already exists.
-
-Implemented:
-
-- context lookup commands
-- note creation/update commands
-- canon decisions
-- validate/reject transitions
-- consistency guardrails before persistence
-- bootstrap extraction from existing manuscript chapters
-
-Key files:
-
-- [interactive/context_commands.py](/home/david/projects/autonovel-fork/interactive/context_commands.py)
-- [interactive/persistence_commands.py](/home/david/projects/autonovel-fork/interactive/persistence_commands.py)
-- [interactive/bootstrap_extract.py](/home/david/projects/autonovel-fork/interactive/bootstrap_extract.py)
-
-Important limitation:
-
-`consistency-check` is currently a minimum persistence guardrail. It does not
-replace full editorial review, reader review, or a future advanced consistency
-system.
-
-### TextifAI Runtime
-
-The repository now has a usable TextifAI product/runtime layer in terminal.
-
-Implemented:
-
-- `textifai` as the main entrypoint
-- `textifai setup`
-- `textifai chat`
-- `textifai doctor`
-- onboarding flow for vault/provider setup
-- terminal shell with:
-  - help and status
-  - normal vs advanced mode
-  - context lookup commands
-  - persistence commands
-  - bootstrap commands
-  - advanced request/pack/context inspection
-
-Key files:
-
-- [textifai/cli.py](/home/david/projects/autonovel-fork/textifai/cli.py)
-- [textifai/shell.py](/home/david/projects/autonovel-fork/textifai/shell.py)
-- [textifai/router.py](/home/david/projects/autonovel-fork/textifai/router.py)
-- [textifai/onboarding.py](/home/david/projects/autonovel-fork/textifai/onboarding.py)
-- [textifai/doctor.py](/home/david/projects/autonovel-fork/textifai/doctor.py)
-
-### Context Engine V1
-
-A first internal Context Engine now exists.
-
-Implemented:
-
-- deterministic intent resolution
-- explicit `narrative_scope` vs `retrieval_scope`
-- structured candidate retrieval from the vault
-- explainable ranking with score breakdowns
-- configurable context policies
-- structured `context_pack` output with:
-  - `hard_constraints`
-  - `narrative_context`
-  - `voice_context.project_voice`
-  - `voice_context.character_voice`
-  - `evidence`
-
-Key files:
-
-- [context_engine/contracts.py](/home/david/projects/autonovel-fork/context_engine/contracts.py)
-- [context_engine/query.py](/home/david/projects/autonovel-fork/context_engine/query.py)
-- [context_engine/ranking.py](/home/david/projects/autonovel-fork/context_engine/ranking.py)
-- [context_engine/builder.py](/home/david/projects/autonovel-fork/context_engine/builder.py)
-- [context_engine/service.py](/home/david/projects/autonovel-fork/context_engine/service.py)
-- [config/context_policies.json](/home/david/projects/autonovel-fork/config/context_policies.json)
-
-Not implemented yet:
-
-- embeddings
-- semantic/vector retrieval
-- external chat integration
-- advanced compression profiles
-
-### Language And Multilingual Policy
-
-TextifAI now has a dedicated language layer that separates:
-
-- interface language
-- user command language
-- internal system language
-- project default language
-- mixed-language policy
-- language by artifact type
-
-Implemented:
-
-- runtime i18n with classic locale files and fallback to `en`
-- `LanguagePolicy` for runtime and project settings
-- multilingual content-flow propagation for:
-  - context requests
-  - consistency checks
-  - decisions
-  - bootstrap extraction
-- artifact-level persistence of `artifact_language` where it adds durable value
-
-Key files:
-
-- [textifai/i18n.py](/home/david/projects/autonovel-fork/textifai/i18n.py)
-- [textifai/language_policy.py](/home/david/projects/autonovel-fork/textifai/language_policy.py)
-- [textifai/language_resolution.py](/home/david/projects/autonovel-fork/textifai/language_resolution.py)
-- [config/language_policy.json](/home/david/projects/autonovel-fork/config/language_policy.json)
-
-Important limitation:
-
-This is not yet a full multilingual generation or retrieval system. The layer
-currently provides structured language policy and propagation, not advanced
-translation, semantic multilingual retrieval, or deep content-language
-enforcement.
-
-### Conversational Task Layer
-
-The repo now also has the first internal skeleton of a conversational task
-layer.
-
-Implemented:
-
-- typed conversation contracts
-- short conversational state
-- base conversation manager
-- controlled task catalog and flow catalog
-- hybrid intent recognizer architecture:
-  - rules first
-  - controlled LLM escalation when needed
-  - hard validation against the internal intent catalog
-
-Key files:
-
-- [textifai/conversation/contracts.py](/home/david/projects/autonovel-fork/textifai/conversation/contracts.py)
-- [textifai/conversation/state.py](/home/david/projects/autonovel-fork/textifai/conversation/state.py)
-- [textifai/conversation/manager.py](/home/david/projects/autonovel-fork/textifai/conversation/manager.py)
-- [textifai/conversation/recognizer.py](/home/david/projects/autonovel-fork/textifai/conversation/recognizer.py)
-- [textifai/conversation/hybrid_recognizer.py](/home/david/projects/autonovel-fork/textifai/conversation/hybrid_recognizer.py)
-
-Important limitation:
-
-This is still an orchestration layer in progress. It does not yet provide a
-full conversational executor, autonomous agent behavior, or an external chat
-UI. The Context Engine remains the main mechanism for structured context
-selection.
+It is different from VaERL:
+
+- VaERL resolves and anchors
+- Context Engine packages context
+
+That separation matters. We do not want duplicate retrieval logic in multiple places.
+
+## How The Flow Works
+
+The current workflow is:
+
+1. the author writes something in natural language
+2. CCE classifies the request
+3. VaERL resolves mentions against the vault when possible
+4. editorial structuring turns the input into a usable shape
+5. context preparation selects the useful project artifacts
+6. the system returns a structured result the author can validate
+7. later stages can use that structure for narration or review
+
+This is intentionally not a fully autonomous authoring loop. The human remains the authorial center.
+
+## Core Open Source vs Future Premium
+
+The current repository should be read as the open core of TextifAI.
+
+### Core Open Source
+
+The core includes:
+
+- terminal runtime
+- conversational interpretation
+- vault-aware entity resolution
+- editorial structuring
+- narration preparation
+- Context Engine
+- persistence and validation primitives
+- core pipeline orchestration
+
+### Future Premium Or Private Layer
+
+The following belong more naturally to a later premium/private layer, if they appear at all:
+
+- richer collaborative UX
+- advanced hosted workflows
+- more opinionated editorial automation
+- premium orchestration surfaces
+- private deployment-specific enhancements
+
+That future layer is not implemented here. The current repo is the core.
+
+## Current Architecture At A Glance
+
+- `textifai/`
+  - product/runtime layer
+  - conversation
+  - editorial intent
+  - editorial structuring
+  - narration prep
+  - VaERL
+  - terminal entrypoints
+- `context_engine/`
+  - deterministic context assembly
+- `vault/`
+  - vault schema, bootstrap, read/write, ingest
+- `interactive/`
+  - internal context and persistence commands
+- `providers/`
+  - inference backend abstraction
+- `stores/`
+  - project storage abstraction
+- `scripts/`
+  - operational entrypoints grouped by task family
 
 ## What Is Already Implemented
 
-The following are real, present features in the repo today:
+The repo already includes:
 
-- text provider abstraction with hosted and local backends
-- project store abstraction
-- vault bootstrap, schema, and adapter
-- TextifAI terminal runtime with onboarding, doctor, shell commands, and advanced inspection mode
-- interactive persistence primitives
-- manuscript bootstrap extractors:
-  - `extract-voice`
-  - `extract-characters`
-  - `extract-canon`
-  - `extract-timeline`
-- deterministic Context Engine v1
-- policy-driven context assembly
-- runtime i18n and language policy
-- multilingual content-flow propagation for key runtime operations
-- conversational contracts, base manager, and hybrid intent recognizer foundation
-- tests for providers, storage, vault, interactive layer, bootstrap, and context engine
+- a provider abstraction for hosted and local models
+- a project storage abstraction
+- a vault backend and schema
+- a terminal TextifAI runtime
+- interactive context and persistence commands
+- a deterministic Context Engine
+- runtime language policy support
+- conversational intent and task scaffolding
+- CCE and editorial intent classification
+- VaERL
+- editorial structuring contracts and builders
+- narration prep contracts and builders
 
 ## What Is Still Future Work
 
-The project is intentionally mid-refactor. These areas are still future or only partially built:
+Not yet implemented, or still intentionally limited:
 
-- LibreChat integration
-- MCP integration
-- external conversational interface
-- richer conversational planning and execution beyond the current skeleton
-- advanced editorial review flows built on top of the interactive layer
-- richer voice preset system
-- full semantic bootstrap from an existing novel
+- GUI
+- LibreChat
+- MCP
 - embeddings / semantic retrieval
-- multilingual generation/review workflows beyond policy propagation
-- more advanced context policies and compression strategies
-- broader cleanup of remaining legacy scripts outside the main refactor path
-
-## Providers
-
-The default text provider is configured through `AUTONOVEL_TEXT_PROVIDER`.
-
-Supported values currently include:
-
-- `anthropic`
-- `openai`
-- `lmstudio`
-- `ollama`
-- `anthropic_compatible`
-- `openai_compatible`
-
-Task-level defaults and overrides live in [config/inference.json](/home/david/projects/autonovel-fork/config/inference.json).
-
-This fork is explicitly designed to keep hosted providers working while opening
-the door to local backends.
-
-## Vault Usage
-
-The project backend can target either the classic workspace layout or a vault.
-
-Environment selection:
-
-```bash
-AUTONOVEL_PROJECT_BACKEND=workspace
-```
-
-or:
-
-```bash
-AUTONOVEL_PROJECT_BACKEND=vault
-AUTONOVEL_VAULT_ROOT=/absolute/path/to/your/vault
-```
-
-Useful vault commands:
-
-```bash
-uv run python main.py init-vault --path /tmp/MyNovelVault --title "My Novel"
-uv run python main.py validate-vault --path /tmp/MyNovelVault
-uv run python main.py export-context --path /tmp/MyNovelVault --artifact all
-uv run python main.py import-existing-chapters --path /tmp/MyNovelVault --source-dir ./legacy_chapters
-uv run python main.py ingest-context --path /tmp/MyNovelVault --json ./digested_context.json
-```
-
-See [docs/VAULT_SCHEMA.md](/home/david/projects/autonovel-fork/docs/VAULT_SCHEMA.md) for the schema and note model.
-
-## Bootstrap From Existing Manuscript
-
-The repo can now bootstrap project artifacts from chapters already written.
-
-Implemented extractors:
-
-- `interactive-extract-voice`
-- `interactive-extract-characters`
-- `interactive-extract-canon`
-- `interactive-extract-timeline`
-
-Current behavior:
-
-- generated artifacts persist as `proposed` or `pending_revision`
-- never `validated` by default
-- `origin.source` is set to `manuscript_bootstrap`
-- `origin.chapter_ids` are recorded when available
-- bootstrap prefers creating new proposals over overwriting sensitive notes
-
-Important limitation:
-
-These extractors are deliberately heuristic and conservative. They are meant to
-seed a project with traceable proposals, not to perform final editorial or
-canonical judgment.
+- advanced autonomous editing loops
+- automatic narration as a mature end-state
+- premium/private layers
 
 ## Quick Start
 
 ```bash
 git clone <repo-url>
-cd textifai
+cd autonovel-fork
 cp .env.example .env
 uv sync
 ```
 
-If you want the classic pipeline flow:
+For the terminal runtime:
+
+```bash
+textifai
+```
+
+For the pipeline:
 
 ```bash
 uv run python run_pipeline.py --from-scratch
 ```
 
-If you want a vault-backed project:
+For setup and diagnostics:
 
 ```bash
-textifai setup
-```
-
-Product entrypoints:
-
-```bash
-textifai
-textifai chat
 textifai setup
 textifai doctor
 ```
 
-## Terminal Quick Start
+## Useful Docs
 
-The terminal runtime is the recommended product entrypoint today.
-
-Typical first-use flow:
-
-```bash
-textifai
-```
-
-If the environment is not ready yet, TextifAI will guide you through setup.
-Once you are inside the shell, a practical order is:
-
-```text
-world
-find Sera
-scene scene_054_b
-check decision:magic_costs
-bootstrap canon
-mode advanced
-request
-pack
-context-debug
-```
-
-Normal mode is for everyday use:
-
-- load context
-- run checks
-- validate or reject notes
-- launch bootstrap flows
-
-Advanced mode is for inspection:
-
-- inspect the current request
-- inspect the current pack
-- inspect context debug output
-- switch policy or budget for the current session
-
-Useful shell commands:
-
-- `help`
-- `status`
-- `mode normal`
-- `mode advanced`
-- `world`
-- `find <query>`
-- `scene <scene_id>`
-- `chapter <chapter_id>`
-- `check <type:slug|note_path>`
-- `decide`
-- `validate <type:slug|note_path>`
-- `reject <type:slug|note_path>`
-- `bootstrap`
-- `request`
-- `pack`
-- `context-debug`
-
-## Main Commands
-
-Pipeline:
-
-```bash
-uv run python run_pipeline.py --phase foundation
-uv run python run_pipeline.py --phase drafting
-uv run python run_pipeline.py --phase revision
-uv run python run_pipeline.py --phase export
-```
-
-Interactive / vault:
-
-```bash
-uv run python main.py interactive-world --path /tmp/MyNovelVault
-uv run python main.py interactive-find --path /tmp/MyNovelVault --query "Sera"
-uv run python main.py interactive-consistency-check --path /tmp/MyNovelVault --json payload.json
-uv run python main.py interactive-create-note --path /tmp/MyNovelVault --json payload.json
-uv run python main.py interactive-update-note --path /tmp/MyNovelVault --json payload.json
-```
-
-Bootstrap:
-
-```bash
-uv run python main.py interactive-extract-voice --path /tmp/MyNovelVault --chapter-from 1 --chapter-to 3
-uv run python main.py interactive-extract-characters --path /tmp/MyNovelVault --chapter-id ch_01 --chapter-id ch_02
-uv run python main.py interactive-extract-canon --path /tmp/MyNovelVault --chapter-id ch_03
-uv run python main.py interactive-extract-timeline --path /tmp/MyNovelVault --chapter-id ch_04
-```
-
-## Current Boundaries
-
-This README intentionally describes the current system honestly:
-
-- the fork is already much more than the original AutoNovel pipeline
-- the persistent vault architecture is real
-- the interactive layer is real
-- the Context Engine v1 is real
-- the project is being oriented toward human-led creation with AI assistance, not toward fully autonomous authorship as its primary mode
-- the future conversational shell is not implemented yet
-- embeddings are not implemented yet
-- advanced editorial orchestration on top of the new layers is still in progress
-
-## Related Docs
-
-- [PIPELINE.md](/home/david/projects/autonovel-fork/PIPELINE.md)
-- [WORKFLOW.md](/home/david/projects/autonovel-fork/WORKFLOW.md)
-- [docs/VAULT_SCHEMA.md](/home/david/projects/autonovel-fork/docs/VAULT_SCHEMA.md)
-- [docs/TODO_PHASE1.md](/home/david/projects/autonovel-fork/docs/TODO_PHASE1.md)
 - [docs/ARCHITECTURE_NOTES.md](/home/david/projects/autonovel-fork/docs/ARCHITECTURE_NOTES.md)
+- [docs/VAULT_SCHEMA.md](/home/david/projects/autonovel-fork/docs/VAULT_SCHEMA.md)
+- [WORKFLOW.md](/home/david/projects/autonovel-fork/WORKFLOW.md)
+- [PIPELINE.md](/home/david/projects/autonovel-fork/PIPELINE.md)
 
-## Inspiration
+## Honest Boundary
 
-- the original AutoNovel project and workflow
-- [karpathy/autoresearch](https://github.com/karpathy/autoresearch)
-- story development and revision frameworks carried over from the original codebase
+TextifAI is not a magical narrator and not a generic chat wrapper. The project is designed to be:
+
+- vault-aware
+- conservative
+- structured
+- explainable
+- usable from the terminal first
+
+The core is intentionally domain-agnostic. Example fixtures from a fantasy vault are useful for validation, but they are not the logic of the system.
