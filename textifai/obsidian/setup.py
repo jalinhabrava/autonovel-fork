@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from textifai.bootstrap import VaultInitializationConfig, confirm_and_write_bootstrap
+from textifai.bootstrap.source_reader import discover_importable_source_paths
 from textifai.obsidian.readiness import ObsidianOperationalReadiness, evaluate_obsidian_operational_readiness
 from vault.bootstrap import bootstrap_vault, validate_vault
 
@@ -62,6 +63,7 @@ class ObsidianProjectSetupResult:
     readiness: ObsidianOperationalReadiness | None = None
     vaerl_index_entries: int = 0
     notes: list[str] = field(default_factory=list)
+    source_files_considered: list[str] = field(default_factory=list)
 
 
 def prepare_obsidian_project(
@@ -76,6 +78,16 @@ def prepare_obsidian_project(
         if config.plugin_repo_root is not None
         else repo_path / "integrations" / "obsidian-textifai-bridge"
     )
+    source_root_path = (
+        Path(config.source_root).expanduser().resolve()
+        if config.mode == "existing_material" and config.source_root is not None
+        else (vault_root if config.mode == "existing_material" else None)
+    )
+    preexisting_source_paths = (
+        discover_importable_source_paths(source_root_path)
+        if source_root_path is not None
+        else []
+    )
 
     vault_created = False
     written_drafts: list[str] = []
@@ -86,24 +98,43 @@ def prepare_obsidian_project(
 
     if config.mode == "new_project":
         if not vault_root.exists() or not any(vault_root.iterdir()):
-            bootstrap_vault(vault_root, title=config.project_title or "TextifAI Project", force=not vault_root.exists())
+            bootstrap_vault(
+                vault_root,
+                title=config.project_title or "TextifAI Project",
+                force=not vault_root.exists(),
+                allow_existing_content=True,
+            )
             vault_created = True
         elif validate_vault(vault_root):
-            raise ValueError(f"Existing path is not a valid vault: {vault_root}")
+            bootstrap_vault(
+                vault_root,
+                title=config.project_title or "TextifAI Project",
+                allow_existing_content=True,
+            )
+            notes.append("Carpeta existente convertida a vault TextifAI sin borrar material previo.")
         notes.append("Vault inicializado para proyecto nuevo.")
     else:
-        if config.source_root is None:
-            raise ValueError("source_root is required for existing_material mode")
-        source_root = Path(config.source_root).expanduser().resolve()
+        source_root = source_root_path or vault_root
         if not source_root.exists():
             raise FileNotFoundError(f"Source root does not exist: {source_root}")
         bootstrap_mode = "import_into_existing_vault"
         if not vault_root.exists() or not any(vault_root.iterdir()):
-            bootstrap_vault(vault_root, title=config.project_title or source_root.name or "TextifAI Project", force=not vault_root.exists())
+            bootstrap_vault(
+                vault_root,
+                title=config.project_title or source_root.name or "TextifAI Project",
+                force=not vault_root.exists(),
+                allow_existing_content=True,
+            )
             vault_created = True
             bootstrap_mode = "new_project"
         elif validate_vault(vault_root):
-            raise ValueError(f"Existing path is not a valid vault: {vault_root}")
+            bootstrap_vault(
+                vault_root,
+                title=config.project_title or source_root.name or "TextifAI Project",
+                allow_existing_content=True,
+            )
+            bootstrap_mode = "import_into_existing_vault"
+            notes.append("Carpeta existente convertida a vault TextifAI sin fallar sobre material previo.")
         bootstrap_result = confirm_and_write_bootstrap(
             VaultInitializationConfig(
                 vault_root=str(vault_root),
@@ -115,6 +146,7 @@ def prepare_obsidian_project(
                 use_import_staging=True,
             ),
             source_root=source_root,
+            source_paths=preexisting_source_paths or None,
         )
         written_drafts = list(bootstrap_result.written_drafts)
         warnings.extend(list(bootstrap_result.warnings))
@@ -156,6 +188,7 @@ def prepare_obsidian_project(
         readiness=readiness,
         vaerl_index_entries=index_entries,
         notes=notes,
+        source_files_considered=[str(path) for path in preexisting_source_paths],
     )
 
 

@@ -5,9 +5,14 @@ from pathlib import Path
 
 from textifai.bootstrap.contracts import SourceDocumentInventory, SourceDocumentRecord
 from textifai.bootstrap.language import detect_language_profile
+from vault.schema import VAULT_DIRS
 
 
-def build_source_document_inventory(source_root: str | Path) -> SourceDocumentInventory:
+def build_source_document_inventory(
+    source_root: str | Path,
+    *,
+    explicit_paths: list[str | Path] | None = None,
+) -> SourceDocumentInventory:
     root = Path(source_root).expanduser().resolve()
     documents: list[SourceDocumentRecord] = []
     warnings: list[str] = []
@@ -22,7 +27,13 @@ def build_source_document_inventory(source_root: str | Path) -> SourceDocumentIn
             warnings=[f"Source root does not exist: {root}"],
         )
 
-    for path in sorted(root.rglob("*")):
+    candidate_paths = (
+        [Path(path).expanduser().resolve() for path in explicit_paths]
+        if explicit_paths is not None
+        else sorted(root.rglob("*"))
+    )
+
+    for path in candidate_paths:
         if not path.is_file():
             continue
         source_format = _detect_source_format(path)
@@ -110,7 +121,26 @@ def _checksum(raw_bytes: bytes) -> str:
 
 
 def _should_skip_path(path: Path) -> bool:
-    return any(part in {"99_Import_Staging", ".obsidian"} for part in path.parts)
+    canonical_vault_roots = {Path(relative).parts[0] for relative in VAULT_DIRS.values()}
+    skip_parts = {"99_Import_Staging", ".obsidian", *canonical_vault_roots}
+    return any(part in skip_parts for part in path.parts)
+
+
+def discover_importable_source_paths(source_root: str | Path) -> list[Path]:
+    root = Path(source_root).expanduser().resolve()
+    if not root.exists():
+        return []
+    paths: list[Path] = []
+    for path in sorted(root.rglob("*")):
+        if not path.is_file():
+            continue
+        source_format = _detect_source_format(path)
+        if source_format not in {"md", "txt", "docx", "pdf", "doc"}:
+            continue
+        if _should_skip_path(path):
+            continue
+        paths.append(path)
+    return paths
 
 
 def _guess_content_kinds(path: Path, text: str) -> list[str]:

@@ -7,9 +7,14 @@ from vault.schema import IMPORT_STAGING_DIRS, ROOT_NOTES, TEMPLATE_ROOT, VAULT_D
 from vault.templates import render_template
 
 
-def bootstrap_vault(destination: str | Path, title: str = "Untitled Novel Project", force: bool = False) -> Path:
+def bootstrap_vault(
+    destination: str | Path,
+    title: str = "Untitled Novel Project",
+    force: bool = False,
+    allow_existing_content: bool = False,
+) -> Path:
     root = Path(destination)
-    if root.exists() and any(root.iterdir()) and not force:
+    if root.exists() and any(root.iterdir()) and not force and not allow_existing_content:
         raise FileExistsError(f"Vault destination is not empty: {root}")
 
     root.mkdir(parents=True, exist_ok=True)

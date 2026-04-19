@@ -27,7 +27,11 @@ from textifai.bootstrap.contracts import (
 from textifai.bootstrap.language import build_language_profile
 from textifai.bootstrap.normalization_plan import build_bootstrap_result, build_normalization_plan
 from textifai.bootstrap.segmenter import segment_source_document
-from textifai.bootstrap.source_reader import build_source_document_inventory, read_source_documents
+from textifai.bootstrap.source_reader import (
+    build_source_document_inventory,
+    discover_importable_source_paths,
+    read_source_documents,
+)
 from textifai.bootstrap.staging_writer import write_bootstrap_staging
 from textifai.bootstrap.validation import validate_bootstrap_result
 from vault.bootstrap import bootstrap_vault, create_import_staging_structure, validate_vault
@@ -37,6 +41,7 @@ def prepare_bootstrap(
     config: VaultInitializationConfig,
     *,
     source_root: str | Path | None = None,
+    source_paths: list[str | Path] | None = None,
     llm_analyzer: BootstrapLLMAnalyzer | None = None,
 ) -> BootstrapResult:
     vault_root = Path(config.vault_root).expanduser().resolve()
@@ -46,11 +51,19 @@ def prepare_bootstrap(
             bootstrap_vault(vault_root, title=config.project_title or "TextifAI Project", force=False)
             created_vault = True
         elif not any(vault_root.iterdir()):
-            bootstrap_vault(vault_root, title=config.project_title or "TextifAI Project", force=True)
+            bootstrap_vault(
+                vault_root,
+                title=config.project_title or "TextifAI Project",
+                force=True,
+                allow_existing_content=True,
+            )
             created_vault = True
         else:
-            if validate_vault(vault_root):
-                raise ValueError(f"Existing path is not a valid vault: {vault_root}")
+            bootstrap_vault(
+                vault_root,
+                title=config.project_title or "TextifAI Project",
+                allow_existing_content=True,
+            )
             create_import_staging_structure(vault_root)
     else:
         errors = validate_vault(vault_root)
@@ -85,7 +98,7 @@ def prepare_bootstrap(
             warnings=warnings,
         )
 
-    inventory = build_source_document_inventory(source_root)
+    inventory = build_source_document_inventory(source_root, explicit_paths=source_paths)
     source_texts = read_source_documents(inventory)
     fragments_by_source = {
         document.source_id: segment_source_document(document, source_texts[document.source_id])
@@ -154,9 +167,15 @@ def confirm_and_write_bootstrap(
     config: VaultInitializationConfig,
     *,
     source_root: str | Path,
+    source_paths: list[str | Path] | None = None,
     llm_analyzer: BootstrapLLMAnalyzer | None = None,
 ) -> BootstrapResult:
-    result = prepare_bootstrap(config, source_root=source_root, llm_analyzer=llm_analyzer)
+    result = prepare_bootstrap(
+        config,
+        source_root=source_root,
+        source_paths=source_paths,
+        llm_analyzer=llm_analyzer,
+    )
     if result.normalization_plan is None or result.inventory is None:
         return result
     source_texts = read_source_documents(result.inventory)

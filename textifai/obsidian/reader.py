@@ -84,7 +84,7 @@ class ObsidianVaultReader:
             title=title,
             path=str(path),
             vault_relative_path=str(relative),
-            artifact_type=_infer_artifact_type(relative),
+            artifact_type=_infer_artifact_type(relative, frontmatter),
             frontmatter=dict(frontmatter),
             aliases=normalize_aliases(frontmatter.get("aliases")),
             project_confirmed_aliases=normalize_aliases(frontmatter.get("project_confirmed_aliases")),
@@ -100,7 +100,10 @@ class ObsidianVaultReader:
         return ".obsidian" in parts or path.name.startswith(".")
 
 
-def _infer_artifact_type(relative: Path) -> str:
+def _infer_artifact_type(relative: Path, frontmatter: dict[str, object] | None = None) -> str:
+    hinted = str((frontmatter or {}).get("kind") or "").strip().casefold()
+    if hinted in {"character", "lore", "scene", "chapter", "decision"}:
+        return hinted
     normalized = relative.as_posix()
     if normalized.startswith("03_Characters/Profiles/"):
         return "character"
