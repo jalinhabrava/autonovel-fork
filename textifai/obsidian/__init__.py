@@ -11,6 +11,7 @@ from textifai.obsidian.contracts import (
     ValidatedObsidianSnapshot,
 )
 from textifai.obsidian.context import build_obsidian_context_bundle
+from textifai.obsidian.readiness import ObsidianOperationalReadiness, evaluate_obsidian_operational_readiness
 from textifai.obsidian.reader import ObsidianVaultReader
 from textifai.obsidian.snapshot_validation import validate_obsidian_snapshot
 from textifai.obsidian.source import open_obsidian_source
@@ -23,11 +24,13 @@ __all__ = [
     "ObsidianBridgeSnapshotReader",
     "ObsidianContextBundle",
     "ObsidianNote",
+    "ObsidianOperationalReadiness",
     "ObsidianSourceStatus",
     "ObsidianVaultReader",
     "OpenedObsidianSource",
     "ValidatedObsidianSnapshot",
     "build_obsidian_context_bundle",
+    "evaluate_obsidian_operational_readiness",
     "open_obsidian_source",
     "resolve_obsidian_snapshot_path",
     "validate_obsidian_snapshot",
