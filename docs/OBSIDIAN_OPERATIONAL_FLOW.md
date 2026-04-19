@@ -12,9 +12,24 @@ TextifAI now distinguishes between:
 
 Short operational wrapper:
 
+- `uv run python scripts/textifai.py`
 - `uv run python scripts/textifai_obsidian.py init --vault-root ...`
 - `uv run python scripts/textifai_obsidian.py status --vault-root ...`
 - `uv run python scripts/textifai_obsidian.py inspect --vault-root ...`
+
+The recommended onboarding entrypoint is now:
+
+```bash
+uv run python scripts/textifai.py
+```
+
+It asks:
+
+- whether the project starts from zero or from existing documentation,
+- where the vault should live,
+- where the source documentation lives if needed,
+- the project title and working languages,
+- and whether the bridge plugin should be built now.
 
 The short `init` command automatically chooses:
 
@@ -83,6 +98,22 @@ The expected high-signal fields are:
 - `source_note_count`
 - `vaerl_index_entries`
 - `vaerl_artifact_types`
+
+## Snapshot Refresh Expectation
+
+After the plugin is activated inside Obsidian Desktop, snapshot refresh should no longer be a repetitive manual task.
+
+The bridge is already configured to auto-export:
+
+- on startup,
+- after `metadataCache` resolves,
+- and after markdown vault changes.
+
+The manual palette command:
+
+- `Export TextifAI context snapshot`
+
+should now be treated mainly as a force-refresh or troubleshooting action, not the normal steady-state workflow.
 
 ## Operational Readiness Policy
 
