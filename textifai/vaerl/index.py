@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from textifai.obsidian.artifact_types import normalize_artifact_type
 from textifai.obsidian import open_obsidian_source
 from textifai.vaerl.contracts import VaultIndexEntry
 from vault.schema import slugify
@@ -16,7 +17,12 @@ def build_vault_index(
     reader = source.reader
     entries: list[VaultIndexEntry] = []
     for note in reader.list_notes():
-        if note.artifact_type == "note":
+        normalized_artifact_type = normalize_artifact_type(
+            vault_relative_path=note.vault_relative_path,
+            frontmatter_kind=note.frontmatter.get("kind"),
+            snapshot_artifact_type=note.artifact_type,
+        )
+        if normalized_artifact_type == "note":
             continue
         frontmatter = dict(note.frontmatter)
         frontmatter.setdefault("_context_source_reliability", source.status.reliability)
@@ -24,7 +30,7 @@ def build_vault_index(
         entries.append(
             VaultIndexEntry(
                 artifact_id=note.note_id,
-                artifact_type=note.artifact_type,
+                artifact_type=normalized_artifact_type,
                 title=note.title,
                 slug=note.note_id,
                 aliases=list(note.aliases),

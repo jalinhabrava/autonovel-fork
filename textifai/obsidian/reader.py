@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from textifai.obsidian.artifact_types import normalize_artifact_type
 from textifai.obsidian.contracts import ObsidianNote
 from textifai.obsidian.parser import (
     extract_heading_title,
@@ -84,7 +85,10 @@ class ObsidianVaultReader:
             title=title,
             path=str(path),
             vault_relative_path=str(relative),
-            artifact_type=_infer_artifact_type(relative, frontmatter),
+            artifact_type=normalize_artifact_type(
+                vault_relative_path=relative,
+                frontmatter_kind=frontmatter.get("kind"),
+            ),
             frontmatter=dict(frontmatter),
             aliases=normalize_aliases(frontmatter.get("aliases")),
             project_confirmed_aliases=normalize_aliases(frontmatter.get("project_confirmed_aliases")),
@@ -98,26 +102,6 @@ class ObsidianVaultReader:
     def _skip_path(self, path: Path) -> bool:
         parts = set(path.relative_to(self.vault_root).parts)
         return ".obsidian" in parts or path.name.startswith(".")
-
-
-def _infer_artifact_type(relative: Path, frontmatter: dict[str, object] | None = None) -> str:
-    hinted = str((frontmatter or {}).get("kind") or "").strip().casefold()
-    if hinted in {"character", "lore", "scene", "chapter", "decision"}:
-        return hinted
-    normalized = relative.as_posix()
-    if normalized.startswith("03_Characters/Profiles/"):
-        return "character"
-    if normalized.startswith("02_World/Lore/"):
-        return "lore"
-    if normalized.startswith("04_Outline/Scenes/"):
-        return "scene"
-    if normalized.startswith("05_Draft/Chapters/"):
-        return "chapter"
-    if normalized.startswith("06_Canon/Decisions/"):
-        return "decision"
-    return "note"
-
-
 def _compute_incoming_links(notes: list[ObsidianNote]) -> dict[str, list[str]]:
     incoming: dict[str, list[str]] = {note.note_id: [] for note in notes}
     for note in notes:

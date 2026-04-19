@@ -198,7 +198,7 @@ export default class TextifAIBridgePlugin extends Plugin {
 					path: file.path,
 					vault_relative_path: file.path,
 					canonical_path: normalizeVaultPath(file.path),
-					artifact_type: inferArtifactType(file.path),
+					artifact_type: inferArtifactType(file.path, cache?.frontmatter),
 					file_mtime: file.stat.mtime,
 					file_ctime: file.stat.ctime,
 					file_size: file.stat.size,
@@ -405,14 +405,34 @@ function buildLinkRecord(linkPath: string, sourcePath: string, isEmbed: boolean,
 	};
 }
 
-function inferArtifactType(path: string): string {
+function inferArtifactType(path: string, frontmatter?: Record<string, unknown>): string {
+	const hinted = normalizeArtifactHint(frontmatter?.kind);
+	if (hinted) return hinted;
 	const normalized = normalizeVaultPath(path);
 	if (normalized.startsWith("03_characters/profiles/")) return "character";
 	if (normalized.startsWith("02_world/lore/")) return "lore";
 	if (normalized.startsWith("04_outline/scenes/")) return "scene";
 	if (normalized.startsWith("05_draft/chapters/")) return "chapter";
 	if (normalized.startsWith("06_canon/decisions/")) return "decision";
+	if (normalized.startsWith("99_import_staging/99_import_staging/characters/")) return "character";
+	if (normalized.startsWith("99_import_staging/99_import_staging/lore/")) return "lore";
+	if (normalized.startsWith("99_import_staging/99_import_staging/scenes/")) return "scene";
+	if (normalized.startsWith("99_import_staging/99_import_staging/chapters/")) return "chapter";
+	if (normalized.startsWith("99_import_staging/99_import_staging/mixed/")) return "mixed_note";
+	if (normalized.startsWith("99_import_staging/characters/")) return "character";
+	if (normalized.startsWith("99_import_staging/lore/")) return "lore";
+	if (normalized.startsWith("99_import_staging/scenes/")) return "scene";
+	if (normalized.startsWith("99_import_staging/chapters/")) return "chapter";
+	if (normalized.startsWith("99_import_staging/mixed/")) return "mixed_note";
 	return "note";
+}
+
+function normalizeArtifactHint(value: unknown): string | null {
+	const raw = String(value ?? "").trim().toLowerCase();
+	if (!raw) return null;
+	if (raw === "note") return null;
+	if (raw === "canon_decision") return "decision";
+	return raw;
 }
 
 function noteIdFromPath(path: string): string {

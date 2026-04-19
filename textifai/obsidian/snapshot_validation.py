@@ -14,6 +14,8 @@ from textifai.obsidian.contracts import (
     ObsidianSourceStatus,
     ValidatedObsidianSnapshot,
 )
+from textifai.obsidian.artifact_types import normalize_artifact_type
+from textifai.obsidian.parser import parse_obsidian_frontmatter
 from vault.schema import slugify
 
 
@@ -164,13 +166,23 @@ def _note_from_snapshot(value: dict[str, Any], issues: list[str]) -> ObsidianNot
     if not note_id:
         issues.append("note_missing_id")
         return None
+    frontmatter = dict(value.get("frontmatter") or {})
+    if not frontmatter and str(value.get("raw_text") or "").startswith("---\n"):
+        recovered = parse_obsidian_frontmatter(str(value.get("raw_text") or ""))
+        if recovered:
+            frontmatter = dict(recovered)
+    artifact_type = normalize_artifact_type(
+        vault_relative_path=relative_path,
+        frontmatter_kind=frontmatter.get("kind"),
+        snapshot_artifact_type=value.get("artifact_type"),
+    )
     return ObsidianNote(
         note_id=note_id,
         title=title,
         path=str(value.get("path") or relative_path),
         vault_relative_path=relative_path,
-        artifact_type=str(value.get("artifact_type") or "note"),
-        frontmatter=dict(value.get("frontmatter") or {}),
+        artifact_type=artifact_type,
+        frontmatter=frontmatter,
         aliases=[str(item).strip() for item in value.get("aliases", []) if str(item).strip()],
         project_confirmed_aliases=[str(item).strip() for item in value.get("project_confirmed_aliases", []) if str(item).strip()],
         outgoing_links=[slugify(str(item)) for item in value.get("outgoing_links", []) if str(item).strip()],
