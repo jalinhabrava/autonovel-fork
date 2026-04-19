@@ -989,7 +989,7 @@ class OntGuidedValidationTests(unittest.TestCase):
         self.assertTrue(json_path.exists())
         self.assertTrue(md_path.exists())
         self.assertGreaterEqual(len(payload["cases"]), 1)
-        self.assertEqual(payload["evaluation_status"], "partial_pipeline_only_until_obsidian_context_source_is_validated")
+        self.assertEqual(payload["evaluation_status"], "partial_pipeline_only_until_obsidian_bridge_snapshot_is_fresh_and_validated")
         first_case = payload["cases"][0]
         self.assertIn("trace_rendered_prompt_payload", first_case)
         self.assertIn("llm_rendered_prompt_payload", first_case)

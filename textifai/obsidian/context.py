@@ -13,11 +13,12 @@ def build_obsidian_context_bundle(
     related_limit: int = 6,
     snapshot_path: str | Path | None = None,
 ) -> ObsidianContextBundle:
-    reader = open_obsidian_source(vault_root, snapshot_path=snapshot_path)
-    primary = reader.get_note(note_id)
+    source = open_obsidian_source(vault_root, snapshot_path=snapshot_path)
+    primary = source.reader.get_note(note_id)
     if primary is None:
-        return ObsidianContextBundle(primary=None, related=[])
+        return ObsidianContextBundle(primary=None, related=[], source_status=source.status)
     return ObsidianContextBundle(
         primary=primary,
-        related=reader.related_notes(primary.note_id, limit=related_limit),
+        related=source.reader.related_notes(primary.note_id, limit=related_limit),
+        source_status=source.status,
     )

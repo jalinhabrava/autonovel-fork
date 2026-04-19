@@ -34,6 +34,8 @@ def build_response_context(
                 "excerpt": _trim_excerpt(bundle.primary.body_text),
                 "source": source,
                 "path": bundle.primary.path,
+                "context_source_reliability": bundle.source_status.reliability if bundle.source_status else None,
+                "context_source_kind": bundle.source_status.source_kind if bundle.source_status else None,
             }
         )
         seen.add(key)
@@ -49,6 +51,8 @@ def build_response_context(
                     "excerpt": _trim_excerpt(related.body_text),
                     "source": f"{source}_obsidian_related",
                     "path": related.path,
+                    "context_source_reliability": bundle.source_status.reliability if bundle.source_status else None,
+                    "context_source_kind": bundle.source_status.source_kind if bundle.source_status else None,
                 }
             )
             seen.add(related_key)

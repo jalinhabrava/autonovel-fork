@@ -12,11 +12,15 @@ def build_vault_index(
     vault_path: Path,
     known_characters: list[dict[str, object]] | None = None,
 ) -> list[VaultIndexEntry]:
-    reader = open_obsidian_source(vault_path)
+    source = open_obsidian_source(vault_path)
+    reader = source.reader
     entries: list[VaultIndexEntry] = []
     for note in reader.list_notes():
         if note.artifact_type == "note":
             continue
+        frontmatter = dict(note.frontmatter)
+        frontmatter.setdefault("_context_source_reliability", source.status.reliability)
+        frontmatter.setdefault("_context_source_kind", source.status.source_kind)
         entries.append(
             VaultIndexEntry(
                 artifact_id=note.note_id,
@@ -28,7 +32,7 @@ def build_vault_index(
                 path=note.path,
                 links=list(note.outgoing_links),
                 backlinks=list(note.incoming_links),
-                frontmatter=dict(note.frontmatter),
+                frontmatter=frontmatter,
             )
         )
     entries = _merge_known_characters(entries, known_characters or [])

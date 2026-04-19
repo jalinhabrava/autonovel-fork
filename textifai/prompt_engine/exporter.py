@@ -15,10 +15,10 @@ def export_prompt_cases(
 ) -> dict[str, Any]:
     payload = {
         "export_title": export_title,
-        "evaluation_status": "partial_pipeline_only_until_obsidian_context_source_is_validated",
+        "evaluation_status": "partial_pipeline_only_until_obsidian_bridge_snapshot_is_fresh_and_validated",
         "evaluation_note": (
-            "Prompt/output review is paused as definitive validation until the Obsidian-compatible Markdown vault "
-            "reader is validated as the primary VaERL context source, or a future live Obsidian bridge exists."
+            "Prompt/output review is paused as definitive validation until a fresh and valid Obsidian bridge snapshot "
+            "is available as the preferred VaERL context source, or a future live Obsidian bridge exists."
         ),
         "cases": [_normalize_case(case) for case in cases],
     }

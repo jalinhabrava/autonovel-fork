@@ -1,6 +1,6 @@
 # Prompt Evaluation Status
 
-Current status: `paused_pending_obsidian_context_source`
+Current status: `paused_pending_obsidian_bridge_reliability`
 
 This repository currently keeps prompt/export evaluation as a **partial pipeline check**, not as definitive product-quality validation.
 
@@ -11,11 +11,18 @@ Why:
 - that is useful for testing the pipeline shape,
 - but it is not yet the final operational context expected from a structured Markdown vault source compatible with Obsidian, or from a future live Obsidian bridge.
 
-Until the Obsidian-compatible Markdown vault reader is validated as the primary source of vault context, or a future live Obsidian bridge exists:
+Until a fresh and valid Obsidian bridge snapshot is available, or a future live Obsidian bridge exists:
 
 - enriched prompt inspection remains useful,
 - trace/debug exports remain useful,
 - but author-facing prompt/output quality should not be treated as final product validation.
+
+Current context-source interpretation:
+
+- `vault_reader_only`: useful for partial pipeline checks, not definitive product evaluation
+- `obsidian_bridge_snapshot_fresh`: preferred bridge-backed context source
+- `obsidian_bridge_snapshot_stale`: usable with caution, not ideal for prompt quality conclusions
+- `obsidian_bridge_snapshot_invalid`: do not treat prompt quality conclusions as reliable
 
 Methodological rule for now:
 
