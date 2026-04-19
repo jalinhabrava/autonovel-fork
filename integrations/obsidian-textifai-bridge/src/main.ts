@@ -4,10 +4,10 @@ import {
 	Plugin,
 	PluginSettingTab,
 	Setting,
-	TAbstractFile,
 	TFile,
 	normalizePath,
 } from "obsidian";
+import { createHash, randomUUID } from "node:crypto";
 
 interface TextifAIBridgeSettings {
 	exportPath: string;
@@ -16,7 +16,11 @@ interface TextifAIBridgeSettings {
 	autoExportOnVaultChange: boolean;
 	debounceMs: number;
 	includeFullText: boolean;
+	installationId: string;
+	exportSequence: number;
 }
+
+const SNAPSHOT_SCHEMA_VERSION = "2.0";
 
 const DEFAULT_SETTINGS: TextifAIBridgeSettings = {
 	exportPath: ".textifai/obsidian-bridge-snapshot.json",
@@ -25,11 +29,16 @@ const DEFAULT_SETTINGS: TextifAIBridgeSettings = {
 	autoExportOnVaultChange: true,
 	debounceMs: 800,
 	includeFullText: true,
+	installationId: "",
+	exportSequence: 0,
 };
 
 export default class TextifAIBridgePlugin extends Plugin {
 	settings: TextifAIBridgeSettings = DEFAULT_SETTINGS;
 	private exportTimer: ReturnType<typeof setTimeout> | null = null;
+	private exportInProgress = false;
+	private rerunRequested = false;
+	private dirtyReasons = new Set<string>();
 
 	async onload(): Promise<void> {
 		await this.loadSettings();
@@ -37,7 +46,8 @@ export default class TextifAIBridgePlugin extends Plugin {
 			id: "export-textifai-context-snapshot",
 			name: "Export TextifAI context snapshot",
 			callback: async () => {
-				await this.exportSnapshot("manual_command");
+				this.markDirty("manual_command");
+				await this.flushExportQueue();
 				new Notice("TextifAI snapshot exported");
 			},
 		});
@@ -61,6 +71,14 @@ export default class TextifAIBridgePlugin extends Plugin {
 			this.app.metadataCache.on("changed", (file) => {
 				if (this.settings.autoExportOnVaultChange && file instanceof TFile && file.extension === "md") {
 					this.scheduleExport("metadata_changed");
+				}
+			}),
+		);
+
+		this.registerEvent(
+			this.app.vault.on("create", (file) => {
+				if (this.settings.autoExportOnVaultChange && file instanceof TFile && file.extension === "md") {
+					this.scheduleExport("vault_create");
 				}
 			}),
 		);
@@ -90,93 +108,157 @@ export default class TextifAIBridgePlugin extends Plugin {
 	}
 
 	private scheduleExport(reason: string): void {
+		this.markDirty(reason);
 		if (this.exportTimer) {
 			clearTimeout(this.exportTimer);
 		}
 		this.exportTimer = setTimeout(() => {
-			void this.exportSnapshot(reason);
+			void this.flushExportQueue();
 		}, this.settings.debounceMs);
 	}
 
-	private async exportSnapshot(reason: string): Promise<void> {
+	private markDirty(reason: string): void {
+		this.dirtyReasons.add(reason);
+		if (this.exportInProgress) {
+			this.rerunRequested = true;
+		}
+	}
+
+	private async flushExportQueue(): Promise<void> {
+		if (this.exportInProgress) {
+			this.rerunRequested = true;
+			return;
+		}
+		this.exportInProgress = true;
+		try {
+			do {
+				this.rerunRequested = false;
+				const reasons = Array.from(this.dirtyReasons);
+				this.dirtyReasons.clear();
+				await this.exportSnapshot(reasons);
+			} while (this.rerunRequested || this.dirtyReasons.size > 0);
+		} finally {
+			this.exportInProgress = false;
+		}
+	}
+
+	private async exportSnapshot(reasons: string[]): Promise<void> {
 		const files = this.app.vault.getMarkdownFiles();
 		const notes = [];
 		const incomingByTarget: Record<string, Set<string>> = {};
+		const warnings: string[] = [];
+		const errors: string[] = [];
 
 		for (const file of files) {
-			const cache = this.app.metadataCache.getFileCache(file);
-			const body = this.settings.includeFullText ? await this.app.vault.cachedRead(file) : "";
-			const resolved = this.app.metadataCache.resolvedLinks[file.path] ?? {};
-			const unresolved = this.app.metadataCache.unresolvedLinks[file.path] ?? {};
-			const outgoingLinks = Object.keys(resolved)
-				.map((path) => path.replace(/\.md$/i, ""))
-				.map((path) => path.replaceAll("\\", "/"));
+			try {
+				const cache = this.app.metadataCache.getFileCache(file);
+				const body = this.settings.includeFullText ? await this.app.vault.cachedRead(file) : "";
+				const resolved = this.app.metadataCache.resolvedLinks[file.path] ?? {};
+				const unresolved = this.app.metadataCache.unresolvedLinks[file.path] ?? {};
+				const links = (cache?.links ?? []).map((link) => buildLinkRecord(link.link, file.path, false, this.app));
+				const embeds = (cache?.embeds ?? []).map((embed) => buildLinkRecord(embed.link, file.path, true, this.app));
+				const frontmatterLinks = (cache?.frontmatterLinks ?? []).map((link) => buildLinkRecord(link.link, file.path, false, this.app));
 
-			for (const targetPath of Object.keys(resolved)) {
-				const normalizedTarget = targetPath.replace(/\.md$/i, "").replaceAll("\\", "/");
-				incomingByTarget[normalizedTarget] ??= new Set<string>();
-				incomingByTarget[normalizedTarget].add(file.path.replace(/\.md$/i, "").replaceAll("\\", "/"));
+				for (const targetPath of Object.keys(resolved)) {
+					const normalizedTarget = normalizeVaultPath(targetPath.replace(/\.md$/i, ""));
+					incomingByTarget[normalizedTarget] ??= new Set<string>();
+					incomingByTarget[normalizedTarget].add(normalizeVaultPath(file.path.replace(/\.md$/i, "")));
+				}
+
+				notes.push({
+					note_id: noteIdFromPath(file.path),
+					title: file.basename,
+					path: file.path,
+					vault_relative_path: file.path,
+					canonical_path: normalizeVaultPath(file.path),
+					artifact_type: inferArtifactType(file.path),
+					file_mtime: file.stat.mtime,
+					file_ctime: file.stat.ctime,
+					file_size: file.stat.size,
+					cache_complete: cache != null,
+					frontmatter: cache?.frontmatter ?? {},
+					aliases: normalizeAliases(cache?.frontmatter?.aliases),
+					project_confirmed_aliases: normalizeAliases(cache?.frontmatter?.project_confirmed_aliases),
+					outgoing_links: Object.keys(resolved).map(noteIdFromPath),
+					incoming_links: [],
+					raw_text: body,
+					body_text: body,
+					tags: normalizeTags((cache?.tags ?? []).map((tag) => tag.tag)),
+					headings: (cache?.headings ?? []).map((heading) => ({
+						heading: heading.heading,
+						level: heading.level,
+					})),
+					sections: (cache?.sections ?? []).map((section) => ({
+						type: section.type,
+						start_line: section.position.start.line,
+						end_line: section.position.end.line,
+					})),
+					wikilinks: links,
+					embeds,
+					frontmatter_links: frontmatterLinks,
+					resolved_links: Object.fromEntries(
+						Object.entries(resolved).map(([path, count]) => [noteIdFromPath(path), count]),
+					),
+					unresolved_links: unresolved,
+					source_kind: "obsidian_bridge_snapshot",
+				});
+			} catch (error) {
+				errors.push(`${file.path}: ${String(error)}`);
 			}
-
-			notes.push({
-				note_id: linkPathId(file.path),
-				title: file.basename,
-				path: file.path,
-				vault_relative_path: file.path,
-				artifact_type: inferArtifactType(file.path),
-				frontmatter: cache?.frontmatter ?? {},
-				aliases: normalizeAliases(cache?.frontmatter?.aliases),
-				project_confirmed_aliases: normalizeAliases(cache?.frontmatter?.project_confirmed_aliases),
-				outgoing_links: outgoingLinks.map(linkPathId),
-				incoming_links: [],
-				raw_text: body,
-				body_text: body,
-				tags: (cache?.tags ?? []).map((tag) => tag.tag),
-				headings: (cache?.headings ?? []).map((heading) => ({
-					heading: heading.heading,
-					level: heading.level,
-				})),
-				resolved_links: Object.fromEntries(
-					Object.entries(resolved).map(([path, count]) => [linkPathId(path), count]),
-				),
-				unresolved_links: unresolved,
-				source_kind: "obsidian_bridge_snapshot",
-			});
 		}
 
 		for (const note of notes) {
-			const incoming = incomingByTarget[note.vault_relative_path.replace(/\.md$/i, "")];
-			note.incoming_links = incoming ? Array.from(incoming).map(linkPathId).sort() : [];
+			const incoming = incomingByTarget[normalizeVaultPath(note.vault_relative_path.replace(/\.md$/i, ""))];
+			note.incoming_links = incoming ? Array.from(incoming).map(noteIdFromPath).sort() : [];
 		}
 
+		const vaultRootHint = getVaultRootHint(this.app);
+		const generatedAt = new Date();
+		const nextSequence = this.settings.exportSequence + 1;
 		const payload = {
-			schema_version: "1.0",
+			schema_version: SNAPSHOT_SCHEMA_VERSION,
 			source: "obsidian_textifai_bridge",
-			generated_at: new Date().toISOString(),
+			generated_at: generatedAt.toISOString(),
+			generated_unix_ms: generatedAt.getTime(),
 			vault_name: this.app.vault.getName(),
+			vault_id: buildVaultId(this.app, vaultRootHint),
+			installation_id: this.settings.installationId,
+			vault_root_hint: vaultRootHint,
 			plugin_version: this.manifest.version,
 			obsidian_app_version: (this.app as App & { version?: string }).version ?? null,
-			export_reason: reason,
+			export_reason: reasons.join(",") || "manual_command",
+			export_sequence: nextSequence,
+			export_complete: errors.length === 0,
+			note_count: notes.length,
+			bridge_capabilities: {
+				metadata_cache: true,
+				resolved_links: true,
+				unresolved_links: true,
+				headings: true,
+				sections: true,
+				tags: true,
+				wikilinks: true,
+				embeds: true,
+				frontmatter_links: true,
+				atomic_snapshot_write: true,
+			},
+			warnings,
+			errors,
 			notes,
 		};
 
-		const outputPath = normalizePath(this.settings.exportPath);
-		const lastSlash = outputPath.lastIndexOf("/");
-		if (lastSlash > 0) {
-			const dir = outputPath.slice(0, lastSlash);
-			try {
-				// Hidden folders such as `.textifai` need adapter-level access.
-				// mkdir is safe to retry; failures are ignored if the folder already exists.
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				await (this.app.vault.adapter as any).mkdir(dir);
-			} catch {}
-		}
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		await (this.app.vault.adapter as any).write(outputPath, JSON.stringify(payload, null, 2));
+		await writeSnapshotAtomically(this.app, normalizePath(this.settings.exportPath), JSON.stringify(payload, null, 2));
+		this.settings.exportSequence = nextSequence;
+		await this.saveSettings();
 	}
 
 	private async loadSettings(): Promise<void> {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		const loaded = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		if (!loaded.installationId) {
+			loaded.installationId = randomUUID();
+		}
+		this.settings = loaded;
+		await this.saveSettings();
 	}
 
 	async saveSettings(): Promise<void> {
@@ -220,6 +302,7 @@ class TextifAIBridgeSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Auto-export after metadata resolution")
+			.setDesc("Uses metadataCache.on('resolved') to export a fresh snapshot after Obsidian finishes resolving links.")
 			.addToggle((toggle) =>
 				toggle.setValue(this.plugin.settings.autoExportOnResolved).onChange(async (value) => {
 					this.plugin.settings.autoExportOnResolved = value;
@@ -229,32 +312,92 @@ class TextifAIBridgeSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Auto-export on vault changes")
+			.setDesc("Uses metadataCache changed plus vault create/rename/delete events. Exports are debounced and serialized.")
 			.addToggle((toggle) =>
 				toggle.setValue(this.plugin.settings.autoExportOnVaultChange).onChange(async (value) => {
 					this.plugin.settings.autoExportOnVaultChange = value;
 					await this.plugin.saveSettings();
 				}),
 			);
+
+		new Setting(containerEl)
+			.setName("Include full text")
+			.setDesc("Exports cached markdown body for TextifAI context retrieval.")
+			.addToggle((toggle) =>
+				toggle.setValue(this.plugin.settings.includeFullText).onChange(async (value) => {
+					this.plugin.settings.includeFullText = value;
+					await this.plugin.saveSettings();
+				}),
+			);
 	}
 }
 
+async function writeSnapshotAtomically(app: App, outputPath: string, payload: string): Promise<void> {
+	const adapter = app.vault.adapter as {
+		mkdir?: (path: string) => Promise<void>;
+		write: (path: string, data: string) => Promise<void>;
+		rename?: (oldPath: string, newPath: string) => Promise<void>;
+		remove?: (path: string) => Promise<void>;
+		exists?: (path: string) => Promise<boolean>;
+	};
+	const dir = outputPath.includes("/") ? outputPath.slice(0, outputPath.lastIndexOf("/")) : "";
+	if (dir && adapter.mkdir) {
+		try {
+			await adapter.mkdir(dir);
+		} catch {}
+	}
+	const tempPath = `${outputPath}.tmp`;
+	await adapter.write(tempPath, payload);
+	if (adapter.exists && adapter.remove) {
+		try {
+			if (await adapter.exists(outputPath)) {
+				await adapter.remove(outputPath);
+			}
+		} catch {}
+	}
+	if (adapter.rename) {
+		await adapter.rename(tempPath, outputPath);
+		return;
+	}
+	await adapter.write(outputPath, payload);
+	if (adapter.remove) {
+		try {
+			await adapter.remove(tempPath);
+		} catch {}
+	}
+}
+
+function buildLinkRecord(linkPath: string, sourcePath: string, isEmbed: boolean, app: App) {
+	const resolved = app.metadataCache.getFirstLinkpathDest(linkPath, sourcePath);
+	return {
+		link_text: linkPath,
+		normalized_link_text: normalizeVaultPath(linkPath),
+		is_embed: isEmbed,
+		resolved_path: resolved?.path ?? null,
+		resolved_note_id: resolved ? noteIdFromPath(resolved.path) : null,
+	};
+}
+
 function inferArtifactType(path: string): string {
-	const normalized = path.replaceAll("\\", "/");
-	if (normalized.startsWith("03_Characters/Profiles/")) return "character";
-	if (normalized.startsWith("02_World/Lore/")) return "lore";
-	if (normalized.startsWith("04_Outline/Scenes/")) return "scene";
-	if (normalized.startsWith("05_Draft/Chapters/")) return "chapter";
-	if (normalized.startsWith("06_Canon/Decisions/")) return "decision";
+	const normalized = normalizeVaultPath(path);
+	if (normalized.startsWith("03_characters/profiles/")) return "character";
+	if (normalized.startsWith("02_world/lore/")) return "lore";
+	if (normalized.startsWith("04_outline/scenes/")) return "scene";
+	if (normalized.startsWith("05_draft/chapters/")) return "chapter";
+	if (normalized.startsWith("06_canon/decisions/")) return "decision";
 	return "note";
 }
 
-function linkPathId(path: string): string {
+function noteIdFromPath(path: string): string {
+	return normalizeVaultPath(path).replace(/\.md$/i, "");
+}
+
+function normalizeVaultPath(path: string): string {
 	return path
-		.replace(/\.md$/i, "")
 		.replaceAll("\\", "/")
 		.toLowerCase()
 		.replace(/\s+/g, "_")
-		.replace(/[^a-z0-9_/-]/g, "")
+		.replace(/[^a-z0-9_./-]/g, "")
 		.replace(/^_+|_+$/g, "");
 }
 
@@ -266,4 +409,24 @@ function normalizeAliases(value: unknown): string[] {
 		return [value.trim()];
 	}
 	return [];
+}
+
+function normalizeTags(tags: string[]): string[] {
+	return tags.map((tag) => tag.trim()).filter(Boolean).sort();
+}
+
+function getVaultRootHint(app: App): string | null {
+	try {
+		// Desktop adapters expose getBasePath; mobile may not.
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const basePath = (app.vault.adapter as any).getBasePath?.();
+		return typeof basePath === "string" && basePath.trim() ? basePath : null;
+	} catch {
+		return null;
+	}
+}
+
+function buildVaultId(app: App, vaultRootHint: string | null): string {
+	const raw = `${app.vault.getName()}::${vaultRootHint ?? "unknown_root"}`;
+	return createHash("sha256").update(raw).digest("hex").slice(0, 24);
 }
