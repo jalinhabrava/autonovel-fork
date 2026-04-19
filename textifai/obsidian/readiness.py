@@ -80,7 +80,7 @@ def evaluate_obsidian_operational_readiness(
                 "install_obsidian_bridge_plugin",
                 "generate_initial_snapshot",
             ],
-            notes=["Vault no operativo todavía; TextifAI debe quedarse en modo bootstrap."],
+            notes=["El vault aún no está operativo; TextifAI debe quedarse en modo bootstrap hasta inicializarlo."],
         )
 
     opened = open_obsidian_source(root)
@@ -114,13 +114,11 @@ def evaluate_obsidian_operational_readiness(
         notes = []
         required_actions = []
         if reliability == "obsidian_bridge_snapshot_stale":
-            notes.append("Bridge disponible pero envejecido; usar con cautela.")
-            required_actions.append("refresh_obsidian_bridge_snapshot")
+            notes.append("Hay snapshot bridge, pero ya no está fresco; refresca la exportación desde Obsidian antes de evaluar con fuerza.")
+            required_actions.append("refresh_obsidian_bridge_snapshot_from_obsidian")
         else:
-            notes.append("Solo hay lectura markdown del vault; sirve para trabajo degradado, no para grounding fuerte.")
-            required_actions.extend(
-                ["install_or_enable_obsidian_bridge_plugin", "generate_obsidian_bridge_snapshot"]
-            )
+            notes.append("El vault ya es usable y VaERL puede consultarlo, pero aún falta un snapshot bridge fresco para grounding fuerte.")
+            required_actions.extend(["install_or_enable_obsidian_bridge_plugin", "generate_fresh_obsidian_bridge_snapshot"])
         return ObsidianOperationalReadiness(
             vault_root=str(root),
             vault_exists=True,

@@ -10,6 +10,25 @@ TextifAI now distinguishes between:
 
 ## Startup Modes
 
+Short operational wrapper:
+
+- `uv run python scripts/textifai_obsidian.py init --vault-root ...`
+- `uv run python scripts/textifai_obsidian.py status --vault-root ...`
+
+The short `init` command automatically chooses:
+
+- `new_project` when no source material is provided
+- `existing_material` when `--source-root` is provided
+- `existing_material` in-place when `--use-vault-root-as-source` is provided
+
+If the target folder already exists, TextifAI now follows a tolerant policy:
+
+- missing folder: create it
+- empty folder: initialize the vault there
+- existing non-vault folder: convert it in place without deleting prior material
+- existing folder with author documents: adopt it and stage imports there
+- only block when a real filesystem or data-integrity conflict exists
+
 ### Mode A: Existing Material
 
 Use `textifai.obsidian.prepare_obsidian_project(..., mode="existing_material")`.
