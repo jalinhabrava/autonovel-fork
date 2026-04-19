@@ -22,6 +22,22 @@ MENTION_SOURCE_CATALOG = (
     "request_hint",
 )
 
+ENTITY_HINT_KIND_CATALOG = (
+    "semantic_target",
+    "alias",
+    "document_analysis",
+    "narrative_signal",
+    "project_alias",
+)
+
+ENTITY_HINT_SOURCE_CATALOG = (
+    "author_understanding",
+    "conversation",
+    "document_analysis",
+    "derived_source",
+    "project_alias",
+)
+
 ARTIFACT_RELATION_CATALOG = (
     "direct_profile",
     "direct_note",
@@ -40,7 +56,28 @@ MATCH_SOURCE_CATALOG = (
     "alias",
     "known_name",
     "metadata",
+    "project_confirmed_alias",
 )
+
+
+@dataclass(frozen=True)
+class EntityHint:
+    hint_text: str
+    normalized_hint: str
+    hint_kind: str = "semantic_target"
+    hint_source: str = "author_understanding"
+    language: str | None = None
+    confidence: float = 0.0
+    supported_by_author_understanding: bool = False
+    supported_by_document_analysis: bool = False
+    candidate_target_id: str | None = None
+    candidate_target_type: str | None = None
+
+    def __post_init__(self) -> None:
+        _ensure_catalog_value("hint_kind", self.hint_kind, ENTITY_HINT_KIND_CATALOG)
+        _ensure_catalog_value("hint_source", self.hint_source, ENTITY_HINT_SOURCE_CATALOG)
+        if not 0.0 <= self.confidence <= 1.0:
+            raise ValueError("confidence must be between 0 and 1")
 
 
 @dataclass(frozen=True)
@@ -69,6 +106,7 @@ class EntityCandidate:
     match_source: str = "title"
     match_reason: str = ""
     confidence: float = 0.0
+    supporting_hints: list[EntityHint] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         _ensure_catalog_value("artifact_type", self.artifact_type, ENTITY_KIND_CATALOG)
@@ -99,6 +137,8 @@ class EntityResolutionResult:
     resolved_entity_id: str | None = None
     resolved_entity_type: str | None = None
     related_artifacts_suggested: list[RelatedArtifactSuggestion] = field(default_factory=list)
+    hint_support_score: float = 0.0
+    resolution_evidence: list[EntityHint] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -113,6 +153,7 @@ class VaultIndexEntry:
     title: str
     slug: str
     aliases: list[str] = field(default_factory=list)
+    project_confirmed_aliases: list[str] = field(default_factory=list)
     path: str | None = None
     links: list[str] = field(default_factory=list)
     backlinks: list[str] = field(default_factory=list)

@@ -9,6 +9,7 @@ from textifai.author_understanding.contracts import (
     MixedRequestPart,
 )
 from textifai.editorial_intent.contracts import CandidateTarget
+from textifai.vaerl.contracts import EntityHint
 
 
 class TextifAIAuthorUnderstandingContractTests(unittest.TestCase):
@@ -21,6 +22,18 @@ class TextifAIAuthorUnderstandingContractTests(unittest.TestCase):
             author_goal_signals=["structure_scene", "prepare_for_narration"],
             preserve_signals=["preserve_scene_conflict"],
             change_signals=["structure_scene"],
+            entity_hints=[
+                EntityHint(
+                    hint_text="Memory Ritual",
+                    normalized_hint="memory_ritual",
+                    hint_kind="semantic_target",
+                    hint_source="author_understanding",
+                    confidence=0.9,
+                    supported_by_author_understanding=True,
+                    candidate_target_id="memory_ritual",
+                    candidate_target_type="lore",
+                )
+            ],
             followup_reference_text="de lo anterior",
             narrative_content_text="Sera llega tarde al puerto.",
             meta_instruction_text="ordena la escena",
@@ -43,6 +56,7 @@ class TextifAIAuthorUnderstandingContractTests(unittest.TestCase):
             source="hybrid",
         )
         self.assertEqual(interpretation.primary_intent_type, "mixed_request")
+        self.assertTrue(interpretation.entity_hints)
         with self.assertRaises(ValueError):
             AuthorIntentInterpretation(
                 primary_intent_type="invented_intent",

@@ -33,6 +33,7 @@ def build_vault_index(
             title = str(frontmatter.get("title") or path.stem.replace("_", " ").replace("-", " ").title()).strip()
             slug = slugify(str(frontmatter.get("slug") or path.stem))
             aliases = _normalize_aliases(frontmatter.get("aliases"))
+            project_confirmed_aliases = _normalize_aliases(frontmatter.get("project_confirmed_aliases"))
             links = _extract_links(text)
             entries.append(
                 VaultIndexEntry(
@@ -41,6 +42,7 @@ def build_vault_index(
                     title=title,
                     slug=slug,
                     aliases=aliases,
+                    project_confirmed_aliases=project_confirmed_aliases,
                     path=str(path),
                     links=links,
                     backlinks=[],
@@ -56,6 +58,7 @@ def build_vault_index(
             title=entry.title,
             slug=entry.slug,
             aliases=entry.aliases,
+            project_confirmed_aliases=entry.project_confirmed_aliases,
             path=entry.path,
             links=entry.links,
             backlinks=backlinks.get(entry.artifact_id, []),
@@ -110,12 +113,14 @@ def _merge_known_characters(
         if character_id in by_id:
             entry = by_id[character_id]
             aliases = sorted(set(entry.aliases + names))
+            project_confirmed_aliases = sorted(set(entry.project_confirmed_aliases + names))
             by_id[character_id] = VaultIndexEntry(
                 artifact_id=entry.artifact_id,
                 artifact_type=entry.artifact_type,
                 title=entry.title,
                 slug=entry.slug,
                 aliases=aliases,
+                project_confirmed_aliases=project_confirmed_aliases,
                 path=entry.path,
                 links=entry.links,
                 backlinks=entry.backlinks,
@@ -129,6 +134,7 @@ def _merge_known_characters(
             title=title,
             slug=character_id,
             aliases=sorted(set(names)),
+            project_confirmed_aliases=sorted(set(names)),
             path=None,
             links=[],
             backlinks=[],

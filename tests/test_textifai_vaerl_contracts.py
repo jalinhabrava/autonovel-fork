@@ -2,6 +2,7 @@ import unittest
 
 from textifai.vaerl.contracts import (
     EntityCandidate,
+    EntityHint,
     EntityMention,
     EntityResolutionResult,
     RelatedArtifactSuggestion,
@@ -32,6 +33,20 @@ class TextifAIVaERLContractsTests(unittest.TestCase):
             confidence=0.92,
         )
         self.assertTrue(candidate.path.endswith("memory_ritual.md"))
+
+    def test_entity_hint_supports_project_alias_metadata(self):
+        hint = EntityHint(
+            hint_text="ritual de memoria",
+            normalized_hint="ritual_de_memoria",
+            hint_kind="project_alias",
+            hint_source="project_alias",
+            language="es",
+            confidence=0.87,
+            supported_by_author_understanding=True,
+            candidate_target_id="memory_ritual",
+            candidate_target_type="lore",
+        )
+        self.assertEqual(hint.candidate_target_id, "memory_ritual")
 
     def test_entity_resolution_result_keeps_related_artifacts_separate(self):
         result = EntityResolutionResult(
@@ -71,6 +86,7 @@ class TextifAIVaERLContractsTests(unittest.TestCase):
             artifact_type="lore",
             title="Memory Ritual",
             slug="memory_ritual",
+            project_confirmed_aliases=["ritual de memoria"],
             links=["magic_costs"],
             backlinks=["scene_054_b"],
         )

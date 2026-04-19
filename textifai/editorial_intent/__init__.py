@@ -3,6 +3,7 @@ from textifai.editorial_intent.contracts import (
     EDITORIAL_REQUEST_TYPE_CATALOG,
     FOLLOWUP_MODE_CATALOG,
     PRESERVE_CONSTRAINT_CATALOG,
+    SEMANTIC_BASIS_CATALOG,
     CandidateTarget,
     EditorialIntent,
 )
@@ -12,6 +13,7 @@ __all__ = [
     "EDITORIAL_REQUEST_TYPE_CATALOG",
     "FOLLOWUP_MODE_CATALOG",
     "PRESERVE_CONSTRAINT_CATALOG",
+    "SEMANTIC_BASIS_CATALOG",
     "CandidateTarget",
     "EditorialIntent",
 ]

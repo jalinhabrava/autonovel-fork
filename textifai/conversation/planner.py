@@ -40,6 +40,7 @@ class TaskPlanner:
         if followthrough_action is not None:
             task_type, flow_name, step_kinds = followthrough_action
             planner_reason = _planner_reason(intent, effective_intent_name)
+            semantic_phase = _is_semantic_phase(task_type, flow_name, step_kinds)
             return PlannedTask(
                 task_type=task_type,
                 flow_name=flow_name,
@@ -53,6 +54,7 @@ class TaskPlanner:
                 requires_context=False,
                 requires_llm=False,
                 requires_persistence=False,
+                semantic_phase=semantic_phase,
                 step_kinds=step_kinds,
                 metadata={
                     "intent_name": effective_intent_name,
@@ -61,6 +63,7 @@ class TaskPlanner:
                     "target_resolution_source": _target_resolution_source(request, intent, state),
                     "confirmation_required": False,
                     "planner_reason": planner_reason,
+                    "phase_classification": "semantic" if semantic_phase else "operational",
                     "narrative_signals": asdict(intent.narrative_signals) if intent.narrative_signals is not None else None,
                     "author_understanding": intent.metadata.get("author_understanding"),
                     "editorial_intent": asdict(intent.editorial_intent) if intent.editorial_intent is not None else None,
@@ -99,6 +102,7 @@ class TaskPlanner:
                 ["return_response"],
             )
         planner_reason = _planner_reason(intent, effective_intent_name)
+        semantic_phase = _is_semantic_phase(task_type, flow_name, step_kinds)
 
         return PlannedTask(
             task_type=task_type,
@@ -113,21 +117,23 @@ class TaskPlanner:
             requires_context=requires_context,
             requires_llm=False,
             requires_persistence=requires_persistence,
+            semantic_phase=semantic_phase,
             step_kinds=step_kinds,
             metadata={
                 "intent_name": effective_intent_name,
-            "recognized_intent_name": intent.intent_name,
-            "query_text": _derive_query_text(request, intent),
-            "target_resolution_source": _target_resolution_source(request, intent, state),
-            "confirmation_required": flow_name in {"decision_persistence_flow", "validate_artifact_flow", "reject_artifact_flow"},
-            "planner_reason": planner_reason,
-            "narrative_signals": asdict(intent.narrative_signals) if intent.narrative_signals is not None else None,
-            "author_understanding": intent.metadata.get("author_understanding"),
-            "editorial_intent": asdict(intent.editorial_intent) if intent.editorial_intent is not None else None,
-            "vaerl_results": intent.metadata.get("vaerl_results"),
-            "unsupported_capability": unsupported_capability,
-            "editorial_structuring_requested": effective_intent_name == "editorial_structuring",
-            "followthrough_action": intent.editorial_intent.metadata.get("followthrough_action") if intent.editorial_intent else None,
+                "recognized_intent_name": intent.intent_name,
+                "query_text": _derive_query_text(request, intent),
+                "target_resolution_source": _target_resolution_source(request, intent, state),
+                "confirmation_required": flow_name in {"decision_persistence_flow", "validate_artifact_flow", "reject_artifact_flow"},
+                "planner_reason": planner_reason,
+                "phase_classification": "semantic" if semantic_phase else "operational",
+                "narrative_signals": asdict(intent.narrative_signals) if intent.narrative_signals is not None else None,
+                "author_understanding": intent.metadata.get("author_understanding"),
+                "editorial_intent": asdict(intent.editorial_intent) if intent.editorial_intent is not None else None,
+                "vaerl_results": intent.metadata.get("vaerl_results"),
+                "unsupported_capability": unsupported_capability,
+                "editorial_structuring_requested": effective_intent_name == "editorial_structuring",
+                "followthrough_action": intent.editorial_intent.metadata.get("followthrough_action") if intent.editorial_intent else None,
             },
         )
 
@@ -415,3 +421,34 @@ def _author_understanding_requires_clarification(author_understanding: dict | No
 
 def _intent_has_explicit_target(intent: RecognizedIntent) -> bool:
     return bool(intent.target_type and intent.target_id)
+
+
+def _is_semantic_phase(task_type: str, flow_name: str, step_kinds: list[str]) -> bool:
+    if task_type in {"editorial_structuring", "editorial_followthrough"}:
+        return True
+    if flow_name in {
+        "editorial_structuring_flow",
+        "validate_structuring_flow",
+        "narration_handoff_flow",
+        "review_handoff_flow",
+        "structured_followup_flow",
+        "world_lookup_flow",
+        "context_search_flow",
+        "scene_context_flow",
+        "chapter_context_flow",
+        "consistency_check_flow",
+    }:
+        return True
+    semantic_steps = {
+        "resolve_entities",
+        "resolve_followthrough_source",
+        "build_context",
+        "structure_editorial",
+        "prepare_narration_context",
+        "validate_structuring",
+        "prepare_narration_handoff",
+        "prepare_review_handoff",
+        "resume_structured_followup",
+        "run_consistency_check",
+    }
+    return any(step in semantic_steps for step in step_kinds)

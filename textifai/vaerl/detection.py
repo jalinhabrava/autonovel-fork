@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 
-from textifai.vaerl.contracts import EntityMention, VaultIndexEntry
+from textifai.vaerl.contracts import EntityHint, EntityMention, VaultIndexEntry
 from vault.schema import slugify
 
 
@@ -20,12 +20,16 @@ def detect_mentions(
     *,
     text: str,
     index_entries: list[VaultIndexEntry],
-    entity_hints: list[str] | None = None,
+    entity_hints: list[EntityHint | str] | None = None,
 ) -> list[EntityMention]:
     mentions: list[EntityMention] = []
     lowered = text.casefold()
     for entry in index_entries:
-        candidate_names = [entry.title, entry.slug.replace("_", " ").replace("-", " ")] + list(entry.aliases)
+        candidate_names = (
+            [entry.title, entry.slug.replace("_", " ").replace("-", " ")]
+            + list(entry.aliases)
+            + list(entry.project_confirmed_aliases)
+        )
         for name in candidate_names:
             normalized = name.strip()
             if len(normalized) < 3:
@@ -65,17 +69,17 @@ def detect_mentions(
                 )
             )
 
-    for hint in entity_hints or []:
-        normalized_hint = slugify(hint)
-        if not normalized_hint:
+    for hint in _normalize_entity_hints(entity_hints or []):
+        if not hint.normalized_hint:
             continue
         mentions.append(
             EntityMention(
-                surface_text=hint,
-                normalized_text=normalized_hint,
-                source="narrative_signals",
-                confidence=0.4,
-                context_hint="narrative_signal_hint",
+                surface_text=hint.hint_text,
+                normalized_text=hint.normalized_hint,
+                mention_kind_hint=hint.candidate_target_type,
+                source="request_hint" if hint.hint_source == "conversation" else "narrative_signals",
+                confidence=max(hint.confidence, 0.4),
+                context_hint=hint.hint_kind,
             )
         )
 
@@ -100,3 +104,24 @@ def _dedupe_mentions(mentions: list[EntityMention]) -> list[EntityMention]:
         seen.add(key)
         deduped.append(mention)
     return deduped
+
+
+def _normalize_entity_hints(entity_hints: list[EntityHint | str]) -> list[EntityHint]:
+    normalized: list[EntityHint] = []
+    for item in entity_hints:
+        if isinstance(item, EntityHint):
+            normalized.append(item)
+            continue
+        hint_text = str(item).strip()
+        if not hint_text:
+            continue
+        normalized.append(
+            EntityHint(
+                hint_text=hint_text,
+                normalized_hint=slugify(hint_text),
+                hint_kind="narrative_signal",
+                hint_source="conversation",
+                confidence=0.4,
+            )
+        )
+    return normalized

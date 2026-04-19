@@ -20,7 +20,7 @@ class TextifAIAuthorUnderstandingHybridAnalysisTests(unittest.TestCase):
     def test_rule_based_analysis_keeps_simple_followup_contextual(self):
         analyzer = HybridAuthorUnderstandingAnalyzer(config=HybridAuthorUnderstandingConfig(llm_enabled=False))
         request = ConversationRequest(
-            raw_text="esta nota",
+            raw_text="continuemos",
             source="user",
             mode="normal",
             interface_language="es",
@@ -31,6 +31,7 @@ class TextifAIAuthorUnderstandingHybridAnalysisTests(unittest.TestCase):
             explanation_language="es",
         )
         state = create_conversation_state(explanation_language="es", artifact_target_language="ja")
+        state = state.__class__(**{**state.__dict__, "last_target_type": "lore", "last_target_id": "memory_ritual"})
         interpretation = analyzer.analyze(
             request=request,
             rule_intent=_rule_intent("unknown", confidence=0.25),
@@ -40,13 +41,37 @@ class TextifAIAuthorUnderstandingHybridAnalysisTests(unittest.TestCase):
         )
         self.assertEqual(interpretation.primary_intent_type, "contextual_followup")
         self.assertEqual(interpretation.source, "rule_based")
-        self.assertEqual(interpretation.followup_reference_text, "esta nota")
+        self.assertEqual(interpretation.followup_reference_text, "continuemos")
         self.assertFalse(interpretation.has_mixed_request)
 
     def test_rule_based_analysis_treats_prepare_without_execution_as_narration_prep(self):
-        analyzer = HybridAuthorUnderstandingAnalyzer(config=HybridAuthorUnderstandingConfig(llm_enabled=False))
+        llm = _StubLLMInterpreter(
+            LLMInterpretationResult(
+                raw_text="continuemos con eso",
+                provider_name="stub",
+                model="stub-model",
+                primary_intent_type="narration_preparation",
+                secondary_intent_types=[],
+                confidence=0.9,
+                has_mixed_request=False,
+                author_goal_signals=["prepare_for_narration"],
+                preserve_signals=[],
+                change_signals=["prepare_for_narration"],
+                followup_reference_text=None,
+                narrative_content_text=None,
+                meta_instruction_text="continuemos con eso",
+                needs_clarification=False,
+                clarification_reason=None,
+                parts=[MixedRequestPart(part_type="narration_prep", text="continuemos con eso", confidence=0.92)],
+                candidate_targets=[],
+                preferred_target=None,
+                disambiguation_reason=None,
+                raw_payload={"primary_intent_type": "narration_preparation"},
+            )
+        )
+        analyzer = HybridAuthorUnderstandingAnalyzer(llm_interpreter=llm)
         request = ConversationRequest(
-            raw_text="todavía no lo escribas, pero sí déjalo preparado",
+            raw_text="continuemos con eso",
             source="user",
             mode="normal",
             interface_language="es",
@@ -64,8 +89,8 @@ class TextifAIAuthorUnderstandingHybridAnalysisTests(unittest.TestCase):
             state=create_conversation_state(explanation_language="es", artifact_target_language="ja"),
         )
         self.assertEqual(interpretation.primary_intent_type, "narration_preparation")
-        self.assertEqual(interpretation.source, "rule_based")
-        self.assertTrue(interpretation.needs_clarification)
+        self.assertEqual(interpretation.source, "hybrid")
+        self.assertFalse(interpretation.needs_clarification)
         self.assertIn("prepare_for_narration", interpretation.change_signals)
 
     def test_llm_assisted_analysis_separates_revision_and_preservation(self):
@@ -119,7 +144,7 @@ class TextifAIAuthorUnderstandingHybridAnalysisTests(unittest.TestCase):
         self.assertEqual(interpretation.primary_intent_type, "editorial_revision")
         self.assertIn("align_tone", interpretation.change_signals)
         self.assertIn("preserve_scene_conflict", interpretation.preserve_signals)
-        self.assertFalse(interpretation.needs_clarification)
+        self.assertTrue(interpretation.needs_clarification)
 
     def test_llm_assisted_analysis_identifies_mixed_structuring_and_narration_prep(self):
         llm = _StubLLMInterpreter(
@@ -175,7 +200,31 @@ class TextifAIAuthorUnderstandingHybridAnalysisTests(unittest.TestCase):
         self.assertIn("prepare_for_narration", interpretation.change_signals)
 
     def test_rule_based_analysis_is_domain_agnostic_for_nonfantasy_scene(self):
-        analyzer = HybridAuthorUnderstandingAnalyzer(config=HybridAuthorUnderstandingConfig(llm_enabled=False))
+        llm = _StubLLMInterpreter(
+            LLMInterpretationResult(
+                raw_text="Ana llega tarde a la reunión, Marcos cubre el brief y no pueden improvisar",
+                provider_name="stub",
+                model="stub-model",
+                primary_intent_type="narrative_facts",
+                secondary_intent_types=[],
+                confidence=0.91,
+                has_mixed_request=False,
+                author_goal_signals=["extract_story_facts"],
+                preserve_signals=[],
+                change_signals=["extract_story_facts"],
+                followup_reference_text=None,
+                narrative_content_text="Ana llega tarde a la reunión, Marcos cubre el brief y no pueden improvisar",
+                meta_instruction_text=None,
+                needs_clarification=False,
+                clarification_reason=None,
+                parts=[MixedRequestPart(part_type="narrative_content", text="Ana llega tarde a la reunión, Marcos cubre el brief y no pueden improvisar", confidence=0.93)],
+                candidate_targets=[],
+                preferred_target=None,
+                disambiguation_reason=None,
+                raw_payload={"primary_intent_type": "narrative_facts"},
+            )
+        )
+        analyzer = HybridAuthorUnderstandingAnalyzer(llm_interpreter=llm)
         request = ConversationRequest(
             raw_text="Ana llega tarde a la reunión, Marcos cubre el brief y no pueden improvisar",
             source="user",
@@ -194,7 +243,7 @@ class TextifAIAuthorUnderstandingHybridAnalysisTests(unittest.TestCase):
             entity_results=[],
             state=create_conversation_state(explanation_language="es", artifact_target_language="es"),
         )
-        self.assertEqual(interpretation.source, "rule_based")
+        self.assertEqual(interpretation.source, "hybrid")
         self.assertEqual(interpretation.primary_intent_type, "narrative_facts")
         self.assertIsNotNone(interpretation.narrative_content_text)
 

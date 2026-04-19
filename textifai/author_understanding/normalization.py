@@ -17,6 +17,8 @@ from textifai.author_understanding.contracts import (
     MixedRequestPart,
 )
 from textifai.editorial_intent.contracts import CandidateTarget
+from textifai.vaerl.contracts import EntityHint
+from vault.schema import slugify
 
 
 _INTENT_SYNONYMS = {
@@ -157,6 +159,11 @@ def normalize_author_understanding_payload(
         for item in payload.get("parts", [])
         if (part := normalize_mixed_request_part(item)) is not None
     ]
+    entity_hints = [
+        hint
+        for item in payload.get("entity_hints", [])
+        if (hint := normalize_entity_hint(item)) is not None
+    ]
     candidate_targets = [
         candidate
         for item in payload.get("candidate_targets", [])
@@ -177,6 +184,7 @@ def normalize_author_understanding_payload(
         author_goal_signals=_normalize_signal_list(payload.get("author_goal_signals")),
         preserve_signals=_normalize_signal_list(payload.get("preserve_signals")),
         change_signals=_normalize_signal_list(payload.get("change_signals")),
+        entity_hints=entity_hints,
         followup_reference_text=_clean_text(payload.get("followup_reference_text")),
         narrative_content_text=_clean_text(payload.get("narrative_content_text")) or _join_part_texts(parts, {"narrative_content"}),
         meta_instruction_text=_clean_text(payload.get("meta_instruction_text"))
@@ -214,6 +222,7 @@ def build_rule_based_author_intent(
     author_goal_signals: list[str] | None = None,
     preserve_signals: list[str] | None = None,
     change_signals: list[str] | None = None,
+    entity_hints: list[EntityHint] | None = None,
     followup_reference_text: str | None = None,
     narrative_content_text: str | None = None,
     meta_instruction_text: str | None = None,
@@ -232,6 +241,7 @@ def build_rule_based_author_intent(
         author_goal_signals=_dedupe_strings(author_goal_signals or []),
         preserve_signals=_dedupe_strings(preserve_signals or []),
         change_signals=_dedupe_strings(change_signals or []),
+        entity_hints=list(entity_hints or []),
         followup_reference_text=_clean_text(followup_reference_text),
         narrative_content_text=_clean_text(narrative_content_text),
         meta_instruction_text=_clean_text(meta_instruction_text),
@@ -248,6 +258,49 @@ def _normalize_signal_list(values: Any) -> list[str]:
     if not isinstance(values, list):
         return []
     return _dedupe_strings([str(value).strip() for value in values if str(value).strip()])
+
+
+def normalize_entity_hint(value: Any) -> EntityHint | None:
+    raw = _coerce_mapping(value)
+    if raw is None:
+        text = _clean_text(value)
+        if text is None:
+            return None
+        return EntityHint(
+            hint_text=text,
+            normalized_hint=slugify(text),
+            hint_kind="semantic_target",
+            hint_source="conversation",
+            confidence=0.4,
+        )
+    hint_text = _clean_text(raw.get("hint_text") or raw.get("surface_text") or raw.get("text"))
+    normalized_hint = _clean_text(raw.get("normalized_hint")) or (hint_text.casefold().replace(" ", "_") if hint_text else None)
+    if normalized_hint is not None:
+        normalized_hint = slugify(normalized_hint)
+    if hint_text is None or normalized_hint is None:
+        return None
+    return EntityHint(
+        hint_text=hint_text,
+        normalized_hint=normalized_hint,
+        hint_kind=_normalize_catalog_value(
+            raw.get("hint_kind"),
+            ("semantic_target", "alias", "document_analysis", "narrative_signal", "project_alias"),
+            default="semantic_target",
+        )
+        or "semantic_target",
+        hint_source=_normalize_catalog_value(
+            raw.get("hint_source"),
+            ("author_understanding", "conversation", "document_analysis", "derived_source", "project_alias"),
+            default="author_understanding",
+        )
+        or "author_understanding",
+        language=_clean_text(raw.get("language")),
+        confidence=_coerce_confidence(raw.get("confidence"), default=0.0),
+        supported_by_author_understanding=bool(raw.get("supported_by_author_understanding", False)),
+        supported_by_document_analysis=bool(raw.get("supported_by_document_analysis", False)),
+        candidate_target_id=_clean_text(raw.get("candidate_target_id")),
+        candidate_target_type=_clean_text(raw.get("candidate_target_type")),
+    )
 
 
 def _normalize_catalog_value(value: Any, catalog: tuple[str, ...], *, default: str | None) -> str | None:

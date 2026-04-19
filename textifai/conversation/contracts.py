@@ -164,6 +164,7 @@ class PlannedTask:
     requires_context: bool
     requires_llm: bool
     requires_persistence: bool
+    semantic_phase: bool = False
     step_kinds: list[str] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)
 

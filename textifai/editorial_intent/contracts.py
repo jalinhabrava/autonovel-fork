@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from textifai.vaerl.contracts import EntityHint
+
 
 EDITORIAL_REQUEST_TYPE_CATALOG = (
     "narrative_facts",
@@ -42,6 +44,14 @@ EDITORIAL_GOAL_CATALOG = (
     "anchor_canon",
 )
 
+SEMANTIC_BASIS_CATALOG = (
+    "author_understanding_validated",
+    "recognized_intent",
+    "narrative_signals",
+    "surface_fallback",
+    "mixed",
+)
+
 
 @dataclass(frozen=True)
 class CandidateTarget:
@@ -54,10 +64,12 @@ class CandidateTarget:
 class EditorialIntent:
     request_type: str
     confidence: float
+    semantic_basis: str = "surface_fallback"
     target_scope: str | None = None
     resolved_target_type: str | None = None
     resolved_target_id: str | None = None
     candidate_targets: list[CandidateTarget] = field(default_factory=list)
+    entity_hints: list[EntityHint] = field(default_factory=list)
     followup_mode: str = "none"
     preserve_constraints: list[str] = field(default_factory=list)
     editorial_goals: list[str] = field(default_factory=list)
@@ -65,6 +77,7 @@ class EditorialIntent:
 
     def __post_init__(self) -> None:
         _ensure_catalog_value("request_type", self.request_type, EDITORIAL_REQUEST_TYPE_CATALOG)
+        _ensure_catalog_value("semantic_basis", self.semantic_basis, SEMANTIC_BASIS_CATALOG)
         _ensure_catalog_value("followup_mode", self.followup_mode, FOLLOWUP_MODE_CATALOG)
         for constraint in self.preserve_constraints:
             _ensure_catalog_value("preserve_constraint", constraint, PRESERVE_CONSTRAINT_CATALOG)

@@ -311,10 +311,10 @@ class TextifAIConversationManagerTests(unittest.TestCase):
                 explanation_language="es",
             )
             turn = manager.handle_request(request)
-            self.assertEqual(turn.planned_task.flow_name, "editorial_structuring_flow")
-            self.assertEqual(turn.result_type, "conversation_clarification")
-            self.assertIsNone(turn.planned_task.target_id)
-            self.assertIsNone(turn.planned_task.target_type)
+            self.assertEqual(turn.planned_task.flow_name, "consistency_check_flow")
+            self.assertEqual(turn.result_type, "consistency_report")
+            self.assertEqual(turn.planned_task.target_id, "harbor_map")
+            self.assertEqual(turn.planned_task.target_type, "lore")
 
     def test_manager_routes_prep_for_narration_to_previous_editorial_result(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from textifai.editorial_intent.contracts import CandidateTarget
+from textifai.vaerl.contracts import EntityHint
 
 
 AUTHOR_INTENT_TYPE_CATALOG = (
@@ -83,6 +84,7 @@ class LLMAuthorUnderstandingPayload:
     author_goal_signals: list[str] = field(default_factory=list)
     preserve_signals: list[str] = field(default_factory=list)
     change_signals: list[str] = field(default_factory=list)
+    entity_hints: list[EntityHint] = field(default_factory=list)
     followup_reference_text: str | None = None
     narrative_content_text: str | None = None
     meta_instruction_text: str | None = None
@@ -114,6 +116,7 @@ class AuthorIntentInterpretation:
     author_goal_signals: list[str] = field(default_factory=list)
     preserve_signals: list[str] = field(default_factory=list)
     change_signals: list[str] = field(default_factory=list)
+    entity_hints: list[EntityHint] = field(default_factory=list)
     followup_reference_text: str | None = None
     narrative_content_text: str | None = None
     meta_instruction_text: str | None = None

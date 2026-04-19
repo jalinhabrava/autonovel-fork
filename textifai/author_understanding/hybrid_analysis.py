@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 import re
 from typing import Any
 
@@ -24,7 +24,7 @@ from textifai.author_understanding.normalization import build_rule_based_author_
 from textifai.conversation.contracts import ConversationRequest, NarrativeSignals, RecognizedIntent
 from textifai.conversation.state import ConversationState
 from textifai.editorial_intent.contracts import CandidateTarget
-from textifai.vaerl.contracts import EntityResolutionResult
+from textifai.vaerl.contracts import EntityHint, EntityResolutionResult
 
 
 @dataclass(frozen=True)
@@ -151,6 +151,7 @@ class HybridAuthorUnderstandingAnalyzer:
             author_goal_signals=list(merged.author_goal_signals),
             preserve_signals=list(merged.preserve_signals),
             change_signals=list(merged.change_signals),
+            entity_hints=list(merged.entity_hints),
             followup_reference_text=merged.followup_reference_text,
             narrative_content_text=merged.narrative_content_text,
             meta_instruction_text=merged.meta_instruction_text,
@@ -172,21 +173,50 @@ def _build_rule_interpretation(
     entity_results: list[EntityResolutionResult],
     state: ConversationState | None,
 ) -> AuthorIntentInterpretation:
-    lowered = request.raw_text.strip().casefold()
-    parts = _split_mixed_request_parts(request.raw_text)
+    raw_text = request.raw_text.strip()
+    token_count = _token_count(raw_text)
     candidate_targets = _candidate_targets_from_entity_results(entity_results)
+    entity_hints = _entity_hints_from_entity_results(entity_results)
     disambiguation = disambiguate_targets(candidate_targets)
+    parts = _split_mixed_request_parts(raw_text, state=state, candidate_targets=candidate_targets)
     primary_intent_type = _infer_primary_intent_type(
-        lowered=lowered,
         recognized_intent_name=rule_intent.intent_name,
         narrative_signals=narrative_signals,
+        token_count=token_count,
+        candidate_targets=candidate_targets,
+        request=request,
         parts=parts,
+        state=state,
     )
-    has_mixed_request = len({part.part_type for part in parts}) > 1 or primary_intent_type == "mixed_request"
-    author_goal_signals, preserve_signals, change_signals = _derive_signals(lowered, narrative_signals, parts)
-    narrative_content_text = _extract_narrative_content(request.raw_text, parts)
-    meta_instruction_text = _extract_meta_instruction(request.raw_text, parts)
-    followup_reference_text = _extract_followup_reference(request.raw_text, parts, state)
+    has_mixed_request = len(parts) > 1 or primary_intent_type == "mixed_request"
+    author_goal_signals, preserve_signals, change_signals = _derive_signals(
+        narrative_signals,
+        candidate_targets=candidate_targets,
+        primary_intent_type=primary_intent_type,
+        parts=parts,
+        token_count=token_count,
+    )
+    narrative_content_text = _extract_narrative_content(
+        raw_text,
+        primary_intent_type=primary_intent_type,
+        narrative_signals=narrative_signals,
+        candidate_targets=candidate_targets,
+        token_count=token_count,
+    )
+    meta_instruction_text = _extract_meta_instruction(
+        raw_text,
+        primary_intent_type=primary_intent_type,
+        narrative_content_text=narrative_content_text,
+    )
+    followup_reference_text = _extract_followup_reference(
+        raw_text,
+        parts,
+        state,
+        candidate_targets,
+        primary_intent_type=primary_intent_type,
+        token_count=token_count,
+        request_target_hint=request.target_hint,
+    )
     needs_clarification = _needs_clarification(
         primary_intent_type=primary_intent_type,
         narrative_content_text=narrative_content_text,
@@ -209,7 +239,7 @@ def _build_rule_interpretation(
         "has_followup_reference": bool(followup_reference_text),
     }
     mixed_request_analysis = MixedRequestAnalysis(
-        source_text=request.raw_text,
+        source_text=raw_text,
         parts=parts,
     )
     return build_rule_based_author_intent(
@@ -219,6 +249,7 @@ def _build_rule_interpretation(
         author_goal_signals=author_goal_signals,
         preserve_signals=preserve_signals,
         change_signals=change_signals,
+        entity_hints=entity_hints,
         followup_reference_text=followup_reference_text,
         narrative_content_text=narrative_content_text,
         meta_instruction_text=meta_instruction_text,
@@ -286,6 +317,7 @@ def _build_trivial_contextual_interpretation(
         author_goal_signals=list(rule_interpretation.author_goal_signals),
         preserve_signals=list(rule_interpretation.preserve_signals),
         change_signals=list(rule_interpretation.change_signals),
+        entity_hints=list(rule_interpretation.entity_hints),
         followup_reference_text=followup_reference_text,
         narrative_content_text=None,
         meta_instruction_text=None,
@@ -371,6 +403,11 @@ def _merge_interpretations(
         + list(llm_interpretation.author_goal_signals)
         + list(llm_interpretation.change_signals)
     )
+    entity_hints = _dedupe_entity_hints(
+        list(rule_interpretation.entity_hints)
+        + list(llm_interpretation.entity_hints)
+        + _entity_hints_from_candidate_targets(list(disambiguation.candidate_targets))
+    )
     preserve_signals = _dedupe(
         list(rule_interpretation.preserve_signals)
         + list(llm_interpretation.preserve_signals)
@@ -382,12 +419,13 @@ def _merge_interpretations(
     )
     confidence = max(rule_interpretation.confidence, llm_interpretation.confidence)
     needs_clarification = llm_interpretation.needs_clarification or (
-        rule_interpretation.needs_clarification
+        llm_interpretation.primary_intent_type == "unknown"
+        and rule_interpretation.needs_clarification
         and primary not in {"editorial_revision"}
         and narrative_content_text is None
         and followup_reference_text is None
     )
-    if disambiguation.requires_user_confirmation and not disambiguation.preferred_target and primary not in {"mixed_request", "editorial_revision"}:
+    if disambiguation.requires_user_confirmation and not disambiguation.preferred_target and primary in {"contextual_followup", "structured_followup", "mixed_request", "editorial_revision", "structuring_request", "narrative_facts"}:
         needs_clarification = True
     clarification_reason = llm_interpretation.clarification_reason or rule_interpretation.clarification_reason
     if needs_clarification and not clarification_reason:
@@ -400,6 +438,7 @@ def _merge_interpretations(
         author_goal_signals=author_goal_signals,
         preserve_signals=preserve_signals,
         change_signals=change_signals,
+        entity_hints=entity_hints,
         followup_reference_text=followup_reference_text,
         narrative_content_text=narrative_content_text,
         meta_instruction_text=meta_instruction_text,
@@ -473,14 +512,78 @@ def _candidate_targets_from_entity_results(entity_results: list[EntityResolution
     return sorted(deduped.values(), key=lambda item: (item.confidence, item.target_type, item.target_id), reverse=True)
 
 
+def _entity_hints_from_entity_results(entity_results: list[EntityResolutionResult]) -> list[EntityHint]:
+    hints: list[EntityHint] = []
+    for item in entity_results:
+        if item.resolved and item.resolved_entity_id and item.resolved_entity_type:
+            hints.append(
+                EntityHint(
+                    hint_text=item.mention.surface_text,
+                    normalized_hint=item.mention.normalized_text,
+                    hint_kind="semantic_target",
+                    hint_source="author_understanding",
+                    confidence=max(item.resolution_confidence, 0.4),
+                    supported_by_author_understanding=True,
+                    supported_by_document_analysis=False,
+                    candidate_target_id=item.resolved_entity_id,
+                    candidate_target_type=item.resolved_entity_type,
+                )
+            )
+            continue
+        if item.candidate_entities:
+            top = item.candidate_entities[0]
+            hints.append(
+                EntityHint(
+                    hint_text=item.mention.surface_text,
+                    normalized_hint=item.mention.normalized_text,
+                    hint_kind="semantic_target",
+                    hint_source="author_understanding",
+                    confidence=max(top.confidence, 0.35),
+                    supported_by_author_understanding=True,
+                    supported_by_document_analysis=False,
+                    candidate_target_id=top.artifact_id,
+                    candidate_target_type=top.artifact_type,
+                )
+            )
+    return _dedupe_entity_hints(hints)
+
+
+def _entity_hints_from_candidate_targets(candidate_targets: list[CandidateTarget]) -> list[EntityHint]:
+    return [
+        EntityHint(
+            hint_text=f"{candidate.target_type}:{candidate.target_id}",
+            normalized_hint=candidate.target_id,
+            hint_kind="semantic_target",
+            hint_source="author_understanding",
+            confidence=candidate.confidence,
+            supported_by_author_understanding=True,
+            candidate_target_id=candidate.target_id,
+            candidate_target_type=candidate.target_type,
+        )
+        for candidate in candidate_targets
+    ]
+
+
+def _dedupe_entity_hints(hints: list[EntityHint]) -> list[EntityHint]:
+    seen: dict[tuple[str, str | None, str | None], EntityHint] = {}
+    for hint in hints:
+        key = (hint.normalized_hint, hint.candidate_target_id, hint.candidate_target_type)
+        if key not in seen or hint.confidence > seen[key].confidence:
+            seen[key] = hint
+    return sorted(seen.values(), key=lambda item: (item.confidence, item.hint_kind, item.normalized_hint), reverse=True)
+
+
 def _infer_primary_intent_type(
     *,
-    lowered: str,
     recognized_intent_name: str,
     narrative_signals: NarrativeSignals | None,
+    token_count: int,
+    candidate_targets: list[CandidateTarget],
+    request: ConversationRequest,
     parts: list[MixedRequestPart],
+    state: ConversationState | None,
 ) -> str:
-    if recognized_intent_name in {"validate_structure"}:
+    if recognized_intent_name in {"validation_request"}:
         return "validation_request"
     if recognized_intent_name in {"prepare_narration"}:
         return "narration_preparation"
@@ -488,114 +591,116 @@ def _infer_primary_intent_type(
         return "review_handoff"
     if recognized_intent_name in {"structured_followup"}:
         return "structured_followup"
-    if _looks_like_followup_request(lowered):
-        if _looks_like_narration_prep(lowered):
-            return "narration_preparation"
-        if _looks_like_structured_followup(lowered, parts, narrative_signals):
-            return "structured_followup"
+    if _has_recent_anchor(state) and token_count <= 3 and (request.target_hint or candidate_targets):
         return "contextual_followup"
-    if _looks_like_review_request(lowered):
-        return "review_handoff"
-    if _looks_like_validation_request(lowered):
-        return "validation_request"
-    if _looks_like_narration_prep(lowered):
-        return "narration_preparation"
-    if _looks_like_structuring_request(lowered):
-        if _looks_like_revision_request(lowered, narrative_signals) or _has_mixed_parts(parts):
-            return "mixed_request"
-        return "structuring_request"
-    if _looks_like_revision_request(lowered, narrative_signals):
-        if _has_mixed_parts(parts):
-            return "mixed_request"
-        return "editorial_revision"
-    if _looks_like_narrative_facts(lowered):
-        return "narrative_facts"
-    if _has_mixed_parts(parts):
+    if narrative_signals is not None and narrative_signals.issue_types:
+        if "canon_issue" in narrative_signals.issue_types:
+            if len(candidate_targets) >= 2 or len(parts) > 1:
+                return "mixed_request"
+            return "validation_request"
+        if any(issue_type in narrative_signals.issue_types for issue_type in {"tone_issue", "motivation_issue", "character_voice_mismatch", "clarity_issue", "continuity_issue"}):
+            return "editorial_revision"
+    if len(candidate_targets) >= 2 and (len(parts) > 1 or token_count >= 4):
         return "mixed_request"
+    if recognized_intent_name == "editorial_structuring" and (len(parts) > 1 or token_count >= 4):
+        return "structuring_request"
+    if recognized_intent_name in {"inspect_scene", "inspect_chapter"} and _has_recent_anchor(state):
+        return "contextual_followup"
+    if candidate_targets and token_count <= 3 and _has_recent_anchor(state):
+        return "contextual_followup"
     return "unknown"
 
 
 def _derive_signals(
-    lowered: str,
     narrative_signals: NarrativeSignals | None,
+    *,
+    candidate_targets: list[CandidateTarget],
+    primary_intent_type: str,
     parts: list[MixedRequestPart],
+    token_count: int,
 ) -> tuple[list[str], list[str], list[str]]:
     author_goal_signals: list[str] = []
     preserve_signals: list[str] = []
     change_signals: list[str] = []
     issue_types = list((narrative_signals.issue_types if narrative_signals else []) or [])
-    if "canon_issue" in issue_types or "canon" in lowered:
+    if "canon_issue" in issue_types:
         author_goal_signals.append("anchor_canon")
         preserve_signals.append("preserve_validated_canon")
-    if "character_voice_mismatch" in issue_types or "voz" in lowered or "voice" in lowered:
+    if "character_voice_mismatch" in issue_types:
         preserve_signals.append("preserve_character_voice")
-    if "tone_issue" in issue_types or "más contenida" in lowered or "mas contenida" in lowered:
+    if "tone_issue" in issue_types:
         author_goal_signals.append("align_tone")
         change_signals.append("align_tone")
-    if "motivation_issue" in issue_types or "no entiendo por qué" in lowered or "no entiendo por que" in lowered:
+    if "motivation_issue" in issue_types:
         author_goal_signals.append("clarify_motivation")
         change_signals.append("clarify_motivation")
-    if any(phrase in lowered for phrase in ("dure más", "dure mas", "cede tan rápido", "cede tan rapido", "last longer", "sostener el conflicto")):
-        author_goal_signals.append("extend_conflict")
-        change_signals.append("extend_conflict")
-        preserve_signals.append("preserve_scene_conflict")
-    if _looks_like_structuring_request(lowered):
+    if "clarity_issue" in issue_types or "continuity_issue" in issue_types:
+        author_goal_signals.append("clarify_structure")
+        change_signals.append("clarify_structure")
+    if primary_intent_type == "structuring_request":
         author_goal_signals.append("structure_scene")
         change_signals.append("structure_scene")
-    if _looks_like_narration_prep(lowered):
+    if primary_intent_type == "narration_preparation":
         author_goal_signals.append("prepare_for_narration")
         change_signals.append("prepare_for_narration")
-    if _looks_like_review_request(lowered):
+    if primary_intent_type == "review_handoff":
         author_goal_signals.append("prepare_for_review")
         change_signals.append("prepare_for_review")
-    if _has_mixed_parts(parts):
-        author_goal_signals.append("mixed_request")
-        change_signals.append("mixed_request")
-    if "sin que" in lowered or "sin perder" in lowered or "sin romper" in lowered:
-        preserve_signals.append("preserve_scene_conflict")
-    if "sin que" in lowered and any(term in lowered for term in ("cruel", "cruelty")):
-        preserve_signals.append("preserve_character_empathy")
+    if primary_intent_type == "validation_request":
+        author_goal_signals.append("anchor_canon")
+    if len(candidate_targets) >= 2 or len(parts) > 1:
+        author_goal_signals.append("structure_scene")
+        change_signals.append("structure_scene")
     return (_dedupe(author_goal_signals), _dedupe(preserve_signals), _dedupe(change_signals))
 
 
-def _extract_narrative_content(text: str, parts: list[MixedRequestPart]) -> str | None:
-    narrative_parts = [part.text for part in parts if part.part_type == "narrative_content"]
-    if narrative_parts:
-        content = " ".join(narrative_parts).strip()
-        if content:
-            return content
+def _extract_narrative_content(
+    text: str,
+    *,
+    primary_intent_type: str,
+    narrative_signals: NarrativeSignals | None,
+    candidate_targets: list[CandidateTarget],
+    token_count: int,
+) -> str | None:
+    if primary_intent_type not in {"narrative_facts", "structuring_request", "mixed_request"}:
+        return None
+    if token_count < 4 and not candidate_targets and narrative_signals is None:
+        return None
     stripped = text.strip()
-    if _looks_like_narrative_facts(stripped.casefold()) and not _looks_like_pure_meta_instruction(stripped.casefold()):
-        return stripped
-    return None
+    return stripped or None
 
 
-def _extract_meta_instruction(text: str, parts: list[MixedRequestPart]) -> str | None:
-    meta_parts = [part.text for part in parts if part.part_type in {"meta_instruction", "narration_prep", "review_handoff", "validation_request"}]
-    if meta_parts:
-        content = " ".join(meta_parts).strip()
-        if content:
-            return content
-    stripped = text.strip()
-    if _looks_like_pure_meta_instruction(stripped.casefold()):
-        return stripped
-    return None
+def _extract_meta_instruction(
+    text: str,
+    *,
+    primary_intent_type: str,
+    narrative_content_text: str | None,
+) -> str | None:
+    if primary_intent_type not in {"narration_preparation", "review_handoff", "validation_request", "structured_followup", "mixed_request"}:
+        return None
+    if primary_intent_type == "mixed_request" and narrative_content_text is not None:
+        return text.strip() or None
+    return text.strip() or None
 
 
-def _extract_followup_reference(text: str, parts: list[MixedRequestPart], state: ConversationState | None) -> str | None:
+def _extract_followup_reference(
+    text: str,
+    parts: list[MixedRequestPart],
+    state: ConversationState | None,
+    candidate_targets: list[CandidateTarget],
+    *,
+    primary_intent_type: str,
+    token_count: int,
+    request_target_hint: str | None,
+) -> str | None:
     followup_parts = [part.text for part in parts if part.part_type == "followup_reference"]
     if followup_parts:
         content = " ".join(followup_parts).strip()
         if content:
             return content
-    lowered = text.casefold().strip()
-    if lowered.startswith("de lo anterior"):
-        return text.strip()
-    if lowered.startswith("lo del ") or "lo anterior" in lowered:
-        return text.strip()
-    if lowered in {"esta nota", "esta escena", "este capítulo", "este capitulo", "sí, esa", "si, esa", "usa la anterior"}:
-        return text.strip()
-    if state is not None and state.last_target_id and lowered.startswith("lo del "):
+    if primary_intent_type not in {"contextual_followup", "structured_followup"}:
+        return None
+    if token_count <= 3 and (_has_recent_anchor(state) or request_target_hint or candidate_targets):
         return text.strip()
     return None
 
@@ -648,245 +753,31 @@ def _rule_confidence(
     return confidence
 
 
-def _looks_like_followup_request(lowered: str) -> bool:
-    return any(
-        phrase in lowered
-        for phrase in (
-            "de lo anterior",
-            "lo anterior",
-            "esta nota",
-            "esta escena",
-            "este capítulo",
-            "este capitulo",
-            "sí, esa",
-            "si, esa",
-            "usa la anterior",
-            "lo del ",
-            "de la anterior",
-            "de lo de antes",
-        )
-    )
-
-
-def _looks_like_structured_followup(
-    lowered: str,
-    parts: list[MixedRequestPart],
-    narrative_signals: NarrativeSignals | None,
-) -> bool:
-    if any(
-        phrase in lowered
-        for phrase in (
-            "quédate con",
-            "quedate con",
-            "usa la anterior",
-            "sí, esa",
-            "si, esa",
-            "de lo anterior",
-            "de la anterior",
-        )
-    ):
-        return True
-    if _has_mixed_parts(parts) and (narrative_signals is not None and bool(narrative_signals.issue_types)):
-        return True
-    return False
-
-
-def _split_mixed_request_parts(text: str) -> list[MixedRequestPart]:
-    lowered = text.casefold()
-    clauses = [clause.strip() for clause in re.split(r"(?:;|,|\band then\b|\by luego\b|\bluego\b|\bpero\b)", lowered) if clause.strip()]
+def _split_mixed_request_parts(text: str, *, state: ConversationState | None, candidate_targets: list[CandidateTarget]) -> list[MixedRequestPart]:
+    clauses = [clause.strip() for clause in re.split(r"(?:\n+|;|[.!?]+|->|—)", text) if clause.strip()]
     parts: list[MixedRequestPart] = []
     for clause in clauses:
-        part_type = _classify_part_type(clause)
-        if part_type == "mixed":
-            continue
-        original = _extract_original_clause(text, clause)
-        parts.append(MixedRequestPart(part_type=part_type, text=original, confidence=_part_confidence(part_type, clause)))
+        part_type = _classify_clause_part(clause, state=state, candidate_targets=candidate_targets)
+        parts.append(MixedRequestPart(part_type=part_type, text=clause, confidence=_part_confidence(part_type, clause)))
     if not parts and text.strip():
-        parts.append(MixedRequestPart(part_type=_classify_part_type(lowered), text=text.strip(), confidence=0.55))
+        parts.append(MixedRequestPart(part_type="mixed", text=text.strip(), confidence=0.55))
     return parts
 
 
-def _classify_part_type(clause: str) -> str:
-    if _looks_like_validation_request(clause):
-        return "validation_request"
-    if _looks_like_review_request(clause):
-        return "review_handoff"
-    if _looks_like_narration_prep(clause):
-        return "narration_prep"
-    if _looks_like_followup_reference(clause):
+def _classify_clause_part(
+    clause: str,
+    *,
+    state: ConversationState | None,
+    candidate_targets: list[CandidateTarget],
+) -> str:
+    token_count = _token_count(clause)
+    if token_count <= 3 and _has_recent_anchor(state):
         return "followup_reference"
-    if _looks_like_pure_meta_instruction(clause):
+    if token_count <= 4 and not candidate_targets:
         return "meta_instruction"
-    if _looks_like_revision_request(clause, None):
-        if any(phrase in clause for phrase in ("sin perder", "sin romper", "sin que")):
-            return "preserve"
-        return "revision"
-    if _looks_like_structuring_request(clause):
-        return "narrative_content" if _looks_like_narrative_facts(clause) else "meta_instruction"
-    if _looks_like_narrative_facts(clause):
+    if token_count >= 4 and candidate_targets:
         return "narrative_content"
     return "mixed"
-
-
-def _looks_like_narrative_facts(lowered: str) -> bool:
-    return any(
-        token in lowered
-        for token in (
-            "llega",
-            "encuentra",
-            "acusa",
-            "revela",
-            "rompe",
-            "falla",
-            "improvisa",
-            "oculta",
-            "enfría",
-            "enfria",
-            "termina",
-            "terminan",
-            "confiesa",
-            "decide",
-            "pasa a",
-        )
-    )
-
-
-def _looks_like_structuring_request(lowered: str) -> bool:
-    return any(
-        phrase in lowered
-        for phrase in (
-            "ordena",
-            "reordena",
-            "estructura clara",
-            "convertir",
-            "estructura",
-            "beat by beat",
-            "outline",
-        )
-    )
-
-
-def _looks_like_revision_request(lowered: str, narrative_signals: NarrativeSignals | None) -> bool:
-    return bool(
-        any(
-            phrase in lowered
-            for phrase in (
-                "quiero que",
-                "no me gusta",
-                "sin que",
-                "demasiado",
-                "más contenida",
-                "mas contenida",
-                "no cede",
-                "cede tan rápido",
-                "cede tan rapido",
-                "version",
-                "versión",
-            )
-        )
-        or (narrative_signals is not None and bool(narrative_signals.issue_types))
-    )
-
-
-def _looks_like_narration_prep(lowered: str) -> bool:
-    return any(
-        phrase in lowered
-        for phrase in (
-            "prepáralo para narrar",
-            "preparalo para narrar",
-            "prepáralo para escribir",
-            "preparalo para escribir",
-            "déjalo listo para narrar",
-            "dejalo listo para narrar",
-            "déjalo preparado",
-            "dejalo preparado",
-            "lista para narrar",
-            "listo para narrar",
-            "preparada para narrar",
-            "preparado para narrar",
-            "todavía no lo escribas",
-            "todavia no lo escribas",
-            "sin cerrarlo todavía",
-            "sin cerrarlo todavia",
-        )
-    )
-
-
-def _looks_like_review_request(lowered: str) -> bool:
-    return any(
-        phrase in lowered
-        for phrase in (
-            "déjalo listo para revisión",
-            "dejalo listo para revision",
-            "prepáralo para revisión",
-            "preparalo para revision",
-            "listo para revisión",
-            "lista para revisión",
-            "listo para revision",
-            "lista para revision",
-        )
-    )
-
-
-def _looks_like_validation_request(lowered: str) -> bool:
-    return any(
-        phrase in lowered
-        for phrase in (
-            "valida esta estructura",
-            "valido esta estructura",
-            "validate this structure",
-        )
-    )
-
-
-def _looks_like_followup_reference(lowered: str) -> bool:
-    return any(
-        phrase in lowered
-        for phrase in (
-            "de lo anterior",
-            "lo anterior",
-            "esta nota",
-            "esta escena",
-            "este capítulo",
-            "este capitulo",
-            "sí, esa",
-            "si, esa",
-            "usa la anterior",
-            "lo del ",
-        )
-    )
-
-
-def _looks_like_pure_meta_instruction(lowered: str) -> bool:
-    return any(
-        phrase in lowered
-        for phrase in (
-            "ordena esta escena",
-            "ordénala",
-            "ordénalo",
-            "ordena esto",
-            "prepáralo para narrar",
-            "preparalo para narrar",
-            "prepáralo para escribir",
-            "preparalo para escribir",
-            "prepáralo para revisión",
-            "preparalo para revision",
-            "déjalo preparado",
-            "dejalo preparado",
-            "todavía no lo escribas",
-            "todavia no lo escribas",
-            "sin cerrarlo todavía",
-            "sin cerrarlo todavia",
-            "déjame",
-            "dejame",
-            "déjalo",
-            "dejalo",
-        )
-    )
-
-
-def _has_mixed_parts(parts: list[MixedRequestPart]) -> bool:
-    return len({part.part_type for part in parts}) > 1
 
 
 def _part_confidence(part_type: str, clause: str) -> float:
@@ -895,17 +786,15 @@ def _part_confidence(part_type: str, clause: str) -> float:
         confidence += 0.15
     if part_type in {"followup_reference", "validation_request", "review_handoff", "narration_prep"}:
         confidence += 0.2
-    if "sin perder" in clause or "sin romper" in clause:
-        confidence += 0.05
     return min(confidence, 0.95)
 
 
-def _extract_original_clause(original_text: str, lowered_clause: str) -> str:
-    original_lowered = original_text.casefold()
-    index = original_lowered.find(lowered_clause)
-    if index == -1:
-        return lowered_clause.strip()
-    return original_text[index : index + len(lowered_clause)].strip()
+def _has_recent_anchor(state: ConversationState | None) -> bool:
+    return bool(state and state.last_target_id)
+
+
+def _token_count(raw_text: str) -> int:
+    return len([token for token in raw_text.strip().split() if token])
 
 
 def _dedupe(values: list[str]) -> list[str]:

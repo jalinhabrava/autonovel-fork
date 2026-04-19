@@ -99,12 +99,21 @@ class ConversationManager:
 
     def _enrich_editorial_intent(self, intent, request: ConversationRequest):
         entity_results = []
+        entity_hints = []
+        request_entity_hints = request.metadata.get("entity_hints", [])
+        if isinstance(request_entity_hints, list):
+            entity_hints.extend(request_entity_hints)
+        project_confirmed_aliases = request.metadata.get("project_confirmed_aliases", [])
+        if isinstance(project_confirmed_aliases, list):
+            entity_hints.extend(project_confirmed_aliases)
+        if intent.narrative_signals is not None:
+            entity_hints.extend(intent.narrative_signals.mentioned_entities)
         if self.session is not None:
             entity_results = resolve_entities(
                 text=request.raw_text,
                 vault_path=self.session.vault_path,
                 known_characters=request.metadata.get("known_characters", []),
-                entity_hints=list((intent.narrative_signals.mentioned_entities if intent.narrative_signals else []) or []),
+                entity_hints=entity_hints,
             )
         author_understanding = self.author_understanding_analyzer.analyze(
             request=request,
