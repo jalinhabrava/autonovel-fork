@@ -1,4 +1,5 @@
 import json
+import subprocess
 import tempfile
 import unittest
 from datetime import datetime, timezone
@@ -51,6 +52,54 @@ class TextifAIObsidianSetupTests(unittest.TestCase):
             self.assertEqual(result.readiness.source_reliability, "vault_reader_only")
             self.assertFalse(result.readiness.can_answer_strong_grounded)
 
+    def test_prepare_new_project_can_convert_existing_non_vault_folder(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            vault_root = base / "ExistingFolder"
+            vault_root.mkdir()
+            (vault_root / "random_notes.txt").write_text("legacy notes", encoding="utf-8")
+            plugin_root = _fake_plugin_repo(base / "plugin")
+
+            result = prepare_obsidian_project(
+                ObsidianProjectSetupConfig(
+                    vault_root=str(vault_root),
+                    mode="new_project",
+                    project_title="Converted Project",
+                    install_bridge_plugin=True,
+                    build_bridge_plugin=False,
+                    plugin_repo_root=str(plugin_root),
+                ),
+                repo_root=base,
+            )
+
+            self.assertTrue(result.vault_ready)
+            self.assertTrue((vault_root / "00_Project" / "Project.md").exists())
+            self.assertTrue((vault_root / "random_notes.txt").exists())
+            self.assertTrue(any("convertida a vault" in note for note in result.notes))
+
+    def test_prepare_new_project_accepts_existing_empty_folder(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            vault_root = base / "EmptyFolder"
+            vault_root.mkdir()
+            plugin_root = _fake_plugin_repo(base / "plugin")
+
+            result = prepare_obsidian_project(
+                ObsidianProjectSetupConfig(
+                    vault_root=str(vault_root),
+                    mode="new_project",
+                    project_title="Empty Folder Project",
+                    install_bridge_plugin=True,
+                    build_bridge_plugin=False,
+                    plugin_repo_root=str(plugin_root),
+                ),
+                repo_root=base,
+            )
+
+            self.assertTrue(result.vault_ready)
+            self.assertTrue((vault_root / ".obsidian").exists())
+            self.assertTrue((vault_root / "00_Project" / "Project.md").exists())
+
     def test_prepare_existing_material_writes_staging_and_explains_official_importer_tradeoff(self):
         with tempfile.TemporaryDirectory() as tmp:
             base = Path(tmp)
@@ -81,6 +130,37 @@ class TextifAIObsidianSetupTests(unittest.TestCase):
             self.assertFalse(result.official_obsidian_importer_used)
             self.assertIsNotNone(result.official_obsidian_importer_reason)
             self.assertEqual(result.readiness.source_reliability, "vault_reader_only")
+
+    def test_prepare_existing_material_can_adopt_existing_folder_as_vault_and_source(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            folder = base / "AuthorFolder"
+            folder.mkdir()
+            (folder / "fichas.md").write_text("# Fichas\n\nSera.\n", encoding="utf-8")
+            (folder / "escena.txt").write_text("Ren llega tarde al puerto.", encoding="utf-8")
+            plugin_root = _fake_plugin_repo(base / "plugin")
+
+            result = prepare_obsidian_project(
+                ObsidianProjectSetupConfig(
+                    vault_root=str(folder),
+                    mode="existing_material",
+                    source_root=None,
+                    project_title="Adopted Folder",
+                    primary_language="es",
+                    install_bridge_plugin=True,
+                    build_bridge_plugin=False,
+                    plugin_repo_root=str(plugin_root),
+                ),
+                repo_root=base,
+            )
+
+            self.assertTrue(result.vault_ready)
+            self.assertTrue(result.bootstrap_written_drafts)
+            self.assertGreaterEqual(len(result.source_files_considered), 2)
+            self.assertTrue(any(path.endswith("fichas.md") for path in result.source_files_considered))
+            self.assertTrue((folder / "00_Project" / "Project.md").exists())
+            self.assertTrue((folder / "fichas.md").exists())
+            self.assertGreater(result.vaerl_index_entries, 0)
 
     def test_readiness_becomes_fresh_when_valid_snapshot_exists(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -173,6 +253,66 @@ class TextifAIObsidianSetupTests(unittest.TestCase):
             readiness = turn.response_support_summary["obsidian_operational_readiness"]
             self.assertEqual(readiness["source_reliability"], "vault_reader_only")
             self.assertTrue(readiness["can_query_vaerl"])
+
+    def test_short_obsidian_init_wrapper_supports_existing_folder_mode(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            folder = base / "AuthorFolder"
+            folder.mkdir()
+            (folder / "lore.md").write_text("# Lore\n\nSpelarita.\n", encoding="utf-8")
+            plugin_root = _fake_plugin_repo(base / "plugin")
+
+            completed = subprocess.run(
+                [
+                    "uv",
+                    "run",
+                    "python",
+                    "scripts/textifai_obsidian.py",
+                    "init",
+                    "--vault-root",
+                    str(folder),
+                    "--use-vault-root-as-source",
+                    "--project-title",
+                    "Wrapper Project",
+                    "--plugin-repo-root",
+                    str(plugin_root),
+                ],
+                cwd=Path(__file__).resolve().parents[1],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            payload = json.loads(completed.stdout)
+
+            self.assertEqual(payload["mode"], "existing_material")
+            self.assertTrue(payload["vault_ready"])
+            self.assertTrue(payload["bootstrap_written_drafts"])
+            self.assertEqual(payload["plugin_status"]["install_succeeded"], True)
+
+    def test_short_obsidian_status_wrapper_reports_readiness(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            vault_root = Path(tmp) / "Vault"
+            bootstrap_vault(vault_root, title="Status Project")
+
+            completed = subprocess.run(
+                [
+                    "uv",
+                    "run",
+                    "python",
+                    "scripts/textifai_obsidian.py",
+                    "status",
+                    "--vault-root",
+                    str(vault_root),
+                ],
+                cwd=Path(__file__).resolve().parents[1],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            payload = json.loads(completed.stdout)
+
+            self.assertEqual(payload["operational_mode"], "degraded_context")
+            self.assertEqual(payload["source_reliability"], "vault_reader_only")
 
 
 def _fake_plugin_repo(path: Path) -> Path:
