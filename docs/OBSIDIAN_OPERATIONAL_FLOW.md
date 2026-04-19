@@ -14,6 +14,7 @@ Short operational wrapper:
 
 - `uv run python scripts/textifai_obsidian.py init --vault-root ...`
 - `uv run python scripts/textifai_obsidian.py status --vault-root ...`
+- `uv run python scripts/textifai_obsidian.py inspect --vault-root ...`
 
 The short `init` command automatically chooses:
 
@@ -59,6 +60,29 @@ What happens:
 2. Install the bridge plugin if requested.
 3. Evaluate operational readiness.
 4. Expose a vault ready for later author interactions and incremental project propagation.
+
+## Validation Commands
+
+The current Python entrypoints you should treat as authoritative are:
+
+- `open_obsidian_source(vault_root, snapshot_path=None)`
+- `validate_obsidian_snapshot(snapshot_path)`
+- `evaluate_obsidian_operational_readiness(vault_root)`
+- `build_vault_index(vault_path=...)`
+
+The inspect command wraps those exact calls:
+
+```bash
+uv run python scripts/textifai_obsidian.py inspect --vault-root /mnt/c/Users/<TU_USUARIO>/Documents/TextifAI/OnT_Vault
+```
+
+The expected high-signal fields are:
+
+- `readiness.operational_mode`
+- `source_status.reliability`
+- `source_note_count`
+- `vaerl_index_entries`
+- `vaerl_artifact_types`
 
 ## Operational Readiness Policy
 

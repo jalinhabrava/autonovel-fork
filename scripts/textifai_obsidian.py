@@ -10,8 +10,9 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from textifai.obsidian import evaluate_obsidian_operational_readiness
+from textifai.obsidian import evaluate_obsidian_operational_readiness, open_obsidian_source, validate_obsidian_snapshot
 from textifai.obsidian.setup import ObsidianProjectSetupConfig, prepare_obsidian_project
+from textifai.vaerl.index import build_vault_index
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -40,6 +41,17 @@ def build_parser() -> argparse.ArgumentParser:
 
     status_parser = subparsers.add_parser("status", help="Inspect operational readiness for a vault.")
     status_parser.add_argument("--vault-root", required=True)
+
+    inspect_parser = subparsers.add_parser(
+        "inspect",
+        help="Inspect snapshot, readiness, and VaERL indexing for a vault.",
+    )
+    inspect_parser.add_argument("--vault-root", required=True)
+    inspect_parser.add_argument(
+        "--snapshot-path",
+        default=None,
+        help="Optional snapshot path override. Defaults to the bridge snapshot candidates inside the vault.",
+    )
     return parser
 
 
@@ -50,6 +62,28 @@ def main() -> int:
     if args.command == "status":
         readiness = evaluate_obsidian_operational_readiness(Path(args.vault_root))
         print(json.dumps(asdict(readiness), indent=2, ensure_ascii=False))
+        return 0
+
+    if args.command == "inspect":
+        vault_root = Path(args.vault_root)
+        readiness = evaluate_obsidian_operational_readiness(vault_root)
+        source = open_obsidian_source(vault_root, snapshot_path=args.snapshot_path)
+        snapshot_validation = None
+        if source.status.snapshot_path is not None:
+            snapshot_validation = validate_obsidian_snapshot(Path(source.status.snapshot_path))
+        entries = []
+        if readiness.can_query_vaerl:
+            entries = build_vault_index(vault_path=vault_root)
+        payload = {
+            "vault_root": str(vault_root),
+            "readiness": asdict(readiness),
+            "source_status": asdict(source.status),
+            "snapshot_validation": asdict(snapshot_validation.status) if snapshot_validation is not None else None,
+            "source_note_count": len(source.reader.list_notes()),
+            "vaerl_index_entries": len(entries),
+            "vaerl_artifact_types": sorted({entry.artifact_type for entry in entries}),
+        }
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
         return 0
 
     mode = "existing_material" if (args.source_root or args.use_vault_root_as_source) else "new_project"
