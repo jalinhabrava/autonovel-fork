@@ -136,8 +136,8 @@ class TextifAIObsidianSetupTests(unittest.TestCase):
             base = Path(tmp)
             folder = base / "AuthorFolder"
             folder.mkdir()
-            (folder / "fichas.md").write_text("# Fichas\n\nSera.\n", encoding="utf-8")
-            (folder / "escena.txt").write_text("Ren llega tarde al puerto.", encoding="utf-8")
+            (folder / "fichas.md").write_text("# Personaje Sera\n\nSera.\n", encoding="utf-8")
+            (folder / "lore.txt").write_text("Lore de Spelarita y canon del mundo.", encoding="utf-8")
             plugin_root = _fake_plugin_repo(base / "plugin")
 
             result = prepare_obsidian_project(

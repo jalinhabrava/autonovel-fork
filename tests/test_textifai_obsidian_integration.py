@@ -143,6 +143,33 @@ class TextifAIObsidianIntegrationTests(unittest.TestCase):
             self.assertEqual(sera.title, "Sera Snapshot")
             self.assertEqual(sera.frontmatter.get("_context_source_reliability"), "obsidian_bridge_snapshot_fresh")
 
+    def test_snapshot_staging_notes_with_frontmatter_kind_enter_vaerl_index(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            vault_root = _bootstrap_sample_vault(Path(tmp))
+            _write_snapshot_with_staging_notes(vault_root / ".textifai", generated_at=_now_iso())
+
+            source = open_obsidian_source(vault_root)
+            entries = build_vault_index(vault_path=vault_root)
+
+            self.assertEqual(source.status.reliability, "obsidian_bridge_snapshot_fresh")
+            self.assertGreater(len(source.reader.list_notes()), 0)
+            self.assertGreater(len(entries), 0)
+            self.assertTrue(any(entry.artifact_type == "character" for entry in entries))
+            self.assertTrue(any(entry.artifact_type == "chapter" for entry in entries))
+
+    def test_snapshot_recovers_frontmatter_from_raw_text_when_exported_frontmatter_is_empty(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            vault_root = _bootstrap_sample_vault(Path(tmp))
+            _write_snapshot_with_staging_notes(vault_root / ".textifai", generated_at=_now_iso(), empty_frontmatter=True)
+
+            source = open_obsidian_source(vault_root)
+            staging_notes = [note for note in source.reader.list_notes() if "99_Import_Staging" in note.vault_relative_path]
+            entries = build_vault_index(vault_path=vault_root)
+
+            self.assertTrue(staging_notes)
+            self.assertTrue(any(note.frontmatter.get("kind") == "character" for note in staging_notes))
+            self.assertTrue(any(entry.artifact_type == "character" for entry in entries))
+
     def test_author_response_context_exposes_source_reliability(self):
         with tempfile.TemporaryDirectory() as tmp:
             vault_root = _bootstrap_sample_vault(Path(tmp))
@@ -184,6 +211,24 @@ class TextifAIObsidianIntegrationTests(unittest.TestCase):
             resolved = resolve_obsidian_snapshot_path(vault_root)
 
             self.assertEqual(resolved, expected.resolve())
+
+    def test_real_windows_vault_snapshot_smoke_returns_entries_when_available(self):
+        vault_root = Path("/mnt/c/Users/ladir/Documents/TextifAI/OnT_Vault")
+        snapshot_path = vault_root / ".textifai" / "obsidian-bridge-snapshot.json"
+        if not snapshot_path.exists():
+            self.skipTest("Real Windows vault snapshot not available in this environment.")
+
+        validated = validate_obsidian_snapshot(snapshot_path)
+        if validated.status.reliability != "obsidian_bridge_snapshot_fresh":
+            self.skipTest(f"Real Windows vault snapshot not fresh: {validated.status.reliability}")
+
+        source = open_obsidian_source(vault_root)
+        entries = build_vault_index(vault_path=vault_root)
+
+        self.assertEqual(source.status.reliability, "obsidian_bridge_snapshot_fresh")
+        self.assertGreater(len(source.reader.list_notes()), 0)
+        self.assertGreater(len(entries), 0)
+        self.assertTrue(any(entry.artifact_type in {"character", "lore", "chapter", "scene"} for entry in entries))
 
 
 def _bootstrap_sample_vault(base: Path) -> Path:
@@ -313,6 +358,88 @@ def _write_snapshot(
                 "note_count": 2,
             }
         )
+    path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+    return path
+
+
+def _write_snapshot_with_staging_notes(
+    root: Path,
+    *,
+    generated_at: str,
+    empty_frontmatter: bool = False,
+) -> Path:
+    root.mkdir(parents=True, exist_ok=True)
+    path = root / "obsidian-bridge-snapshot.json"
+    notes = [
+        {
+            "note_id": "99_import_staging99_import_stagingcharacterssera_001",
+            "title": "Sera Imported",
+            "path": "99_Import_Staging/99_Import_Staging/characters/sera_001.md",
+            "vault_relative_path": "99_Import_Staging/99_Import_Staging/characters/sera_001.md",
+            "canonical_path": "99_import_staging/99_import_staging/characters/sera_001.md",
+            "artifact_type": "note",
+            "frontmatter": {} if empty_frontmatter else {"kind": "character", "title": "Sera Imported", "slug": "sera_001"},
+            "aliases": [],
+            "project_confirmed_aliases": [],
+            "outgoing_links": [],
+            "incoming_links": [],
+            "raw_text": "---\nkind: character\ntitle: \"Sera Imported\"\nslug: \"sera_001\"\n---\n\n# Sera Imported\n",
+            "body_text": "# Sera Imported\n",
+            "tags": [],
+            "headings": [{"heading": "Sera Imported", "level": 1}],
+            "sections": [{"type": "heading", "start_line": 0, "end_line": 2}],
+            "wikilinks": [],
+            "embeds": [],
+            "frontmatter_links": [],
+            "resolved_links": {},
+            "unresolved_links": {},
+            "source_kind": "obsidian_bridge_snapshot",
+        },
+        {
+            "note_id": "99_import_staging99_import_stagingchapterschapter_001",
+            "title": "Chapter Imported",
+            "path": "99_Import_Staging/99_Import_Staging/chapters/chapter_001.md",
+            "vault_relative_path": "99_Import_Staging/99_Import_Staging/chapters/chapter_001.md",
+            "canonical_path": "99_import_staging/99_import_staging/chapters/chapter_001.md",
+            "artifact_type": "note",
+            "frontmatter": {"kind": "chapter", "title": "Chapter Imported", "slug": "chapter_001"},
+            "aliases": [],
+            "project_confirmed_aliases": [],
+            "outgoing_links": [],
+            "incoming_links": [],
+            "raw_text": "---\nkind: chapter\ntitle: \"Chapter Imported\"\nslug: \"chapter_001\"\n---\n\n# Chapter Imported\n",
+            "body_text": "# Chapter Imported\n",
+            "tags": [],
+            "headings": [{"heading": "Chapter Imported", "level": 1}],
+            "sections": [{"type": "heading", "start_line": 0, "end_line": 2}],
+            "wikilinks": [],
+            "embeds": [],
+            "frontmatter_links": [],
+            "resolved_links": {},
+            "unresolved_links": {},
+            "source_kind": "obsidian_bridge_snapshot",
+        },
+    ]
+    payload = {
+        "schema_version": CURRENT_OBSIDIAN_SNAPSHOT_SCHEMA_VERSION,
+        "source": "obsidian_textifai_bridge",
+        "generated_at": generated_at,
+        "generated_unix_ms": 1776600000000,
+        "vault_name": "OnT",
+        "vault_id": "vault_ont_123",
+        "installation_id": "installation_abc",
+        "vault_root_hint": "/tmp/OnT",
+        "plugin_version": "0.2.0",
+        "obsidian_app_version": "1.8.10",
+        "export_reason": "manual_command",
+        "export_sequence": 4,
+        "export_complete": True,
+        "note_count": len(notes),
+        "bridge_capabilities": {"metadata_cache": True},
+        "warnings": [],
+        "errors": [],
+        "notes": notes,
+    }
     path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
     return path
 
