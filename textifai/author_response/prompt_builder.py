@@ -35,6 +35,7 @@ def build_anchored_author_prompt(
     semantic_working_sufficiency: bool = False,
     general_editorial_sufficiency: bool = False,
     anchored_editorial_sufficiency: bool = False,
+    response_support_summary_extra: dict[str, Any] | None = None,
 ) -> AnchoredAuthorPrompt:
     semantic_flow_name = _semantic_flow_name(semantic_response_kind)
     model_profile_id = _resolve_model_profile_id(request=request, task=task)
@@ -57,6 +58,7 @@ def build_anchored_author_prompt(
         followthrough_result=followthrough_result,
         consistency_report=consistency_report,
         clarification_payload=clarification_payload,
+        response_support_summary_extra=response_support_summary_extra,
     )
     prompt_base = load_prompt_base()
     template = load_prompt_template(semantic_flow_name)

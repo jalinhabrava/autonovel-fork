@@ -10,6 +10,7 @@ from textifai.conversation.planner import TaskPlanner
 from textifai.conversation.state import ConversationState, apply_turn_to_state, create_conversation_state
 from textifai.editorial_intent.classifier import classify_editorial_intent
 from textifai.editorial.entity_resolution import resolve_entities
+from textifai.obsidian import evaluate_obsidian_operational_readiness
 from textifai.session import TextifAISession
 
 
@@ -130,6 +131,7 @@ class ConversationManager:
     def _enrich_editorial_intent(self, intent, request: ConversationRequest):
         entity_results = []
         entity_hints = []
+        readiness = None
         request_entity_hints = request.metadata.get("entity_hints", [])
         if isinstance(request_entity_hints, list):
             entity_hints.extend(request_entity_hints)
@@ -139,12 +141,14 @@ class ConversationManager:
         if intent.narrative_signals is not None:
             entity_hints.extend(intent.narrative_signals.mentioned_entities)
         if self.session is not None:
-            entity_results = resolve_entities(
-                text=request.raw_text,
-                vault_path=self.session.vault_path,
-                known_characters=request.metadata.get("known_characters", []),
-                entity_hints=entity_hints,
-            )
+            readiness = evaluate_obsidian_operational_readiness(self.session.vault_path)
+            if readiness.can_query_vaerl:
+                entity_results = resolve_entities(
+                    text=request.raw_text,
+                    vault_path=self.session.vault_path,
+                    known_characters=request.metadata.get("known_characters", []),
+                    entity_hints=entity_hints,
+                )
         author_understanding = self.author_understanding_analyzer.analyze(
             request=request,
             rule_intent=intent,
@@ -164,6 +168,8 @@ class ConversationManager:
             metadata = dict(intent.metadata)
             metadata["author_understanding"] = asdict(author_understanding)
             metadata["vaerl_results"] = [asdict(item) for item in entity_results]
+            if readiness is not None:
+                metadata["obsidian_operational_readiness"] = asdict(readiness)
             return intent.__class__(
                 intent_name=intent.intent_name,
                 confidence=intent.confidence,
@@ -182,6 +188,8 @@ class ConversationManager:
         metadata["author_understanding"] = asdict(author_understanding)
         metadata["editorial_intent"] = asdict(editorial_intent)
         metadata["vaerl_results"] = [asdict(item) for item in entity_results]
+        if readiness is not None:
+            metadata["obsidian_operational_readiness"] = asdict(readiness)
         return intent.__class__(
             intent_name=intent.intent_name,
             confidence=intent.confidence,

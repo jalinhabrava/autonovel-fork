@@ -46,6 +46,7 @@ from textifai.followthrough.contracts import FollowThroughResult, NarrationReque
 from textifai.followthrough.narration_handoff import build_narration_prep as build_followthrough_narration_prep, build_narration_request
 from textifai.followthrough.review_handoff import build_review_ready_package
 from textifai.followthrough.validation import build_followthrough_result, build_validated_structuring_state, extract_followthrough_state
+from textifai.obsidian import evaluate_obsidian_operational_readiness
 from textifai.render import render_help
 from textifai.session import TextifAISession
 from textifai.conversation.state import ConversationState
@@ -581,6 +582,23 @@ class MinimalExecutionLayer:
             consistency_report=consistency_report,
             clarification_payload=clarification_payload,
         )
+        operational_readiness = evaluate_obsidian_operational_readiness(self.session.vault_path)
+        support_flags["obsidian_operational_readiness"] = {
+            "vault_root": operational_readiness.vault_root,
+            "operational_mode": operational_readiness.operational_mode,
+            "source_reliability": operational_readiness.source_reliability,
+            "source_kind": operational_readiness.source_kind,
+            "can_query_vaerl": operational_readiness.can_query_vaerl,
+            "can_answer_degraded_contextual": operational_readiness.can_answer_degraded_contextual,
+            "can_answer_strong_grounded": operational_readiness.can_answer_strong_grounded,
+            "can_evaluate_prompt_quality": operational_readiness.can_evaluate_prompt_quality,
+            "required_actions": list(operational_readiness.required_actions),
+            "notes": list(operational_readiness.notes),
+        }
+        if not operational_readiness.can_query_vaerl:
+            response_generation_ready = False
+        elif not operational_readiness.can_answer_degraded_contextual:
+            response_generation_ready = False
         vault_context = build_response_context(
             vault_root=self.session.vault_path,
             editorial_intent=editorial_intent,
@@ -605,6 +623,7 @@ class MinimalExecutionLayer:
             semantic_working_sufficiency=bool(support_flags["semantic_working_sufficiency"]),
             general_editorial_sufficiency=bool(support_flags["general_editorial_sufficiency"]),
             anchored_editorial_sufficiency=bool(support_flags["anchored_editorial_sufficiency"]),
+            response_support_summary_extra=support_flags,
         )
         response = self.author_response_generator.generate(prompt=prompt)
         return ExecutionResult(

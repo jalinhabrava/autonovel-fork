@@ -30,6 +30,7 @@ def build_semantic_prompt_context(
     followthrough_result: FollowThroughResult | None = None,
     consistency_report: dict[str, Any] | None = None,
     clarification_payload: dict[str, Any] | None = None,
+    response_support_summary_extra: dict[str, Any] | None = None,
 ) -> SemanticPromptContext:
     general_editorial_sufficiency = (
         semantic_working_sufficiency if general_editorial_sufficiency is None else general_editorial_sufficiency
@@ -154,6 +155,8 @@ def build_semantic_prompt_context(
         "has_consistency_report": consistency_report is not None,
         "has_clarification_payload": clarification_payload is not None,
     }
+    if response_support_summary_extra:
+        response_support_summary.update(response_support_summary_extra)
 
     return SemanticPromptContext(
         semantic_flow_name=semantic_flow_name,
