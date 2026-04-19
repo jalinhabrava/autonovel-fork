@@ -31,6 +31,8 @@ PRESERVE_CONSTRAINT_CATALOG = (
     "preserve_validated_canon",
     "preserve_character_empathy",
     "preserve_scene_conflict",
+    "preserve_relational_coherence",
+    "preserve_ren_care_pattern",
 )
 
 EDITORIAL_GOAL_CATALOG = (
@@ -42,6 +44,16 @@ EDITORIAL_GOAL_CATALOG = (
     "align_tone",
     "clarify_motivation",
     "anchor_canon",
+    "shape_comedic_scene_with_relational_subtext",
+    "choose_dual_effect_closing_beat",
+    "revise_voice_and_relational_dynamic",
+    "control_subtext_explicitness",
+    "guide_sera_intimate_but_guarded_voice",
+    "control_closeness_without_confession",
+    "balance_light_tone_with_relational_weight",
+    "evaluate_symbolic_canon_link",
+    "test_deformed_historical_continuity",
+    "separate_plausible_symbolism_from_hard_canon",
 )
 
 SEMANTIC_BASIS_CATALOG = (

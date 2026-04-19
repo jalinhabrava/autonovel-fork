@@ -18,6 +18,8 @@ from textifai.derived_sources.contracts import (
 
 TEXT_FORMATS = {"md", "txt"}
 DERIVED_FORMATS = {"docx", "pdf", "doc"}
+PDF_PYPDF_SIZE_LIMIT = 1_500_000
+PDF_LIGHT_EXTRACTION_SIZE_LIMIT = 1_500_000
 
 
 @dataclass(frozen=True)
@@ -163,11 +165,16 @@ def _extract_docx_text(path: Path, raw_bytes: bytes) -> tuple[str, list[str]]:
 
 def _extract_pdf_text(path: Path, raw_bytes: bytes) -> tuple[str, list[str]]:
     notes: list[str] = []
+    if len(raw_bytes) > PDF_LIGHT_EXTRACTION_SIZE_LIMIT:
+        return "", ["pdf_light_extraction_skipped_large", "pdf_text_unavailable"]
+    literal_text = _extract_pdf_literals(raw_bytes)
+    if literal_text.strip():
+        return literal_text, ["pdf_literal_text"]
     try:
         from pypdf import PdfReader  # type: ignore
     except Exception:
         PdfReader = None
-    if PdfReader is not None:
+    if PdfReader is not None and len(raw_bytes) <= PDF_PYPDF_SIZE_LIMIT:
         try:
             reader = PdfReader(str(path))
             pages = [page.extract_text() or "" for page in reader.pages]
@@ -177,9 +184,8 @@ def _extract_pdf_text(path: Path, raw_bytes: bytes) -> tuple[str, list[str]]:
             notes.append("pdf_no_extractable_text")
         except Exception:
             notes.append("pdf_parser_failed")
-    literal_text = _extract_pdf_literals(raw_bytes)
-    if literal_text.strip():
-        return literal_text, [*notes, "pdf_literal_text"]
+    elif PdfReader is not None:
+        notes.append("pdf_pypdf_skipped_large")
     return "", [*notes, "pdf_text_unavailable"]
 
 

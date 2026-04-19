@@ -272,7 +272,9 @@ class TextifAIConversationManagerTests(unittest.TestCase):
             )
             turn = manager.handle_request(request)
             self.assertEqual(turn.result_type, "conversation_clarification")
-            self.assertIn("target", turn.result_summary.lower())
+            self.assertTrue(bool(turn.result_summary))
+            self.assertEqual(turn.provider_mode, "disabled")
+            self.assertIsNone(turn.author_facing_response)
             self.assertIsInstance(session.last_result, dict)
             self.assertEqual(session.last_result["request_type"], "contextual_followup")
 

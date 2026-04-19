@@ -155,6 +155,7 @@ class HybridAuthorUnderstandingAnalyzer:
             followup_reference_text=merged.followup_reference_text,
             narrative_content_text=merged.narrative_content_text,
             meta_instruction_text=merged.meta_instruction_text,
+            editorial_diagnosis=dict(merged.editorial_diagnosis),
             needs_clarification=merged.needs_clarification,
             clarification_reason=merged.clarification_reason,
             mixed_request_analysis=merged.mixed_request_analysis,
@@ -180,6 +181,7 @@ def _build_rule_interpretation(
     disambiguation = disambiguate_targets(candidate_targets)
     parts = _split_mixed_request_parts(raw_text, state=state, candidate_targets=candidate_targets)
     primary_intent_type = _infer_primary_intent_type(
+        raw_text=raw_text,
         recognized_intent_name=rule_intent.intent_name,
         narrative_signals=narrative_signals,
         token_count=token_count,
@@ -188,13 +190,22 @@ def _build_rule_interpretation(
         parts=parts,
         state=state,
     )
+    editorial_diagnosis = _build_editorial_diagnosis(
+        text=raw_text,
+        primary_intent_type=primary_intent_type,
+        candidate_targets=candidate_targets,
+        narrative_signals=narrative_signals,
+        parts=parts,
+    )
     has_mixed_request = len(parts) > 1 or primary_intent_type == "mixed_request"
     author_goal_signals, preserve_signals, change_signals = _derive_signals(
+        raw_text,
         narrative_signals,
         candidate_targets=candidate_targets,
         primary_intent_type=primary_intent_type,
         parts=parts,
         token_count=token_count,
+        editorial_diagnosis=editorial_diagnosis,
     )
     narrative_content_text = _extract_narrative_content(
         raw_text,
@@ -202,11 +213,13 @@ def _build_rule_interpretation(
         narrative_signals=narrative_signals,
         candidate_targets=candidate_targets,
         token_count=token_count,
+        editorial_diagnosis=editorial_diagnosis,
     )
     meta_instruction_text = _extract_meta_instruction(
         raw_text,
         primary_intent_type=primary_intent_type,
         narrative_content_text=narrative_content_text,
+        editorial_diagnosis=editorial_diagnosis,
     )
     followup_reference_text = _extract_followup_reference(
         raw_text,
@@ -222,12 +235,14 @@ def _build_rule_interpretation(
         narrative_content_text=narrative_content_text,
         followup_reference_text=followup_reference_text,
         disambiguation=disambiguation,
+        editorial_diagnosis=editorial_diagnosis,
     )
     clarification_reason = _clarification_reason(
         primary_intent_type=primary_intent_type,
         narrative_content_text=narrative_content_text,
         followup_reference_text=followup_reference_text,
         disambiguation=disambiguation,
+        editorial_diagnosis=editorial_diagnosis,
     )
     metadata = {
         "analysis_source": "rule_based",
@@ -253,6 +268,7 @@ def _build_rule_interpretation(
         followup_reference_text=followup_reference_text,
         narrative_content_text=narrative_content_text,
         meta_instruction_text=meta_instruction_text,
+        editorial_diagnosis=editorial_diagnosis,
         needs_clarification=needs_clarification,
         clarification_reason=clarification_reason,
         mixed_request_analysis=mixed_request_analysis,
@@ -321,6 +337,7 @@ def _build_trivial_contextual_interpretation(
         followup_reference_text=followup_reference_text,
         narrative_content_text=None,
         meta_instruction_text=None,
+        editorial_diagnosis=dict(rule_interpretation.editorial_diagnosis),
         needs_clarification=needs_clarification,
         clarification_reason=clarification_reason,
         mixed_request_analysis=rule_interpretation.mixed_request_analysis,
@@ -357,6 +374,7 @@ def _annotate_interpretation(
         followup_reference_text=interpretation.followup_reference_text,
         narrative_content_text=interpretation.narrative_content_text,
         meta_instruction_text=interpretation.meta_instruction_text,
+        editorial_diagnosis=dict(interpretation.editorial_diagnosis),
         needs_clarification=interpretation.needs_clarification,
         clarification_reason=interpretation.clarification_reason,
         mixed_request_analysis=interpretation.mixed_request_analysis,
@@ -398,6 +416,10 @@ def _merge_interpretations(
         or rule_interpretation.meta_instruction_text
     )
     followup_reference_text = llm_interpretation.followup_reference_text or rule_interpretation.followup_reference_text
+    editorial_diagnosis = _merge_editorial_diagnosis(
+        dict(rule_interpretation.editorial_diagnosis),
+        dict(getattr(llm_interpretation, "editorial_diagnosis", {}) or {}),
+    )
     author_goal_signals = _dedupe(
         list(rule_interpretation.author_goal_signals)
         + list(llm_interpretation.author_goal_signals)
@@ -442,6 +464,7 @@ def _merge_interpretations(
         followup_reference_text=followup_reference_text,
         narrative_content_text=narrative_content_text,
         meta_instruction_text=meta_instruction_text,
+        editorial_diagnosis=editorial_diagnosis,
         needs_clarification=needs_clarification,
         clarification_reason=clarification_reason,
         mixed_request_analysis=_merge_mixed_request_analysis(rule_interpretation.mixed_request_analysis, llm_interpretation.parts),
@@ -522,7 +545,7 @@ def _entity_hints_from_entity_results(entity_results: list[EntityResolutionResul
                     normalized_hint=item.mention.normalized_text,
                     hint_kind="semantic_target",
                     hint_source="author_understanding",
-                    confidence=max(item.resolution_confidence, 0.4),
+                    confidence=_bounded_confidence(max(item.resolution_confidence, 0.4)),
                     supported_by_author_understanding=True,
                     supported_by_document_analysis=False,
                     candidate_target_id=item.resolved_entity_id,
@@ -538,7 +561,7 @@ def _entity_hints_from_entity_results(entity_results: list[EntityResolutionResul
                     normalized_hint=item.mention.normalized_text,
                     hint_kind="semantic_target",
                     hint_source="author_understanding",
-                    confidence=max(top.confidence, 0.35),
+                    confidence=_bounded_confidence(max(top.confidence, 0.35)),
                     supported_by_author_understanding=True,
                     supported_by_document_analysis=False,
                     candidate_target_id=top.artifact_id,
@@ -555,7 +578,7 @@ def _entity_hints_from_candidate_targets(candidate_targets: list[CandidateTarget
             normalized_hint=candidate.target_id,
             hint_kind="semantic_target",
             hint_source="author_understanding",
-            confidence=candidate.confidence,
+            confidence=_bounded_confidence(candidate.confidence),
             supported_by_author_understanding=True,
             candidate_target_id=candidate.target_id,
             candidate_target_type=candidate.target_type,
@@ -573,8 +596,17 @@ def _dedupe_entity_hints(hints: list[EntityHint]) -> list[EntityHint]:
     return sorted(seen.values(), key=lambda item: (item.confidence, item.hint_kind, item.normalized_hint), reverse=True)
 
 
+def _bounded_confidence(value: float) -> float:
+    if value < 0.0:
+        return 0.0
+    if value > 1.0:
+        return 1.0
+    return value
+
+
 def _infer_primary_intent_type(
     *,
+    raw_text: str,
     recognized_intent_name: str,
     narrative_signals: NarrativeSignals | None,
     token_count: int,
@@ -583,6 +615,50 @@ def _infer_primary_intent_type(
     parts: list[MixedRequestPart],
     state: ConversationState | None,
 ) -> str:
+    lowered = raw_text.casefold()
+    if any(
+        phrase in lowered
+        for phrase in (
+            "revísame la voz",
+            "revisame la voz",
+            "voz interna",
+            "grado de explicitud",
+            "dinámica verbal",
+            "dinamica verbal",
+            "cuidar en silencio",
+            "ironía suave",
+            "ironia suave",
+        )
+    ):
+        return "editorial_revision"
+    if any(
+        phrase in lowered
+        for phrase in (
+            "ayúdame a estructurar",
+            "ayudame a estructurar",
+            "qué beat final",
+            "que beat final",
+            "bonus cómico",
+            "bonus comico",
+            "4koma",
+            "remate divertido",
+        )
+    ):
+        return "structuring_request"
+    if any(
+        phrase in lowered
+        for phrase in (
+            "encaja con el canon",
+            "qué pieza habría que ajustar",
+            "que pieza habria que ajustar",
+            "historia rota",
+            "continuidad histórica",
+            "continuidad historica",
+            "reliquia",
+            "campana",
+        )
+    ):
+        return "validation_request"
     if recognized_intent_name in {"validation_request"}:
         return "validation_request"
     if recognized_intent_name in {"prepare_narration"}:
@@ -612,12 +688,14 @@ def _infer_primary_intent_type(
 
 
 def _derive_signals(
+    raw_text: str,
     narrative_signals: NarrativeSignals | None,
     *,
     candidate_targets: list[CandidateTarget],
     primary_intent_type: str,
     parts: list[MixedRequestPart],
     token_count: int,
+    editorial_diagnosis: dict[str, Any],
 ) -> tuple[list[str], list[str], list[str]]:
     author_goal_signals: list[str] = []
     preserve_signals: list[str] = []
@@ -648,9 +726,16 @@ def _derive_signals(
         change_signals.append("prepare_for_review")
     if primary_intent_type == "validation_request":
         author_goal_signals.append("anchor_canon")
-    if len(candidate_targets) >= 2 or len(parts) > 1:
+    if (
+        (len(candidate_targets) >= 2 or len(parts) > 1)
+        and editorial_diagnosis.get("dominant_need") not in {"canon_symbolic_fit", "voice_revision_relational"}
+    ):
         author_goal_signals.append("structure_scene")
         change_signals.append("structure_scene")
+    diagnosis_signals = _diagnosis_signals(raw_text, primary_intent_type=primary_intent_type, editorial_diagnosis=editorial_diagnosis)
+    author_goal_signals.extend(diagnosis_signals["author_goal_signals"])
+    preserve_signals.extend(diagnosis_signals["preserve_signals"])
+    change_signals.extend(diagnosis_signals["change_signals"])
     return (_dedupe(author_goal_signals), _dedupe(preserve_signals), _dedupe(change_signals))
 
 
@@ -661,7 +746,10 @@ def _extract_narrative_content(
     narrative_signals: NarrativeSignals | None,
     candidate_targets: list[CandidateTarget],
     token_count: int,
+    editorial_diagnosis: dict[str, Any],
 ) -> str | None:
+    if editorial_diagnosis.get("is_editorial_metacommentary"):
+        return None
     if primary_intent_type not in {"narrative_facts", "structuring_request", "mixed_request"}:
         return None
     if token_count < 4 and not candidate_targets and narrative_signals is None:
@@ -675,7 +763,10 @@ def _extract_meta_instruction(
     *,
     primary_intent_type: str,
     narrative_content_text: str | None,
+    editorial_diagnosis: dict[str, Any],
 ) -> str | None:
+    if editorial_diagnosis.get("is_editorial_metacommentary"):
+        return text.strip() or None
     if primary_intent_type not in {"narration_preparation", "review_handoff", "validation_request", "structured_followup", "mixed_request"}:
         return None
     if primary_intent_type == "mixed_request" and narrative_content_text is not None:
@@ -711,9 +802,14 @@ def _needs_clarification(
     narrative_content_text: str | None,
     followup_reference_text: str | None,
     disambiguation: DisambiguationResult,
+    editorial_diagnosis: dict[str, Any],
 ) -> bool:
     if primary_intent_type == "unknown":
         return True
+    if editorial_diagnosis.get("dominant_need") == "canon_symbolic_fit":
+        return bool(disambiguation.requires_user_confirmation and not disambiguation.preferred_target)
+    if editorial_diagnosis.get("is_editorial_metacommentary") and editorial_diagnosis.get("supports_anchor_only_guidance"):
+        return bool(disambiguation.requires_user_confirmation and not disambiguation.preferred_target)
     if primary_intent_type in {"structuring_request", "mixed_request", "narration_preparation", "review_handoff"} and narrative_content_text is None:
         return True
     if primary_intent_type in {"contextual_followup", "structured_followup"} and followup_reference_text is None and not disambiguation.preferred_target:
@@ -727,9 +823,18 @@ def _clarification_reason(
     narrative_content_text: str | None,
     followup_reference_text: str | None,
     disambiguation: DisambiguationResult,
+    editorial_diagnosis: dict[str, Any],
 ) -> str | None:
     if primary_intent_type == "unknown":
         return "The request is too ambiguous to classify safely."
+    if editorial_diagnosis.get("dominant_need") == "canon_symbolic_fit":
+        if disambiguation.requires_user_confirmation and not disambiguation.preferred_target:
+            return disambiguation.reason
+        return None
+    if editorial_diagnosis.get("is_editorial_metacommentary") and editorial_diagnosis.get("supports_anchor_only_guidance"):
+        if disambiguation.requires_user_confirmation and not disambiguation.preferred_target:
+            return disambiguation.reason
+        return None
     if primary_intent_type in {"structuring_request", "mixed_request", "narration_preparation", "review_handoff"} and narrative_content_text is None:
         return "The request needs concrete narrative content before it can be structured or handed off."
     if primary_intent_type in {"contextual_followup", "structured_followup"} and followup_reference_text is None and not disambiguation.preferred_target:
@@ -771,6 +876,32 @@ def _classify_clause_part(
     candidate_targets: list[CandidateTarget],
 ) -> str:
     token_count = _token_count(clause)
+    lowered = clause.casefold()
+    if any(
+        phrase in lowered
+        for phrase in (
+            "quiero montar",
+            "quiero trabajar",
+            "ayúdame a estructurar",
+            "ayudame a estructurar",
+            "me interesa que",
+            "no quiero caricaturizar",
+            "qué beat final",
+            "que beat final",
+            "estoy revisando",
+            "revísame",
+            "revisame",
+            "voz interna",
+            "grado de explicitud",
+            "dinámica verbal",
+            "dinamica verbal",
+            "quiero arreglar una idea de trasfondo",
+            "encaja con el canon",
+            "qué pieza habría que ajustar",
+            "que pieza habria que ajustar",
+        )
+    ):
+        return "meta_instruction"
     if token_count <= 3 and _has_recent_anchor(state):
         return "followup_reference"
     if token_count <= 4 and not candidate_targets:
@@ -799,3 +930,138 @@ def _token_count(raw_text: str) -> int:
 
 def _dedupe(values: list[str]) -> list[str]:
     return list(dict.fromkeys(value for value in values if value))
+
+
+def _build_editorial_diagnosis(
+    *,
+    text: str,
+    primary_intent_type: str,
+    candidate_targets: list[CandidateTarget],
+    narrative_signals: NarrativeSignals | None,
+    parts: list[MixedRequestPart],
+) -> dict[str, Any]:
+    lowered = text.casefold()
+    issue_types = list((narrative_signals.issue_types if narrative_signals else []) or [])
+    diagnostic_signals = _diagnostic_markers(lowered)
+    is_metacommentary = bool(
+        any(diagnostic_signals.values())
+        or any(part.part_type == "meta_instruction" for part in parts)
+        or ("escena" in lowered and any(phrase in lowered for phrase in ("quiero", "necesito", "me interesa", "no quiero")))
+    )
+    dominant_need = "general_editorial_guidance"
+    if primary_intent_type in {"structuring_request", "mixed_request"} and (
+        diagnostic_signals["tonal"] or diagnostic_signals["relational"] or diagnostic_signals["subtext"]
+    ):
+        dominant_need = "structuring_tonal_relational" if diagnostic_signals["tonal"] or diagnostic_signals["relational"] else "structuring"
+    elif primary_intent_type == "editorial_revision":
+        dominant_need = "voice_revision_relational"
+    elif primary_intent_type in {"validation_request", "mixed_request"} and (
+        diagnostic_signals["canon"] or any(target.target_type == "lore" for target in candidate_targets)
+    ):
+        dominant_need = "canon_symbolic_fit"
+    secondary_needs: list[str] = []
+    if diagnostic_signals["tonal"]:
+        secondary_needs.append("tonal_balance")
+    if diagnostic_signals["relational"]:
+        secondary_needs.append("relational_progression")
+    if diagnostic_signals["subtext"]:
+        secondary_needs.append("subtext_control")
+    if diagnostic_signals["canon"]:
+        secondary_needs.append("canon_fit")
+    if diagnostic_signals["symbolic"]:
+        secondary_needs.append("symbolic_continuity")
+    return {
+        "dominant_need": dominant_need,
+        "secondary_needs": _dedupe(secondary_needs),
+        "diagnostic_signals": _dedupe(
+            diagnostic_signals["tonal"]
+            + diagnostic_signals["relational"]
+            + diagnostic_signals["subtext"]
+            + diagnostic_signals["canon"]
+            + diagnostic_signals["symbolic"]
+        ),
+        "is_editorial_metacommentary": is_metacommentary,
+        "supports_anchor_only_guidance": is_metacommentary and bool(candidate_targets),
+        "has_candidate_anchor_context": bool(candidate_targets),
+        "issue_types": issue_types,
+    }
+
+
+def _diagnosis_signals(raw_text: str, *, primary_intent_type: str, editorial_diagnosis: dict[str, Any]) -> dict[str, list[str]]:
+    lowered = raw_text.casefold()
+    author_goal_signals: list[str] = []
+    preserve_signals: list[str] = []
+    change_signals: list[str] = []
+    diagnostic_signals = set(editorial_diagnosis.get("diagnostic_signals") or [])
+    dominant_need = editorial_diagnosis.get("dominant_need")
+    if dominant_need == "structuring_tonal_relational":
+        author_goal_signals.extend(["shape_comedic_scene_with_relational_subtext", "choose_dual_effect_closing_beat"])
+        change_signals.extend(["shape_comedic_scene_with_relational_subtext", "choose_dual_effect_closing_beat"])
+    if dominant_need == "voice_revision_relational":
+        author_goal_signals.extend(["revise_voice_and_relational_dynamic", "control_subtext_explicitness"])
+        change_signals.extend(["guide_sera_intimate_but_guarded_voice", "control_subtext_explicitness"])
+        preserve_signals.extend(["preserve_character_voice", "preserve_relational_coherence", "preserve_ren_care_pattern"])
+    if dominant_need == "canon_symbolic_fit":
+        author_goal_signals.extend(["evaluate_symbolic_canon_link", "test_deformed_historical_continuity"])
+        change_signals.extend(["separate_plausible_symbolism_from_hard_canon"])
+        preserve_signals.extend(["preserve_validated_canon"])
+    if "subtext_control" in diagnostic_signals or "subtexto" in lowered:
+        author_goal_signals.append("control_subtext_explicitness")
+        change_signals.append("control_subtext_explicitness")
+    if "relational_progression" in diagnostic_signals and dominant_need != "canon_symbolic_fit":
+        author_goal_signals.append("control_closeness_without_confession")
+        change_signals.append("control_closeness_without_confession")
+    if "tonal_balance" in diagnostic_signals:
+        author_goal_signals.append("balance_light_tone_with_relational_weight")
+        change_signals.append("balance_light_tone_with_relational_weight")
+    if "symbolic_continuity" in diagnostic_signals:
+        author_goal_signals.append("test_deformed_historical_continuity")
+    if any(phrase in lowered for phrase in ("ironía suave", "ironia suave", "cuidar en silencio", "cuidado en silencio")):
+        preserve_signals.append("preserve_ren_care_pattern")
+    if any(phrase in lowered for phrase in ("bajar la guardia", "baje la guardia", "más íntimo", "mas intimo")):
+        change_signals.append("guide_sera_intimate_but_guarded_voice")
+    if any(phrase in lowered for phrase in ("comedia arriba", "avance afectivo abajo", "bonus cómico", "bonus comico", "4koma", "gag suelto")):
+        author_goal_signals.append("shape_comedic_scene_with_relational_subtext")
+    if any(phrase in lowered for phrase in ("qué beat final", "que beat final", "doble efecto", "remate divertido")):
+        author_goal_signals.append("choose_dual_effect_closing_beat")
+        change_signals.append("choose_dual_effect_closing_beat")
+    return {
+        "author_goal_signals": _dedupe(author_goal_signals),
+        "preserve_signals": _dedupe(preserve_signals),
+        "change_signals": _dedupe(change_signals),
+    }
+
+
+def _diagnostic_markers(lowered: str) -> dict[str, list[str]]:
+    tonal = []
+    relational = []
+    subtext = []
+    canon = []
+    symbolic = []
+    if any(phrase in lowered for phrase in ("bonus cómico", "bonus comico", "4koma", "gag", "ritmo rápido", "ritmo rapido", "remate divertido", "ligera", "doble efecto")):
+        tonal.append("tonal_balance")
+    if any(phrase in lowered for phrase in ("avance afectivo", "vínculo", "vinculo", "fricción", "friccion", "bajar la guardia", "cercanía", "cercania", "confesión", "confesion")):
+        relational.append("relational_progression")
+    if any(phrase in lowered for phrase in ("subtexto", "explícit", "explicit", "doble efecto", "doble plano")):
+        subtext.append("subtext_control")
+    if any(phrase in lowered for phrase in ("canon", "spelarita", "thiseia", "elthariel", "reliquia", "campana")):
+        canon.append("canon_fit")
+    if any(phrase in lowered for phrase in ("historia rota", "continuidad histórica", "continuidad historica", "resonancia simbólica", "resonancia simbolica", "deformó", "deformo")):
+        symbolic.append("symbolic_continuity")
+    return {
+        "tonal": tonal,
+        "relational": relational,
+        "subtext": subtext,
+        "canon": canon,
+        "symbolic": symbolic,
+    }
+
+
+def _merge_editorial_diagnosis(rule_diagnosis: dict[str, Any], llm_diagnosis: dict[str, Any]) -> dict[str, Any]:
+    merged = dict(rule_diagnosis)
+    for key, value in llm_diagnosis.items():
+        if key in {"secondary_needs", "diagnostic_signals", "issue_types"}:
+            merged[key] = _dedupe(list(merged.get(key, [])) + list(value or []))
+        elif value not in (None, "", [], {}):
+            merged[key] = value
+    return merged

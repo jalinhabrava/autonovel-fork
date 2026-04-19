@@ -42,7 +42,21 @@ def classify_editorial_intent(
     if recognized_intent_name in {"inspect_scene", "inspect_chapter"} and len(candidate_targets) <= 1 and not (author_understanding is not None and author_understanding.has_mixed_request):
         return None
     if recognized_intent_name == "consistency_check" and len(candidate_targets) <= 1:
-        return None
+        return _build_intent(
+            request_type="validation_request",
+            confidence=max(0.78, author_understanding.confidence if author_understanding is not None else 0.0),
+            semantic_basis=semantic_basis,
+            target_scope=_target_scope(candidate_targets, state),
+            resolved_target=resolved_target,
+            multi_target=multi_target,
+            candidate_targets=candidate_targets,
+            entity_hints=entity_hints,
+            followup_mode=followup_mode if followup_mode != "none" else "prefer_candidate_targets",
+            preserve_constraints=_dedupe(preserve_constraints + ["preserve_validated_canon"]),
+            editorial_goals=_dedupe(editorial_goals + ["anchor_canon"]),
+            narrative_source_text=None,
+            author_understanding=author_understanding,
+        )
     if recognized_intent_name == "consistency_check" and len(candidate_targets) >= 2:
         return _build_intent(
             request_type="mixed_editorial_request",
@@ -55,7 +69,7 @@ def classify_editorial_intent(
             entity_hints=entity_hints,
             followup_mode=followup_mode,
             preserve_constraints=preserve_constraints,
-            editorial_goals=_dedupe(editorial_goals + ["structure_scene"]),
+            editorial_goals=_dedupe(editorial_goals + ["anchor_canon"]),
             narrative_source_text=narrative_source_text,
             author_understanding=author_understanding,
         )
@@ -75,7 +89,7 @@ def classify_editorial_intent(
             entity_hints=entity_hints,
             followup_mode=validation_followup_mode,
             preserve_constraints=preserve_constraints,
-            editorial_goals=_dedupe(editorial_goals + ["structure_scene"]),
+            editorial_goals=_dedupe(editorial_goals + ["anchor_canon"]),
             narrative_source_text=None,
             followthrough_action="validate_structure",
             author_understanding=author_understanding,
@@ -505,6 +519,18 @@ def _editorial_guidance(narrative_signals, author_understanding: AuthorIntentInt
         goals.append("clarify_motivation")
     if "clarity_issue" in issue_types or "continuity_issue" in issue_types:
         goals.append("clarify_motivation")
+    if author_understanding is not None:
+        diagnosis = dict(author_understanding.editorial_diagnosis)
+        dominant_need = diagnosis.get("dominant_need")
+        if dominant_need == "structuring_tonal_relational":
+            goals.extend(["shape_comedic_scene_with_relational_subtext", "choose_dual_effect_closing_beat"])
+            preserve_constraints.append("preserve_relational_coherence")
+        elif dominant_need == "voice_revision_relational":
+            goals.extend(["revise_voice_and_relational_dynamic", "control_subtext_explicitness"])
+            preserve_constraints.extend(["preserve_character_voice", "preserve_relational_coherence"])
+        elif dominant_need == "canon_symbolic_fit":
+            goals.extend(["evaluate_symbolic_canon_link", "test_deformed_historical_continuity"])
+            preserve_constraints.append("preserve_validated_canon")
     if author_understanding is not None:
         goals = _dedupe(goals + _normalize_signal_list(author_understanding.author_goal_signals))
         preserve_constraints = _dedupe(preserve_constraints + _normalize_signal_list(author_understanding.preserve_signals))

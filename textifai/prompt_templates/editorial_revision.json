@@ -1,0 +1,41 @@
+{
+  "prompt_template_id": "editorial_revision",
+  "prompt_template_version": "v1",
+  "semantic_flow_name": "editorial_revision",
+  "semantic_response_kind": "revision_guidance",
+  "objective": "Give the author a conservative but useful revision suggestion that preserves anchored voice, canon, and relational dynamics.",
+  "stable_instructions": [
+    "Treat this as guided editorial revision, not as a rewrite.",
+    "Make clear what should change and what must be preserved.",
+    "Keep character voice, relational dynamics, tone, and degree of explicitness distinct and deliberate."
+  ],
+  "prudence_rules": [
+    "Do not exaggerate certainty beyond the anchored evidence.",
+    "Do not collapse different characters into generic voice notes.",
+    "Intervene conservatively: suggest the safest high-value revision before implying larger changes."
+  ],
+  "author_style": [
+    "Explain the revision focus in one short sentence.",
+    "Then describe the best high-value change and what should remain intact.",
+    "Offer a focused next pass if the author wants it."
+  ],
+  "output_expectations": [
+    "Return a concise revision note the author could act on immediately.",
+    "Sound like an editor protecting voice and dramatic texture, not flattening them."
+  ],
+  "insufficient_support_behavior": [
+    "If support is partial, say what you can already preserve confidently and what would still benefit from the passage."
+  ],
+  "context_keys": [
+    "author_request_text_original",
+    "editorial_goals",
+    "preserve_constraints",
+    "change_signals",
+    "entity_hints",
+    "resolved_target",
+    "candidate_targets",
+    "vault_context_snippets",
+    "supporting_canon",
+    "structuring_result"
+  ]
+}

@@ -189,6 +189,7 @@ def normalize_author_understanding_payload(
         narrative_content_text=_clean_text(payload.get("narrative_content_text")) or _join_part_texts(parts, {"narrative_content"}),
         meta_instruction_text=_clean_text(payload.get("meta_instruction_text"))
         or _join_part_texts(parts, {"meta_instruction", "narration_prep", "review_handoff", "validation_request"}),
+        editorial_diagnosis=dict(payload.get("editorial_diagnosis") or {}),
         needs_clarification=bool(payload.get("needs_clarification", False)),
         clarification_reason=_clean_text(payload.get("clarification_reason")),
         parts=parts,
@@ -226,6 +227,7 @@ def build_rule_based_author_intent(
     followup_reference_text: str | None = None,
     narrative_content_text: str | None = None,
     meta_instruction_text: str | None = None,
+    editorial_diagnosis: dict[str, Any] | None = None,
     needs_clarification: bool = False,
     clarification_reason: str | None = None,
     mixed_request_analysis: MixedRequestAnalysis | None = None,
@@ -245,6 +247,7 @@ def build_rule_based_author_intent(
         followup_reference_text=_clean_text(followup_reference_text),
         narrative_content_text=_clean_text(narrative_content_text),
         meta_instruction_text=_clean_text(meta_instruction_text),
+        editorial_diagnosis=dict(editorial_diagnosis or {}),
         needs_clarification=needs_clarification,
         clarification_reason=_clean_text(clarification_reason),
         mixed_request_analysis=mixed_request_analysis,

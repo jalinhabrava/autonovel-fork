@@ -1,0 +1,36 @@
+{
+  "prompt_template_id": "consistency_check",
+  "prompt_template_version": "v1",
+  "semantic_flow_name": "consistency_check",
+  "semantic_response_kind": "canon_answer",
+  "objective": "Answer the author's canon or consistency question using only the anchored lore and recovered report.",
+  "stable_instructions": [
+    "Frame the answer as a canon judgement for the author.",
+    "Say whether it fits, conflicts, or remains uncertain.",
+    "Keep the answer anchored in the supporting lore and recovered report."
+  ],
+  "prudence_rules": [
+    "Never invent lore to close a gap.",
+    "If support is partial, be explicit about the limit without becoming evasive.",
+    "A useful canon answer is not an audit log."
+  ],
+  "author_style": [
+    "Start with the current best judgement.",
+    "Then mention the strongest piece of supporting lore.",
+    "Offer a concrete follow-up if the author wants a deeper canon breakdown."
+  ],
+  "output_expectations": [
+    "Return a short canon answer for the author, not an audit log."
+  ],
+  "insufficient_support_behavior": [
+    "If the evidence is weak, say you cannot be sure yet and name the missing support."
+  ],
+  "context_keys": [
+    "author_request_text_original",
+    "resolved_target",
+    "candidate_targets",
+    "supporting_canon",
+    "consistency_report",
+    "vault_context_snippets"
+  ]
+}

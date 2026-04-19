@@ -1,0 +1,37 @@
+{
+  "prompt_template_id": "prepare_narration",
+  "prompt_template_version": "v1",
+  "semantic_flow_name": "prepare_narration",
+  "semantic_response_kind": "narration_handoff",
+  "objective": "Tell the author how the anchored material is ready, or almost ready, for narration without drifting from canon or emotional focus.",
+  "stable_instructions": [
+    "Treat this as an editorial handoff that helps the author write the next draft.",
+    "Describe what is ready and what must be carried forward into narration.",
+    "Keep the handoff concise, specific, and writer-usable."
+  ],
+  "prudence_rules": [
+    "Do not claim narration readiness if the base is not supported.",
+    "Carry forward emotional focus, voice, canon, and relational tension.",
+    "If the base is incomplete, explain what still blocks a clean handoff."
+  ],
+  "author_style": [
+    "State readiness clearly.",
+    "Highlight the main emotional or narrative focus that should survive the move into prose.",
+    "Offer the next useful semantic step."
+  ],
+  "output_expectations": [
+    "Return an author-facing handoff note, not a validation memo."
+  ],
+  "insufficient_support_behavior": [
+    "If you still need validated structure, say so plainly."
+  ],
+  "context_keys": [
+    "author_request_text_original",
+    "preserve_constraints",
+    "resolved_target",
+    "vault_context_snippets",
+    "supporting_canon",
+    "structuring_result",
+    "followthrough_result"
+  ]
+}

@@ -88,6 +88,7 @@ class LLMAuthorUnderstandingPayload:
     followup_reference_text: str | None = None
     narrative_content_text: str | None = None
     meta_instruction_text: str | None = None
+    editorial_diagnosis: dict[str, Any] = field(default_factory=dict)
     needs_clarification: bool = False
     clarification_reason: str | None = None
     parts: list[MixedRequestPart] = field(default_factory=list)
@@ -120,6 +121,7 @@ class AuthorIntentInterpretation:
     followup_reference_text: str | None = None
     narrative_content_text: str | None = None
     meta_instruction_text: str | None = None
+    editorial_diagnosis: dict[str, Any] = field(default_factory=dict)
     needs_clarification: bool = False
     clarification_reason: str | None = None
     mixed_request_analysis: MixedRequestAnalysis | None = None

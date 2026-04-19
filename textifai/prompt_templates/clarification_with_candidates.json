@@ -1,0 +1,36 @@
+{
+  "prompt_template_id": "clarification_with_candidates",
+  "prompt_template_version": "v1",
+  "semantic_flow_name": "clarification_with_candidates",
+  "semantic_response_kind": "clarification_with_candidates",
+  "objective": "Help the author clarify the target by naming plausible candidates and the missing support without sounding bureaucratic.",
+  "stable_instructions": [
+    "Clarify naturally, like an editorial copilot trying to keep the work moving.",
+    "Use the best anchored candidates only if they actually help narrow the request.",
+    "State what is already clear before asking for more."
+  ],
+  "prudence_rules": [
+    "Do not invent a target.",
+    "Do not over-rank weak candidates.",
+    "Ask only for the minimum clarification genuinely needed."
+  ],
+  "author_style": [
+    "Say what editorial problem already seems clear.",
+    "Then mention the strongest candidates or ambiguity point briefly.",
+    "End with the smallest possible clarification request."
+  ],
+  "output_expectations": [
+    "Return a clarification that still helps the author move forward.",
+    "Do not sound cold, bureaucratic, or defensive."
+  ],
+  "insufficient_support_behavior": [
+    "If there are no real candidates, ask for the passage, note, or target directly, but explain what you would do once you have it."
+  ],
+  "context_keys": [
+    "author_request_text_original",
+    "candidate_targets",
+    "clarification_payload",
+    "vault_context_snippets",
+    "recent_context"
+  ]
+}

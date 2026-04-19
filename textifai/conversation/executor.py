@@ -19,6 +19,9 @@ from interactive.context_requests import (
 from interactive.payloads import validate_artifact_payload
 from interactive.persistence_commands import consistency_check, decide, reject, validate
 from interactive.query import parse_frontmatter, strip_frontmatter
+from textifai.author_response.context import build_response_context
+from textifai.author_response.generator import ProviderBackedAuthorResponseGenerator
+from textifai.author_response.prompt_builder import build_anchored_author_prompt
 from textifai.conversation.contracts import (
     ConversationRequest,
     ExecutionResult,
@@ -50,8 +53,9 @@ from textifai.vaerl.contracts import EntityCandidate, EntityMention, EntityResol
 
 
 class MinimalExecutionLayer:
-    def __init__(self, *, session: TextifAISession | None = None) -> None:
+    def __init__(self, *, session: TextifAISession | None = None, author_response_generator=None) -> None:
         self.session = session
+        self.author_response_generator = author_response_generator or ProviderBackedAuthorResponseGenerator()
 
     def execute(
         self,
@@ -152,7 +156,7 @@ class MinimalExecutionLayer:
         wants_narration_prep = _author_understanding_requests_narration_prep(author_understanding)
 
         if editorial_intent is not None and editorial_intent.metadata.get("multi_target") and editorial_intent.request_type == "structured_followup":
-            return self._editorial_followup_clarification(task, editorial_intent, entity_results)
+            return self._editorial_followup_clarification(task, request, editorial_intent, entity_results)
 
         if editorial_intent is not None and source_text is None:
             if wants_narration_prep and base_result is not None:
@@ -173,7 +177,7 @@ class MinimalExecutionLayer:
                     result_kind="narration_prep",
                     ready_for_validation=base_result.ready_for_validation,
                 )
-                return ExecutionResult(
+                execution = ExecutionResult(
                     type="editorial_structuring",
                     flow_name=task.flow_name,
                     success=True,
@@ -185,7 +189,41 @@ class MinimalExecutionLayer:
                         if entity.resolved and entity.resolved_entity_type and entity.resolved_entity_id
                     ],
                 )
-            return self._editorial_followup_clarification(task, editorial_intent, entity_results)
+                return self._attach_author_response(
+                    execution,
+                    task=task,
+                    request=request,
+                    author_understanding=author_understanding,
+                    editorial_intent=editorial_intent,
+                    entity_results=base_result.entity_resolution_results or entity_results,
+                    structuring_result=result,
+                )
+            if _can_generate_from_anchor_only(editorial_intent=editorial_intent, entity_results=entity_results):
+                execution = ExecutionResult(
+                    type="author_semantic_response",
+                    flow_name=task.flow_name,
+                    success=True,
+                    result_summary="Prepared anchored semantic guidance.",
+                    result={
+                        "mode": "anchor_only_guidance",
+                        "request_type": editorial_intent.request_type,
+                    },
+                    artifacts_touched=[
+                        f"{entity.resolved_entity_type}:{entity.resolved_entity_id}"
+                        for entity in entity_results
+                        if entity.resolved and entity.resolved_entity_type and entity.resolved_entity_id
+                    ],
+                )
+                return self._attach_author_response(
+                    execution,
+                    task=task,
+                    request=request,
+                    author_understanding=author_understanding,
+                    editorial_intent=editorial_intent,
+                    entity_results=entity_results,
+                    structuring_result=base_result,
+                )
+            return self._editorial_followup_clarification(task, request, editorial_intent, entity_results)
 
         result = build_editorial_structuring_result(
             source_text=source_text,
@@ -222,7 +260,7 @@ class MinimalExecutionLayer:
             summaries.append("revision intent")
         if result.narration_prep is not None and editorial_intent is not None and editorial_intent.request_type == "narration_preparation":
             summaries.append("narration prep")
-        return ExecutionResult(
+        execution = ExecutionResult(
             type="editorial_structuring",
             flow_name=task.flow_name,
             success=True,
@@ -233,6 +271,15 @@ class MinimalExecutionLayer:
                 for entity in result.entity_resolution_results
                 if entity.resolved and entity.resolved_entity_type and entity.resolved_entity_id
             ],
+        )
+        return self._attach_author_response(
+            execution,
+            task=task,
+            request=request,
+            author_understanding=author_understanding,
+            editorial_intent=editorial_intent,
+            entity_results=entity_results,
+            structuring_result=result,
         )
 
     def _execute_followthrough(self, task: PlannedTask, request: ConversationRequest) -> ExecutionResult:
@@ -250,7 +297,15 @@ class MinimalExecutionLayer:
                 flow_name=task.flow_name,
             )
             if clarification is not None:
-                return clarification
+                return self._attach_author_response(
+                    clarification,
+                    task=task,
+                    request=request,
+                    author_understanding=_author_understanding_from_metadata(task.metadata.get("author_understanding")),
+                    editorial_intent=_editorial_intent_from_metadata(task.metadata.get("editorial_intent")),
+                    entity_results=[],
+                    clarification_payload=dict(clarification.result or {}),
+                )
             followthrough = build_followthrough_result(
                 validated_structuring_state=validated_state,
                 narration_request=None,
@@ -259,10 +314,18 @@ class MinimalExecutionLayer:
                 next_recommended_step=_next_step_for_state(validated_state, default="prepare_narration"),
                 ready_for_user_confirmation=True,
             )
-            return _followthrough_execution_result(
+            return self._attach_author_response(
+                _followthrough_execution_result(
+                    task=task,
+                    followthrough=followthrough,
+                    summary="Validated structured editorial state.",
+                ),
                 task=task,
-                followthrough=followthrough,
-                summary="Validated structured editorial state.",
+                request=request,
+                author_understanding=_author_understanding_from_metadata(task.metadata.get("author_understanding")),
+                editorial_intent=_editorial_intent_from_metadata(task.metadata.get("editorial_intent")),
+                entity_results=validated_state.source_structuring_result.entity_resolution_results,
+                followthrough_result=followthrough,
             )
 
         if followthrough_action == "prepare_narration":
@@ -275,7 +338,15 @@ class MinimalExecutionLayer:
                 flow_name=task.flow_name,
             )
             if clarification is not None:
-                return clarification
+                return self._attach_author_response(
+                    clarification,
+                    task=task,
+                    request=request,
+                    author_understanding=_author_understanding_from_metadata(task.metadata.get("author_understanding")),
+                    editorial_intent=_editorial_intent_from_metadata(task.metadata.get("editorial_intent")),
+                    entity_results=[],
+                    clarification_payload=dict(clarification.result or {}),
+                )
             narration_request = build_narration_request(
                 validated_structuring_state=validated_state,
                 target_language=target_language,
@@ -302,10 +373,18 @@ class MinimalExecutionLayer:
                 ),
                 ready_for_user_confirmation=True,
             )
-            return _followthrough_execution_result(
+            return self._attach_author_response(
+                _followthrough_execution_result(
+                    task=task,
+                    followthrough=followthrough,
+                    summary="Prepared narration handoff from validated editorial structure.",
+                ),
                 task=task,
-                followthrough=followthrough,
-                summary="Prepared narration handoff from validated editorial structure.",
+                request=request,
+                author_understanding=_author_understanding_from_metadata(task.metadata.get("author_understanding")),
+                editorial_intent=_editorial_intent_from_metadata(task.metadata.get("editorial_intent")),
+                entity_results=validated_state.source_structuring_result.entity_resolution_results,
+                followthrough_result=followthrough,
             )
 
         if followthrough_action == "prepare_review":
@@ -318,7 +397,15 @@ class MinimalExecutionLayer:
                 flow_name=task.flow_name,
             )
             if clarification is not None:
-                return clarification
+                return self._attach_author_response(
+                    clarification,
+                    task=task,
+                    request=request,
+                    author_understanding=_author_understanding_from_metadata(task.metadata.get("author_understanding")),
+                    editorial_intent=_editorial_intent_from_metadata(task.metadata.get("editorial_intent")),
+                    entity_results=[],
+                    clarification_payload=dict(clarification.result or {}),
+                )
             narration_prep = build_followthrough_narration_prep(
                 validated_structuring_state=validated_state,
                 target_language=target_language,
@@ -336,10 +423,18 @@ class MinimalExecutionLayer:
                 next_recommended_step="done",
                 ready_for_user_confirmation=True,
             )
-            return _followthrough_execution_result(
+            return self._attach_author_response(
+                _followthrough_execution_result(
+                    task=task,
+                    followthrough=followthrough,
+                    summary="Prepared review handoff from validated editorial structure.",
+                ),
                 task=task,
-                followthrough=followthrough,
-                summary="Prepared review handoff from validated editorial structure.",
+                request=request,
+                author_understanding=_author_understanding_from_metadata(task.metadata.get("author_understanding")),
+                editorial_intent=_editorial_intent_from_metadata(task.metadata.get("editorial_intent")),
+                entity_results=validated_state.source_structuring_result.entity_resolution_results,
+                followthrough_result=followthrough,
             )
 
         validated_state, clarification = _ensure_validated_state(
@@ -351,7 +446,15 @@ class MinimalExecutionLayer:
             flow_name=task.flow_name,
         )
         if clarification is not None:
-            return clarification
+            return self._attach_author_response(
+                clarification,
+                task=task,
+                request=request,
+                author_understanding=_author_understanding_from_metadata(task.metadata.get("author_understanding")),
+                editorial_intent=_editorial_intent_from_metadata(task.metadata.get("editorial_intent")),
+                entity_results=[],
+                clarification_payload=dict(clarification.result or {}),
+            )
         followthrough = build_followthrough_result(
             validated_structuring_state=validated_state,
             narration_request=None,
@@ -360,15 +463,24 @@ class MinimalExecutionLayer:
             next_recommended_step=_next_step_for_state(validated_state, default="continue_followup"),
             ready_for_user_confirmation=True,
         )
-        return _followthrough_execution_result(
+        return self._attach_author_response(
+            _followthrough_execution_result(
+                task=task,
+                followthrough=followthrough,
+                summary="Continued the prior structured editorial follow-up.",
+            ),
             task=task,
-            followthrough=followthrough,
-            summary="Continued the prior structured editorial follow-up.",
+            request=request,
+            author_understanding=_author_understanding_from_metadata(task.metadata.get("author_understanding")),
+            editorial_intent=_editorial_intent_from_metadata(task.metadata.get("editorial_intent")),
+            entity_results=validated_state.source_structuring_result.entity_resolution_results,
+            followthrough_result=followthrough,
         )
 
     def _editorial_followup_clarification(
         self,
         task: PlannedTask,
+        request: ConversationRequest,
         editorial_intent: EditorialIntent,
         entity_results,
     ) -> ExecutionResult:
@@ -395,7 +507,8 @@ class MinimalExecutionLayer:
             )
         elif editorial_intent.request_type == "editorial_revision":
             reason = "This revision is editorial, but it needs a concrete narrative passage or fact set to revise safely."
-        return ExecutionResult(
+        return self._attach_author_response(
+            ExecutionResult(
             type="conversation_clarification",
             flow_name=task.flow_name,
             success=False,
@@ -417,6 +530,110 @@ class MinimalExecutionLayer:
                 "has_narrative_facts": False,
             },
             artifacts_touched=[],
+            ),
+            task=task,
+            request=request,
+            author_understanding=_author_understanding_from_metadata(task.metadata.get("author_understanding")),
+            editorial_intent=editorial_intent,
+            entity_results=entity_results,
+            clarification_payload={
+                "author_request_text_original": request.raw_text,
+                "request_type": editorial_intent.request_type,
+                "reason": reason,
+                "candidate_targets": candidate_targets,
+                "resolved_target": resolved,
+            },
+        )
+
+    def _attach_author_response(
+        self,
+        execution: ExecutionResult,
+        *,
+        task: PlannedTask,
+        request: ConversationRequest | None,
+        author_understanding: dict | None,
+        editorial_intent: EditorialIntent | None,
+        entity_results: list[EntityResolutionResult],
+        structuring_result: EditorialStructuringResult | None = None,
+        followthrough_result: FollowThroughResult | None = None,
+        consistency_report: dict | None = None,
+        clarification_payload: dict | None = None,
+    ) -> ExecutionResult:
+        semantic_response_kind = task.metadata.get("semantic_response_kind")
+        if semantic_response_kind is None:
+            return execution
+        response_generation_ready = _response_generation_ready(
+            task=task,
+            editorial_intent=editorial_intent,
+            author_understanding=author_understanding,
+            structuring_result=structuring_result,
+            followthrough_result=followthrough_result,
+            consistency_report=consistency_report,
+            clarification_payload=clarification_payload,
+        )
+        support_flags = _response_generation_support(
+            task=task,
+            editorial_intent=editorial_intent,
+            author_understanding=author_understanding,
+            entity_results=entity_results,
+            structuring_result=structuring_result,
+            followthrough_result=followthrough_result,
+            consistency_report=consistency_report,
+            clarification_payload=clarification_payload,
+        )
+        vault_context = build_response_context(
+            vault_root=self.session.vault_path,
+            editorial_intent=editorial_intent,
+            entity_results=entity_results,
+        )
+        supporting_canon = [snippet for snippet in vault_context if snippet["artifact_type"] == "lore"][:4]
+        prompt = build_anchored_author_prompt(
+            request=request or _fallback_request_from_execution(task, execution),
+            task=task,
+            semantic_response_kind=semantic_response_kind,
+            response_generation_ready=response_generation_ready,
+            author_understanding=author_understanding,
+            editorial_intent=editorial_intent,
+            entity_results=_serialize_entity_results(entity_results),
+            vault_context_snippets=vault_context,
+            supporting_canon=supporting_canon,
+            structuring_result=structuring_result,
+            followthrough_result=followthrough_result,
+            consistency_report=consistency_report,
+            clarification_payload=clarification_payload,
+            exact_artifact_resolution=bool(support_flags["exact_artifact_resolution"]),
+            semantic_working_sufficiency=bool(support_flags["semantic_working_sufficiency"]),
+            general_editorial_sufficiency=bool(support_flags["general_editorial_sufficiency"]),
+            anchored_editorial_sufficiency=bool(support_flags["anchored_editorial_sufficiency"]),
+        )
+        response = self.author_response_generator.generate(prompt=prompt)
+        return ExecutionResult(
+            type=execution.type,
+            flow_name=execution.flow_name,
+            success=execution.success,
+            result_summary=response.author_facing_response or execution.result_summary,
+            result=execution.result,
+            context_request=execution.context_request,
+            context_pack=execution.context_pack,
+            artifacts_touched=execution.artifacts_touched,
+            persisted=execution.persisted,
+            missing_target=execution.missing_target,
+            pending_operation=execution.pending_operation,
+            clear_pending_operation=execution.clear_pending_operation,
+            response_generation_ready=response.response_generation_ready,
+            semantic_response_kind=response.semantic_response_kind,
+            anchored_prompt_payload=response.anchored_prompt_payload,
+            author_facing_response=response.author_facing_response,
+            response_support_summary=response.response_support_summary,
+            provider_mode=response.provider_mode,
+            response_generation_mode=response.response_generation_mode,
+            response_generation_reason=response.response_generation_reason,
+            provider_execution_enabled=response.provider_execution_enabled,
+            provider_execution_mode=response.provider_execution_mode,
+            provider_model_used=response.provider_model_used,
+            live_model_response=response.live_model_response,
+            simulated_preview_enabled=response.simulated_preview_enabled,
+            simulated_preview_output=response.simulated_preview_output,
         )
 
     def _execute_world(self, task: PlannedTask) -> ExecutionResult:
@@ -540,7 +757,30 @@ class MinimalExecutionLayer:
 
     def _execute_consistency_check(self, task: PlannedTask) -> ExecutionResult:
         if not task.target_id or not task.target_type:
-            return self._missing_target(task, "A concrete artifact target is required before running consistency check.")
+            editorial_intent = _editorial_intent_from_metadata(task.metadata.get("editorial_intent"))
+            clarification = ExecutionResult(
+                type="missing_target",
+                flow_name=task.flow_name,
+                success=False,
+                result_summary="A narrower lore anchor is still needed before running a strict consistency check.",
+                result={
+                    "author_request_text_original": task.metadata.get("raw_request_text"),
+                    "request_type": editorial_intent.request_type if editorial_intent is not None else "validation_request",
+                    "reason": "Multiple plausible lore targets remain unresolved for strict consistency validation.",
+                    "candidate_targets": _candidate_targets_from_editorial_intent(editorial_intent),
+                    "resolved_target": None,
+                },
+                missing_target=True,
+            )
+            return self._attach_author_response(
+                clarification,
+                task=task,
+                request=_request_from_task_metadata(task),
+                author_understanding=_author_understanding_from_metadata(task.metadata.get("author_understanding")),
+                editorial_intent=editorial_intent,
+                entity_results=_entity_results_from_metadata(task.metadata.get("vaerl_results")),
+                clarification_payload=dict(clarification.result or {}),
+            )
         payload = _artifact_payload_from_target(self.session, task.target_type, task.target_id)
         if payload is None:
             return self._missing_target(task, "The requested artifact could not be resolved from the current vault.")
@@ -560,7 +800,7 @@ class MinimalExecutionLayer:
             }
         )
         report = consistency_check(str(self.session.vault_path), payload)
-        return ExecutionResult(
+        execution = ExecutionResult(
             type="consistency_report",
             flow_name=task.flow_name,
             success=True,
@@ -568,6 +808,15 @@ class MinimalExecutionLayer:
             result=report,
             context_request=report.get("context_request"),
             context_pack=report.get("context_pack"),
+        )
+        return self._attach_author_response(
+            execution,
+            task=task,
+            request=None,
+            author_understanding=_author_understanding_from_metadata(task.metadata.get("author_understanding")),
+            editorial_intent=_editorial_intent_from_metadata(task.metadata.get("editorial_intent")),
+            entity_results=_entity_results_from_metadata(task.metadata.get("vaerl_results")),
+            consistency_report=report,
         )
 
     def _missing_target(self, task: PlannedTask, message: str) -> ExecutionResult:
@@ -826,6 +1075,57 @@ def _artifact_payload_from_target(session: TextifAISession, target_type: str, ta
     return validate_artifact_payload(payload)
 
 
+def _fallback_request_from_execution(task: PlannedTask, execution: ExecutionResult) -> ConversationRequest:
+    raw_text = execution.result_summary
+    if isinstance(execution.result, dict):
+        raw_text = str(
+            execution.result.get("author_request_text_original")
+            or execution.result.get("request_text")
+            or execution.result_summary
+        )
+    return ConversationRequest(
+        raw_text=raw_text,
+        source="system",
+        mode="normal",
+        interface_language=task.explanation_language,
+        user_command_language=task.operation_language,
+        internal_system_language="en",
+        project_default_language=task.artifact_target_language or task.operation_language,
+        mixed_language_allowed=True,
+        artifact_target_language=task.artifact_target_language,
+        explanation_language=task.explanation_language,
+    )
+
+
+def _request_from_task_metadata(task: PlannedTask) -> ConversationRequest:
+    raw_text = str(task.metadata.get("raw_request_text") or task.metadata.get("query_text") or "")
+    return ConversationRequest(
+        raw_text=raw_text,
+        source="user",
+        mode="normal",
+        interface_language=task.explanation_language,
+        user_command_language=task.operation_language,
+        internal_system_language="en",
+        project_default_language=task.artifact_target_language or task.operation_language,
+        mixed_language_allowed=True,
+        artifact_target_language=task.artifact_target_language,
+        explanation_language=task.explanation_language,
+    )
+
+
+def _candidate_targets_from_editorial_intent(editorial_intent: EditorialIntent | None) -> list[dict[str, object]]:
+    if editorial_intent is None:
+        return []
+    return [
+        {
+            "target_type": candidate.target_type,
+            "target_id": candidate.target_id,
+            "confidence": candidate.confidence,
+        }
+        for candidate in editorial_intent.candidate_targets
+    ]
+
+
 def _resolve_note_target(session: TextifAISession, target_type: str, target_id: str) -> dict | None:
     try:
         path = VaultProjectAdapter(session.vault_path).note_path(target_type, target_id)
@@ -887,6 +1187,157 @@ def _author_understanding_requests_narration_prep(value: dict | None) -> bool:
     return False
 
 
+def _response_generation_ready(
+    *,
+    task: PlannedTask,
+    editorial_intent: EditorialIntent | None,
+    author_understanding: dict | None,
+    structuring_result: EditorialStructuringResult | None,
+    followthrough_result: FollowThroughResult | None,
+    consistency_report: dict | None,
+    clarification_payload: dict | None,
+) -> bool:
+    support = _response_generation_support(
+        task=task,
+        editorial_intent=editorial_intent,
+        author_understanding=author_understanding,
+        entity_results=[],
+        structuring_result=structuring_result,
+        followthrough_result=followthrough_result,
+        consistency_report=consistency_report,
+        clarification_payload=clarification_payload,
+    )
+    return bool(support["response_generation_ready"])
+
+
+def _response_generation_support(
+    *,
+    task: PlannedTask,
+    editorial_intent: EditorialIntent | None,
+    author_understanding: dict | None,
+    entity_results: list[EntityResolutionResult],
+    structuring_result: EditorialStructuringResult | None,
+    followthrough_result: FollowThroughResult | None,
+    consistency_report: dict | None,
+    clarification_payload: dict | None,
+) -> dict[str, bool]:
+    exact_artifact_resolution = bool(
+        editorial_intent
+        and editorial_intent.resolved_target_id
+        and editorial_intent.resolved_target_type
+    )
+    narrow_candidates = bool(editorial_intent and 0 < len(editorial_intent.candidate_targets) <= 3)
+    has_resolved_entity = any(result.resolved for result in entity_results)
+    has_editorial_signals = bool(
+        editorial_intent
+        and (
+            editorial_intent.editorial_goals
+            or editorial_intent.preserve_constraints
+            or editorial_intent.entity_hints
+        )
+    )
+    has_structuring_material = bool(
+        structuring_result
+        and (
+            (structuring_result.story_facts and structuring_result.story_facts.explicit_facts)
+            or (structuring_result.beat_outline and structuring_result.beat_outline.beats)
+            or structuring_result.revision_intent is not None
+            or structuring_result.narration_prep is not None
+        )
+    )
+    followup_continuity = bool(
+        editorial_intent and editorial_intent.followup_mode in {"reuse_recent_target", "prefer_candidate_targets"}
+    )
+    consistency_support = bool(
+        consistency_report is not None
+        and (exact_artifact_resolution or narrow_candidates or has_resolved_entity)
+    )
+    narration_support = bool(
+        followthrough_result and followthrough_result.validated_structuring_state is not None
+    ) or has_structuring_material
+    anchored_signal_support = bool(
+        exact_artifact_resolution
+        or narrow_candidates
+        or has_resolved_entity
+        or consistency_support
+    )
+    if author_understanding is None and editorial_intent is None and not consistency_support and not narration_support:
+        general_editorial_sufficiency = False
+    elif clarification_payload is not None:
+        general_editorial_sufficiency = bool(narrow_candidates or has_editorial_signals or followup_continuity)
+    elif task.flow_name == "consistency_check_flow":
+        general_editorial_sufficiency = consistency_support
+    elif followthrough_result is not None or task.flow_name in {"narration_handoff_flow", "review_handoff_flow"}:
+        general_editorial_sufficiency = narration_support or exact_artifact_resolution
+    else:
+        general_editorial_sufficiency = bool(
+            has_editorial_signals
+            or has_structuring_material
+            or followup_continuity
+            or narrow_candidates
+            or has_resolved_entity
+        )
+
+    if author_understanding is None and editorial_intent is None and not consistency_support and not narration_support:
+        anchored_editorial_sufficiency = False
+    elif clarification_payload is not None:
+        anchored_editorial_sufficiency = False
+    elif task.flow_name == "consistency_check_flow":
+        anchored_editorial_sufficiency = consistency_support
+    elif followthrough_result is not None or task.flow_name in {"narration_handoff_flow", "review_handoff_flow"}:
+        anchored_editorial_sufficiency = narration_support or exact_artifact_resolution
+    else:
+        anchored_editorial_sufficiency = bool(
+            exact_artifact_resolution
+            or followup_continuity
+            or (narrow_candidates and (has_editorial_signals or has_resolved_entity))
+        )
+    if author_understanding is not None and author_understanding.get("needs_clarification") and not general_editorial_sufficiency:
+        general_editorial_sufficiency = False
+    if author_understanding is not None and author_understanding.get("needs_clarification") and not anchored_editorial_sufficiency:
+        anchored_editorial_sufficiency = False
+    semantic_working_sufficiency = bool(anchored_editorial_sufficiency)
+    if task.flow_name == "consistency_check_flow":
+        response_generation_ready = bool(anchored_editorial_sufficiency)
+    elif followthrough_result is not None or task.flow_name in {"narration_handoff_flow", "review_handoff_flow"}:
+        response_generation_ready = bool(anchored_editorial_sufficiency)
+    else:
+        response_generation_ready = bool(general_editorial_sufficiency)
+    return {
+        "exact_artifact_resolution": exact_artifact_resolution,
+        "general_editorial_sufficiency": general_editorial_sufficiency,
+        "anchored_editorial_sufficiency": anchored_editorial_sufficiency,
+        "semantic_working_sufficiency": semantic_working_sufficiency,
+        "response_generation_ready": response_generation_ready,
+    }
+
+
+def _can_generate_from_anchor_only(
+    *,
+    editorial_intent: EditorialIntent,
+    entity_results: list[EntityResolutionResult],
+) -> bool:
+    author_understanding = editorial_intent.metadata.get("author_understanding") or {}
+    diagnosis = dict(author_understanding.get("editorial_diagnosis") or {})
+    if editorial_intent.request_type in {"editorial_revision", "validation_request"}:
+        return bool(
+            (editorial_intent.resolved_target_id and editorial_intent.resolved_target_type)
+            or any(result.resolved for result in entity_results)
+        )
+    if editorial_intent.request_type in {"structuring_request", "mixed_editorial_request"}:
+        return bool(
+            diagnosis.get("supports_anchor_only_guidance")
+            and (
+                (editorial_intent.resolved_target_id and editorial_intent.resolved_target_type)
+                or editorial_intent.candidate_targets
+                or any(result.resolved for result in entity_results)
+            )
+        )
+    if editorial_intent.request_type in {"contextual_followup", "structured_followup"}:
+        return editorial_intent.followup_mode in {"reuse_recent_target", "prefer_candidate_targets"}
+    return False
+
+
 def _entity_results_from_metadata(items) -> list[EntityResolutionResult]:
     if not items:
         return []
@@ -910,6 +1361,36 @@ def _entity_results_from_metadata(items) -> list[EntityResolutionResult]:
             )
         )
     return results
+
+
+def _serialize_entity_results(items: list[EntityResolutionResult]) -> list[dict]:
+    serialized: list[dict] = []
+    for item in items:
+        serialized.append(
+            {
+                "query_text": item.query_text,
+                "mention": {
+                    "surface_text": item.mention.surface_text,
+                    "normalized_text": item.mention.normalized_text,
+                    "source": item.mention.source,
+                },
+                "resolved": item.resolved,
+                "resolution_confidence": item.resolution_confidence,
+                "resolved_entity_id": item.resolved_entity_id,
+                "resolved_entity_type": item.resolved_entity_type,
+                "hint_support_score": item.hint_support_score,
+                "candidate_entities": [
+                    {
+                        "artifact_type": candidate.artifact_type,
+                        "artifact_id": candidate.artifact_id,
+                        "title": candidate.title,
+                        "confidence": candidate.confidence,
+                    }
+                    for candidate in item.candidate_entities[:3]
+                ],
+            }
+        )
+    return serialized
 
 
 def _editorial_source_text(raw_text: str, editorial_intent: EditorialIntent | None) -> str | None:
@@ -1118,7 +1599,8 @@ def _followthrough_clarification(request_text: str, *, followthrough_action: str
         success=False,
         result_summary=summary,
         result={
-            "request_text": request_text,
+            "author_request_text_original": request_text,
+            "system_interpretation": summary,
             "next_step": "validate_structure",
         },
         artifacts_touched=[],

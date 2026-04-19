@@ -1,0 +1,18 @@
+{
+  "model_profile_id": "qwen",
+  "instruction_order": [
+    "stable_instructions",
+    "objective",
+    "prudence_rules",
+    "output_expectations",
+    "author_style",
+    "insufficient_support_behavior",
+    "overlay_instructions"
+  ],
+  "explicitness": "high",
+  "output_wrapper": "json_payload",
+  "overlay_instructions": [
+    "Repeat the prudence boundary clearly before asking for the final response.",
+    "Keep the output expectation explicit and simple."
+  ]
+}

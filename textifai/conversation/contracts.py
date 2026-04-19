@@ -186,6 +186,20 @@ class ConversationTurn:
     artifacts_touched: list[str] = field(default_factory=list)
     context_used: bool = False
     persisted: bool = False
+    response_generation_ready: bool = False
+    semantic_response_kind: str | None = None
+    anchored_prompt_payload: dict[str, Any] | None = None
+    author_facing_response: str | None = None
+    response_support_summary: dict[str, Any] | None = None
+    provider_mode: str | None = None
+    response_generation_mode: str | None = None
+    response_generation_reason: str | None = None
+    provider_execution_enabled: bool = False
+    provider_execution_mode: str | None = None
+    provider_model_used: str | None = None
+    live_model_response: str | None = None
+    simulated_preview_enabled: bool = False
+    simulated_preview_output: str | None = None
 
 
 @dataclass(frozen=True)
@@ -219,6 +233,20 @@ class ExecutionResult:
     missing_target: bool = False
     pending_operation: PendingConversationOperation | None = None
     clear_pending_operation: bool = False
+    response_generation_ready: bool = False
+    semantic_response_kind: str | None = None
+    anchored_prompt_payload: dict[str, Any] | None = None
+    author_facing_response: str | None = None
+    response_support_summary: dict[str, Any] | None = None
+    provider_mode: str | None = None
+    response_generation_mode: str | None = None
+    response_generation_reason: str | None = None
+    provider_execution_enabled: bool = False
+    provider_execution_mode: str | None = None
+    provider_model_used: str | None = None
+    live_model_response: str | None = None
+    simulated_preview_enabled: bool = False
+    simulated_preview_output: str | None = None
 
 
 def _ensure_catalog_value(field_name: str, value: str, catalog: tuple[str, ...]) -> None:

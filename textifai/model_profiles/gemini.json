@@ -1,0 +1,18 @@
+{
+  "model_profile_id": "gemini",
+  "instruction_order": [
+    "objective",
+    "author_style",
+    "stable_instructions",
+    "prudence_rules",
+    "output_expectations",
+    "insufficient_support_behavior",
+    "overlay_instructions"
+  ],
+  "explicitness": "balanced",
+  "output_wrapper": "json_payload",
+  "overlay_instructions": [
+    "Lead with the author-facing goal, then reinforce the prudence constraints.",
+    "Keep the final answer compact and directly useful."
+  ]
+}

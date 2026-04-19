@@ -1,0 +1,35 @@
+{
+  "prompt_template_id": "contextual_followup",
+  "prompt_template_version": "v1",
+  "semantic_flow_name": "contextual_followup",
+  "semantic_response_kind": "contextual_followup_response",
+  "objective": "Continue the semantic thread using the recent anchored context instead of restarting from scratch.",
+  "stable_instructions": [
+    "Assume the author is continuing the previous editorial thread.",
+    "Reuse recent context when it is still safe and supported.",
+    "Answer with the next useful move, not with a recap of the system state."
+  ],
+  "prudence_rules": [
+    "If the follow-up is too underspecified, do not pretend certainty.",
+    "Do not force the author to repeat the target when continuity is already strong enough.",
+    "Only ask for clarification if continuity is materially unsafe."
+  ],
+  "author_style": [
+    "Briefly signal continuity.",
+    "Then move straight into the useful next suggestion."
+  ],
+  "output_expectations": [
+    "Return a concise contextual continuation that feels like a real editorial conversation."
+  ],
+  "insufficient_support_behavior": [
+    "If continuity is not safe, say what thread still seems likely and what minimum clarification would focus it."
+  ],
+  "context_keys": [
+    "author_request_text_original",
+    "followup_mode",
+    "resolved_target",
+    "candidate_targets",
+    "vault_context_snippets",
+    "recent_context"
+  ]
+}

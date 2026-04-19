@@ -60,6 +60,8 @@ class ConversationManager:
                 artifacts_touched=[],
                 context_used=False,
                 persisted=False,
+                response_generation_ready=False,
+                semantic_response_kind=task.metadata.get("semantic_response_kind"),
             )
             self.state = apply_turn_to_state(self.state, turn)
             if self.session is not None:
@@ -77,6 +79,20 @@ class ConversationManager:
             artifacts_touched=execution.artifacts_touched,
             context_used=execution.context_pack is not None or task.requires_context,
             persisted=execution.persisted,
+            response_generation_ready=execution.response_generation_ready,
+            semantic_response_kind=execution.semantic_response_kind,
+            anchored_prompt_payload=execution.anchored_prompt_payload,
+            author_facing_response=execution.author_facing_response,
+            response_support_summary=execution.response_support_summary,
+            provider_mode=execution.provider_mode,
+            response_generation_mode=execution.response_generation_mode,
+            response_generation_reason=execution.response_generation_reason,
+            provider_execution_enabled=execution.provider_execution_enabled,
+            provider_execution_mode=execution.provider_execution_mode,
+            provider_model_used=execution.provider_model_used,
+            live_model_response=execution.live_model_response,
+            simulated_preview_enabled=execution.simulated_preview_enabled,
+            simulated_preview_output=execution.simulated_preview_output,
         )
         self.state = apply_turn_to_state(
             self.state,
@@ -94,6 +110,20 @@ class ConversationManager:
                 remembered = {"type": execution.type, "summary": execution.result_summary, "data": asdict(execution.result)}
             else:
                 remembered = {"type": execution.type, "summary": execution.result_summary}
+            remembered["response_generation_ready"] = execution.response_generation_ready
+            remembered["semantic_response_kind"] = execution.semantic_response_kind
+            remembered["author_facing_response"] = execution.author_facing_response
+            remembered["anchored_prompt_payload"] = execution.anchored_prompt_payload
+            remembered["response_support_summary"] = execution.response_support_summary
+            remembered["provider_mode"] = execution.provider_mode
+            remembered["response_generation_mode"] = execution.response_generation_mode
+            remembered["response_generation_reason"] = execution.response_generation_reason
+            remembered["provider_execution_enabled"] = execution.provider_execution_enabled
+            remembered["provider_execution_mode"] = execution.provider_execution_mode
+            remembered["provider_model_used"] = execution.provider_model_used
+            remembered["live_model_response"] = execution.live_model_response
+            remembered["simulated_preview_enabled"] = execution.simulated_preview_enabled
+            remembered["simulated_preview_output"] = execution.simulated_preview_output
             self.session.remember(remembered, request=execution.context_request)
         return turn
 
