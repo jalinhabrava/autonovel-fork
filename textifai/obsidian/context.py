@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from textifai.obsidian.contracts import ObsidianContextBundle
-from textifai.obsidian.reader import ObsidianVaultReader
+from textifai.obsidian.source import open_obsidian_source
 
 
 def build_obsidian_context_bundle(
@@ -11,8 +11,9 @@ def build_obsidian_context_bundle(
     *,
     note_id: str,
     related_limit: int = 6,
+    snapshot_path: str | Path | None = None,
 ) -> ObsidianContextBundle:
-    reader = ObsidianVaultReader(vault_root)
+    reader = open_obsidian_source(vault_root, snapshot_path=snapshot_path)
     primary = reader.get_note(note_id)
     if primary is None:
         return ObsidianContextBundle(primary=None, related=[])
@@ -20,4 +21,3 @@ def build_obsidian_context_bundle(
         primary=primary,
         related=reader.related_notes(primary.note_id, limit=related_limit),
     )
-

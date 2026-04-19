@@ -1,0 +1,10 @@
+{
+  "id": "textifai-bridge",
+  "name": "TextifAI Bridge",
+  "version": "0.1.0",
+  "minAppVersion": "1.5.0",
+  "description": "Exports an Obsidian metadata snapshot that TextifAI can consume as a higher-fidelity context source.",
+  "author": "OpenAI Codex",
+  "authorUrl": "https://openai.com",
+  "isDesktopOnly": false
+}

@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import json
 import tempfile
 import unittest
 from pathlib import Path
 
 from textifai.author_response.context import build_response_context
 from textifai.editorial_intent.contracts import EditorialIntent
-from textifai.obsidian import ObsidianVaultReader, build_obsidian_context_bundle
+from textifai.obsidian import ObsidianBridgeSnapshotReader, ObsidianVaultReader, build_obsidian_context_bundle, resolve_obsidian_snapshot_path
 from textifai.vaerl.contracts import EntityMention, EntityResolutionResult
 from textifai.vaerl.index import build_vault_index
 from vault.bootstrap import bootstrap_vault
@@ -129,3 +130,157 @@ class TextifAIObsidianIntegrationTests(unittest.TestCase):
             )
             self.assertTrue(any(item["artifact_id"] == "sera" for item in snippets))
             self.assertTrue(any(item["artifact_id"] == "spelarita" for item in snippets))
+
+    def test_bridge_snapshot_reader_loads_metadata_cache_export(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            snapshot_path = Path(tmp) / "obsidian-bridge-snapshot.json"
+            snapshot_path.write_text(
+                json.dumps(
+                    {
+                        "schema_version": "1.0",
+                        "source": "obsidian_textifai_bridge",
+                        "generated_at": "2026-04-19T12:00:00Z",
+                        "vault_name": "OnT",
+                        "plugin_version": "0.1.0",
+                        "obsidian_app_version": "1.8.10",
+                        "export_reason": "manual_command",
+                        "notes": [
+                            {
+                                "note_id": "sera",
+                                "title": "Sera",
+                                "path": "03_Characters/Profiles/sera.md",
+                                "vault_relative_path": "03_Characters/Profiles/sera.md",
+                                "artifact_type": "character",
+                                "frontmatter": {"aliases": ["Sera"]},
+                                "aliases": ["Serélyne"],
+                                "project_confirmed_aliases": ["Sera"],
+                                "outgoing_links": ["spelarita"],
+                                "incoming_links": ["bond_law"],
+                                "raw_text": "# Sera\n\nLinked to [[spelarita]].",
+                                "body_text": "# Sera\n\nLinked to [[spelarita]].",
+                                "tags": ["#character"],
+                                "headings": [{"heading": "Sera", "level": 1}],
+                                "resolved_links": {"spelarita": 1},
+                                "unresolved_links": {},
+                                "source_kind": "obsidian_bridge_snapshot",
+                            }
+                        ],
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+            reader = ObsidianBridgeSnapshotReader(snapshot_path)
+            note = reader.get_note("sera")
+
+            self.assertIsNotNone(note)
+            assert note is not None
+            self.assertEqual(note.source_kind, "obsidian_bridge_snapshot")
+            self.assertIn("Sera", note.project_confirmed_aliases)
+            self.assertEqual(note.resolved_links.get("spelarita"), 1)
+
+    def test_context_bundle_prefers_bridge_snapshot_when_available(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            vault_root = Path(tmp) / "Vault"
+            bootstrap_vault(vault_root, title="Obsidian Test")
+            (vault_root / "03_Characters" / "Profiles" / "sera.md").write_text(
+                "---\nkind: character\ntitle: Sera Markdown\nslug: sera\n---\n\n# Sera Markdown\n",
+                encoding="utf-8",
+            )
+            snapshot_dir = vault_root / ".textifai"
+            snapshot_dir.mkdir(parents=True, exist_ok=True)
+            (snapshot_dir / "obsidian-bridge-snapshot.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": "1.0",
+                        "source": "obsidian_textifai_bridge",
+                        "generated_at": "2026-04-19T12:00:00Z",
+                        "vault_name": "Obsidian Test",
+                        "plugin_version": "0.1.0",
+                        "obsidian_app_version": "1.8.10",
+                        "export_reason": "metadata_resolved",
+                        "notes": [
+                            {
+                                "note_id": "sera",
+                                "title": "Sera Snapshot",
+                                "path": "03_Characters/Profiles/sera.md",
+                                "vault_relative_path": "03_Characters/Profiles/sera.md",
+                                "artifact_type": "character",
+                                "aliases": ["Serélyne"],
+                                "project_confirmed_aliases": ["Sera"],
+                                "outgoing_links": [],
+                                "incoming_links": [],
+                                "raw_text": "# Sera Snapshot",
+                                "body_text": "# Sera Snapshot",
+                                "resolved_links": {},
+                                "unresolved_links": {},
+                            }
+                        ],
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+
+            bundle = build_obsidian_context_bundle(vault_root, note_id="sera")
+
+            self.assertIsNotNone(bundle.primary)
+            assert bundle.primary is not None
+            self.assertEqual(bundle.primary.title, "Sera Snapshot")
+            self.assertEqual(bundle.primary.source_kind, "obsidian_bridge_snapshot")
+
+    def test_vaerl_index_prefers_snapshot_when_present(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            vault_root = Path(tmp) / "Vault"
+            bootstrap_vault(vault_root, title="Obsidian Test")
+            (vault_root / ".textifai").mkdir(parents=True, exist_ok=True)
+            (vault_root / ".textifai" / "obsidian-bridge-snapshot.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": "1.0",
+                        "source": "obsidian_textifai_bridge",
+                        "generated_at": "2026-04-19T12:00:00Z",
+                        "vault_name": "Obsidian Test",
+                        "plugin_version": "0.1.0",
+                        "obsidian_app_version": "1.8.10",
+                        "export_reason": "manual_command",
+                        "notes": [
+                            {
+                                "note_id": "memory_ritual",
+                                "title": "Memory Ritual Snapshot",
+                                "path": "02_World/Lore/memory_ritual.md",
+                                "vault_relative_path": "02_World/Lore/memory_ritual.md",
+                                "artifact_type": "lore",
+                                "aliases": ["ritual de memoria"],
+                                "project_confirmed_aliases": ["memoriaの儀式"],
+                                "outgoing_links": ["magic_costs"],
+                                "incoming_links": ["magic_costs"],
+                                "raw_text": "# Memory Ritual Snapshot",
+                                "body_text": "# Memory Ritual Snapshot",
+                                "resolved_links": {"magic_costs": 1},
+                                "unresolved_links": {},
+                            }
+                        ],
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+
+            entries = build_vault_index(vault_path=vault_root)
+            entry = next(item for item in entries if item.artifact_id == "memory_ritual")
+
+            self.assertEqual(entry.title, "Memory Ritual Snapshot")
+            self.assertIn("ritual de memoria", entry.aliases)
+
+    def test_snapshot_path_resolution_checks_default_candidates(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            vault_root = Path(tmp) / "Vault"
+            vault_root.mkdir()
+            expected = vault_root / "99_System" / "obsidian_bridge_snapshot.json"
+            expected.parent.mkdir(parents=True, exist_ok=True)
+            expected.write_text("{}", encoding="utf-8")
+
+            resolved = resolve_obsidian_snapshot_path(vault_root)
+
+            self.assertEqual(resolved, expected.resolve())

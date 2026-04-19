@@ -1,0 +1,21 @@
+{
+  "name": "textifai-obsidian-bridge",
+  "version": "0.1.0",
+  "description": "Obsidian bridge plugin for exporting TextifAI context snapshots.",
+  "main": "main.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^16.11.6",
+    "esbuild": "0.25.5",
+    "tslib": "2.4.0",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "obsidian": "latest"
+  }
+}

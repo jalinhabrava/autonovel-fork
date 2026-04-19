@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from textifai.obsidian import ObsidianVaultReader
+from textifai.obsidian import open_obsidian_source
 from textifai.vaerl.contracts import VaultIndexEntry
 from vault.schema import slugify
 
@@ -12,7 +12,7 @@ def build_vault_index(
     vault_path: Path,
     known_characters: list[dict[str, object]] | None = None,
 ) -> list[VaultIndexEntry]:
-    reader = ObsidianVaultReader(vault_path)
+    reader = open_obsidian_source(vault_path)
     entries: list[VaultIndexEntry] = []
     for note in reader.list_notes():
         if note.artifact_type == "note":

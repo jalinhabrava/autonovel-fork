@@ -92,6 +92,7 @@ class ObsidianVaultReader:
             incoming_links=[],
             raw_text=text,
             body_text=body,
+            source_kind="vault_markdown",
         )
 
     def _skip_path(self, path: Path) -> bool:
@@ -121,4 +122,3 @@ def _compute_incoming_links(notes: list[ObsidianNote]) -> dict[str, list[str]]:
             if linked in incoming:
                 incoming[linked].append(note.note_id)
     return {key: sorted(set(value)) for key, value in incoming.items()}
-
