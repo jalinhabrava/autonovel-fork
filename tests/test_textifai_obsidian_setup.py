@@ -314,6 +314,55 @@ class TextifAIObsidianSetupTests(unittest.TestCase):
             self.assertEqual(payload["operational_mode"], "degraded_context")
             self.assertEqual(payload["source_reliability"], "vault_reader_only")
 
+    def test_short_obsidian_inspect_wrapper_reports_index_and_readiness(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            vault_root = base / "Vault"
+            source_root = base / "Source"
+            source_root.mkdir()
+            (source_root / "character.md").write_text(
+                "---\nkind: character\ntitle: Sera\nslug: sera\n---\n\n# Sera\n",
+                encoding="utf-8",
+            )
+            plugin_root = _fake_plugin_repo(base / "plugin")
+
+            prepare_obsidian_project(
+                ObsidianProjectSetupConfig(
+                    vault_root=str(vault_root),
+                    mode="existing_material",
+                    project_title="Inspect Project",
+                    source_root=str(source_root),
+                    primary_language="es",
+                    working_languages=["es"],
+                    install_bridge_plugin=True,
+                    build_bridge_plugin=False,
+                    plugin_repo_root=str(plugin_root),
+                ),
+                repo_root=base,
+            )
+
+            completed = subprocess.run(
+                [
+                    "uv",
+                    "run",
+                    "python",
+                    "scripts/textifai_obsidian.py",
+                    "inspect",
+                    "--vault-root",
+                    str(vault_root),
+                ],
+                cwd=Path(__file__).resolve().parents[1],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            payload = json.loads(completed.stdout)
+
+            self.assertEqual(payload["readiness"]["operational_mode"], "degraded_context")
+            self.assertGreaterEqual(payload["source_note_count"], 1)
+            self.assertGreaterEqual(payload["vaerl_index_entries"], 1)
+            self.assertIn("character", payload["vaerl_artifact_types"])
+
 
 def _fake_plugin_repo(path: Path) -> Path:
     path.mkdir(parents=True, exist_ok=True)
