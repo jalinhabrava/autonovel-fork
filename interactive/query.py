@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import re
 from pathlib import Path
 
@@ -22,7 +23,16 @@ def parse_frontmatter(text: str) -> dict[str, str]:
     for line in lines[1:closing]:
         key, sep, value = line.partition(":")
         if sep:
-            data[key.strip()] = value.strip()
+            stripped = value.strip()
+            if (stripped.startswith('"') and stripped.endswith('"')) or (stripped.startswith("'") and stripped.endswith("'")):
+                try:
+                    parsed = ast.literal_eval(stripped)
+                except (ValueError, SyntaxError):
+                    data[key.strip()] = stripped[1:-1]
+                else:
+                    data[key.strip()] = str(parsed)
+            else:
+                data[key.strip()] = stripped
     return data
 
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import ast
 from pathlib import Path
 
 from vault.schema import ROOT_NOTES, VAULT_DIRS, slugify
@@ -143,7 +144,14 @@ class VaultProjectAdapter:
             return None
         for line in lines[1:closing]:
             if line.startswith(f"{key}:"):
-                return line.split(":", 1)[1].strip()
+                value = line.split(":", 1)[1].strip()
+                if (value.startswith('"') and value.endswith('"')) or (value.startswith("'") and value.endswith("'")):
+                    try:
+                        parsed = ast.literal_eval(value)
+                    except (ValueError, SyntaxError):
+                        return value[1:-1]
+                    return str(parsed)
+                return value
         return None
 
     def _strip_frontmatter(self, text: str) -> str:

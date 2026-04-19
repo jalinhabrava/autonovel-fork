@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import re
 from pathlib import Path
 
 
@@ -60,15 +62,15 @@ TEMPLATE_ROOT = Path(__file__).resolve().parent.parent / "templates" / "vault"
 def note_frontmatter(kind: str, title: str, status: str = "proposed", **extra) -> str:
     lines = [
         "---",
-        f"kind: {kind}",
-        f"title: {title}",
-        f"status: {status}",
-        f"schema_version: {VAULT_SCHEMA_VERSION}",
+        f"kind: {_yaml_scalar(kind)}",
+        f"title: {_yaml_scalar(title)}",
+        f"status: {_yaml_scalar(status)}",
+        f"schema_version: {_yaml_scalar(VAULT_SCHEMA_VERSION)}",
     ]
     for key, value in extra.items():
         if value is None:
             continue
-        lines.append(f"{key}: {value}")
+        lines.append(f"{key}: {_yaml_scalar(value)}")
     lines.append("---")
     return "\n".join(lines)
 
@@ -76,3 +78,14 @@ def note_frontmatter(kind: str, title: str, status: str = "proposed", **extra) -
 def slugify(value: str) -> str:
     value = value.strip().lower().replace(" ", "_")
     return "".join(ch for ch in value if ch.isalnum() or ch in {"_", "-"}).strip("_") or "note"
+
+
+def _yaml_scalar(value: object) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, (int, float)):
+        return str(value)
+    text = "" if value is None else str(value)
+    if re.fullmatch(r"[A-Za-z0-9._/\-]+", text):
+        return text
+    return json.dumps(text, ensure_ascii=False)

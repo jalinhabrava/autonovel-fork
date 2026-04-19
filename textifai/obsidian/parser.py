@@ -40,7 +40,7 @@ def parse_obsidian_frontmatter(text: str) -> dict[str, Any]:
         if not sep:
             continue
         key = key.strip()
-        value = value.strip()
+        value = _coerce_yaml_fallback_scalar(value.strip())
         if value:
             data[key] = value
             current_list_key = None
@@ -90,3 +90,16 @@ def normalize_aliases(value: Any) -> list[str]:
     if isinstance(value, list):
         return [str(item).strip() for item in value if str(item).strip()]
     return []
+
+
+def _coerce_yaml_fallback_scalar(value: str) -> Any:
+    if not value:
+        return value
+    if value in {"true", "false"}:
+        return value == "true"
+    if (value.startswith('"') and value.endswith('"')) or (value.startswith("'") and value.endswith("'")):
+        try:
+            return ast.literal_eval(value)
+        except (ValueError, SyntaxError):
+            return value[1:-1]
+    return value
