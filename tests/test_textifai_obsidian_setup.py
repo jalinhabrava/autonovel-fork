@@ -363,6 +363,52 @@ class TextifAIObsidianSetupTests(unittest.TestCase):
             self.assertGreaterEqual(payload["vaerl_index_entries"], 1)
             self.assertIn("character", payload["vaerl_artifact_types"])
 
+    def test_textifai_entrypoint_defaults_to_interactive_start(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            vault_root = base / "Vault"
+            source_root = base / "Source"
+            source_root.mkdir()
+            (source_root / "character.md").write_text(
+                "---\nkind: character\ntitle: Sera\nslug: sera\n---\n\n# Sera\n",
+                encoding="utf-8",
+            )
+            plugin_root = _fake_plugin_repo(base / "plugin")
+
+            completed = subprocess.run(
+                [
+                    "uv",
+                    "run",
+                    "python",
+                    "scripts/textifai.py",
+                    "--json",
+                    "--plugin-repo-root",
+                    str(plugin_root),
+                ],
+                cwd=Path(__file__).resolve().parents[1],
+                input="\n".join(
+                    [
+                        "1",
+                        "Onboarding Project",
+                        str(vault_root),
+                        "n",
+                        str(source_root),
+                        "es",
+                        "es,ja",
+                        "s",
+                    ]
+                )
+                + "\n",
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            payload = json.loads(completed.stdout[completed.stdout.find("{"):])
+
+            self.assertEqual(payload["mode"], "existing_material")
+            self.assertTrue(payload["vault_ready"])
+            self.assertGreaterEqual(payload["vaerl_index_entries"], 1)
+
 
 def _fake_plugin_repo(path: Path) -> Path:
     path.mkdir(parents=True, exist_ok=True)
