@@ -144,7 +144,34 @@ export default class TextifAIBridgePlugin extends Plugin {
 
 	private async exportSnapshot(reasons: string[]): Promise<void> {
 		const files = this.app.vault.getMarkdownFiles();
-		const notes = [];
+		const notes: Array<{
+			note_id: string;
+			title: string;
+			path: string;
+			vault_relative_path: string;
+			canonical_path: string;
+			artifact_type: string;
+			file_mtime: number;
+			file_ctime: number;
+			file_size: number;
+			cache_complete: boolean;
+			frontmatter: Record<string, unknown>;
+			aliases: string[];
+			project_confirmed_aliases: string[];
+			outgoing_links: string[];
+			incoming_links: string[];
+			raw_text: string;
+			body_text: string;
+			tags: string[];
+			headings: Array<Record<string, unknown>>;
+			sections: Array<Record<string, unknown>>;
+			wikilinks: Array<Record<string, unknown>>;
+			embeds: Array<Record<string, unknown>>;
+			frontmatter_links: Array<Record<string, unknown>>;
+			resolved_links: Record<string, number>;
+			unresolved_links: Record<string, number>;
+			source_kind: string;
+		}> = [];
 		const incomingByTarget: Record<string, Set<string>> = {};
 		const warnings: string[] = [];
 		const errors: string[] = [];
@@ -394,7 +421,7 @@ function noteIdFromPath(path: string): string {
 
 function normalizeVaultPath(path: string): string {
 	return path
-		.replaceAll("\\", "/")
+		.replace(/\\/g, "/")
 		.toLowerCase()
 		.replace(/\s+/g, "_")
 		.replace(/[^a-z0-9_./-]/g, "")

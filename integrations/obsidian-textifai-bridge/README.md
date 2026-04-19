@@ -47,6 +47,8 @@ npm install
 npm run build
 ```
 
+Node `18+` is recommended. TextifAI's setup helper also tries a `node@20` + `npm@10` `npx` fallback when the system Node is too old.
+
 2. Copy these files into your vault plugin directory:
 
 - `manifest.json`

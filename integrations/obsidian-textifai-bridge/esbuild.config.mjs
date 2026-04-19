@@ -8,6 +8,7 @@ const context = await esbuild.context({
   entryPoints: ["src/main.ts"],
   bundle: true,
   external: ["obsidian", "electron", ...builtinModules],
+  platform: "node",
   format: "cjs",
   target: "es2018",
   sourcemap: prod ? false : "inline",

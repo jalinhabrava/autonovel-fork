@@ -13,6 +13,8 @@ npm install
 npm run build
 ```
 
+Node `18+` is recommended. If the system Node is too old, TextifAI's setup helper attempts a fallback build using `npx -p node@20 -p npm@10`.
+
 ## Install into a vault
 
 Create:
