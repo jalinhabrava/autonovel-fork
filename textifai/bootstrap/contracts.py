@@ -36,6 +36,12 @@ BOOTSTRAP_FRAGMENT_STATUS_CATALOG = (
     "needs_review",
 )
 
+BOOTSTRAP_ARTIFACT_STAGE_CATALOG = (
+    "raw_fragment",
+    "candidate_artifact",
+    "promoted_artifact",
+)
+
 BOOTSTRAP_LANGUAGE_HINT_CATALOG = (
     "mixed",
     "unknown",
@@ -156,12 +162,24 @@ class NormalizedArtifactDraft:
     register_signals: list[str] = field(default_factory=list)
     provenance: ImportProvenance | None = None
     normalization_notes: list[str] = field(default_factory=list)
+    artifact_stage: str = "candidate_artifact"
+    promotion_status: str = "staged_candidate"
+    canonical_subject: str | None = None
+    semantic_class: str | None = None
+    source_section_title: str | None = None
+    fragment_role: str | None = None
+    entities: list[str] = field(default_factory=list)
+    topics: list[str] = field(default_factory=list)
+    world_terms: list[str] = field(default_factory=list)
+    character_refs: list[str] = field(default_factory=list)
+    lore_refs: list[str] = field(default_factory=list)
     confidence: float = 0.0
     status: str = "draft"
 
     def __post_init__(self) -> None:
         _ensure_catalog_value("artifact_type", self.artifact_type, BOOTSTRAP_ARTIFACT_TYPE_CATALOG)
         _ensure_catalog_value("status", self.status, BOOTSTRAP_FRAGMENT_STATUS_CATALOG)
+        _ensure_catalog_value("artifact_stage", self.artifact_stage, BOOTSTRAP_ARTIFACT_STAGE_CATALOG)
         if not self.title.strip():
             raise ValueError("title must not be empty")
         if not self.slug.strip():
@@ -202,6 +220,7 @@ class BootstrapResult:
     inventory: SourceDocumentInventory | None
     normalization_plan: NormalizationPlan | None
     written_drafts: list[str] = field(default_factory=list)
+    promoted_paths: list[str] = field(default_factory=list)
     coverage_report: dict[str, int] = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
 

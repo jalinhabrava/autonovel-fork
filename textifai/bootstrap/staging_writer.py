@@ -71,6 +71,17 @@ def _write_draft(staging_root: Path, draft: NormalizedArtifactDraft) -> Path:
         loss_risk_flags=",".join(draft.provenance.loss_risk_flags) if draft.provenance else None,
         dominant_language=draft.dominant_language,
         detected_languages=",".join(draft.detected_languages),
+        artifact_stage=draft.artifact_stage,
+        promotion_status=draft.promotion_status,
+        canonical_subject=draft.canonical_subject,
+        semantic_class=draft.semantic_class,
+        source_section_title=draft.source_section_title,
+        fragment_role=draft.fragment_role,
+        entities=",".join(draft.entities),
+        topics=",".join(draft.topics),
+        world_terms=",".join(draft.world_terms),
+        character_refs=",".join(draft.character_refs),
+        lore_refs=",".join(draft.lore_refs),
     )
     body = [
         frontmatter,

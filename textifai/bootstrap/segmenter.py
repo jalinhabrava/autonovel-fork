@@ -111,7 +111,35 @@ def _split_on_headings(text: str) -> list[_FragmentBlock]:
             blocks.append(_FragmentBlock(start=current_start, end=len(text), text=block_text, heading=current_heading))
     if not blocks:
         return [_FragmentBlock(start=0, end=len(text), text=text, heading=None)]
-    return blocks
+    return _merge_heading_only_blocks(blocks)
+
+
+def _merge_heading_only_blocks(blocks: list["_FragmentBlock"]) -> list["_FragmentBlock"]:
+    merged: list[_FragmentBlock] = []
+    index = 0
+    while index < len(blocks):
+        block = blocks[index]
+        if _is_heading_only_block(block) and index + 1 < len(blocks):
+            next_block = blocks[index + 1]
+            text = f"{block.text.rstrip()}\n\n{next_block.text.lstrip()}".strip()
+            merged.append(
+                _FragmentBlock(
+                    start=block.start,
+                    end=next_block.end,
+                    text=text,
+                    heading=next_block.heading or block.heading,
+                )
+            )
+            index += 2
+            continue
+        merged.append(block)
+        index += 1
+    return merged
+
+
+def _is_heading_only_block(block: "_FragmentBlock") -> bool:
+    lines = [line.strip() for line in block.text.splitlines() if line.strip()]
+    return len(lines) == 1 and lines[0].startswith("#")
 
 
 def _hash_text(text: str) -> str:

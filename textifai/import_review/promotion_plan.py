@@ -23,6 +23,7 @@ def build_promotion_plan(
     conflicts: list[str] = []
     warnings: list[str] = []
     requires_confirmation = False
+    reserved_target_paths: set[str] = set()
 
     for draft in bundle.drafts:
         review = review_by_draft.get(draft.draft_id)
@@ -47,9 +48,23 @@ def build_promotion_plan(
                 decision="hold",
                 target_artifact_type=draft.artifact_type,
                 target_slug=draft.target_slug,
-                target_path=target_path,
+                target_path=str(target_path),
                 overwrite_mode="forbid",
                 reason="unsupported_artifact_type",
+            )
+            decisions.append(decision)
+            requires_confirmation = True
+            continue
+
+        if str(draft.frontmatter.get("promotion_status") or "staged_candidate") != "eligible_for_promotion":
+            decision = PromotionDecision(
+                draft_id=draft.draft_id,
+                decision="promote",
+                target_artifact_type=draft.artifact_type,
+                target_slug=draft.target_slug,
+                target_path=str(target_path),
+                overwrite_mode="require_confirm",
+                reason="staging_candidate_requires_confirmation",
             )
             decisions.append(decision)
             requires_confirmation = True
@@ -66,6 +81,23 @@ def build_promotion_plan(
                 target_path=str(target_path),
                 overwrite_mode="require_confirm",
                 reason="target_path_exists",
+            )
+            decisions.append(decision)
+            requires_confirmation = True
+            continue
+
+        target_key = str(target_path)
+        if target_key in reserved_target_paths:
+            conflict = f"{draft.draft_id}: target path duplicated in plan -> {target_path}"
+            conflicts.append(conflict)
+            decision = PromotionDecision(
+                draft_id=draft.draft_id,
+                decision="blocked_by_conflict",
+                target_artifact_type=draft.artifact_type,
+                target_slug=draft.target_slug,
+                target_path=str(target_path),
+                overwrite_mode="require_confirm",
+                reason="duplicate_target_path_in_plan",
             )
             decisions.append(decision)
             requires_confirmation = True
@@ -106,9 +138,11 @@ def build_promotion_plan(
                 reason=review.review_status,
             )
             requires_confirmation = True
-        if review.review_notes:
-            warnings.extend(review.review_notes)
+            if review.review_notes:
+                warnings.extend(review.review_notes)
         decisions.append(decision)
+        if decision.decision == "promote":
+            reserved_target_paths.add(target_key)
 
     return PromotionPlan(
         plan_id=uuid.uuid4().hex[:12],

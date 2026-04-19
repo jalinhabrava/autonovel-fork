@@ -18,6 +18,7 @@ from textifai.bootstrap.contracts import (
     VaultInitializationConfig,
 )
 from textifai.bootstrap.language import build_language_profile
+from textifai.bootstrap.semantic_enrichment import enrich_fragment_semantics
 from vault.schema import IMPORT_STAGING_DIRS
 
 
@@ -55,6 +56,9 @@ def build_normalization_plan(
     coverage = {
         "total_documents": len(inventory.documents),
         "total_fragments": 0,
+        "raw_fragments": 0,
+        "candidate_artifacts": 0,
+        "promotion_eligible_artifacts": 0,
         "total_chars": 0,
         "covered_chars": 0,
         "ambiguous_chars": 0,
@@ -72,6 +76,7 @@ def build_normalization_plan(
         if document.has_mixed_language or len(document.detected_languages) > 1:
             coverage["multilingual_documents"] += 1
         coverage["total_fragments"] += len(fragments)
+        coverage["raw_fragments"] += len(fragments)
         coverage["total_chars"] += len(text)
         for index, fragment in enumerate(fragments, start=1):
             fragment_analysis = _fragment_analysis_for(fragment, analysis)
@@ -98,6 +103,9 @@ def build_normalization_plan(
                 fragment_index=index,
             )
             drafts.append(draft)
+            coverage["candidate_artifacts"] += 1
+            if draft.promotion_status == "eligible_for_promotion":
+                coverage["promotion_eligible_artifacts"] += 1
             coverage["staged_fragments"] += 1
         if not fragments:
             unmapped_fragments.append(document.source_id)
@@ -129,6 +137,7 @@ def build_bootstrap_result(
     plan: NormalizationPlan | None,
     created_vault: bool,
     written_drafts: list[str] | None = None,
+    promoted_paths: list[str] | None = None,
     coverage_report: dict[str, int] | None = None,
     warnings: list[str] | None = None,
 ) -> BootstrapResult:
@@ -139,6 +148,7 @@ def build_bootstrap_result(
         inventory=inventory,
         normalization_plan=plan,
         written_drafts=list(written_drafts or []),
+        promoted_paths=list(promoted_paths or []),
         coverage_report=dict(coverage_report or (plan.coverage_summary if plan is not None else {})),
         warnings=list(warnings or []),
     )
@@ -155,10 +165,24 @@ def _build_draft(
     fragment_index: int,
 ) -> NormalizedArtifactDraft:
     title = fragment_analysis.title_hint or _infer_title(document, fragment)
-    slug = _build_draft_slug(document, fragment_index)
-    target_path = _build_target_path(config.vault_root, artifact_type, slug)
     source_format = document_analysis.source_format if document_analysis else document.extension
     extraction_mode = document_analysis.extraction_mode if document_analysis else ("native_text" if document.extension in {"md", "txt"} else "light_structural_normalization")
+    semantic = enrich_fragment_semantics(
+        document=document,
+        fragment=fragment,
+        artifact_type=artifact_type,
+        fragment_title_hint=title,
+        fragment_notes=list(fragment_analysis.notes) if fragment_analysis else [],
+    )
+    title = semantic.title
+    slug = _resolved_semantic_slug(
+        document=document,
+        semantic_slug=semantic.slug,
+        artifact_type=semantic.artifact_type,
+        source_format=source_format,
+        extraction_mode=extraction_mode,
+    )
+    target_path = _build_target_path(config.vault_root, semantic.artifact_type, _build_draft_filename(document, fragment_index, slug))
     extraction_confidence = document_analysis.extraction_confidence if document_analysis else fragment.kind_confidence
     structural_confidence = document_analysis.structural_confidence if document_analysis else fragment.kind_confidence
     provenance = ImportProvenance(
@@ -189,7 +213,7 @@ def _build_draft(
     )
     return NormalizedArtifactDraft(
         draft_id=f"{document.source_id}__{fragment.fragment_id}",
-        artifact_type=artifact_type,
+        artifact_type=semantic.artifact_type,
         title=title,
         slug=slug,
         target_path=target_path,
@@ -198,7 +222,18 @@ def _build_draft(
         detected_languages=detected_languages,
         register_signals=list(dict.fromkeys([*fragment.register_signals, *(fragment_analysis.register_signals if fragment_analysis else [])])),
         provenance=provenance,
-        normalization_notes=list(fragment_analysis.notes) if fragment_analysis else [],
+        normalization_notes=list(semantic.notes),
+        artifact_stage=semantic.artifact_stage,
+        promotion_status=semantic.promotion_status,
+        canonical_subject=semantic.canonical_subject,
+        semantic_class=semantic.semantic_class,
+        source_section_title=semantic.source_section_title,
+        fragment_role=semantic.fragment_role,
+        entities=list(semantic.entities),
+        topics=list(semantic.topics),
+        world_terms=list(semantic.world_terms),
+        character_refs=list(semantic.character_refs),
+        lore_refs=list(semantic.lore_refs),
         confidence=fragment_analysis.confidence if fragment_analysis else fragment.kind_confidence,
         status="needs_review" if fragment.needs_review or (fragment_analysis.needs_review if fragment_analysis else False) else "draft",
     )
@@ -251,6 +286,28 @@ def _build_draft_slug(document: SourceDocumentRecord, fragment_index: int) -> st
     stem = "".join(ch for ch in document.filename.rsplit(".", 1)[0].lower() if ch.isalnum())
     stem = stem[:20] or "source"
     return f"{stem}_{document.source_id[-8:]}_{fragment_index:03d}"
+
+
+def _build_draft_filename(document: SourceDocumentRecord, fragment_index: int, semantic_slug: str) -> str:
+    prefix = _build_draft_slug(document, fragment_index)
+    if semantic_slug and semantic_slug != prefix:
+        return f"{prefix}__{semantic_slug}"
+    return prefix
+
+
+def _resolved_semantic_slug(
+    *,
+    document: SourceDocumentRecord,
+    semantic_slug: str,
+    artifact_type: str,
+    source_format: str,
+    extraction_mode: str,
+) -> str:
+    slug = semantic_slug or _build_draft_slug(document, 1)
+    if source_format in {"pdf", "docx", "doc"} or extraction_mode != "native_text":
+        if artifact_type in {"scene", "chapter"}:
+            return f"{slug}_{document.source_id[-6:]}"
+    return slug
 
 
 def _infer_title(document: SourceDocumentRecord, fragment) -> str:

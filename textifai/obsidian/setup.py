@@ -7,6 +7,7 @@ from pathlib import Path
 
 from textifai.bootstrap import VaultInitializationConfig, confirm_and_write_bootstrap
 from textifai.bootstrap.source_reader import discover_importable_source_paths
+from textifai.import_review import ReviewPolicy, promote_reviewed_import, review_import_stage
 from textifai.obsidian.readiness import ObsidianOperationalReadiness, evaluate_obsidian_operational_readiness
 from vault.bootstrap import bootstrap_vault, validate_vault
 
@@ -64,6 +65,8 @@ class ObsidianProjectSetupResult:
     vaerl_index_entries: int = 0
     notes: list[str] = field(default_factory=list)
     source_files_considered: list[str] = field(default_factory=list)
+    bootstrap_auto_promoted_paths: list[str] = field(default_factory=list)
+    bootstrap_pending_candidates: list[str] = field(default_factory=list)
 
 
 def prepare_obsidian_project(
@@ -95,6 +98,8 @@ def prepare_obsidian_project(
     notes: list[str] = []
     import_strategy = "none"
     importer_reason = None
+    promoted_paths: list[str] = []
+    pending_candidates: list[str] = []
 
     if config.mode == "new_project":
         if not vault_root.exists() or not any(vault_root.iterdir()):
@@ -152,6 +157,15 @@ def prepare_obsidian_project(
         warnings.extend(list(bootstrap_result.warnings))
         import_strategy = "textifai_bootstrap_staging"
         notes.append("Material existente preparado en staging del vault.")
+        if written_drafts:
+            bundle, reviews, plan = review_import_stage(vault_root, policy=ReviewPolicy())
+            promotion = promote_reviewed_import(vault_root, policy=ReviewPolicy(), confirmed=False)
+            promoted_paths = list(promotion.promoted_paths)
+            pending_candidates = list(promotion.pending_drafts)
+            if promoted_paths:
+                notes.append(f"Se promovieron automáticamente {len(promoted_paths)} artefactos canónicos de bajo riesgo.")
+            elif pending_candidates:
+                notes.append("El material quedó en staging pendiente de promoción explícita o de más contexto.")
         if _all_markdown_sources(source_root) and config.importer_preference == "obsidian_importer_manual_if_markdown":
             importer_reason = (
                 "Obsidian Importer oficial existe para Markdown, pero TextifAI sigue usando staging propio "
@@ -189,6 +203,8 @@ def prepare_obsidian_project(
         vaerl_index_entries=index_entries,
         notes=notes,
         source_files_considered=[str(path) for path in preexisting_source_paths],
+        bootstrap_auto_promoted_paths=promoted_paths,
+        bootstrap_pending_candidates=pending_candidates,
     )
 
 

@@ -13,6 +13,7 @@ TextifAI now distinguishes between:
 Short operational wrapper:
 
 - `uv run python scripts/textifai.py`
+- `uv run python scripts/textifai.py ask --vault-root ...`
 - `uv run python scripts/textifai_obsidian.py init --vault-root ...`
 - `uv run python scripts/textifai_obsidian.py status --vault-root ...`
 - `uv run python scripts/textifai_obsidian.py inspect --vault-root ...`
@@ -55,7 +56,8 @@ What happens:
 2. Install the bridge plugin into `.obsidian/plugins/textifai-bridge` if requested.
 3. Run TextifAI bootstrap staging over the source documents.
 4. Leave imported material in `99_Import_Staging` with provenance and review semantics.
-5. Index the vault through VaERL on the currently available source.
+5. Auto-review low-risk imports and promote only the clearest artifacts to canonical folders.
+6. Index the vault through VaERL on the currently available source.
 
 Important:
 
@@ -64,6 +66,26 @@ Important:
   - deterministic provenance,
   - reviewable staging,
   - and a headless path that does not depend on the Obsidian Desktop UI.
+
+### Import Artifact Levels
+
+Bootstrap now distinguishes between:
+
+- `raw_fragment`
+  - source segmentation unit
+  - visible in manifests and coverage stats
+- `candidate_artifact`
+  - staged note in `99_Import_Staging`
+  - provisional, reviewable, with semantic metadata
+- `promoted_artifact`
+  - canonical note already written into folders like `02_World/Lore` or `03_Characters/Profiles`
+  - only for low-risk cases; the rest remain in staging
+
+Important:
+
+- staging is still the main bootstrap safety net
+- promoted notes are intentionally conservative
+- a staged note may be semantically useful for VaERL before it is good enough to be treated as canon
 
 ### Mode B: New Project
 
@@ -96,8 +118,25 @@ The expected high-signal fields are:
 - `readiness.operational_mode`
 - `source_status.reliability`
 - `source_note_count`
+- `raw_fragment_count`
+- `candidate_artifact_count`
+- `promoted_artifact_count`
 - `vaerl_index_entries`
 - `vaerl_artifact_types`
+- `manifest_summary.promotion_eligible_drafts`
+
+For a first author-facing interaction from the CLI:
+
+```bash
+uv run python scripts/textifai.py ask --vault-root /mnt/c/Users/<TU_USUARIO>/Documents/TextifAI/OnT_Vault
+```
+
+That command:
+
+1. resolves readiness,
+2. queries VaERL,
+3. routes the request through the conversation manager,
+4. and appends a minimal trace to `99_System/textifai_ask_trace.jsonl`.
 
 ## Snapshot Refresh Expectation
 

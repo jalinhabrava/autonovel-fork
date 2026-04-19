@@ -26,7 +26,7 @@ def promote_controlled_import(
         draft = draft_by_id[decision.draft_id]
         review = review_by_draft.get(decision.draft_id)
         if decision.decision == "promote" and review is not None:
-            if (plan.requires_confirmation or decision.overwrite_mode == "require_confirm") and not confirmed:
+            if decision.overwrite_mode == "require_confirm" and not confirmed:
                 pending_drafts.append(decision.draft_id)
                 audit_entries.append(
                     _audit(
@@ -81,10 +81,21 @@ def _build_stable_write(
             "source_staging_draft": draft.draft_id,
             "promotion_plan_target": decision.target_path,
             "import_review_state": "promoted",
+            "artifact_stage": "promoted_artifact",
+            "promotion_status": "promoted_canonical",
             "source_format": provenance.source_format,
             "extraction_mode": provenance.extraction_mode,
             "extraction_confidence": provenance.extraction_confidence,
             "structural_confidence": provenance.structural_confidence,
+            "canonical_subject": draft.frontmatter.get("canonical_subject"),
+            "semantic_class": draft.frontmatter.get("semantic_class"),
+            "source_section_title": draft.frontmatter.get("source_section_title"),
+            "fragment_role": draft.frontmatter.get("fragment_role"),
+            "entities": draft.frontmatter.get("entities"),
+            "topics": draft.frontmatter.get("topics"),
+            "world_terms": draft.frontmatter.get("world_terms"),
+            "character_refs": draft.frontmatter.get("character_refs"),
+            "lore_refs": draft.frontmatter.get("lore_refs"),
         },
         provenance=provenance,
         source_staging_draft=draft.draft_id,

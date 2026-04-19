@@ -127,6 +127,7 @@ class TextifAIObsidianSetupTests(unittest.TestCase):
 
             self.assertEqual(result.import_strategy_used, "textifai_bootstrap_staging")
             self.assertTrue(result.bootstrap_written_drafts)
+            self.assertTrue(result.bootstrap_auto_promoted_paths)
             self.assertFalse(result.official_obsidian_importer_used)
             self.assertIsNotNone(result.official_obsidian_importer_reason)
             self.assertEqual(result.readiness.source_reliability, "vault_reader_only")
@@ -362,6 +363,8 @@ class TextifAIObsidianSetupTests(unittest.TestCase):
             self.assertGreaterEqual(payload["source_note_count"], 1)
             self.assertGreaterEqual(payload["vaerl_index_entries"], 1)
             self.assertIn("character", payload["vaerl_artifact_types"])
+            self.assertIn("candidate_artifact_count", payload)
+            self.assertIn("manifest_summary", payload)
 
     def test_textifai_entrypoint_defaults_to_interactive_start(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -408,6 +411,65 @@ class TextifAIObsidianSetupTests(unittest.TestCase):
             self.assertEqual(payload["mode"], "existing_material")
             self.assertTrue(payload["vault_ready"])
             self.assertGreaterEqual(payload["vaerl_index_entries"], 1)
+
+    def test_textifai_ask_entrypoint_runs_author_facing_interaction(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            vault_root = base / "Vault"
+            plugin_root = _fake_plugin_repo(base / "plugin")
+            source_root = base / "Source"
+            source_root.mkdir()
+            (source_root / "lore.md").write_text("# Nushi\n\nLos Nushi son entidades del mundo.\n", encoding="utf-8")
+
+            prepare_obsidian_project(
+                ObsidianProjectSetupConfig(
+                    vault_root=str(vault_root),
+                    mode="existing_material",
+                    project_title="Ask Project",
+                    source_root=str(source_root),
+                    primary_language="es",
+                    working_languages=["es"],
+                    install_bridge_plugin=True,
+                    build_bridge_plugin=False,
+                    plugin_repo_root=str(plugin_root),
+                ),
+                repo_root=base,
+            )
+            (base / ".env").write_text(
+                "\n".join(
+                    [
+                        "AUTONOVEL_PROJECT_BACKEND=vault",
+                        f"AUTONOVEL_VAULT_ROOT={vault_root}",
+                        "AUTONOVEL_TEXT_PROVIDER=ollama",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            completed = subprocess.run(
+                [
+                    "uv",
+                    "run",
+                    "python",
+                    "scripts/textifai.py",
+                    "ask",
+                    "--vault-root",
+                    str(vault_root),
+                    "--text",
+                    "Necesito una guía editorial sobre los Nushi.",
+                    "--json",
+                ],
+                cwd=Path(__file__).resolve().parents[1],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            payload = json.loads(completed.stdout)
+
+            self.assertIn("flow_name", payload)
+            self.assertIn("response_support_summary", payload)
+            self.assertTrue((vault_root / "99_System" / "textifai_ask_trace.jsonl").exists())
 
 
 def _fake_plugin_repo(path: Path) -> Path:
