@@ -94,14 +94,18 @@ def update_env_values(base_dir: str | Path, updates: dict[str, str]) -> Path:
 def synchronize_runtime_environment(base_dir: str | Path = ".") -> dict[str, str]:
     root = Path(base_dir).resolve()
     env_path = root / ENV_FILE_NAME
-    values = _load_env_values(env_path)
+    values = _load_env_values(env_path, include_process_env=False)
     keys = {
         "AUTONOVEL_PROJECT_BACKEND",
         "AUTONOVEL_VAULT_ROOT",
         "AUTONOVEL_TEXT_PROVIDER",
         "AUTONOVEL_WRITER_MODEL",
+        "ANTHROPIC_API_KEY",
+        "AUTONOVEL_API_BASE_URL",
         "AUTONOVEL_OPENAI_API_BASE_URL",
         "OPENAI_API_KEY",
+        "AUTONOVEL_ANTHROPIC_COMPATIBLE_API_KEY",
+        "AUTONOVEL_ANTHROPIC_COMPATIBLE_API_BASE_URL",
         "AUTONOVEL_OPENAI_COMPATIBLE_API_BASE_URL",
         "AUTONOVEL_OPENAI_COMPATIBLE_API_KEY",
         "AUTONOVEL_OLLAMA_API_BASE_URL",
@@ -120,7 +124,7 @@ def runtime_banner(locale: str = DEFAULT_LOCALE) -> str:
     return get_translator(locale).t("shell.banner.title")
 
 
-def _load_env_values(env_path: Path) -> dict[str, str]:
+def _load_env_values(env_path: Path, *, include_process_env: bool = True) -> dict[str, str]:
     values: dict[str, str] = {}
     if env_path.exists():
         for line in env_path.read_text().splitlines():
@@ -129,21 +133,32 @@ def _load_env_values(env_path: Path) -> dict[str, str]:
                 continue
             key, value = stripped.split("=", 1)
             values[key.strip()] = value.strip()
-    for key in (
-        "AUTONOVEL_PROJECT_BACKEND",
-        "AUTONOVEL_VAULT_ROOT",
-        "AUTONOVEL_TEXT_PROVIDER",
-        "AUTONOVEL_WRITER_MODEL",
-        "TEXTIFAI_LOCALE",
-        "TEXTIFAI_INTERFACE_LANGUAGE",
-        "TEXTIFAI_USER_COMMAND_LANGUAGE",
-        "TEXTIFAI_INTERNAL_SYSTEM_LANGUAGE",
-        "TEXTIFAI_PROJECT_DEFAULT_LANGUAGE",
-        "TEXTIFAI_MIXED_LANGUAGE_ALLOWED",
-        "TEXTIFAI_ARTIFACT_LANGUAGES",
-    ):
-        if key in os.environ and os.environ[key]:
-            values[key] = os.environ[key]
+    if include_process_env:
+        for key in (
+            "AUTONOVEL_PROJECT_BACKEND",
+            "AUTONOVEL_VAULT_ROOT",
+            "AUTONOVEL_TEXT_PROVIDER",
+            "AUTONOVEL_WRITER_MODEL",
+            "ANTHROPIC_API_KEY",
+            "AUTONOVEL_API_BASE_URL",
+            "OPENAI_API_KEY",
+            "AUTONOVEL_OPENAI_API_BASE_URL",
+            "AUTONOVEL_ANTHROPIC_COMPATIBLE_API_KEY",
+            "AUTONOVEL_ANTHROPIC_COMPATIBLE_API_BASE_URL",
+            "AUTONOVEL_OPENAI_COMPATIBLE_API_KEY",
+            "AUTONOVEL_OPENAI_COMPATIBLE_API_BASE_URL",
+            "AUTONOVEL_OLLAMA_API_BASE_URL",
+            "AUTONOVEL_OLLAMA_API_KEY",
+            "TEXTIFAI_LOCALE",
+            "TEXTIFAI_INTERFACE_LANGUAGE",
+            "TEXTIFAI_USER_COMMAND_LANGUAGE",
+            "TEXTIFAI_INTERNAL_SYSTEM_LANGUAGE",
+            "TEXTIFAI_PROJECT_DEFAULT_LANGUAGE",
+            "TEXTIFAI_MIXED_LANGUAGE_ALLOWED",
+            "TEXTIFAI_ARTIFACT_LANGUAGES",
+        ):
+            if key not in values and key in os.environ and os.environ[key]:
+                values[key] = os.environ[key]
     return values
 
 

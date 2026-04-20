@@ -7,6 +7,7 @@ from dataclasses import asdict
 from pathlib import Path
 
 from textifai.conversation.runtime_bridge import _load_known_characters, render_execution_result
+from textifai.author_understanding.prompt_builder import build_author_understanding_prompt
 from textifai.conversation.contracts import ConversationRequest
 from textifai.conversation.executor import MinimalExecutionLayer
 from textifai.conversation.manager import ConversationManager
@@ -70,7 +71,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     configure_provider_parser.add_argument(
         "--provider-kind",
-        choices=["openai", "openai_compatible", "local_openai_compatible", "ollama", "skip"],
+        choices=["anthropic", "openai", "openai_compatible", "local_openai_compatible", "ollama", "skip"],
         default=None,
     )
     configure_provider_parser.add_argument("--api-base", default=None)
@@ -342,12 +343,17 @@ def _run_author_facing_query(
     provider_readiness = evaluate_provider_readiness(repo_path)
     readiness = evaluate_obsidian_operational_readiness(session.vault_path)
     if not provider_readiness.author_flows_available:
+        preview = _build_preprovider_pipeline_preview(
+            session=session,
+            query_text=query_text,
+        )
         payload = {
             "vault_root": str(session.vault_path),
             "author_facing_available": False,
             "reason": "provider_not_available",
             "provider_readiness": asdict(provider_readiness),
             "readiness": asdict(readiness),
+            "pipeline_trace_preview": preview,
             "message": (
                 "Author-facing semantic guidance requires a reachable configured text provider. "
                 "Inspect and status still work, but ask cannot provide grounded author guidance until provider readiness is green."
@@ -396,6 +402,10 @@ def _run_author_facing_query(
         "response_support_summary": turn.response_support_summary,
         "provider_mode": turn.provider_mode,
         "response_generation_mode": turn.response_generation_mode,
+        "pipeline_trace": _build_pipeline_trace(
+            turn=turn,
+            vault_root=session.vault_path,
+        ),
     }
     _append_ask_trace(session.vault_path, payload)
     if emit_json:
@@ -414,6 +424,114 @@ def _append_ask_trace(vault_root: Path, payload: dict) -> None:
     trace_path.parent.mkdir(parents=True, exist_ok=True)
     with trace_path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(payload, ensure_ascii=False) + "\n")
+
+
+def _build_pipeline_trace(*, turn, vault_root: Path) -> dict:
+    metadata = dict(turn.recognized_intent.metadata or {})
+    author_understanding = metadata.get("author_understanding")
+    source = open_obsidian_source(vault_root)
+    response_support = dict(turn.response_support_summary or {})
+    semantic_payload = None
+    semantic_result = None
+    if isinstance(author_understanding, dict):
+        llm_interpretation = author_understanding.get("llm_interpretation") or {}
+        if isinstance(llm_interpretation, dict):
+            semantic_payload = ((llm_interpretation.get("raw_payload") or {}).get("_trace"))
+            semantic_result = {
+                "primary_intent_type": llm_interpretation.get("primary_intent_type"),
+                "secondary_intent_types": llm_interpretation.get("secondary_intent_types"),
+                "confidence": llm_interpretation.get("confidence"),
+                "needs_clarification": llm_interpretation.get("needs_clarification"),
+                "clarification_reason": llm_interpretation.get("clarification_reason"),
+                "candidate_targets": llm_interpretation.get("candidate_targets"),
+                "preferred_target": llm_interpretation.get("preferred_target"),
+                "entity_hints": llm_interpretation.get("entity_hints"),
+                "provider_name": llm_interpretation.get("provider_name"),
+                "model": llm_interpretation.get("model"),
+            }
+    return {
+        "deterministic_parse": {
+            "recognized_intent_name": turn.recognized_intent.intent_name,
+            "target_type": turn.recognized_intent.target_type,
+            "target_id": turn.recognized_intent.target_id,
+            "signals": list(turn.recognized_intent.signals),
+            "requires_target": turn.recognized_intent.requires_target,
+        },
+        "semantic_interpretation_prompt": semantic_payload,
+        "semantic_interpretation_result": semantic_result,
+        "grounding": {
+            "source_status": asdict(source.status),
+            "vaerl_results": metadata.get("vaerl_results"),
+            "editorial_intent": metadata.get("editorial_intent"),
+            "response_support_summary": response_support,
+        },
+        "enriched_prompt": turn.anchored_prompt_payload,
+        "final_response": {
+            "author_facing_response": turn.author_facing_response,
+            "provider_mode": turn.provider_mode,
+            "response_generation_mode": turn.response_generation_mode,
+            "provider_model_used": turn.provider_model_used,
+            "response_generation_ready": turn.response_generation_ready,
+        },
+    }
+
+
+def _build_preprovider_pipeline_preview(*, session, query_text: str) -> dict:
+    manager = ConversationManager(session=session, executor=MinimalExecutionLayer(session=session))
+    request = ConversationRequest(
+        raw_text=query_text,
+        source="user",
+        mode="normal",
+        interface_language=session.language_policy.interface_language,
+        user_command_language=session.language_policy.user_command_language,
+        internal_system_language=session.language_policy.internal_system_language,
+        project_default_language=session.language_policy.project_default_language,
+        mixed_language_allowed=session.language_policy.mixed_language_allowed,
+        explanation_language=session.language_policy.interface_language,
+        metadata={
+            "known_characters": _load_known_characters(session.vault_path),
+            "allow_live_provider": False,
+            "allow_simulated_preview": False,
+            "provider_name": session.provider,
+        },
+    )
+    if manager.state is None:
+        from textifai.conversation.state import create_conversation_state
+
+        manager.state = create_conversation_state(
+            explanation_language=request.explanation_language or request.interface_language,
+            artifact_target_language=request.artifact_target_language,
+        )
+    rule_intent = manager.recognizer.recognize(request, manager.state)
+    prompt = build_author_understanding_prompt(
+        request=request,
+        rule_intent=rule_intent,
+        narrative_signals=rule_intent.narrative_signals,
+        entity_results=[],
+        state=manager.state,
+    )
+    return {
+        "deterministic_parse": {
+            "recognized_intent_name": rule_intent.intent_name,
+            "target_type": rule_intent.target_type,
+            "target_id": rule_intent.target_id,
+            "signals": list(rule_intent.signals),
+            "requires_target": rule_intent.requires_target,
+        },
+        "semantic_interpretation_prompt": {
+            "prompt_version": prompt.prompt_version,
+            "system_prompt": prompt.system_prompt,
+            "user_payload": prompt.user_payload,
+            "required_output_schema": prompt.required_output_schema,
+            "catalogs": prompt.catalogs,
+        },
+        "grounding": {
+            "status": "not_started",
+            "reason": "provider_unavailable_before_semantic_interpretation",
+        },
+        "enriched_prompt": None,
+        "final_response": None,
+    }
 
 
 def _prompt(message: str, *, default: str) -> str:
@@ -457,15 +575,16 @@ def _print_human_start_summary(result, *, provider_readiness) -> None:
 
 def _interactive_provider_configuration(*, repo_root: str | Path):
     choice = _prompt(
-        "Select an LLM provider [1] OpenAI, [2] remote OpenAI-compatible, [3] local OpenAI-compatible, [4] Ollama, [5] skip for now",
+        "Select an LLM provider [1] Anthropic, [2] OpenAI, [3] remote OpenAI-compatible, [4] local OpenAI-compatible, [5] Ollama, [6] skip for now",
         default="5",
     ).strip()
     mapped = {
-        "1": "openai",
-        "2": "openai_compatible",
-        "3": "local_openai_compatible",
-        "4": "ollama",
-        "5": "skip",
+        "1": "anthropic",
+        "2": "openai",
+        "3": "openai_compatible",
+        "4": "local_openai_compatible",
+        "5": "ollama",
+        "6": "skip",
     }.get(choice, choice or "skip")
     configuration = _build_provider_configuration(
         provider_kind=mapped,
@@ -503,11 +622,19 @@ def _build_provider_configuration(
     kind = provider_kind or "skip"
     if interactive:
         kind = _prompt(
-            "Provider kind [openai|openai_compatible|local_openai_compatible|ollama|skip]",
+            "Provider kind [anthropic|openai|openai_compatible|local_openai_compatible|ollama|skip]",
             default="skip",
         ).strip() or "skip"
     if kind == "skip":
         return ProviderConfiguration(provider_choice="skip")
+    if kind == "anthropic":
+        return ProviderConfiguration(
+            provider_choice="anthropic",
+            provider_name="anthropic",
+            api_base=api_base or (_prompt("Anthropic API base URL", default="https://api.anthropic.com") if interactive else "https://api.anthropic.com"),
+            api_key=api_key or (_prompt("Anthropic API key", default="") if interactive else ""),
+            model=model or (_prompt("Anthropic model", default="claude-sonnet-4-6") if interactive else None),
+        )
     if kind == "openai":
         return ProviderConfiguration(
             provider_choice="openai",

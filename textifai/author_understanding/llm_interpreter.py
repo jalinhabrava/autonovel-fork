@@ -86,6 +86,16 @@ class ProviderBackedAuthorUnderstandingInterpreter:
         payload = extract_json_payload(response.text)
         if payload is None:
             return None
+        payload = dict(payload)
+        payload["_trace"] = {
+            "prompt_version": prompt.prompt_version,
+            "system_prompt": prompt.system_prompt,
+            "user_payload": prompt.user_payload,
+            "required_output_schema": prompt.required_output_schema,
+            "catalogs": prompt.catalogs,
+            "provider_name": response.provider_name,
+            "model": response.model,
+        }
         return normalize_author_understanding_payload(
             raw_text=request.raw_text,
             payload=payload,

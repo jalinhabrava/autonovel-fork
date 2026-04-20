@@ -43,6 +43,7 @@ It asks in English:
 
 Provider onboarding supports:
 
+- Anthropic
 - OpenAI
 - remote OpenAI-compatible providers
 - local OpenAI-compatible providers such as LM Studio
@@ -53,6 +54,7 @@ Important:
 
 - `ask` and other author-facing semantic flows require a configured and reachable provider
 - if provider readiness is red, TextifAI should fail honestly instead of inventing editorial capability with local heuristics
+- when provider readiness is red, `textifai ask --json` now emits a pre-provider pipeline preview so you can inspect the deterministic parse and semantic interpretation prompt payload without faking an author response
 
 The short `init` command automatically chooses:
 

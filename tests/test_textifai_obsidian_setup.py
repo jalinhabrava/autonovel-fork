@@ -470,6 +470,8 @@ class TextifAIObsidianSetupTests(unittest.TestCase):
             self.assertNotEqual(completed.returncode, 0)
             self.assertFalse(payload["author_facing_available"])
             self.assertEqual(payload["reason"], "provider_not_available")
+            self.assertIn("pipeline_trace_preview", payload)
+            self.assertIn("semantic_interpretation_prompt", payload["pipeline_trace_preview"])
             self.assertTrue((vault_root / "99_System" / "textifai_ask_trace.jsonl").exists())
 
 

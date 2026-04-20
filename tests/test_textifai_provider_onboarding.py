@@ -65,6 +65,29 @@ class TextifAIProviderOnboardingTests(unittest.TestCase):
             self.assertEqual(readiness.provider_mode, "local_openai_compatible")
             self.assertEqual(readiness.provider_model, "test-model")
 
+    def test_configure_provider_supports_anthropic_configuration(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base_dir = Path(tmp)
+
+            readiness = configure_provider(
+                base_dir=base_dir,
+                configuration=ProviderConfiguration(
+                    provider_choice="anthropic",
+                    provider_name="anthropic",
+                    api_base="https://api.anthropic.com",
+                    api_key="test-key",
+                    model="claude-sonnet-4-6",
+                ),
+                test_connectivity=False,
+            )
+
+            env_text = (base_dir / ".env").read_text(encoding="utf-8")
+            self.assertIn("AUTONOVEL_TEXT_PROVIDER=anthropic", env_text)
+            self.assertIn("AUTONOVEL_WRITER_MODEL=claude-sonnet-4-6", env_text)
+            self.assertIn("ANTHROPIC_API_KEY=test-key", env_text)
+            self.assertTrue(readiness.provider_configured)
+            self.assertEqual(readiness.provider_mode, "remote_anthropic")
+
     def test_provider_cli_reports_json_payload(self):
         with tempfile.TemporaryDirectory() as tmp:
             base_dir = Path(tmp)
