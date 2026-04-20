@@ -17,6 +17,15 @@ class BootstrapFragmentAnalysis:
     artifact_type: str
     confidence: float = 0.0
     title_hint: str | None = None
+    canonical_subject: str | None = None
+    semantic_class: str | None = None
+    promotion_status: str | None = None
+    fragment_role: str | None = None
+    entities: list[str] = field(default_factory=list)
+    topics: list[str] = field(default_factory=list)
+    world_terms: list[str] = field(default_factory=list)
+    character_refs: list[str] = field(default_factory=list)
+    lore_refs: list[str] = field(default_factory=list)
     language: str | None = None
     detected_languages: list[str] = field(default_factory=list)
     register_signals: list[str] = field(default_factory=list)
@@ -240,6 +249,15 @@ def _derived_fragment_analyses(
                 artifact_type=artifact_type,
                 confidence=confidence,
                 title_hint=title_hint,
+                canonical_subject=None,
+                semantic_class=None,
+                promotion_status=None,
+                fragment_role=None,
+                entities=[],
+                topics=[],
+                world_terms=[],
+                character_refs=[],
+                lore_refs=[],
                 language=language,
                 detected_languages=[language] if language else [],
                 register_signals=list(dict.fromkeys(register_signals)),
@@ -254,6 +272,15 @@ def _derived_fragment_analyses(
                 artifact_type="mixed_note",
                 confidence=0.1,
                 title_hint=None,
+                canonical_subject=None,
+                semantic_class=None,
+                promotion_status=None,
+                fragment_role=None,
+                entities=[],
+                topics=[],
+                world_terms=[],
+                character_refs=[],
+                lore_refs=[],
                 language=document.dominant_language,
                 detected_languages=[document.dominant_language] if document.dominant_language else [],
                 register_signals=["llm_candidate_overflow"],
@@ -268,6 +295,15 @@ def _derived_fragment_analyses(
                 artifact_type="mixed_note",
                 confidence=0.0,
                 title_hint=None,
+                canonical_subject=None,
+                semantic_class=None,
+                promotion_status=None,
+                fragment_role=None,
+                entities=[],
+                topics=[],
+                world_terms=[],
+                character_refs=[],
+                lore_refs=[],
                 language=document.dominant_language,
                 detected_languages=[document.dominant_language] if document.dominant_language else [],
                 register_signals=["empty"],
@@ -298,6 +334,15 @@ def _normalize_analysis_payload(*, document: SourceDocumentRecord, payload: dict
                 artifact_type=artifact_type,
                 confidence=_coerce_confidence(raw.get("confidence")),
                 title_hint=_clean_text(raw.get("title_hint")),
+                canonical_subject=_clean_text(raw.get("canonical_subject")),
+                semantic_class=_clean_text(raw.get("semantic_class")),
+                promotion_status=_clean_text(raw.get("promotion_status")),
+                fragment_role=_clean_text(raw.get("fragment_role")),
+                entities=_normalize_string_list(raw.get("entities")),
+                topics=_normalize_string_list(raw.get("topics")),
+                world_terms=_normalize_string_list(raw.get("world_terms")),
+                character_refs=_normalize_string_list(raw.get("character_refs")),
+                lore_refs=_normalize_string_list(raw.get("lore_refs")),
                 language=_clean_text(raw.get("language")),
                 detected_languages=_normalize_string_list(raw.get("detected_languages")),
                 register_signals=_normalize_string_list(raw.get("register_signals")),

@@ -5,10 +5,17 @@ import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from textifai.bootstrap import VaultInitializationConfig, confirm_and_write_bootstrap
+from providers.text_provider import get_text_provider_config_error
+from textifai.bootstrap import (
+    BootstrapLLMConfig,
+    ProviderBackedBootstrapAnalyzer,
+    VaultInitializationConfig,
+    confirm_and_write_bootstrap,
+)
 from textifai.bootstrap.source_reader import discover_importable_source_paths
 from textifai.import_review import ReviewPolicy, promote_reviewed_import, review_import_stage
 from textifai.obsidian.readiness import ObsidianOperationalReadiness, evaluate_obsidian_operational_readiness
+from textifai.runtime_config import load_runtime_environment
 from vault.bootstrap import bootstrap_vault, validate_vault
 
 
@@ -100,6 +107,7 @@ def prepare_obsidian_project(
     importer_reason = None
     promoted_paths: list[str] = []
     pending_candidates: list[str] = []
+    bootstrap_llm_analyzer = _resolve_bootstrap_llm_analyzer(repo_path)
 
     if config.mode == "new_project":
         if not vault_root.exists() or not any(vault_root.iterdir()):
@@ -116,8 +124,8 @@ def prepare_obsidian_project(
                 title=config.project_title or "TextifAI Project",
                 allow_existing_content=True,
             )
-            notes.append("Carpeta existente convertida a vault TextifAI sin borrar material previo.")
-        notes.append("Vault inicializado para proyecto nuevo.")
+            notes.append("Existing folder was converted into a TextifAI vault without deleting prior material.")
+        notes.append("Vault initialized for a new project.")
     else:
         source_root = source_root_path or vault_root
         if not source_root.exists():
@@ -139,7 +147,7 @@ def prepare_obsidian_project(
                 allow_existing_content=True,
             )
             bootstrap_mode = "import_into_existing_vault"
-            notes.append("Carpeta existente convertida a vault TextifAI sin fallar sobre material previo.")
+            notes.append("Existing folder was converted into a TextifAI vault without disturbing prior material.")
         bootstrap_result = confirm_and_write_bootstrap(
             VaultInitializationConfig(
                 vault_root=str(vault_root),
@@ -152,24 +160,25 @@ def prepare_obsidian_project(
             ),
             source_root=source_root,
             source_paths=preexisting_source_paths or None,
+            llm_analyzer=bootstrap_llm_analyzer,
         )
         written_drafts = list(bootstrap_result.written_drafts)
         warnings.extend(list(bootstrap_result.warnings))
         import_strategy = "textifai_bootstrap_staging"
-        notes.append("Material existente preparado en staging del vault.")
+        notes.append("Existing source material was staged into the vault import workspace.")
         if written_drafts:
             bundle, reviews, plan = review_import_stage(vault_root, policy=ReviewPolicy())
             promotion = promote_reviewed_import(vault_root, policy=ReviewPolicy(), confirmed=False)
             promoted_paths = list(promotion.promoted_paths)
             pending_candidates = list(promotion.pending_drafts)
             if promoted_paths:
-                notes.append(f"Se promovieron automáticamente {len(promoted_paths)} artefactos canónicos de bajo riesgo.")
+                notes.append(f"Automatically promoted {len(promoted_paths)} low-risk canonical artifacts.")
             elif pending_candidates:
-                notes.append("El material quedó en staging pendiente de promoción explícita o de más contexto.")
+                notes.append("Imported material remains in staging until explicit promotion or stronger context is available.")
         if _all_markdown_sources(source_root) and config.importer_preference == "obsidian_importer_manual_if_markdown":
             importer_reason = (
-                "Obsidian Importer oficial existe para Markdown, pero TextifAI sigue usando staging propio "
-                "porque necesita un flujo reproducible, con procedencia y revisión, fuera de la app."
+                "The official Obsidian Importer exists for Markdown, but TextifAI keeps using its own staging flow "
+                "because it needs a reproducible, provenance-aware, reviewable path outside the app."
             )
 
     plugin_status = None
@@ -205,6 +214,26 @@ def prepare_obsidian_project(
         source_files_considered=[str(path) for path in preexisting_source_paths],
         bootstrap_auto_promoted_paths=promoted_paths,
         bootstrap_pending_candidates=pending_candidates,
+    )
+
+
+def _resolve_bootstrap_llm_analyzer(repo_root: Path) -> ProviderBackedBootstrapAnalyzer | None:
+    env = load_runtime_environment(repo_root)
+    provider_name = env.provider
+    if not provider_name:
+        return None
+    if get_text_provider_config_error("bootstrap_normalization", provider_name) is not None:
+        return None
+    return ProviderBackedBootstrapAnalyzer(
+        config=BootstrapLLMConfig(
+            task_name="bootstrap_normalization",
+            provider_name=provider_name,
+            model=env.writer_model,
+            max_tokens=1800,
+            temperature=0.1,
+            timeout_seconds=120,
+            retries=1,
+        )
     )
 
 

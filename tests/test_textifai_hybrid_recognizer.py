@@ -111,7 +111,7 @@ class TextifAIHybridRecognizerTests(unittest.TestCase):
             config=HybridRecognizerConfig(llm_escalation_threshold=0.96),
         )
         request = ConversationRequest(
-            raw_text="find hidden door",
+            raw_text="I need help understanding the hidden door situation",
             source="user",
             mode="normal",
             interface_language="es",
@@ -211,10 +211,10 @@ class TextifAIHybridRecognizerTests(unittest.TestCase):
         self.assertEqual(intent.intent_name, "unknown")
         self.assertEqual(intent.metadata["unsupported_capability"], "bootstrap_extract")
 
-    def test_natural_canon_decision_phrase_maps_to_persist_decision(self):
+    def test_explicit_decide_command_maps_to_persist_decision(self):
         recognizer = HybridIntentRecognizer(llm_classifier=_FailingClassifier())
         request = ConversationRequest(
-            raw_text="guarda esto como decisión de canon",
+            raw_text="decide lore:magic_limits",
             source="user",
             mode="normal",
             interface_language="es",

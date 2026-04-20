@@ -17,6 +17,7 @@ PROVIDER_MODE_CATALOG = (
     "disabled",
     "simulated",
     "simulated_preview",
+    "live_provider",
     "live_openai",
 )
 

@@ -6,10 +6,11 @@ from pathlib import Path
 
 from textifai.bootstrap.contracts import SourceDocumentRecord, SourceFragment
 from textifai.bootstrap.language import detect_language_profile
+from textifai.obsidian.parser import strip_obsidian_frontmatter
 
 
 _HEADING_RE = re.compile(
-    r"^(#{1,6}\s+.+|chapter\s+\d+.*|cap[ií]tulo\s+\d+.*|scene\s+\d+.*|escena\s+\d+.*)$",
+    r"^(#{1,6}\s+.+|(?:ch|chapter|scene|scn)[\s_-]*\d+.*)$",
     flags=re.IGNORECASE,
 )
 
@@ -18,7 +19,9 @@ def segment_source_document(
     document: SourceDocumentRecord,
     text: str,
 ) -> list[SourceFragment]:
-    if not text.strip():
+    normalized_text = strip_obsidian_frontmatter(text)
+
+    if not normalized_text.strip():
         return [
             SourceFragment(
                 fragment_id=f"{document.source_id}__frag_001",
@@ -36,7 +39,7 @@ def segment_source_document(
             )
         ]
 
-    blocks = _split_on_headings(text)
+    blocks = _split_on_headings(normalized_text)
     fragments: list[SourceFragment] = []
     for index, block in enumerate(blocks, start=1):
         detection = detect_language_profile(block.text)
@@ -61,24 +64,17 @@ def segment_source_document(
 
 
 def _classify_block(document: SourceDocumentRecord, text: str, heading: str | None) -> tuple[str, float, bool]:
-    haystack = " ".join(filter(None, [heading, text[:400]])).casefold()
-    if _matches(haystack, {"character", "personaje", "profile", "bio", "protagonist"}):
-        return "character", 0.92, False
-    if _matches(haystack, {"lore", "world", "worldbuilding", "mundo", "setting", "canon"}):
-        return "lore", 0.88, False
-    if _matches(haystack, {"scene", "escena"}):
+    heading_text = (heading or "").strip().casefold()
+    stem = Path(document.filename).stem.casefold()
+    if heading_text.startswith("scene ") or stem.startswith("scene_") or stem.startswith("scn_"):
         return "scene", 0.9, False
-    if _matches(haystack, {"chapter", "capítulo", "capitulo"}):
-        return "chapter", 0.94, False
-    if len(text.split()) > 700:
-        return "chapter", 0.72, True
-    if len(text.split()) > 180:
-        return "mixed_note", 0.55, True
-    return "project_note", 0.42, True
-
-
-def _matches(text: str, terms: set[str]) -> bool:
-    return any(term in text for term in terms)
+    if heading_text.startswith("chapter ") or stem.startswith("chapter_") or stem.startswith("ch_"):
+        return "chapter", 0.9, False
+    if len(text.split()) > 900:
+        return "chapter", 0.6, True
+    if len(text.split()) > 120:
+        return "mixed_note", 0.45, True
+    return "project_note", 0.3, True
 
 
 def _split_on_headings(text: str) -> list[_FragmentBlock]:

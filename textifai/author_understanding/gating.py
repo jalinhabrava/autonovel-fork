@@ -91,7 +91,19 @@ def _is_expert_bypass(
         return True
     if request.raw_text.strip().startswith("/"):
         return True
-    if rule_intent.intent_name in {"confirm_pending", "cancel_pending", "conversation_help", "validate_structure", "prepare_narration", "prepare_review", "structured_followup"}:
+    if rule_intent.intent_name in {
+        "confirm_pending",
+        "cancel_pending",
+        "conversation_help",
+        "lookup_world",
+        "search_context",
+        "inspect_scene",
+        "inspect_chapter",
+        "validate_structure",
+        "prepare_narration",
+        "prepare_review",
+        "structured_followup",
+    }:
         return True
     if rule_intent.intent_name in {"persist_decision", "validate_artifact", "reject_artifact", "consistency_check"}:
         return bool(rule_intent.target_id or request.target_hint or (state is not None and state.last_target_id))

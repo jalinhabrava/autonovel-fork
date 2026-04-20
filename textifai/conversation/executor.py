@@ -672,7 +672,7 @@ class MinimalExecutionLayer:
             policy=self.session.policy_name,
             token_budget=self.session.token_budget,
         )
-        return ExecutionResult(
+        execution = ExecutionResult(
             type="context_pack",
             flow_name=task.flow_name,
             success=True,
@@ -680,6 +680,14 @@ class MinimalExecutionLayer:
             result=pack,
             context_request=_request_to_dict(request),
             context_pack=pack,
+        )
+        return self._attach_author_response(
+            execution,
+            task=task,
+            request=None,
+            author_understanding=_author_understanding_from_metadata(task.metadata.get("author_understanding")),
+            editorial_intent=_editorial_intent_from_metadata(task.metadata.get("editorial_intent")),
+            entity_results=_entity_results_from_metadata(task.metadata.get("vaerl_results")),
         )
 
     def _execute_search(self, task: PlannedTask, conversation_request: ConversationRequest) -> ExecutionResult:
@@ -702,7 +710,7 @@ class MinimalExecutionLayer:
             policy=self.session.policy_name,
             token_budget=self.session.token_budget,
         )
-        return ExecutionResult(
+        execution = ExecutionResult(
             type="context_pack",
             flow_name=task.flow_name,
             success=True,
@@ -710,6 +718,14 @@ class MinimalExecutionLayer:
             result=pack,
             context_request=_request_to_dict(request),
             context_pack=pack,
+        )
+        return self._attach_author_response(
+            execution,
+            task=task,
+            request=conversation_request,
+            author_understanding=_author_understanding_from_metadata(task.metadata.get("author_understanding")),
+            editorial_intent=_editorial_intent_from_metadata(task.metadata.get("editorial_intent")),
+            entity_results=_entity_results_from_metadata(task.metadata.get("vaerl_results")),
         )
 
     def _execute_scene(self, task: PlannedTask) -> ExecutionResult:
@@ -733,7 +749,7 @@ class MinimalExecutionLayer:
             policy=self.session.policy_name,
             token_budget=self.session.token_budget,
         )
-        return ExecutionResult(
+        execution = ExecutionResult(
             type="context_pack",
             flow_name=task.flow_name,
             success=True,
@@ -741,6 +757,14 @@ class MinimalExecutionLayer:
             result=pack,
             context_request=_request_to_dict(request),
             context_pack=pack,
+        )
+        return self._attach_author_response(
+            execution,
+            task=task,
+            request=None,
+            author_understanding=_author_understanding_from_metadata(task.metadata.get("author_understanding")),
+            editorial_intent=_editorial_intent_from_metadata(task.metadata.get("editorial_intent")),
+            entity_results=_entity_results_from_metadata(task.metadata.get("vaerl_results")),
         )
 
     def _execute_chapter(self, task: PlannedTask) -> ExecutionResult:
@@ -764,7 +788,7 @@ class MinimalExecutionLayer:
             policy=self.session.policy_name,
             token_budget=self.session.token_budget,
         )
-        return ExecutionResult(
+        execution = ExecutionResult(
             type="context_pack",
             flow_name=task.flow_name,
             success=True,
@@ -772,6 +796,14 @@ class MinimalExecutionLayer:
             result=pack,
             context_request=_request_to_dict(request),
             context_pack=pack,
+        )
+        return self._attach_author_response(
+            execution,
+            task=task,
+            request=None,
+            author_understanding=_author_understanding_from_metadata(task.metadata.get("author_understanding")),
+            editorial_intent=_editorial_intent_from_metadata(task.metadata.get("editorial_intent")),
+            entity_results=_entity_results_from_metadata(task.metadata.get("vaerl_results")),
         )
 
     def _execute_consistency_check(self, task: PlannedTask) -> ExecutionResult:
@@ -1282,6 +1314,14 @@ def _response_generation_support(
     )
     if author_understanding is None and editorial_intent is None and not consistency_support and not narration_support:
         general_editorial_sufficiency = False
+    elif task.flow_name in {"world_lookup_flow", "context_search_flow", "scene_context_flow", "chapter_context_flow"}:
+        general_editorial_sufficiency = bool(
+            editorial_intent
+            or author_understanding
+            or exact_artifact_resolution
+            or narrow_candidates
+            or has_resolved_entity
+        )
     elif clarification_payload is not None:
         general_editorial_sufficiency = bool(narrow_candidates or has_editorial_signals or followup_continuity)
     elif task.flow_name == "consistency_check_flow":
@@ -1299,6 +1339,13 @@ def _response_generation_support(
 
     if author_understanding is None and editorial_intent is None and not consistency_support and not narration_support:
         anchored_editorial_sufficiency = False
+    elif task.flow_name in {"world_lookup_flow", "context_search_flow", "scene_context_flow", "chapter_context_flow"}:
+        anchored_editorial_sufficiency = bool(
+            exact_artifact_resolution
+            or narrow_candidates
+            or has_resolved_entity
+            or task.flow_name == "world_lookup_flow"
+        )
     elif clarification_payload is not None:
         anchored_editorial_sufficiency = False
     elif task.flow_name == "consistency_check_flow":

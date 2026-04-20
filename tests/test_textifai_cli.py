@@ -10,6 +10,13 @@ from vault.bootstrap import bootstrap_vault
 
 
 class TextifAICliTests(unittest.TestCase):
+    def test_default_entrypoint_launches_product_setup_wizard(self):
+        with patch("textifai.cli.run_obsidian_cli", return_value=0) as run_obsidian_cli_mock:
+            code = main([])
+
+        self.assertEqual(code, 0)
+        run_obsidian_cli_mock.assert_called_once_with(argv=["start"], repo_root=".")
+
     def test_chat_uses_existing_runtime_environment(self):
         with tempfile.TemporaryDirectory() as tmp:
             base_dir = Path(tmp)

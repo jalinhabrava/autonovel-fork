@@ -10,21 +10,27 @@ TextifAI now distinguishes between:
 
 ## Startup Modes
 
-Short operational wrapper:
+Canonical product entrypoint:
 
-- `uv run python scripts/textifai.py`
-- `uv run python scripts/textifai.py ask --vault-root ...`
-- `uv run python scripts/textifai_obsidian.py init --vault-root ...`
-- `uv run python scripts/textifai_obsidian.py status --vault-root ...`
-- `uv run python scripts/textifai_obsidian.py inspect --vault-root ...`
+- `uv run textifai`
+- `uv run textifai ask --vault-root ...`
+- `uv run textifai init --vault-root ...`
+- `uv run textifai status --vault-root ...`
+- `uv run textifai inspect --vault-root ...`
 
-The recommended onboarding entrypoint is now:
+Development aliases still work:
 
 ```bash
 uv run python scripts/textifai.py
 ```
 
-It asks:
+The recommended onboarding entrypoint is now:
+
+```bash
+uv run textifai
+```
+
+It asks in English:
 
 - whether the project starts from zero or from existing documentation,
 - where the vault should live,
@@ -109,9 +115,19 @@ The current Python entrypoints you should treat as authoritative are:
 
 The inspect command wraps those exact calls:
 
+Windows example:
+
 ```bash
-uv run python scripts/textifai_obsidian.py inspect --vault-root /mnt/c/Users/<TU_USUARIO>/Documents/TextifAI/OnT_Vault
+uv run textifai inspect --vault-root "C:\\Users\\<USER>\\Documents\\TextifAI\\OnT_Vault"
 ```
+
+Linux example:
+
+```bash
+uv run textifai inspect --vault-root "$HOME/Documents/TextifAI/OnT_Vault"
+```
+
+WSL remains supported through path normalization, but it is now treated as a development environment rather than the product default.
 
 The expected high-signal fields are:
 
@@ -128,7 +144,7 @@ The expected high-signal fields are:
 For a first author-facing interaction from the CLI:
 
 ```bash
-uv run python scripts/textifai.py ask --vault-root /mnt/c/Users/<TU_USUARIO>/Documents/TextifAI/OnT_Vault
+uv run textifai ask --vault-root "C:\\Users\\<USER>\\Documents\\TextifAI\\OnT_Vault"
 ```
 
 That command:

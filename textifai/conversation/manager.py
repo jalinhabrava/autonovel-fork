@@ -142,20 +142,26 @@ class ConversationManager:
             entity_hints.extend(intent.narrative_signals.mentioned_entities)
         if self.session is not None:
             readiness = evaluate_obsidian_operational_readiness(self.session.vault_path)
-            if readiness.can_query_vaerl:
-                entity_results = resolve_entities(
-                    text=request.raw_text,
-                    vault_path=self.session.vault_path,
-                    known_characters=request.metadata.get("known_characters", []),
-                    entity_hints=entity_hints,
-                )
         author_understanding = self.author_understanding_analyzer.analyze(
             request=request,
             rule_intent=intent,
             narrative_signals=intent.narrative_signals,
-            entity_results=entity_results,
+            entity_results=[],
             state=self.state,
         )
+        if self.session is not None and readiness is not None and readiness.can_query_vaerl:
+            semantic_hints: list[str] = []
+            for hint in author_understanding.entity_hints:
+                if hint.surface_form:
+                    semantic_hints.append(hint.surface_form)
+                if hint.normalized_form:
+                    semantic_hints.append(hint.normalized_form)
+            entity_results = resolve_entities(
+                text=request.raw_text,
+                vault_path=self.session.vault_path,
+                known_characters=request.metadata.get("known_characters", []),
+                entity_hints=[*entity_hints, *semantic_hints],
+            )
         editorial_intent = classify_editorial_intent(
             raw_text=request.raw_text,
             recognized_intent_name=intent.intent_name,

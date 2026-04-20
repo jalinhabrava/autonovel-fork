@@ -62,6 +62,8 @@ def build_semantic_prompt_context(
             request.metadata.get("allow_live_author_response")
             or request.metadata.get("allow_live_provider")
         ),
+        "allow_simulated_preview": bool(request.metadata.get("allow_simulated_preview")),
+        "provider_name": request.metadata.get("provider_name"),
         "operation_language": task.operation_language,
         "response_language": task.explanation_language,
         "artifact_target_language": task.artifact_target_language,

@@ -60,11 +60,14 @@ class HybridIntentRecognizer:
         if self.llm_classifier is None:
             return self._fallback_without_llm(rule_intent)
 
-        llm_result = self.llm_classifier.classify_intent(
-            request=request,
-            rule_intent=rule_intent,
-            state=state,
-        )
+        try:
+            llm_result = self.llm_classifier.classify_intent(
+                request=request,
+                rule_intent=rule_intent,
+                state=state,
+            )
+        except Exception:
+            return self._fallback_without_llm(rule_intent)
         return self._normalize_llm_result(request, rule_intent, llm_result)
 
     def _should_escalate(
@@ -262,4 +265,3 @@ def _normalize_narrative_signals(
         constraint_hints=list(dict.fromkeys((existing.constraint_hints if existing else []) + constraint_hints)),
         confidence=confidence,
     )
-

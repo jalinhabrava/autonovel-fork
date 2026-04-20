@@ -162,9 +162,19 @@ def _derive_query_text(request: ConversationRequest, intent: RecognizedIntent) -
     if intent.intent_name == "search_context" and lowered.lower().startswith("find "):
         return lowered.split(maxsplit=1)[1].strip()
     if intent.intent_name == "search_context":
-        return lowered
+        extracted = _extract_search_phrase(lowered)
+        return extracted or lowered
     if intent.intent_name == "unknown" and intent.narrative_signals and intent.narrative_signals.mentioned_entities:
         return ", ".join(intent.narrative_signals.mentioned_entities)
+    return None
+
+
+def _extract_search_phrase(raw: str) -> str | None:
+    lowered = raw.lower()
+    prefixes = ("search ", "find ")
+    for prefix in prefixes:
+        if lowered.startswith(prefix):
+            return raw[len(prefix):].strip(" ?!.")
     return None
 
 
@@ -174,7 +184,6 @@ def _resolve_target_type(intent: RecognizedIntent, state: ConversationState | No
     if (
         editorial_intent
         and editorial_intent.metadata.get("multi_target")
-        and intent.intent_name != "consistency_check"
         and editorial_intent.request_type in {
         "narrative_facts",
         "structuring_request",
@@ -220,7 +229,6 @@ def _resolve_target_id(
     if (
         editorial_intent
         and editorial_intent.metadata.get("multi_target")
-        and intent.intent_name != "consistency_check"
         and editorial_intent.request_type in {
         "narrative_facts",
         "structuring_request",
@@ -267,7 +275,6 @@ def _target_resolution_source(
     if (
         editorial_intent
         and editorial_intent.metadata.get("multi_target")
-        and intent.intent_name != "consistency_check"
         and editorial_intent.request_type in {
         "narrative_facts",
         "structuring_request",
@@ -328,12 +335,20 @@ def _resolve_effective_intent_name(intent: RecognizedIntent, state: Conversation
             return "editorial_structuring"
         return intent.intent_name
     if editorial_intent is not None:
+        if intent.intent_name == "unknown" and editorial_intent.request_type == "narrative_facts":
+            if editorial_intent.resolved_target_id or editorial_intent.candidate_targets:
+                return "search_context"
+            return "lookup_world"
+        if intent.intent_name == "unknown" and editorial_intent.request_type == "contextual_followup":
+            if editorial_intent.resolved_target_id or editorial_intent.candidate_targets:
+                return "search_context"
+            return "lookup_world"
         if intent.intent_name == "consistency_check" and editorial_intent.request_type in {
             "validation_request",
             "mixed_editorial_request",
         }:
             return "consistency_check"
-        if editorial_intent.request_type == "contextual_followup" and intent.intent_name in {"unknown", "inspect_scene"}:
+        if editorial_intent.request_type == "contextual_followup" and intent.intent_name == "inspect_scene":
             return "editorial_structuring"
         if editorial_intent.metadata.get("multi_target") and editorial_intent.request_type == "structured_followup":
             return "editorial_structuring"
@@ -522,6 +537,7 @@ def _semantic_response_kind(intent: RecognizedIntent, effective_intent_name: str
     mapping = {
         "structuring_request": "structuring_suggestion",
         "editorial_revision": "revision_guidance",
+        "narrative_facts": "contextual_followup_response",
         "narration_preparation": "narration_handoff",
         "contextual_followup": "contextual_followup_response",
         "structured_followup": "contextual_followup_response",

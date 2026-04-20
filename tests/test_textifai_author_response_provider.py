@@ -32,33 +32,34 @@ class TextifAIAuthorResponseProviderTests(unittest.TestCase):
         )
         prompt = _prompt(allow_live_provider=True, ready=True)
 
-        with patch.dict("os.environ", {"OPENAI_API_KEY": ""}, clear=False):
+        with patch.dict("os.environ", {"AUTONOVEL_TEXT_PROVIDER": "openai", "OPENAI_API_KEY": ""}, clear=False):
             response = generator.generate(prompt=prompt)
 
         self.assertEqual(response.provider_mode, "disabled")
         self.assertEqual(response.response_generation_mode, "disabled")
-        self.assertEqual(response.response_support_summary.get("provider_fallback_reason"), "missing_openai_api_key")
+        self.assertEqual(response.response_support_summary.get("provider_fallback_reason"), "provider_not_available")
 
-    def test_uses_live_openai_when_permitted_and_available(self):
+    def test_uses_live_provider_when_permitted_and_available(self):
         fake_client = Mock()
         fake_client.is_available.return_value = True
-        fake_client.generate.return_value = ("Live answer from model.", "gpt-test")
+        fake_client.generate.return_value = ("Live answer from model.", "gpt-test", "anthropic")
         generator = ProviderBackedAuthorResponseGenerator(
             allow_live=True,
             allow_simulated_preview=False,
             fallback_generator=TemplateAuthorResponseGenerator(),
-            openai_client=fake_client,
+            provider_client=fake_client,
         )
 
         response = generator.generate(prompt=_prompt(allow_live_provider=True, ready=True))
 
-        self.assertEqual(response.provider_mode, "live_openai")
+        self.assertEqual(response.provider_mode, "live_provider")
         self.assertTrue(response.provider_execution_enabled)
-        self.assertEqual(response.provider_execution_mode, "live_openai")
+        self.assertEqual(response.provider_execution_mode, "live_provider")
         self.assertEqual(response.provider_model_used, "gpt-test")
         self.assertEqual(response.live_model_response, "Live answer from model.")
         self.assertEqual(response.author_facing_response, "Live answer from model.")
-        self.assertEqual(response.response_support_summary.get("provider_mode"), "live_openai")
+        self.assertEqual(response.response_support_summary.get("provider_mode"), "live_provider")
+        self.assertEqual(response.response_support_summary.get("provider_name"), "anthropic")
 
     def test_not_ready_stays_conservative_even_if_live_is_available(self):
         fake_client = Mock()
@@ -67,7 +68,7 @@ class TextifAIAuthorResponseProviderTests(unittest.TestCase):
             allow_live=True,
             allow_simulated_preview=False,
             fallback_generator=TemplateAuthorResponseGenerator(),
-            openai_client=fake_client,
+            provider_client=fake_client,
         )
 
         response = generator.generate(prompt=_prompt(allow_live_provider=True, ready=False))

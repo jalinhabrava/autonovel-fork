@@ -19,7 +19,9 @@ from textifai.bootstrap.contracts import (
 )
 from textifai.bootstrap.language import build_language_profile
 from textifai.bootstrap.semantic_enrichment import enrich_fragment_semantics
+from textifai.obsidian.parser import parse_obsidian_frontmatter
 from vault.schema import IMPORT_STAGING_DIRS
+from vault.schema import slugify
 
 
 @dataclass(frozen=True)
@@ -71,6 +73,7 @@ def build_normalization_plan(
     for document in inventory.documents:
         fragments = fragments_by_source.get(document.source_id, [])
         text = source_texts.get(document.source_id, "")
+        source_frontmatter = parse_obsidian_frontmatter(text)
         analysis = analyses_by_source.get(document.source_id)
         document_requires_confirmation = bool(analysis and analysis.requires_confirmation)
         if document.has_mixed_language or len(document.detected_languages) > 1:
@@ -96,6 +99,7 @@ def build_normalization_plan(
             draft = _build_draft(
                 config=config,
                 document=document,
+                source_frontmatter=source_frontmatter,
                 document_analysis=analysis,
                 fragment=fragment,
                 artifact_type=artifact_type,
@@ -158,22 +162,57 @@ def _build_draft(
     *,
     config: VaultInitializationConfig,
     document: SourceDocumentRecord,
+    source_frontmatter: dict[str, object] | None,
     document_analysis: BootstrapDocumentAnalysis | None,
     fragment: SourceFragment,
     artifact_type: str,
     fragment_analysis,
     fragment_index: int,
 ) -> NormalizedArtifactDraft:
-    title = fragment_analysis.title_hint or _infer_title(document, fragment)
+    source_frontmatter = dict(source_frontmatter or {})
+    explicit_kind = str(source_frontmatter.get("kind") or "").strip()
+    if explicit_kind not in BOOTSTRAP_ARTIFACT_TYPE_CATALOG:
+        explicit_kind = ""
+    title = (
+        fragment_analysis.title_hint
+        or str(source_frontmatter.get("title") or "").strip()
+        or _infer_title(document, fragment)
+    )
     source_format = document_analysis.source_format if document_analysis else document.extension
     extraction_mode = document_analysis.extraction_mode if document_analysis else ("native_text" if document.extension in {"md", "txt"} else "light_structural_normalization")
     semantic = enrich_fragment_semantics(
         document=document,
         fragment=fragment,
-        artifact_type=artifact_type,
+        artifact_type=explicit_kind or artifact_type,
         fragment_title_hint=title,
         fragment_notes=list(fragment_analysis.notes) if fragment_analysis else [],
     )
+    if fragment_analysis is not None:
+        semantic = _merge_llm_semantics(
+            fallback=semantic,
+            fragment_analysis=fragment_analysis,
+        )
+    if explicit_kind:
+        explicit_title = str(source_frontmatter.get("title") or semantic.title).strip() or semantic.title
+        explicit_slug = str(source_frontmatter.get("slug") or semantic.slug).strip() or semantic.slug
+        explicit_notes = list(dict.fromkeys([*semantic.notes, "explicit_source_frontmatter"]))
+        semantic = semantic.__class__(
+            artifact_type=explicit_kind,
+            title=explicit_title,
+            slug=explicit_slug,
+            artifact_stage=semantic.artifact_stage,
+            promotion_status="eligible_for_promotion",
+            canonical_subject=semantic.canonical_subject or explicit_title,
+            semantic_class=semantic.semantic_class or "explicit_source_artifact",
+            source_section_title=semantic.source_section_title,
+            fragment_role=semantic.fragment_role,
+            entities=list(semantic.entities),
+            topics=list(semantic.topics),
+            world_terms=list(semantic.world_terms),
+            character_refs=list(semantic.character_refs),
+            lore_refs=list(semantic.lore_refs),
+            notes=explicit_notes,
+        )
     title = semantic.title
     slug = _resolved_semantic_slug(
         document=document,
@@ -185,6 +224,9 @@ def _build_draft(
     target_path = _build_target_path(config.vault_root, semantic.artifact_type, _build_draft_filename(document, fragment_index, slug))
     extraction_confidence = document_analysis.extraction_confidence if document_analysis else fragment.kind_confidence
     structural_confidence = document_analysis.structural_confidence if document_analysis else fragment.kind_confidence
+    if explicit_kind and source_format in {"md", "txt"} and extraction_mode == "native_text":
+        extraction_confidence = max(extraction_confidence, 0.95)
+        structural_confidence = max(structural_confidence, 0.95)
     provenance = ImportProvenance(
         source_id=document.source_id,
         source_path=document.path,
@@ -234,8 +276,39 @@ def _build_draft(
         world_terms=list(semantic.world_terms),
         character_refs=list(semantic.character_refs),
         lore_refs=list(semantic.lore_refs),
-        confidence=fragment_analysis.confidence if fragment_analysis else fragment.kind_confidence,
+        confidence=max(fragment_analysis.confidence if fragment_analysis else fragment.kind_confidence, 0.9 if explicit_kind else 0.0),
         status="needs_review" if fragment.needs_review or (fragment_analysis.needs_review if fragment_analysis else False) else "draft",
+    )
+
+
+def _merge_llm_semantics(*, fallback, fragment_analysis):
+    title = getattr(fragment_analysis, "title_hint", None) or fallback.title
+    artifact_type = getattr(fragment_analysis, "artifact_type", None) or fallback.artifact_type
+    canonical_subject = getattr(fragment_analysis, "canonical_subject", None)
+    semantic_class = getattr(fragment_analysis, "semantic_class", None)
+    promotion_status = getattr(fragment_analysis, "promotion_status", None)
+    fragment_role = getattr(fragment_analysis, "fragment_role", None)
+    entities = list(getattr(fragment_analysis, "entities", []) or fallback.entities)
+    topics = list(getattr(fragment_analysis, "topics", []) or fallback.topics)
+    world_terms = list(getattr(fragment_analysis, "world_terms", []) or fallback.world_terms)
+    character_refs = list(getattr(fragment_analysis, "character_refs", []) or fallback.character_refs)
+    lore_refs = list(getattr(fragment_analysis, "lore_refs", []) or fallback.lore_refs)
+    return fallback.__class__(
+        artifact_type=artifact_type,
+        title=title,
+        slug=slugify(title) or fallback.slug,
+        artifact_stage=fallback.artifact_stage,
+        promotion_status=promotion_status or fallback.promotion_status,
+        canonical_subject=canonical_subject or fallback.canonical_subject,
+        semantic_class=semantic_class or fallback.semantic_class,
+        source_section_title=fallback.source_section_title,
+        fragment_role=fragment_role or fallback.fragment_role,
+        entities=entities,
+        topics=topics,
+        world_terms=world_terms,
+        character_refs=character_refs,
+        lore_refs=lore_refs,
+        notes=list(dict.fromkeys([*fallback.notes, *getattr(fragment_analysis, "notes", [])])),
     )
 
 

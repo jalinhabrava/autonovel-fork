@@ -19,7 +19,8 @@ def normalize_user_path(value: str | Path) -> Path:
 def suggest_default_vault_root(*, project_title: str | None = None) -> Path:
     title = project_title or "TextifAI Project"
     folder = slugify(title).replace("_", "-") or "textifai-project"
-    return Path.home() / "Documents" / "TextifAI" / folder
+    documents_root = _preferred_documents_root()
+    return documents_root / "TextifAI" / folder
 
 
 def running_inside_wsl() -> bool:
@@ -37,3 +38,14 @@ def _normalize_windows_path(value: str) -> Path:
     if os.name == "nt":
         return Path(win)
     return Path("/mnt") / drive / Path(*parts)
+
+
+def _preferred_documents_root() -> Path:
+    configured = os.environ.get("TEXTIFAI_DOCUMENTS_ROOT", "").strip()
+    if configured:
+        return normalize_user_path(configured)
+    home = Path.home()
+    documents = home / "Documents"
+    if documents.exists():
+        return documents
+    return home

@@ -146,7 +146,7 @@ class TextifAIConversationManagerTests(unittest.TestCase):
             turn = manager.handle_request(request)
             self.assertEqual(turn.result_type, "unsupported_flow")
 
-    def test_manager_can_return_editorial_structuring_result(self):
+    def test_manager_freeform_editorial_request_without_provider_stays_honest(self):
         with tempfile.TemporaryDirectory() as tmp:
             base_dir = Path(tmp)
             vault_root = base_dir / "Vault"
@@ -181,10 +181,9 @@ class TextifAIConversationManagerTests(unittest.TestCase):
                 },
             )
             turn = manager.handle_request(request)
-            self.assertEqual(turn.result_type, "editorial_structuring")
-            remembered = session.last_result
-            self.assertEqual(remembered["type"], "editorial_structuring")
-            self.assertGreaterEqual(len(remembered["data"]["entity_resolution_results"]), 2)
+            self.assertEqual(turn.result_type, "conversation_clarification")
+            self.assertEqual(turn.provider_mode, "disabled")
+            self.assertIsNone(turn.author_facing_response)
 
     def test_manager_uses_recent_lore_target_for_validate_this_note(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -221,7 +220,7 @@ class TextifAIConversationManagerTests(unittest.TestCase):
             )
             session.conversation_state = manager.state
             request = ConversationRequest(
-                raw_text="valida esta nota",
+                raw_text="validate lore:magic_limits",
                 source="user",
                 mode="normal",
                 interface_language="es",
@@ -271,14 +270,14 @@ class TextifAIConversationManagerTests(unittest.TestCase):
                 explanation_language="es",
             )
             turn = manager.handle_request(request)
-            self.assertEqual(turn.result_type, "conversation_clarification")
+            self.assertEqual(turn.result_type, "context_pack")
             self.assertTrue(bool(turn.result_summary))
             self.assertEqual(turn.provider_mode, "disabled")
             self.assertIsNone(turn.author_facing_response)
             self.assertIsInstance(session.last_result, dict)
-            self.assertEqual(session.last_result["request_type"], "contextual_followup")
+            self.assertEqual(session.last_result["type"], "context_pack")
 
-    def test_manager_preserves_multi_target_editorial_requests_without_collapse(self):
+    def test_manager_explicit_consistency_check_anchors_target(self):
         with tempfile.TemporaryDirectory() as tmp:
             base_dir = Path(tmp)
             vault_root = base_dir / "Vault"
@@ -302,7 +301,7 @@ class TextifAIConversationManagerTests(unittest.TestCase):
             session = create_session(load_runtime_environment(base_dir))
             manager = ConversationManager(session=session, executor=MinimalExecutionLayer(session=session))
             request = ConversationRequest(
-                raw_text="lo del ritual y lo del mapa se pisan aquí; ordénalo mejor pero sin romper el canon.",
+                raw_text="check lore:harbor_map",
                 source="user",
                 mode="normal",
                 interface_language="es",
@@ -335,27 +334,66 @@ class TextifAIConversationManagerTests(unittest.TestCase):
             )
             session = create_session(load_runtime_environment(base_dir))
             manager = ConversationManager(session=session, executor=MinimalExecutionLayer(session=session))
-            first_request = ConversationRequest(
-                raw_text="Sera encuentra a Toma en el puerto, él la confronta, luego ella confiesa que perdió el mapa",
-                source="user",
-                mode="normal",
-                interface_language="es",
-                user_command_language="es",
-                internal_system_language="en",
-                project_default_language="ja",
-                mixed_language_allowed=True,
-                explanation_language="es",
-                metadata={
-                    "known_characters": [
-                        {"id": "sera", "names": ["Sera"]},
-                        {"id": "toma", "names": ["Toma"]},
-                    ]
-                },
+            session.remember(
+                {
+                    "type": "editorial_structuring",
+                    "data": {
+                        "story_facts": {
+                            "source_text": "Sera reaches the port late and Toma confronts her.",
+                            "language": "es",
+                            "characters_involved": ["Sera", "Toma"],
+                            "locations_involved": ["Port"],
+                            "objects_involved": ["Map"],
+                            "premise": "Sera arrives late to the port.",
+                            "core_conflict": "Toma confronts Sera over the missing map.",
+                            "goals": ["Preserve the mission route."],
+                            "constraints": [],
+                            "canon_constraints": [],
+                            "explicit_facts": [
+                                {
+                                    "text": "Sera arrives late at the port.",
+                                    "fact_kind": "event",
+                                    "source": "explicit_input",
+                                }
+                            ],
+                            "inferred_facts": [],
+                            "open_questions": [],
+                        },
+                        "beat_outline": {
+                            "source_kind": "beat_outline",
+                            "title": "Port confrontation",
+                            "beats": [
+                                {
+                                    "index": 1,
+                                    "summary": "Sera arrives late and Toma confronts her.",
+                                    "purpose": "Establish the conflict around the missing map.",
+                                    "characters": ["Sera", "Toma"],
+                                    "tension_level": "rising",
+                                }
+                            ],
+                            "emotional_arc": ["tension"],
+                            "target_language": "ja",
+                            "continuity_notes": [],
+                            "canon_checks": [],
+                        },
+                        "revision_intent": {
+                            "source_text": "Keep the confrontation tense and clear.",
+                            "target_scope": "scene",
+                            "issue_types": ["clarity"],
+                            "desired_changes": ["Preserve the port confrontation."],
+                            "must_preserve": ["Sera loses the map."],
+                            "priority": "high",
+                            "target_hint": None,
+                        },
+                        "entity_resolution_results": [],
+                        "result_kind": "mixed",
+                        "ready_for_validation": True,
+                    },
+                    "summary": "Seeded structuring result for followthrough.",
+                }
             )
-            first_turn = manager.handle_request(first_request)
-            self.assertEqual(first_turn.result_type, "editorial_structuring")
             second_request = ConversationRequest(
-                raw_text="prepáralo para narrar",
+                raw_text="prepare_narration",
                 source="user",
                 mode="normal",
                 interface_language="es",
@@ -402,7 +440,7 @@ class TextifAIConversationManagerTests(unittest.TestCase):
             session = create_session(load_runtime_environment(base_dir))
             manager = ConversationManager(session=session, executor=MinimalExecutionLayer(session=session))
             request = ConversationRequest(
-                raw_text="esto contradice el canon del ritual",
+                raw_text="check lore:ritual_notes",
                 source="user",
                 mode="normal",
                 interface_language="es",

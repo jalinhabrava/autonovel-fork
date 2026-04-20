@@ -17,7 +17,12 @@ class TextifAIImportReviewReviewerTests(unittest.TestCase):
             source_root = base / "sources"
             vault_root = base / "vault"
             source_root.mkdir()
-            (source_root / "chapter.md").write_text("# Chapter One\n\nThe meeting began calmly.")
+            (source_root / "chapter.md").write_text(
+                "---\nkind: chapter\ntitle: Chapter One\nslug: chapter_one\n---\n\n# Chapter One\n\n"
+                "The meeting began calmly, but Sera noticed the map was wrong before anyone else did.\n\n"
+                "When Ren challenged the route, the whole room shifted from trust to suspicion.",
+                encoding="utf-8",
+            )
 
             config = VaultInitializationConfig(
                 vault_root=str(vault_root),

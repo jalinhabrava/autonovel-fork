@@ -22,8 +22,6 @@ def build_vault_index(
             frontmatter_kind=note.frontmatter.get("kind"),
             snapshot_artifact_type=note.artifact_type,
         )
-        if normalized_artifact_type == "note":
-            continue
         frontmatter = dict(note.frontmatter)
         frontmatter.setdefault("_context_source_reliability", source.status.reliability)
         frontmatter.setdefault("_context_source_kind", source.status.source_kind)

@@ -17,7 +17,11 @@ class TextifAIImportReviewPromotionPlanTests(unittest.TestCase):
             source_root = base / "sources"
             vault_root = base / "vault"
             source_root.mkdir()
-            (source_root / "character.md").write_text("# Character\n\nA careful observer.")
+            (source_root / "character.md").write_text(
+                "---\nkind: character\ntitle: Sera\nslug: sera\n---\n\n# Sera\n\n"
+                "Sera leads the group, protects the map, and keeps the others aligned when the ritual fails.",
+                encoding="utf-8",
+            )
 
             config = VaultInitializationConfig(
                 vault_root=str(vault_root),

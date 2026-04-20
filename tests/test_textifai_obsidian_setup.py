@@ -75,7 +75,7 @@ class TextifAIObsidianSetupTests(unittest.TestCase):
             self.assertTrue(result.vault_ready)
             self.assertTrue((vault_root / "00_Project" / "Project.md").exists())
             self.assertTrue((vault_root / "random_notes.txt").exists())
-            self.assertTrue(any("convertida a vault" in note for note in result.notes))
+            self.assertTrue(any("converted into a TextifAI vault" in note for note in result.notes))
 
     def test_prepare_new_project_accepts_existing_empty_folder(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -127,7 +127,7 @@ class TextifAIObsidianSetupTests(unittest.TestCase):
 
             self.assertEqual(result.import_strategy_used, "textifai_bootstrap_staging")
             self.assertTrue(result.bootstrap_written_drafts)
-            self.assertTrue(result.bootstrap_auto_promoted_paths)
+            self.assertTrue(result.bootstrap_pending_candidates or result.bootstrap_auto_promoted_paths)
             self.assertFalse(result.official_obsidian_importer_used)
             self.assertIsNotNone(result.official_obsidian_importer_reason)
             self.assertEqual(result.readiness.source_reliability, "vault_reader_only")
@@ -362,9 +362,11 @@ class TextifAIObsidianSetupTests(unittest.TestCase):
             self.assertEqual(payload["readiness"]["operational_mode"], "degraded_context")
             self.assertGreaterEqual(payload["source_note_count"], 1)
             self.assertGreaterEqual(payload["vaerl_index_entries"], 1)
-            self.assertIn("character", payload["vaerl_artifact_types"])
+            self.assertIn("note", payload["vaerl_artifact_types"])
             self.assertIn("candidate_artifact_count", payload)
             self.assertIn("manifest_summary", payload)
+            self.assertIn("provider_readiness", payload)
+            self.assertFalse(payload["provider_readiness"]["available_for_author_response"])
 
     def test_textifai_entrypoint_defaults_to_interactive_start(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -396,9 +398,9 @@ class TextifAIObsidianSetupTests(unittest.TestCase):
                         str(vault_root),
                         "n",
                         str(source_root),
-                        "es",
-                        "es,ja",
-                        "s",
+                        "en",
+                        "en,ja",
+                        "y",
                     ]
                 )
                 + "\n",
@@ -412,7 +414,7 @@ class TextifAIObsidianSetupTests(unittest.TestCase):
             self.assertTrue(payload["vault_ready"])
             self.assertGreaterEqual(payload["vaerl_index_entries"], 1)
 
-    def test_textifai_ask_entrypoint_runs_author_facing_interaction(self):
+    def test_textifai_ask_requires_provider_for_author_facing_guidance(self):
         with tempfile.TemporaryDirectory() as tmp:
             base = Path(tmp)
             vault_root = base / "Vault"
@@ -440,7 +442,6 @@ class TextifAIObsidianSetupTests(unittest.TestCase):
                     [
                         "AUTONOVEL_PROJECT_BACKEND=vault",
                         f"AUTONOVEL_VAULT_ROOT={vault_root}",
-                        "AUTONOVEL_TEXT_PROVIDER=ollama",
                     ]
                 )
                 + "\n",
@@ -461,14 +462,14 @@ class TextifAIObsidianSetupTests(unittest.TestCase):
                     "--json",
                 ],
                 cwd=Path(__file__).resolve().parents[1],
-                check=True,
                 capture_output=True,
                 text=True,
             )
             payload = json.loads(completed.stdout)
 
-            self.assertIn("flow_name", payload)
-            self.assertIn("response_support_summary", payload)
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertFalse(payload["author_facing_available"])
+            self.assertEqual(payload["reason"], "provider_not_available")
             self.assertTrue((vault_root / "99_System" / "textifai_ask_trace.jsonl").exists())
 
 

@@ -56,6 +56,82 @@ class TextifAIConversationPlannerTests(unittest.TestCase):
         self.assertEqual(task.flow_name, "noop_flow")
         self.assertEqual(task.step_kinds, ["return_response"])
 
+    def test_planner_routes_llm_narrative_facts_to_world_lookup_when_no_target_is_resolved(self):
+        request = ConversationRequest(
+            raw_text="List all characters you know from the story.",
+            source="user",
+            mode="normal",
+            interface_language="en",
+            user_command_language="en",
+            internal_system_language="en",
+            project_default_language="en",
+            mixed_language_allowed=True,
+            explanation_language="en",
+        )
+        intent = RecognizedIntent(
+            intent_name="unknown",
+            confidence=0.25,
+            editorial_intent=EditorialIntent(
+                request_type="narrative_facts",
+                confidence=0.83,
+                followup_mode="none",
+                metadata={
+                    "author_understanding": {
+                        "primary_intent_type": "narrative_facts",
+                        "analysis_source": "hybrid",
+                    }
+                },
+            ),
+            metadata={
+                "author_understanding": {
+                    "primary_intent_type": "narrative_facts",
+                    "analysis_source": "hybrid",
+                }
+            },
+        )
+        task = self.planner.plan(request, intent, self.state)
+        self.assertEqual(task.flow_name, "world_lookup_flow")
+        self.assertEqual(task.metadata["planner_reason"], "author_understanding_routing")
+        self.assertEqual(task.metadata["semantic_response_kind"], "contextual_followup_response")
+
+    def test_planner_routes_llm_contextual_followup_to_search_when_candidates_exist(self):
+        request = ConversationRequest(
+            raw_text="What do you know about Nushi?",
+            source="user",
+            mode="normal",
+            interface_language="en",
+            user_command_language="en",
+            internal_system_language="en",
+            project_default_language="en",
+            mixed_language_allowed=True,
+            explanation_language="en",
+        )
+        intent = RecognizedIntent(
+            intent_name="unknown",
+            confidence=0.22,
+            editorial_intent=EditorialIntent(
+                request_type="contextual_followup",
+                confidence=0.86,
+                followup_mode="prefer_candidate_targets",
+                candidate_targets=[CandidateTarget(target_id="nushi", target_type="lore", confidence=0.9)],
+                metadata={
+                    "author_understanding": {
+                        "primary_intent_type": "contextual_followup",
+                        "analysis_source": "hybrid",
+                    }
+                },
+            ),
+            metadata={
+                "author_understanding": {
+                    "primary_intent_type": "contextual_followup",
+                    "analysis_source": "hybrid",
+                }
+            },
+        )
+        task = self.planner.plan(request, intent, self.state)
+        self.assertEqual(task.flow_name, "context_search_flow")
+        self.assertEqual(task.metadata["semantic_response_kind"], "contextual_followup_response")
+
     def test_planner_routes_unknown_narration_preparation_followups_to_editorial_structuring(self):
         request = ConversationRequest(
             raw_text="prepáralo para escribir",

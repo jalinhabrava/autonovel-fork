@@ -80,7 +80,7 @@ def evaluate_obsidian_operational_readiness(
                 "install_obsidian_bridge_plugin",
                 "generate_initial_snapshot",
             ],
-            notes=["El vault aún no está operativo; TextifAI debe quedarse en modo bootstrap hasta inicializarlo."],
+            notes=["The vault is not operational yet; TextifAI should remain in bootstrap mode until initialization is complete."],
         )
 
     opened = open_obsidian_source(root)
@@ -107,17 +107,17 @@ def evaluate_obsidian_operational_readiness(
             degraded_flow_names=[],
             blocked_flow_names=[],
             required_actions=[],
-            notes=["Bridge fresco y válido: grounding serio habilitado."],
+            notes=["Fresh, valid bridge snapshot detected: strong grounding is available."],
         )
 
     if reliability in {"obsidian_bridge_snapshot_stale", "vault_reader_only"}:
         notes = []
         required_actions = []
         if reliability == "obsidian_bridge_snapshot_stale":
-            notes.append("Hay snapshot bridge, pero ya no está fresco; refresca la exportación desde Obsidian antes de evaluar con fuerza.")
+            notes.append("A bridge snapshot exists, but it is no longer fresh; refresh the export from Obsidian before relying on strong grounding.")
             required_actions.append("refresh_obsidian_bridge_snapshot_from_obsidian")
         else:
-            notes.append("El vault ya es usable y VaERL puede consultarlo, pero aún falta un snapshot bridge fresco para grounding fuerte.")
+            notes.append("The vault is usable and VaERL can query it, but a fresh bridge snapshot is still required for strong grounding.")
             required_actions.extend(["install_or_enable_obsidian_bridge_plugin", "generate_fresh_obsidian_bridge_snapshot"])
         return ObsidianOperationalReadiness(
             vault_root=str(root),
@@ -158,5 +158,5 @@ def evaluate_obsidian_operational_readiness(
         degraded_flow_names=list(CONTEXT_SENSITIVE_FLOWS),
         blocked_flow_names=[],
         required_actions=["repair_obsidian_bridge_source"],
-        notes=["Contexto disponible, pero la fiabilidad del bridge no permite evaluación fuerte."],
+        notes=["Context is available, but bridge reliability is still too weak for strong evaluation."],
     )

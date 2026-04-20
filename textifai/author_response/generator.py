@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Protocol
 
 from textifai.author_response.contracts import AnchoredAuthorPrompt, AnchoredAuthorResponse
-from textifai.author_response.provider_client import OpenAIAuthorResponseClient
+from textifai.author_response.provider_client import ConfiguredAuthorResponseClient
 
 
 class AuthorResponseGenerator(Protocol):
@@ -47,12 +47,12 @@ class ProviderBackedAuthorResponseGenerator:
         allow_live: bool = False,
         allow_simulated_preview: bool = False,
         fallback_generator: AuthorResponseGenerator | None = None,
-        openai_client: OpenAIAuthorResponseClient | None = None,
+        provider_client: ConfiguredAuthorResponseClient | None = None,
     ) -> None:
         self.allow_live = allow_live
         self.allow_simulated_preview = allow_simulated_preview
         self.fallback_generator = fallback_generator or TemplateAuthorResponseGenerator()
-        self.openai_client = openai_client or OpenAIAuthorResponseClient()
+        self.provider_client = provider_client or ConfiguredAuthorResponseClient()
 
     def generate(self, *, prompt: AnchoredAuthorPrompt) -> AnchoredAuthorResponse:
         allow_live_for_prompt = bool(prompt.dynamic_context_payload.get("allow_live_provider", False))
@@ -61,9 +61,9 @@ class ProviderBackedAuthorResponseGenerator:
         preview_permitted = self.allow_simulated_preview or allow_preview_for_prompt
         if not prompt.response_generation_ready:
             return _disabled_response(prompt=prompt, reason="response_not_ready")
-        if live_permitted and self.openai_client.is_available():
+        if live_permitted and self.provider_client.is_available(prompt=prompt):
             try:
-                live_text, live_model = self.openai_client.generate(prompt=prompt)
+                live_text, live_model, provider_name = self.provider_client.generate(prompt=prompt)
                 return AnchoredAuthorResponse(
                     semantic_response_kind=prompt.semantic_response_kind,
                     author_facing_response=live_text,
@@ -74,15 +74,16 @@ class ProviderBackedAuthorResponseGenerator:
                         "prompt_template_id": prompt.prompt_template_id,
                         "prompt_template_version": prompt.prompt_template_version,
                         "model_profile_used": prompt.model_profile_used,
-                        "provider_mode": "live_openai",
+                        "provider_mode": "live_provider",
+                        "provider_name": provider_name,
                         "provider_model_used": live_model,
                     },
                     llm_used=True,
-                    provider_mode="live_openai",
-                    response_generation_mode="live_openai",
+                    provider_mode="live_provider",
+                    response_generation_mode="live_provider",
                     response_generation_reason="live_provider_execution",
                     provider_execution_enabled=True,
-                    provider_execution_mode="live_openai",
+                    provider_execution_mode="live_provider",
                     provider_model_used=live_model,
                     live_model_response=live_text,
                     simulated_preview_enabled=False,
@@ -126,7 +127,7 @@ class ProviderBackedAuthorResponseGenerator:
                     "provider_fallback_reason": (
                         "live_provider_not_permitted"
                         if not live_permitted
-                        else "missing_openai_api_key"
+                        else "provider_not_available"
                     ),
                 },
                 llm_used=False,
@@ -142,7 +143,7 @@ class ProviderBackedAuthorResponseGenerator:
             )
         return _disabled_response(
             prompt=prompt,
-            reason="live_provider_not_permitted" if not live_permitted else "missing_openai_api_key",
+            reason="live_provider_not_permitted" if not live_permitted else "provider_not_available",
         )
 
 
@@ -193,10 +194,10 @@ def _render_structuring(payload: dict) -> str:
     constraints = _natural_join(payload.get("preserve_constraints", []))
     hints = _hint_labels(payload)
     return (
-        f"Aqui lo mas util seria ordenar {target} alrededor de una progresion dramatica mas clara, "
-        f"sin soltar {constraints or 'la tension y la voz que ya vienen marcadas'}. "
-        f"Con lo que ya tengo anclado sobre {hints or 'el material relevante'}, la mejor macrodecision seria retrasar la explicitud y dejar que la tension se vea en pequenas reacciones, no en explicaciones directas. "
-        "Si quieres, te lo convierto ahora en una propuesta beat by beat."
+        f"The most useful move is to reorganize {target} around a clearer dramatic progression, "
+        f"without dropping {constraints or 'the tension and voice already anchored in the material'}. "
+        f"Based on what is already grounded around {hints or 'the relevant material'}, I would delay explicit explanation and let the tension surface through smaller reactions first. "
+        "If you want, I can turn that into a beat-by-beat proposal now."
     )
 
 
@@ -204,9 +205,9 @@ def _render_revision(payload: dict) -> str:
     constraints = _natural_join(payload.get("preserve_constraints", []))
     issues = _natural_join(payload.get("change_signals", []))
     return (
-        f"Yo lo enfocaria como una revision guiada y bastante precisa. "
-        f"Lo que conviene mover primero es {issues or 'el foco de la escena'}, mientras preservamos {constraints or 'la voz, la dinamica y el canon ya recuperados'}. "
-        "La idea no seria reescribirlo todo, sino tocar justo lo necesario para que el pasaje gane claridad sin perder personalidad."
+        f"I would treat this as a guided, precise revision. "
+        f"The first thing to move is {issues or 'the focus of the passage'}, while preserving {constraints or 'the voice, dynamics, and canon already recovered'}. "
+        "The goal is not to rewrite everything, but to adjust only what is necessary so the passage gains clarity without flattening its personality."
     )
 
 
@@ -216,14 +217,14 @@ def _render_canon(payload: dict) -> str:
     canon = _first_title(payload.get("supporting_canon", []))
     if summary:
         return (
-            f"Mi mejor juicio ahora mismo es que {summary.lower()} "
-            f"La lectura sale de {canon or 'el canon recuperado'}, asi que la respuesta es prudente, pero no evasiva. "
-            "Si quieres, te lo separo en lo que encaja bien, lo que roza el conflicto y lo que aun pediria confirmacion."
+            f"My best judgement right now is that {summary.lower()} "
+            f"That reading comes from {canon or 'the canon already recovered'}, so the answer is cautious but not evasive. "
+            "If you want, I can split that into what fits cleanly, what is close to conflict, and what still needs confirmation."
         )
     return (
-        f"Con el soporte que tengo, esto parece compatible con {canon or 'el canon validado'}, "
-        "aunque no iria mas lejos de lo que realmente esta anclado. "
-        "Puedo desglosarte enseguida que encaja, que tensiona el canon y que conviene revisar."
+        f"With the support I have, this looks compatible with {canon or 'the validated canon'}, "
+        "but I would not push the claim further than what is actually grounded. "
+        "I can break down what fits, what strains the canon, and what still needs review."
     )
 
 
@@ -231,9 +232,9 @@ def _render_narration(payload: dict) -> str:
     target = _target_label(payload)
     constraints = _natural_join(payload.get("preserve_constraints", []))
     return (
-        f"Ya hay base suficiente para llevar {target} a narracion. "
-        f"Yo arrastraria como guia el foco emocional y {constraints or 'las restricciones ya ancladas'}, para que la prosa no pierda ni tono ni coherencia. "
-        "Si quieres, te lo dejo en un handoff corto y muy escribible."
+        f"There is enough support now to carry {target} into narration. "
+        f"I would keep the emotional focus and {constraints or 'the anchored constraints already in play'} as the guide, so the prose keeps both tone and coherence. "
+        "If you want, I can turn it into a short handoff that is ready to write from."
     )
 
 
@@ -241,9 +242,9 @@ def _render_followup(payload: dict) -> str:
     target = _target_label(payload)
     hints = _hint_labels(payload)
     return (
-        f"Si, sigo sobre {target}. "
-        f"Con la continuidad que ya tengo sobre {hints or 'ese hilo'}, lo mas util es no reiniciar nada y avanzar directamente a la siguiente decision editorial. "
-        "Si quieres, continúo con una propuesta concreta en esa misma direccion."
+        f"Yes, I am still working on {target}. "
+        f"With the continuity I already have around {hints or 'that thread'}, the most useful move is to continue directly into the next editorial decision instead of restarting from scratch. "
+        "If you want, I can continue with a concrete proposal in that direction."
     )
 
 
@@ -253,13 +254,13 @@ def _render_clarification(payload: dict) -> str:
     if candidates:
         labels = [f"{item.get('target_type')}:{item.get('target_id')}" for item in candidates[:3]]
         return (
-            f"Lo que si veo ya bastante claro es el problema editorial alrededor de {hints or 'este material'}. "
-            f"Lo que sigue abierto es sobre cual de estos focos quieres trabajar primero: {', '.join(labels)}. "
-            "Con que me señales cual es el principal, te respondo ya de forma mucho mas enfocada."
+            f"What already looks fairly clear is the editorial problem around {hints or 'this material'}. "
+            f"What is still open is which of these targets you want to focus first: {', '.join(labels)}. "
+            "If you point me to the main one, I can answer in a much more focused way."
         )
     return (
-        "Ya tengo una idea general de lo que quieres mover, pero aun me falta el anclaje minimo para responderte bien de verdad. "
-        "Si me das el pasaje, la nota concreta o el foco exacto, te lo devuelvo ya en forma editorial y util."
+        "I already have a general sense of what you want to move, but I still need the minimum anchor to answer well. "
+        "If you give me the passage, the exact note, or the concrete target, I can turn it around as a useful editorial answer."
     )
 
 
@@ -269,7 +270,7 @@ def _target_label(payload: dict) -> str:
     target_id = target.get("target_id")
     if target_type and target_id:
         return f"{target_type}:{target_id}"
-    return "el material ya anclado"
+    return "the already anchored material"
 
 
 def _first_title(items: list[dict]) -> str | None:
@@ -286,7 +287,7 @@ def _natural_join(values: list[str]) -> str:
         return ""
     if len(filtered) == 1:
         return filtered[0]
-    return ", ".join(filtered[:-1]) + f" y {filtered[-1]}"
+    return ", ".join(filtered[:-1]) + f" and {filtered[-1]}"
 
 
 def _hint_labels(payload: dict) -> str:

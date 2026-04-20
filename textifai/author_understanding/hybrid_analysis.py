@@ -61,8 +61,9 @@ class HybridAuthorUnderstandingAnalyzer:
     ) -> "HybridAuthorUnderstandingAnalyzer":
         merged_config = config or HybridAuthorUnderstandingConfig(
             llm_provider_name=getattr(session, "provider", None),
+            llm_model=getattr(session, "writer_model", None),
         )
-        if llm_interpreter is None and merged_config.llm_enabled and getattr(session, "mode", "normal") == "advanced":
+        if llm_interpreter is None and merged_config.llm_enabled:
             if not get_text_provider_config_error(merged_config.llm_task_name, merged_config.llm_provider_name):
                 llm_interpreter = ProviderBackedAuthorUnderstandingInterpreter(
                     config=AuthorUnderstandingLLMConfig(
@@ -115,13 +116,45 @@ class HybridAuthorUnderstandingAnalyzer:
         if self.llm_interpreter is None:
             return _annotate_interpretation(route=route, interpretation=rule_interpretation, source="rule_based")
 
-        llm_result = self.llm_interpreter.interpret(
-            request=request,
-            rule_intent=rule_intent,
-            narrative_signals=narrative_signals,
-            entity_results=entity_results,
-            state=state,
-        )
+        try:
+            llm_result = self.llm_interpreter.interpret(
+                request=request,
+                rule_intent=rule_intent,
+                narrative_signals=narrative_signals,
+                entity_results=entity_results,
+                state=state,
+            )
+        except Exception as exc:
+            fallback = _annotate_interpretation(route=route, interpretation=rule_interpretation, source="fallback")
+            metadata = dict(fallback.metadata)
+            metadata.update(
+                {
+                    "llm_used": False,
+                    "llm_error": str(exc),
+                    "analysis_source": "fallback",
+                }
+            )
+            return fallback.__class__(
+                primary_intent_type=fallback.primary_intent_type,
+                secondary_intent_types=list(fallback.secondary_intent_types),
+                confidence=fallback.confidence,
+                has_mixed_request=fallback.has_mixed_request,
+                author_goal_signals=list(fallback.author_goal_signals),
+                preserve_signals=list(fallback.preserve_signals),
+                change_signals=list(fallback.change_signals),
+                entity_hints=list(fallback.entity_hints),
+                followup_reference_text=fallback.followup_reference_text,
+                narrative_content_text=fallback.narrative_content_text,
+                meta_instruction_text=fallback.meta_instruction_text,
+                editorial_diagnosis=dict(fallback.editorial_diagnosis),
+                needs_clarification=fallback.needs_clarification,
+                clarification_reason=fallback.clarification_reason,
+                mixed_request_analysis=fallback.mixed_request_analysis,
+                llm_interpretation=fallback.llm_interpretation,
+                disambiguation=fallback.disambiguation,
+                source="fallback",
+                metadata=metadata,
+            )
         if llm_result is None:
             return _annotate_interpretation(route=route, interpretation=rule_interpretation, source="rule_based")
 

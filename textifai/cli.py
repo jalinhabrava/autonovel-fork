@@ -2,41 +2,52 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
 from textifai import PRODUCT_NAME
 from textifai.doctor import format_doctor_report, run_doctor
-from textifai.i18n import get_translator
-from textifai.onboarding import run_onboarding
+from textifai.obsidian.cli import run_cli as run_obsidian_cli
 from textifai.runtime_config import load_runtime_environment, runtime_banner
 from textifai.session import create_session
 from textifai.shell import run_shell
 
 
 def main(argv: list[str] | None = None) -> int:
+    raw_argv = list(sys.argv[1:] if argv is None else argv)
+    if not raw_argv:
+        return run_obsidian_cli(argv=["start"], repo_root=".")
+
+    if raw_argv[0] in {"start", "init", "status", "inspect", "ask"}:
+        return run_obsidian_cli(argv=raw_argv, repo_root=".")
+
     parser = argparse.ArgumentParser(prog="textifai", description=f"{PRODUCT_NAME} product runtime")
     subparsers = parser.add_subparsers(dest="command")
 
-    setup_parser = subparsers.add_parser("setup", help="Run guided setup for TextifAI")
-    setup_parser.add_argument("--base-dir", default=".", help="Base project directory")
-    setup_parser.add_argument("--json", action="store_true", help="Print machine-readable setup summary")
+    start_parser = subparsers.add_parser("start", help="Run the guided TextifAI setup wizard.")
+    start_parser.add_argument("--json", action="store_true", help="Emit machine-readable setup output.")
 
-    chat_parser = subparsers.add_parser("chat", help="Enter the TextifAI product runtime")
+    init_parser = subparsers.add_parser("init", help="Initialize a vault or import existing documentation.")
+    init_parser.add_argument("passthrough", nargs="*")
+
+    inspect_parser = subparsers.add_parser("inspect", help="Inspect vault readiness, snapshot state, and VaERL.")
+    inspect_parser.add_argument("passthrough", nargs="*")
+
+    ask_parser = subparsers.add_parser("ask", help="Run a single author-facing query against the prepared vault.")
+    ask_parser.add_argument("passthrough", nargs="*")
+
+    chat_parser = subparsers.add_parser("chat", help="Enter the interactive TextifAI shell.")
     chat_parser.add_argument("--base-dir", default=".", help="Base project directory")
 
-    doctor_parser = subparsers.add_parser("doctor", help="Validate the basic TextifAI runtime environment")
+    doctor_parser = subparsers.add_parser("doctor", help="Validate the local TextifAI runtime environment.")
     doctor_parser.add_argument("--base-dir", default=".", help="Base project directory")
     doctor_parser.add_argument("--json", action="store_true", help="Print doctor report as JSON")
 
-    args = parser.parse_args(argv)
-    command = args.command or "chat"
+    args = parser.parse_args(raw_argv)
+    command = args.command or "start"
 
-    if command == "setup":
-        summary = run_onboarding(base_dir=args.base_dir)
-        if args.json:
-            print(json.dumps(summary, indent=2))
-        return 0
-
+    if command in {"start", "init", "inspect", "ask", "status"}:
+        return run_obsidian_cli(argv=raw_argv, repo_root=".")
     if command == "doctor":
         report = run_doctor(base_dir=args.base_dir)
         if args.json:
@@ -44,23 +55,18 @@ def main(argv: list[str] | None = None) -> int:
         else:
             print(format_doctor_report(report))
         return 0 if report["overall"] == "ok" else 1
-
     if command == "chat":
         return _run_chat_entry(args.base_dir)
-
     return 0
 
 
 def _run_chat_entry(base_dir: str | Path) -> int:
     env = load_runtime_environment(base_dir)
-    tr = get_translator(env.locale)
     if not _is_environment_ready(env):
         print(runtime_banner(env.locale))
-        print(tr.t("shell.chat.requires_environment"))
-        summary = run_onboarding(base_dir=base_dir)
-        print(json.dumps(summary, indent=2))
+        print("The runtime is not configured yet. Launching the setup wizard.")
+        run_obsidian_cli(argv=["start"], repo_root=base_dir)
         env = load_runtime_environment(base_dir)
-
     session = create_session(env)
     return run_shell(session)
 

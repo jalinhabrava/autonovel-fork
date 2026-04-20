@@ -6,6 +6,8 @@ import sys
 from dataclasses import asdict
 from pathlib import Path
 
+from providers.text_provider import get_text_provider_config_error
+from textifai.conversation.runtime_bridge import _load_known_characters, render_execution_result
 from textifai.conversation.contracts import ConversationRequest
 from textifai.conversation.executor import MinimalExecutionLayer
 from textifai.conversation.manager import ConversationManager
@@ -72,6 +74,7 @@ def run_cli(*, argv: list[str] | None = None, repo_root: str | Path) -> int:
         payload = _inspect_vault(
             vault_root=normalize_user_path(args.vault_root),
             snapshot_path=args.snapshot_path,
+            repo_root=repo_root,
         )
         print(json.dumps(payload, indent=2, ensure_ascii=False))
         return 0
@@ -140,33 +143,33 @@ def _interactive_config_from_args(args: argparse.Namespace) -> ObsidianProjectSe
     mode = "existing_material" if (args.source_root or args.use_vault_root_as_source) else None
     if mode is None:
         choice = _prompt(
-            "Como quieres empezar? [0] proyecto nuevo, [1] documentacion previa",
+            "How do you want to start? [0] new project, [1] existing documentation",
             default="1",
         )
         mode = "new_project" if choice.strip() == "0" else "existing_material"
 
-    project_title = args.project_title or _prompt("Nombre del proyecto", default="TextifAI Project")
+    project_title = args.project_title or _prompt("Project title", default="TextifAI Project")
     vault_root = normalize_user_path(
-        args.vault_root or _prompt("Ruta del vault", default=str(suggest_default_vault_root(project_title=project_title)))
+        args.vault_root or _prompt("Vault location", default=str(suggest_default_vault_root(project_title=project_title)))
     )
     source_root = args.source_root
     use_vault_root_as_source = args.use_vault_root_as_source
     if mode == "existing_material" and not source_root and not use_vault_root_as_source:
-        source_choice = _prompt("La documentacion ya esta dentro de esa carpeta? [s/N]", default="n")
-        if source_choice.strip().lower() in {"s", "si", "sí", "y", "yes"}:
+        source_choice = _prompt("Is the source documentation already inside that folder? [y/N]", default="n")
+        if source_choice.strip().lower() in {"y", "yes"}:
             use_vault_root_as_source = True
         else:
-            source_root = _prompt("Ruta de la documentacion fuente", default="")
+            source_root = _prompt("Source documentation location", default="")
 
-    primary_language = args.primary_language or _prompt("Idioma principal", default="es")
+    primary_language = args.primary_language or _prompt("Primary project language", default="en")
     working_languages = list(args.working_language) or [
         item.strip()
-        for item in _prompt("Idiomas de trabajo separados por comas", default=f"{primary_language},ja").split(",")
+        for item in _prompt("Working languages, comma-separated", default=primary_language).split(",")
         if item.strip()
     ]
     build_bridge_plugin = bool(args.build_bridge_plugin)
     if not build_bridge_plugin:
-        should_build = _prompt("Compilar/instalar el plugin bridge ahora? [S/n]", default="s")
+        should_build = _prompt("Build/install the TextifAI Bridge plugin now? [Y/n]", default="y")
         build_bridge_plugin = should_build.strip().lower() not in {"n", "no"}
 
     normalized_source_root = None
@@ -189,7 +192,14 @@ def _interactive_config_from_args(args: argparse.Namespace) -> ObsidianProjectSe
     )
 
 
-def _inspect_vault(*, vault_root: Path, snapshot_path: str | None = None) -> dict:
+def _inspect_vault(*, vault_root: Path, snapshot_path: str | None = None, repo_root: str | Path = ".") -> dict:
+    env = load_runtime_environment(repo_root)
+    provider_name = env.provider
+    provider_config_error = (
+        get_text_provider_config_error("author_response", provider_name)
+        if provider_name
+        else "provider_not_configured"
+    )
     readiness = evaluate_obsidian_operational_readiness(vault_root)
     source = open_obsidian_source(vault_root, snapshot_path=snapshot_path)
     snapshot_validation = None
@@ -200,6 +210,12 @@ def _inspect_vault(*, vault_root: Path, snapshot_path: str | None = None) -> dic
     manifest_summary = _latest_manifest_stats(vault_root)
     return {
         "vault_root": str(vault_root),
+        "provider_readiness": {
+            "provider_name": provider_name,
+            "configured": bool(provider_name),
+            "available_for_author_response": provider_config_error is None,
+            "configuration_error": provider_config_error,
+        },
         "readiness": asdict(readiness),
         "source_status": asdict(source.status),
         "snapshot_validation": asdict(snapshot_validation.status) if snapshot_validation is not None else None,
@@ -256,14 +272,41 @@ def _run_author_facing_query(
         session.vault_path = vault_root
     elif env.vault_root is None:
         session.vault_path = normalize_user_path(
-            _prompt("Ruta del vault para esta interacción", default=str(suggest_default_vault_root(project_title="TextifAI Project")))
+            _prompt("Vault location for this interaction", default=str(suggest_default_vault_root(project_title="TextifAI Project")))
         )
-    query_text = text or _prompt("Que quieres pedirle a TextifAI", default="")
+    query_text = text or _prompt("What do you want to ask TextifAI?", default="")
     if not query_text.strip():
-        print("No se recibió ninguna petición.")
+        print("No request was provided.")
+        return 1
+    provider_name = session.provider
+    provider_config_error = (
+        get_text_provider_config_error("author_response", provider_name)
+        if provider_name
+        else "provider_not_configured"
+    )
+    readiness = evaluate_obsidian_operational_readiness(session.vault_path)
+    if provider_config_error is not None:
+        payload = {
+            "vault_root": str(session.vault_path),
+            "author_facing_available": False,
+            "reason": "provider_not_available",
+            "provider_name": provider_name,
+            "provider_configuration_error": provider_config_error,
+            "readiness": asdict(readiness),
+            "message": (
+                "Author-facing semantic guidance requires a configured text provider. "
+                "Inspect/status commands still work, but ask/chat cannot provide grounded author guidance without an LLM provider."
+            ),
+        }
+        _append_ask_trace(session.vault_path, payload)
+        if emit_json:
+            print(json.dumps(payload, indent=2, ensure_ascii=False))
+        else:
+            print(payload["message"])
         return 1
 
     manager = ConversationManager(session=session, executor=MinimalExecutionLayer(session=session))
+    known_characters = _load_known_characters(session.vault_path)
     turn = manager.handle_request(
         ConversationRequest(
             raw_text=query_text,
@@ -275,15 +318,25 @@ def _run_author_facing_query(
             project_default_language=session.language_policy.project_default_language,
             mixed_language_allowed=session.language_policy.mixed_language_allowed,
             explanation_language=session.language_policy.interface_language,
-            metadata={},
+            metadata={
+                "known_characters": known_characters,
+                "allow_live_provider": bool(session.provider),
+                "allow_simulated_preview": False,
+                "provider_name": session.provider,
+            },
         )
     )
+    execution = manager.last_execution_result
+    rendered_response = turn.author_facing_response
+    if not rendered_response and execution is not None:
+        rendered_response = render_execution_result(session, execution)
     payload = {
         "vault_root": str(session.vault_path),
+        "author_facing_available": bool(rendered_response),
         "flow_name": turn.planned_task.flow_name,
         "semantic_response_kind": turn.semantic_response_kind,
         "result_summary": turn.result_summary,
-        "author_facing_response": turn.author_facing_response,
+        "author_facing_response": rendered_response,
         "response_generation_ready": turn.response_generation_ready,
         "response_support_summary": turn.response_support_summary,
         "provider_mode": turn.provider_mode,
@@ -297,7 +350,7 @@ def _run_author_facing_query(
         print(f"Flow: {turn.planned_task.flow_name}")
         print(f"Readiness: {readiness.get('operational_mode')}")
         print("")
-        print(turn.author_facing_response or turn.result_summary)
+        print(rendered_response or turn.result_summary)
     return 0
 
 
@@ -315,23 +368,23 @@ def _prompt(message: str, *, default: str) -> str:
 
 
 def _print_human_start_summary(result) -> None:
-    print(f"Vault listo: {result.vault_root}")
-    print(f"Modo: {result.mode}")
-    print(f"Readiness actual: {result.readiness.operational_mode if result.readiness else 'unknown'}")
+    print(f"Vault ready: {result.vault_root}")
+    print(f"Mode: {result.mode}")
+    print(f"Current readiness: {result.readiness.operational_mode if result.readiness else 'unknown'}")
     if result.plugin_status and result.plugin_status.install_succeeded:
-        print("Plugin TextifAI Bridge instalado en el vault.")
+        print("TextifAI Bridge was installed into the vault.")
     if result.bootstrap_written_drafts:
-        print(f"Material importado en staging: {len(result.bootstrap_written_drafts)} borradores.")
+        print(f"Imported staging drafts: {len(result.bootstrap_written_drafts)}")
     if result.bootstrap_auto_promoted_paths:
-        print(f"Promoción canónica automática: {len(result.bootstrap_auto_promoted_paths)} notas.")
+        print(f"Auto-promoted canonical notes: {len(result.bootstrap_auto_promoted_paths)}")
     print("")
-    print("Siguiente paso en Obsidian:")
-    print("1. Abre Obsidian Desktop y usa 'Open folder as vault'.")
-    print("2. Activa 'TextifAI Bridge' en Community plugins.")
-    print("3. Espera unos segundos; el plugin exporta snapshots automáticamente al arrancar y al cambiar notas.")
-    print("4. Si quieres forzarlo, ejecuta 'Export TextifAI context snapshot' desde la paleta.")
+    print("Next step in Obsidian:")
+    print("1. Open Obsidian Desktop and choose 'Open folder as vault'.")
+    print("2. Enable 'TextifAI Bridge' in Community plugins.")
+    print("3. Wait a few seconds; the plugin auto-exports snapshots on startup and after note changes.")
+    print("4. If you need a force refresh, run 'Export TextifAI context snapshot' from the command palette.")
     print("")
-    print("Luego valida con:")
+    print("Then validate with:")
     print(f"uv run python scripts/textifai_obsidian.py inspect --vault-root {result.vault_root}")
-    print("Y para la primera interacción real:")
+    print("And for the first author-facing interaction:")
     print(f"uv run python scripts/textifai.py ask --vault-root {result.vault_root}")

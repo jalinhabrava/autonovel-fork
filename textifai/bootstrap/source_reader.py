@@ -144,19 +144,12 @@ def discover_importable_source_paths(source_root: str | Path) -> list[Path]:
 
 
 def _guess_content_kinds(path: Path, text: str) -> list[str]:
-    haystack = " ".join([path.stem, text[:500]]).casefold()
-    kinds: list[str] = []
-    if any(term in haystack for term in {"chapter", "capítulo", "capitulo"}):
-        kinds.append("chapter")
-    if any(term in haystack for term in {"character", "personaje", "profile", "bio"}):
-        kinds.append("character")
-    if any(term in haystack for term in {"lore", "world", "worldbuilding", "mundo", "canon"}):
-        kinds.append("lore")
-    if any(term in haystack for term in {"scene", "escena"}):
-        kinds.append("scene")
-    if not kinds:
-        kinds.append("mixed_note")
-    return _dedupe(kinds)
+    stem = path.stem.casefold()
+    if stem.startswith("scene_") or stem.startswith("scn_"):
+        return ["scene"]
+    if stem.startswith("chapter_") or stem.startswith("ch_"):
+        return ["chapter"]
+    return ["mixed_note"]
 
 
 def _dedupe(values: list[str]) -> list[str]:
