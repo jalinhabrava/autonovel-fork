@@ -14,6 +14,7 @@ from textifai.bootstrap import (
     confirm_and_write_bootstrap,
 )
 from textifai.bootstrap.source_reader import discover_importable_source_paths
+from textifai.bootstrap.source_reader import read_source_documents
 from textifai.import_review import (
     CompositionConfig,
     ReviewPolicy,
@@ -88,6 +89,7 @@ class ObsidianProjectSetupResult:
     bootstrap_story_summary_paths: list[str] = field(default_factory=list)
     bootstrap_audit_path: str | None = None
     bootstrap_progress_log_path: str | None = None
+    source_extraction_audit_path: str | None = None
 
 
 def prepare_obsidian_project(
@@ -125,6 +127,7 @@ def prepare_obsidian_project(
     story_chapter_paths: list[str] = []
     story_summary_paths: list[str] = []
     bootstrap_audit_path: str | None = None
+    source_extraction_audit_path: str | None = None
     progress_log_path: str | None = None
     progress_log_path = _bootstrap_progress_log_path(vault_root)
     bootstrap_llm_analyzer = _resolve_bootstrap_llm_analyzer(repo_path, progress_log_path=progress_log_path)
@@ -184,6 +187,11 @@ def prepare_obsidian_project(
         )
         written_drafts = list(bootstrap_result.written_drafts)
         warnings.extend(list(bootstrap_result.warnings))
+        if bootstrap_result.inventory is not None:
+            source_extraction_audit_path = _write_source_extraction_audit(
+                vault_root=vault_root,
+                inventory=bootstrap_result.inventory,
+            )
         import_strategy = "textifai_bootstrap_staging"
         notes.append("Existing source material was staged into the vault import workspace.")
         _append_bootstrap_progress(
@@ -273,6 +281,7 @@ def prepare_obsidian_project(
         bootstrap_story_summary_paths=story_summary_paths,
         bootstrap_audit_path=bootstrap_audit_path,
         bootstrap_progress_log_path=progress_log_path,
+        source_extraction_audit_path=source_extraction_audit_path,
     )
 
 
@@ -396,6 +405,57 @@ def _write_bootstrap_audit(
                     "places": [path for path in primary_composed_paths if "/02_World/Places/" in path.replace("\\", "/")],
                     "lore": [path for path in primary_composed_paths if "/02_World/Lore/" in path.replace("\\", "/")],
                 },
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    return str(audit_path)
+
+
+def _write_source_extraction_audit(
+    *,
+    vault_root: Path,
+    inventory,
+) -> str:
+    audit_path = vault_root / "99_System" / "source_extraction_audit.json"
+    audit_path.parent.mkdir(parents=True, exist_ok=True)
+    source_texts = read_source_documents(inventory)
+    per_source = []
+    total_chars = 0
+    for document in inventory.documents:
+        text = source_texts.get(document.source_id, "")
+        char_count = len(text)
+        word_count = len(text.split())
+        total_chars += char_count
+        per_source.append(
+            {
+                "source_id": document.source_id,
+                "filename": document.filename,
+                "path": document.path,
+                "source_format": document.extension,
+                "size_bytes": document.size_bytes,
+                "dominant_language": document.dominant_language,
+                "detected_languages": document.detected_languages,
+                "likely_content_kinds": document.likely_content_kinds,
+                "extraction_method": document.extraction_method,
+                "extraction_warnings": document.extraction_warnings,
+                "line_count": document.line_count,
+                "extracted_char_count": char_count,
+                "extracted_word_count": word_count,
+                "notes": document.notes,
+                "preview": text[:1200],
+            }
+        )
+    audit_path.write_text(
+        json.dumps(
+            {
+                "source_root": inventory.source_root,
+                "total_documents": inventory.total_documents,
+                "total_source_bytes": inventory.total_bytes,
+                "total_extracted_chars": total_chars,
+                "documents": per_source,
             },
             ensure_ascii=False,
             indent=2,

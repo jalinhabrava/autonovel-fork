@@ -28,7 +28,7 @@ class TextifAIVaERLIndexTests(unittest.TestCase):
             self.assertIn("magic_costs", lore_entry.links)
             self.assertIn("magic_costs", lore_entry.backlinks)
 
-    def test_vault_index_promotes_semantic_metadata_into_aliases(self):
+    def test_vault_index_only_promotes_canonical_subject_into_confirmed_aliases(self):
         with tempfile.TemporaryDirectory() as tmp:
             vault_root = Path(tmp) / "Vault"
             bootstrap_vault(vault_root, title="Test Project")
@@ -49,7 +49,7 @@ class TextifAIVaERLIndexTests(unittest.TestCase):
             sera_entry = next(entry for entry in entries if entry.artifact_id == "sera_group_note")
 
             self.assertIn("Sera", sera_entry.project_confirmed_aliases)
-            self.assertIn("Ren", sera_entry.project_confirmed_aliases)
+            self.assertNotIn("Ren", sera_entry.project_confirmed_aliases)
 
     def test_related_subjects_do_not_become_alias_matches(self):
         with tempfile.TemporaryDirectory() as tmp:

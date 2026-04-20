@@ -108,6 +108,7 @@ def build_story_notes(
             chapter_text=chapter_text,
             language=candidate["language"],
             canonical_catalog=[item["title"] for item in canonical_notes],
+            progress_log_path=progress_log_path,
         )
         if summary_payload is None:
             warnings.append(f"summary_generation_failed:{chapter_title}")
@@ -297,6 +298,7 @@ def _compose_chapter_summary(
     chapter_text: str,
     language: str | None,
     canonical_catalog: list[str],
+    progress_log_path: str | None = None,
 ) -> dict[str, object] | None:
     if get_text_provider_config_error(config.task_name, config.provider_name):
         return None
@@ -320,6 +322,16 @@ def _compose_chapter_summary(
         ],
     }
     try:
+        _emit_progress(
+            progress_log_path,
+            phase="story_builder",
+            event="llm_call_started",
+            call_kind="chapter_summary",
+            chapter_title=chapter_title,
+            chapter_chars=len(chapter_text),
+            retries=config.retries,
+            max_tokens=config.max_tokens,
+        )
         response = provider.generate(
             TextGenerationRequest(
                 task=config.task_name,
@@ -334,7 +346,22 @@ def _compose_chapter_summary(
             )
         )
     except TextProviderError:
+        _emit_progress(
+            progress_log_path,
+            phase="story_builder",
+            event="provider_error",
+            call_kind="chapter_summary",
+            chapter_title=chapter_title,
+        )
         return None
+    _emit_progress(
+        progress_log_path,
+        phase="story_builder",
+        event="llm_call_succeeded",
+        call_kind="chapter_summary",
+        chapter_title=chapter_title,
+        response_chars=len(response.text),
+    )
     return extract_json_payload(response.text)
 
 

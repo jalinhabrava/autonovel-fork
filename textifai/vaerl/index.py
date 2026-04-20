@@ -92,8 +92,8 @@ def _merge_known_characters(
 
 
 def _metadata_aliases(frontmatter: dict[str, object]) -> dict[str, list[str]]:
-    aliases = _frontmatter_values(frontmatter, "aliases", "entities")
-    confirmed = _frontmatter_values(frontmatter, "canonical_subject", "character_refs", "lore_refs")
+    aliases = _frontmatter_values(frontmatter, "aliases")
+    confirmed = _frontmatter_values(frontmatter, "canonical_subject")
     return {
         "aliases": _dedupe_strings(aliases),
         "project_confirmed_aliases": _dedupe_strings(confirmed),

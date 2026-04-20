@@ -10,6 +10,7 @@ from providers.text_provider import TextGenerationRequest, TextMessage, TextProv
 from textifai.author_understanding.normalization import extract_json_payload
 from textifai.import_review.staging_loader import LoadedStagedDraft, StagingImportBundle, load_staging_import_bundle
 from textifai.obsidian import open_obsidian_source
+from textifai.bootstrap.source_reader import read_source_documents, build_source_document_inventory
 from vault.notes import artifact_path_for, write_artifact_payload
 from vault.schema import slugify
 
@@ -335,6 +336,10 @@ def _compose_candidate(
     payload = {
         "goal": "Compose a primary Obsidian note only if the evidence supports a stable entity, place, or lore concept.",
         "preferred_output_language": _draft_language(drafts),
+        "navigation_preference": {
+            "prefer_short_navigable_title": True,
+            "keep_formal_or_long_names_in_aliases": True,
+        },
         "candidate": {
             "display_name": candidate.display_name,
             "subject_key": candidate.subject_key,
@@ -358,6 +363,7 @@ def _compose_candidate(
             }
             for draft in drafts
         ],
+        "source_evidence": _build_source_evidence(bundle=bundle, candidate=candidate, drafts=drafts),
         "required_output_schema": {
             "note_type": "character|place|lore|scene|chapter|skip",
             "title": "string",
@@ -383,6 +389,8 @@ def _compose_candidate(
         ],
     }
     try:
+        source_evidence = payload["source_evidence"]
+        source_excerpt_chars = sum(len(str(item.get("excerpt") or "")) for item in source_evidence)
         response = provider.generate(
             TextGenerationRequest(
                 task=config.task_name,
@@ -439,6 +447,119 @@ def _render_primary_note_body(
             lines.append(f"- {section} (`{Path(draft.staging_path).name}`)")
         lines.append("")
     return "\n".join(lines).strip()
+
+
+def _build_source_evidence(
+    *,
+    bundle: StagingImportBundle,
+    candidate: CanonicalCompositionCandidate,
+    drafts: list[LoadedStagedDraft],
+    max_sources: int = 4,
+    max_excerpts_per_source: int = 2,
+) -> list[dict[str, Any]]:
+    source_paths: list[Path] = []
+    all_terms = _dedupe(
+        [
+            candidate.display_name,
+            *candidate.aliases,
+            *[
+                _clean_subject(draft.frontmatter.get("canonical_subject"))
+                for draft in drafts
+                if _clean_subject(draft.frontmatter.get("canonical_subject"))
+            ],
+            *[
+                _clean_subject(draft.frontmatter.get("title"))
+                for draft in drafts
+                if _clean_subject(draft.frontmatter.get("title"))
+            ],
+        ]
+    )
+    candidate_term_keys = {slugify(term) for term in all_terms if term}
+    evidence_drafts = list(drafts)
+    for draft in bundle.drafts:
+        if draft in evidence_drafts:
+            continue
+        body_text = draft.body.casefold()
+        frontmatter_text = " ".join(str(value) for value in draft.frontmatter.values()).casefold()
+        if any(term.casefold() in body_text or term.casefold() in frontmatter_text for term in all_terms if term):
+            evidence_drafts.append(draft)
+            continue
+        draft_keys = {
+            slugify(_clean_subject(draft.frontmatter.get("canonical_subject")) or ""),
+            slugify(_clean_subject(draft.frontmatter.get("title")) or ""),
+            *(slugify(item) for item in _split_values(draft.frontmatter.get("aliases"))),
+            *(slugify(item) for item in _split_values(draft.frontmatter.get("character_refs"))),
+            *(slugify(item) for item in _split_values(draft.frontmatter.get("lore_refs"))),
+            *(slugify(item) for item in _split_values(draft.frontmatter.get("entities"))),
+        }
+        if candidate_term_keys & {key for key in draft_keys if key}:
+            evidence_drafts.append(draft)
+    for draft in evidence_drafts:
+        if draft.provenance and draft.provenance.source_path:
+            source_paths.append(Path(draft.provenance.source_path).expanduser())
+    unique_paths: list[Path] = []
+    seen: set[str] = set()
+    for path in source_paths:
+        key = str(path.resolve()) if path.exists() else str(path)
+        if key in seen:
+            continue
+        seen.add(key)
+        unique_paths.append(path)
+    terms = all_terms
+    evidence: list[dict[str, Any]] = []
+    for path in unique_paths[:max_sources]:
+        if not path.exists():
+            continue
+        try:
+            inventory = build_source_document_inventory(path.parent, explicit_paths=[path])
+            source_texts = read_source_documents(inventory)
+            document = inventory.documents[0] if inventory.documents else None
+            source_text = source_texts.get(document.source_id, "") if document is not None else ""
+        except Exception:
+            source_text = ""
+            document = None
+        if not source_text.strip():
+            continue
+        excerpts = _extract_source_excerpts(source_text, terms, limit=max_excerpts_per_source)
+        if not excerpts:
+            continue
+        evidence.append(
+            {
+                "source_path": str(path),
+                "source_format": document.extension if document is not None else path.suffix.lstrip(".").casefold(),
+                "dominant_language": document.dominant_language if document is not None else None,
+                "matched_terms": _dedupe([term for excerpt in excerpts for term in excerpt["matched_terms"]]),
+                "excerpts": excerpts,
+            }
+        )
+    return evidence
+
+
+def _extract_source_excerpts(text: str, terms: list[str], *, limit: int) -> list[dict[str, Any]]:
+    if not text.strip() or not terms:
+        return []
+    blocks = [part.strip() for part in re.split(r"\n\s*\n", text) if part.strip()]
+    if len(blocks) <= 1:
+        blocks = [line.strip() for line in text.splitlines() if line.strip()]
+    scored: list[tuple[int, dict[str, Any]]] = []
+    normalized_terms = [(term, term.casefold()) for term in terms if term.strip()]
+    for block in blocks:
+        haystack = block.casefold()
+        matched_terms = [term for term, lowered in normalized_terms if lowered in haystack]
+        if not matched_terms:
+            continue
+        score = sum(haystack.count(term.casefold()) for term in matched_terms)
+        scored.append(
+            (
+                score,
+                {
+                    "matched_terms": _dedupe(matched_terms),
+                    "excerpt": block[:1600],
+                },
+            )
+        )
+    scored.sort(key=lambda item: (item[0], len(str(item[1]["excerpt"]))), reverse=True)
+    return [item for _, item in scored[:limit]]
 
 
 def _draft_language(drafts: list[LoadedStagedDraft]) -> str | None:

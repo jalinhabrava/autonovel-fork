@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from pathlib import Path
 
 from textifai.bootstrap.contracts import SourceDocumentInventory, SourceDocumentRecord
@@ -12,6 +13,7 @@ def build_source_document_inventory(
     source_root: str | Path,
     *,
     explicit_paths: list[str | Path] | None = None,
+    progress_log_path: str | None = None,
 ) -> SourceDocumentInventory:
     root = Path(source_root).expanduser().resolve()
     documents: list[SourceDocumentRecord] = []
@@ -41,17 +43,46 @@ def build_source_document_inventory(
             continue
         if _should_skip_path(path):
             continue
-        text = _read_source_text(path)
+        _emit_progress(
+            progress_log_path,
+            phase="source_inventory",
+            event="document_started",
+            filename=path.name,
+            source_format=source_format,
+            size_bytes=path.stat().st_size,
+        )
+        from textifai.derived_sources.extractors import extract_light_source
+
+        seed = extract_light_source(path)
+        text = seed.raw_extracted_text
+        if not text.strip() and source_format in {"md", "txt"}:
+            text = path.read_text(encoding="utf-8", errors="replace")
         detection = detect_language_profile(text)
         likely_content_kinds = _guess_content_kinds(path, text)
-        notes = []
-        notes.append(f"source_format:{source_format}")
+        notes = [f"source_format:{source_format}"]
+        extraction_method = None
+        extraction_warnings: list[str] = []
+        if source_format in {"md", "txt"}:
+            extraction_method = "native_text"
+        else:
+            method_notes = list(seed.metadata.get("method_notes", [])) if isinstance(seed.metadata, dict) else []
+            extraction_method = method_notes[0] if method_notes else (
+                seed.format_profile.extraction_method if seed.format_profile else None
+            )
+            extraction_warnings = list(dict.fromkeys([*seed.warnings, *method_notes]))
         if detection.has_mixed_language:
             notes.append("mixed_language")
         if likely_content_kinds:
             notes.append(f"likely_{likely_content_kinds[0]}")
+        if extraction_method:
+            notes.append(f"extraction_method:{extraction_method}")
+        if not text.strip():
+            notes.append("no_extracted_text")
         source_id = _build_source_id(path, text)
-        relative_path = str(path.relative_to(root))
+        try:
+            relative_path = str(path.relative_to(root))
+        except ValueError:
+            relative_path = path.name
         documents.append(
             SourceDocumentRecord(
                 source_id=source_id,
@@ -66,8 +97,23 @@ def build_source_document_inventory(
                 has_mixed_language=detection.has_mixed_language,
                 likely_content_kinds=likely_content_kinds,
                 line_count=len(text.splitlines()) or 0,
+                extracted_char_count=len(text),
+                extracted_word_count=len(text.split()),
+                extraction_method=extraction_method,
+                extraction_warnings=extraction_warnings,
                 notes=notes,
             )
+        )
+        _emit_progress(
+            progress_log_path,
+            phase="source_inventory",
+            event="document_extracted",
+            filename=path.name,
+            source_format=source_format,
+            extracted_char_count=len(text),
+            extracted_word_count=len(text.split()),
+            extraction_method=extraction_method,
+            extraction_warnings=extraction_warnings[:10],
         )
 
     detected_languages = _dedupe(
@@ -91,10 +137,22 @@ def build_source_document_inventory(
     )
 
 
-def read_source_documents(inventory: SourceDocumentInventory) -> dict[str, str]:
+def read_source_documents(
+    inventory: SourceDocumentInventory,
+    *,
+    progress_log_path: str | None = None,
+) -> dict[str, str]:
     texts: dict[str, str] = {}
     for document in inventory.documents:
         texts[document.source_id] = _read_source_text(Path(document.path))
+        _emit_progress(
+            progress_log_path,
+            phase="source_inventory",
+            event="document_read",
+            source_id=document.source_id,
+            filename=document.filename,
+            extracted_char_count=len(texts[document.source_id]),
+        )
     return texts
 
 
@@ -166,3 +224,12 @@ def _dedupe(values: list[str]) -> list[str]:
 def _detect_source_format(path: Path) -> str:
     suffix = path.suffix.lstrip(".").casefold()
     return suffix if suffix in {"md", "txt", "docx", "pdf", "doc"} else (suffix or "txt")
+
+
+def _emit_progress(path: str | None, **payload) -> None:
+    if not path:
+        return
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with target.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(payload, ensure_ascii=False) + "\n")

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import json
 
 from textifai.bootstrap.analyzer import (
     BootstrapDocumentAnalysis,
@@ -98,12 +99,38 @@ def prepare_bootstrap(
             warnings=warnings,
         )
 
-    inventory = build_source_document_inventory(source_root, explicit_paths=source_paths)
-    source_texts = read_source_documents(inventory)
+    progress_log_path = getattr(getattr(llm_analyzer, "config", None), "progress_log_path", None)
+    _emit_progress(progress_log_path, phase="bootstrap", event="prepare_started", source_root=str(source_root))
+    inventory = build_source_document_inventory(
+        source_root,
+        explicit_paths=source_paths,
+        progress_log_path=progress_log_path,
+    )
+    _emit_progress(
+        progress_log_path,
+        phase="bootstrap",
+        event="inventory_built",
+        document_count=inventory.total_documents,
+        total_bytes=inventory.total_bytes,
+        documents_with_text=sum(1 for document in inventory.documents if document.extracted_char_count > 0),
+    )
+    source_texts = read_source_documents(inventory, progress_log_path=progress_log_path)
+    _emit_progress(
+        progress_log_path,
+        phase="bootstrap",
+        event="source_texts_read",
+        total_extracted_chars=sum(len(source_texts.get(document.source_id, "")) for document in inventory.documents),
+    )
     fragments_by_source = {
         document.source_id: segment_source_document(document, source_texts[document.source_id])
         for document in inventory.documents
     }
+    _emit_progress(
+        progress_log_path,
+        phase="bootstrap",
+        event="segmentation_complete",
+        total_fragments=sum(len(fragments) for fragments in fragments_by_source.values()),
+    )
     analyses_by_source: dict[str, BootstrapDocumentAnalysis] = {}
     if llm_analyzer is not None:
         for document in inventory.documents:
@@ -178,7 +205,8 @@ def confirm_and_write_bootstrap(
     )
     if result.normalization_plan is None or result.inventory is None:
         return result
-    source_texts = read_source_documents(result.inventory)
+    progress_log_path = getattr(getattr(llm_analyzer, "config", None), "progress_log_path", None)
+    source_texts = read_source_documents(result.inventory, progress_log_path=progress_log_path)
     fragments_by_source = {
         document.source_id: segment_source_document(document, source_texts[document.source_id])
         for document in result.inventory.documents
@@ -189,6 +217,13 @@ def confirm_and_write_bootstrap(
         source_texts=source_texts,
         fragments_by_source=fragments_by_source,
         warnings=result.warnings,
+    )
+    _emit_progress(
+        progress_log_path,
+        phase="bootstrap",
+        event="staging_manifest_written",
+        written_draft_count=len(written_paths),
+        manifest_path=str(manifest_path),
     )
     final_result = build_bootstrap_result(
         config=config,
@@ -211,3 +246,12 @@ def confirm_and_write_bootstrap(
             warnings=[*result.warnings, *validation_errors, f"manifest_path={manifest_path}"],
         )
     return final_result
+
+
+def _emit_progress(path: str | None, **payload) -> None:
+    if not path:
+        return
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with target.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(payload, ensure_ascii=False) + "\n")

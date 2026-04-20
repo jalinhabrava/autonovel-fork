@@ -4,6 +4,7 @@ import hashlib
 import re
 import zipfile
 from dataclasses import dataclass, field
+from functools import lru_cache
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
@@ -18,8 +19,8 @@ from textifai.derived_sources.contracts import (
 
 TEXT_FORMATS = {"md", "txt"}
 DERIVED_FORMATS = {"docx", "pdf", "doc"}
-PDF_PYPDF_SIZE_LIMIT = 1_500_000
-PDF_LIGHT_EXTRACTION_SIZE_LIMIT = 1_500_000
+PDF_PYPDF_SIZE_LIMIT = 12_000_000
+PDF_LIGHT_EXTRACTION_SIZE_LIMIT = 8_000_000
 
 
 @dataclass(frozen=True)
@@ -38,6 +39,19 @@ def detect_source_format(path: str | Path) -> str:
 
 def extract_light_source(path: str | Path) -> DerivedExtractionSeed:
     source_path = Path(path).expanduser().resolve()
+    if source_path.exists():
+        stat = source_path.stat()
+        mtime_ns = stat.st_mtime_ns
+        size_bytes = stat.st_size
+    else:
+        mtime_ns = 0
+        size_bytes = 0
+    return _extract_light_source_cached(str(source_path), mtime_ns, size_bytes)
+
+
+@lru_cache(maxsize=128)
+def _extract_light_source_cached(source_path_text: str, mtime_ns: int, size_bytes_hint: int) -> DerivedExtractionSeed:
+    source_path = Path(source_path_text)
     source_format = detect_source_format(source_path)
     raw_bytes = source_path.read_bytes() if source_path.exists() else b""
     checksum = hashlib.sha256(raw_bytes).hexdigest()
@@ -165,27 +179,53 @@ def _extract_docx_text(path: Path, raw_bytes: bytes) -> tuple[str, list[str]]:
 
 def _extract_pdf_text(path: Path, raw_bytes: bytes) -> tuple[str, list[str]]:
     notes: list[str] = []
-    if len(raw_bytes) > PDF_LIGHT_EXTRACTION_SIZE_LIMIT:
-        return "", ["pdf_light_extraction_skipped_large", "pdf_text_unavailable"]
-    literal_text = _extract_pdf_literals(raw_bytes)
-    if literal_text.strip():
-        return literal_text, ["pdf_literal_text"]
+    literal_text = ""
     try:
         from pypdf import PdfReader  # type: ignore
     except Exception:
         PdfReader = None
+    parsed_text = ""
     if PdfReader is not None and len(raw_bytes) <= PDF_PYPDF_SIZE_LIMIT:
         try:
             reader = PdfReader(str(path))
-            pages = [page.extract_text() or "" for page in reader.pages]
-            text = "\n\n".join(page.strip() for page in pages if page.strip())
+            pages: list[str] = []
+            for page in reader.pages:
+                page_text = ""
+                try:
+                    page_text = page.extract_text(extraction_mode="layout") or ""
+                except TypeError:
+                    page_text = page.extract_text() or ""
+                if not page_text.strip():
+                    try:
+                        page_text = page.extract_text() or ""
+                    except Exception:
+                        page_text = ""
+                if page_text.strip():
+                    pages.append(page_text)
+            text = _normalize_pdf_text("\n\n".join(page.strip() for page in pages if page.strip()))
             if text.strip():
-                return text, ["pdf_parser:pypdf"]
-            notes.append("pdf_no_extractable_text")
+                parsed_text = text
+            else:
+                notes.append("pdf_no_extractable_text")
         except Exception:
             notes.append("pdf_parser_failed")
     elif PdfReader is not None:
         notes.append("pdf_pypdf_skipped_large")
+    else:
+        notes.append("pdf_parser_unavailable")
+    should_try_literal = not parsed_text.strip() and len(raw_bytes) <= PDF_LIGHT_EXTRACTION_SIZE_LIMIT
+    if should_try_literal:
+        literal_text = _extract_pdf_literals(raw_bytes)
+    elif len(raw_bytes) > PDF_LIGHT_EXTRACTION_SIZE_LIMIT:
+        notes.append("pdf_light_extraction_skipped_large")
+    literal_text = _normalize_pdf_text(literal_text)
+    selected_text, selected_note = _select_pdf_text_candidate(literal_text=literal_text, parsed_text=parsed_text)
+    if selected_text.strip():
+        return selected_text, [selected_note]
+    if literal_text.strip():
+        return literal_text, ["pdf_literal_text"]
+    if parsed_text.strip():
+        return parsed_text, ["pdf_parser:pypdf"]
     return "", [*notes, "pdf_text_unavailable"]
 
 
@@ -367,6 +407,37 @@ def _extract_pdf_literals(raw_bytes: bytes) -> str:
         candidates = re.findall(r"\[(.*?)\]\s*TJ", decoded, flags=re.DOTALL)
     text = "\n".join(_clean_pdf_text(candidate) for candidate in candidates if candidate.strip())
     return text.strip()
+
+
+def _select_pdf_text_candidate(*, literal_text: str, parsed_text: str) -> tuple[str, str]:
+    literal_score = _pdf_text_score(literal_text)
+    parsed_score = _pdf_text_score(parsed_text)
+    if parsed_score >= literal_score and parsed_text.strip():
+        return parsed_text, "pdf_parser:pypdf"
+    if literal_text.strip():
+        return literal_text, "pdf_literal_text"
+    return "", "pdf_text_unavailable"
+
+
+def _pdf_text_score(text: str) -> tuple[int, int, int]:
+    normalized = text.strip()
+    if not normalized:
+        return (0, 0, 0)
+    non_space = len(re.sub(r"\s+", "", normalized))
+    paragraph_count = len([part for part in re.split(r"\n\s*\n", normalized) if part.strip()])
+    line_count = len([line for line in normalized.splitlines() if line.strip()])
+    return (non_space, paragraph_count, line_count)
+
+
+def _normalize_pdf_text(text: str) -> str:
+    if not text.strip():
+        return ""
+    normalized = text.replace("\r\n", "\n").replace("\r", "\n")
+    normalized = re.sub(r"[ \t]+\n", "\n", normalized)
+    normalized = re.sub(r"\n{3,}", "\n\n", normalized)
+    normalized = re.sub(r"[ \t]{2,}", " ", normalized)
+    normalized = re.sub(r"(?<=\S)-\n(?=\S)", "", normalized)
+    return normalized.strip()
 
 
 def _clean_pdf_text(value: str) -> str:

@@ -140,12 +140,41 @@ class ProviderBackedBootstrapAnalyzer:
             )
         seed = extract_light_source(document.path)
         escalation = decide_llm_escalation(seed)
+        _emit_progress(
+            self.config.progress_log_path,
+            phase="analyze_derived_document",
+            event="source_extracted",
+            source_id=document.source_id,
+            source_format=seed.source_format,
+            extracted_chars=len(seed.raw_extracted_text),
+            block_count=len(seed.lightweight_blocks),
+            method_notes=list(seed.metadata.get("method_notes", [])) if isinstance(seed.metadata, dict) else [],
+            llm_escalation_required=escalation.required,
+        )
         llm_payload = None
         validated_extraction = None
         if not get_text_provider_config_error(self.derived_config.task_name, self.derived_config.provider_name) and escalation.required:
             interpreter = ProviderBackedDerivedSourceInterpreter(config=self.derived_config)
             try:
+                _emit_progress(
+                    self.config.progress_log_path,
+                    phase="analyze_derived_document",
+                    event="llm_call_started",
+                    source_id=document.source_id,
+                    call_kind="derived_source_interpretation",
+                    extracted_chars=len(seed.raw_extracted_text),
+                    block_count=len(seed.lightweight_blocks),
+                    retries=self.derived_config.retries,
+                    max_tokens=self.derived_config.max_tokens,
+                )
                 llm_payload = interpreter.interpret(seed=seed, escalation=escalation)
+                _emit_progress(
+                    self.config.progress_log_path,
+                    phase="analyze_derived_document",
+                    event="llm_call_succeeded",
+                    source_id=document.source_id,
+                    call_kind="derived_source_interpretation",
+                )
                 validated_extraction = validate_derived_extraction(seed=seed, payload=llm_payload)
             except TextProviderError as exc:
                 _emit_progress(
@@ -153,6 +182,7 @@ class ProviderBackedBootstrapAnalyzer:
                     phase="analyze_derived_document",
                     event="provider_error",
                     source_id=document.source_id,
+                    call_kind="derived_source_interpretation",
                     error=str(exc),
                 )
                 llm_payload = None
@@ -296,6 +326,18 @@ class ProviderBackedBootstrapAnalyzer:
         )
         provider = get_text_provider(self.config.task_name, self.config.provider_name)
         try:
+            _emit_progress(
+                self.config.progress_log_path,
+                phase="analyze_batch",
+                event="llm_call_started",
+                source_id=document.source_id,
+                call_kind="bootstrap_fragment_batch",
+                fragment_count=len(fragments),
+                text_chars=len(text),
+                payload_chars=len(payload),
+                retries=self.config.retries,
+                max_tokens=self.config.max_tokens,
+            )
             response = provider.generate(
                 TextGenerationRequest(
                     task=self.config.task_name,
@@ -315,9 +357,21 @@ class ProviderBackedBootstrapAnalyzer:
                 phase="analyze_batch",
                 event="provider_error",
                 source_id=document.source_id,
+                call_kind="bootstrap_fragment_batch",
+                fragment_count=len(fragments),
+                text_chars=len(text),
                 error=str(exc),
             )
             return None
+        _emit_progress(
+            self.config.progress_log_path,
+            phase="analyze_batch",
+            event="llm_call_succeeded",
+            source_id=document.source_id,
+            call_kind="bootstrap_fragment_batch",
+            fragment_count=len(fragments),
+            response_chars=len(response.text),
+        )
         raw_payload = extract_json_payload(response.text)
         if raw_payload is None:
             return None

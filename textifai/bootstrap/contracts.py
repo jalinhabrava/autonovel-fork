@@ -76,6 +76,10 @@ class SourceDocumentRecord:
     has_mixed_language: bool = False
     likely_content_kinds: list[str] = field(default_factory=list)
     line_count: int = 0
+    extracted_char_count: int = 0
+    extracted_word_count: int = 0
+    extraction_method: str | None = None
+    extraction_warnings: list[str] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
@@ -85,6 +89,10 @@ class SourceDocumentRecord:
             raise ValueError("size_bytes must be non-negative")
         if self.line_count < 0:
             raise ValueError("line_count must be non-negative")
+        if self.extracted_char_count < 0:
+            raise ValueError("extracted_char_count must be non-negative")
+        if self.extracted_word_count < 0:
+            raise ValueError("extracted_word_count must be non-negative")
 
 
 @dataclass(frozen=True)
