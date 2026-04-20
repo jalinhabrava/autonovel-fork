@@ -119,25 +119,8 @@ class AnthropicCompatibleTextProvider(BaseHTTPTextProvider):
 
     def generate(self, request: TextGenerationRequest) -> TextGenerationResponse:
         resolved = resolve_text_request(request)
-        headers = {
-            "anthropic-version": "2023-06-01",
-            "content-type": "application/json",
-        }
-        if self.api_key:
-            headers["x-api-key"] = self.api_key
-        headers.update(resolved.extra_headers)
-
-        payload: dict[str, Any] = {
-            "model": resolved.model,
-            "max_tokens": resolved.max_tokens,
-            "temperature": resolved.temperature,
-            "messages": [
-                {"role": message.role, "content": message.content}
-                for message in resolved.messages
-            ],
-        }
-        if resolved.system is not None:
-            payload["system"] = resolved.system
+        headers = _build_anthropic_headers(api_key=self.api_key, extra_headers=resolved.extra_headers)
+        payload = _build_anthropic_payload(resolved)
 
         raw = self._post_json(
             resolved,
@@ -166,36 +149,8 @@ class OpenAICompatibleTextProvider(BaseHTTPTextProvider):
 
     def generate(self, request: TextGenerationRequest) -> TextGenerationResponse:
         resolved = resolve_text_request(request)
-        headers = {
-            "content-type": "application/json",
-        }
-        if self.api_key:
-            headers["Authorization"] = f"Bearer {self.api_key}"
-        headers.update(
-            {
-                key: value
-                for key, value in resolved.extra_headers.items()
-                if not key.lower().startswith("anthropic-")
-            }
-        )
-
-        messages: list[dict[str, Any]] = []
-        if resolved.system is not None:
-            messages.append({"role": "system", "content": resolved.system})
-        messages.extend(
-            {"role": message.role, "content": message.content}
-            for message in resolved.messages
-        )
-
-        payload: dict[str, Any] = {
-            "model": resolved.model,
-            "messages": messages,
-            "temperature": resolved.temperature,
-        }
-        if _uses_max_completion_tokens(resolved.model):
-            payload["max_completion_tokens"] = resolved.max_tokens
-        else:
-            payload["max_tokens"] = resolved.max_tokens
+        headers = _build_openai_headers(api_key=self.api_key, extra_headers=resolved.extra_headers)
+        payload = _build_openai_payload(resolved)
 
         raw = self._post_json(
             resolved,
@@ -306,7 +261,80 @@ def _deep_merge(base: dict[str, Any], extra: dict[str, Any]) -> dict[str, Any]:
     return merged
 
 
-def _uses_max_completion_tokens(model: str | None) -> bool:
+def _build_anthropic_headers(*, api_key: str, extra_headers: dict[str, str]) -> dict[str, str]:
+    headers = {
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+    }
+    if api_key:
+        headers["x-api-key"] = api_key
+    headers.update(extra_headers)
+    return headers
+
+
+def _build_anthropic_payload(resolved: ResolvedTextRequest) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "model": resolved.model,
+        "max_tokens": resolved.max_tokens,
+        "temperature": resolved.temperature,
+        "messages": [
+            {"role": message.role, "content": message.content}
+            for message in resolved.messages
+        ],
+    }
+    if resolved.system is not None:
+        payload["system"] = resolved.system
+    return payload
+
+
+def _build_openai_headers(*, api_key: str, extra_headers: dict[str, str]) -> dict[str, str]:
+    headers = {
+        "content-type": "application/json",
+    }
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+    headers.update(
+        {
+            key: value
+            for key, value in extra_headers.items()
+            if not key.lower().startswith("anthropic-")
+        }
+    )
+    return headers
+
+
+def _build_openai_messages(resolved: ResolvedTextRequest) -> list[dict[str, Any]]:
+    messages: list[dict[str, Any]] = []
+    if resolved.system is not None:
+        messages.append({"role": "system", "content": resolved.system})
+    messages.extend(
+        {"role": message.role, "content": message.content}
+        for message in resolved.messages
+    )
+    return messages
+
+
+def _build_openai_payload(resolved: ResolvedTextRequest) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "model": resolved.model,
+        "messages": _build_openai_messages(resolved),
+        "temperature": resolved.temperature,
+    }
+    token_field = _openai_token_parameter(
+        provider_name=resolved.provider_name,
+        model=resolved.model,
+    )
+    payload[token_field] = resolved.max_tokens
+    return payload
+
+
+def _openai_token_parameter(*, provider_name: str, model: str | None) -> str:
+    if provider_name == "openai" and _uses_openai_responses_style_limits(model):
+        return "max_completion_tokens"
+    return "max_tokens"
+
+
+def _uses_openai_responses_style_limits(model: str | None) -> bool:
     normalized = (model or "").strip().lower()
     return normalized.startswith(("gpt-5", "o1", "o3", "o4"))
 

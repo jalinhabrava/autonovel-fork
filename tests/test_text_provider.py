@@ -180,6 +180,69 @@ class TextProviderTests(unittest.TestCase):
         self.assertIn("max_completion_tokens", captured["payload"])
         self.assertNotIn("max_tokens", captured["payload"])
 
+    def test_openai_compatible_gpt_five_style_model_keeps_max_tokens(self):
+        captured = {}
+
+        def fake_post(*args, **kwargs):
+            captured["payload"] = kwargs["json"]
+            return DummyResponse({"choices": [{"message": {"content": "normalized text"}}]})
+
+        with patch.dict(
+            "os.environ",
+            {
+                "AUTONOVEL_TEXT_PROVIDER": "openai_compatible",
+                "AUTONOVEL_OPENAI_COMPATIBLE_API_BASE_URL": "http://localhost:1234/v1",
+                "AUTONOVEL_OPENAI_COMPATIBLE_API_KEY": "test-key",
+            },
+            clear=False,
+        ):
+            fake_httpx = make_fake_httpx(fake_post)
+            with patch.dict(sys.modules, {"httpx": fake_httpx}):
+                provider = get_text_provider("review_full")
+                response = provider.generate(
+                    TextGenerationRequest(
+                        task="review_full",
+                        model="gpt-5.4",
+                        messages=[TextMessage(role="user", content="ping")],
+                    )
+                )
+
+        self.assertEqual(response.text, "normalized text")
+        self.assertIn("max_tokens", captured["payload"])
+        self.assertNotIn("max_completion_tokens", captured["payload"])
+
+    def test_anthropic_payload_keeps_system_and_max_tokens(self):
+        captured = {}
+
+        def fake_post(*args, **kwargs):
+            captured["headers"] = kwargs["headers"]
+            captured["payload"] = kwargs["json"]
+            return DummyResponse({"content": [{"type": "text", "text": "anthropic text"}]})
+
+        with patch.dict(
+            "os.environ",
+            {
+                "AUTONOVEL_TEXT_PROVIDER": "anthropic",
+                "ANTHROPIC_API_KEY": "test-key",
+            },
+            clear=False,
+        ):
+            fake_httpx = make_fake_httpx(fake_post)
+            with patch.dict(sys.modules, {"httpx": fake_httpx}):
+                provider = get_text_provider("gen_world")
+                response = provider.generate(
+                    TextGenerationRequest(
+                        task="gen_world",
+                        system="System prompt",
+                        messages=[TextMessage(role="user", content="ping")],
+                    )
+                )
+
+        self.assertEqual(response.text, "anthropic text")
+        self.assertEqual(captured["payload"]["system"], "System prompt")
+        self.assertIn("max_tokens", captured["payload"])
+        self.assertEqual(captured["headers"]["x-api-key"], "test-key")
+
     def test_smoke_factory_supports_all_registered_provider_aliases(self):
         cases = [
             ("anthropic", AnthropicTextProvider),
