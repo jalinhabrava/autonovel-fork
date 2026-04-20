@@ -141,6 +141,8 @@ def _note_type_from_path(path: Path) -> str:
         return "scene"
     if "chapters" in parts:
         return "chapter"
+    if "chapter_summaries" in parts:
+        return "chapter_summary"
     raise ValueError(f"Unable to infer stable note type from path: {path}")
 
 

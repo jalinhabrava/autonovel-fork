@@ -13,6 +13,7 @@ class VaultProjectAdapter:
     def __init__(self, vault_root: str | Path):
         self.vault_root = Path(vault_root)
         self.chapters_dir = self.vault_root / VAULT_DIRS["chapters"]
+        self.chapter_summaries_dir = self.vault_root / VAULT_DIRS["story_chapter_summaries"]
         self.briefs_dir = self.vault_root / VAULT_DIRS["editorial_briefs"]
         self.edit_logs_dir = self.vault_root / VAULT_DIRS["editorial_logs"]
         self.eval_logs_dir = self.vault_root / VAULT_DIRS["editorial_eval"]
@@ -42,6 +43,14 @@ class VaultProjectAdapter:
             return []
         return sorted(self.chapters_dir.glob("ch_*.md"))
 
+    def chapter_summary_path(self, chapter_num: int) -> Path:
+        return self.chapter_summaries_dir / f"ch_{chapter_num:02d}_summary.md"
+
+    def list_chapter_summary_paths(self) -> list[Path]:
+        if not self.chapter_summaries_dir.exists():
+            return []
+        return sorted(self.chapter_summaries_dir.glob("ch_*_summary.md"))
+
     def ensure_runtime_dirs(self):
         for relative_dir in VAULT_DIRS.values():
             (self.vault_root / relative_dir).mkdir(parents=True, exist_ok=True)
@@ -56,6 +65,7 @@ class VaultProjectAdapter:
             "scene": self.outline_scenes_dir,
             "decision": self.canon_decisions_dir,
             "chapter": self.chapters_dir,
+            "chapter_summary": self.chapter_summaries_dir,
             "revision_brief": self.briefs_dir,
             "review": self.review_dir,
             "reader_panel": self.reader_panel_dir,

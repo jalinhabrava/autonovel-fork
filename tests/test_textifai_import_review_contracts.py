@@ -47,7 +47,7 @@ class TextifAIImportReviewContractsTests(unittest.TestCase):
             decision="promote",
             target_artifact_type="chapter",
             target_slug="chapter-one",
-            target_path="/tmp/vault/05_Draft/Chapters/chapter_one.md",
+            target_path="/tmp/vault/04_Story/Chapters/chapter_one.md",
             overwrite_mode="forbid",
             reason="accepted",
         )
@@ -57,11 +57,11 @@ class TextifAIImportReviewContractsTests(unittest.TestCase):
             action="promoted",
             timestamp="2026-01-01T00:00:00+00:00",
             review_status="accepted",
-            stable_target_path="/tmp/vault/05_Draft/Chapters/chapter_one.md",
+            stable_target_path="/tmp/vault/04_Story/Chapters/chapter_one.md",
         )
         result = PromotionResult(
             plan_id="plan-1",
-            promoted_paths=["/tmp/vault/05_Draft/Chapters/chapter_one.md"],
+            promoted_paths=["/tmp/vault/04_Story/Chapters/chapter_one.md"],
             audit_entries=[audit_entry],
         )
 

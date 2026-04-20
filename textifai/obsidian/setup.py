@@ -17,6 +17,8 @@ from textifai.bootstrap.source_reader import discover_importable_source_paths
 from textifai.import_review import (
     CompositionConfig,
     ReviewPolicy,
+    StoryBuildConfig,
+    build_story_notes,
     compose_primary_notes_from_staging,
     promote_reviewed_import,
     review_import_stage,
@@ -82,6 +84,8 @@ class ObsidianProjectSetupResult:
     bootstrap_auto_promoted_paths: list[str] = field(default_factory=list)
     bootstrap_pending_candidates: list[str] = field(default_factory=list)
     bootstrap_primary_composed_paths: list[str] = field(default_factory=list)
+    bootstrap_story_chapter_paths: list[str] = field(default_factory=list)
+    bootstrap_story_summary_paths: list[str] = field(default_factory=list)
     bootstrap_audit_path: str | None = None
     bootstrap_progress_log_path: str | None = None
 
@@ -118,6 +122,8 @@ def prepare_obsidian_project(
     promoted_paths: list[str] = []
     pending_candidates: list[str] = []
     composed_paths: list[str] = []
+    story_chapter_paths: list[str] = []
+    story_summary_paths: list[str] = []
     bootstrap_audit_path: str | None = None
     progress_log_path: str | None = None
     progress_log_path = _bootstrap_progress_log_path(vault_root)
@@ -194,12 +200,24 @@ def prepare_obsidian_project(
             pending_candidates = list(promotion.pending_drafts)
             composition = _compose_primary_canonical_notes(vault_root, repo_path=repo_path, progress_log_path=progress_log_path)
             composed_paths = list(composition.written_paths)
+            story_result = _build_story_layer(
+                vault_root=vault_root,
+                bootstrap_result=bootstrap_result,
+                repo_path=repo_path,
+                progress_log_path=progress_log_path,
+            )
+            story_chapter_paths = list(story_result.chapter_paths)
+            story_summary_paths = list(story_result.summary_paths)
             if promoted_paths:
                 notes.append(f"Automatically promoted {len(promoted_paths)} low-risk canonical artifacts.")
             elif pending_candidates:
                 notes.append("Imported material remains in staging until explicit promotion or stronger context is available.")
             if composed_paths:
                 notes.append(f"Composed {len(composed_paths)} primary canonical notes from staged evidence.")
+            if story_chapter_paths:
+                notes.append(f"Wrote {len(story_chapter_paths)} canonical chapter notes.")
+            if story_summary_paths:
+                notes.append(f"Wrote {len(story_summary_paths)} chapter summaries with Obsidian links.")
             bootstrap_audit_path = _write_bootstrap_audit(
                 vault_root=vault_root,
                 source_files=[str(path) for path in preexisting_source_paths],
@@ -207,6 +225,8 @@ def prepare_obsidian_project(
                 promoted_paths=promoted_paths,
                 pending_candidates=pending_candidates,
                 primary_composed_paths=composed_paths,
+                story_chapter_paths=story_chapter_paths,
+                story_summary_paths=story_summary_paths,
                 warnings=warnings,
             )
         if _all_markdown_sources(source_root) and config.importer_preference == "obsidian_importer_manual_if_markdown":
@@ -249,6 +269,8 @@ def prepare_obsidian_project(
         bootstrap_auto_promoted_paths=promoted_paths,
         bootstrap_pending_candidates=pending_candidates,
         bootstrap_primary_composed_paths=composed_paths,
+        bootstrap_story_chapter_paths=story_chapter_paths,
+        bootstrap_story_summary_paths=story_summary_paths,
         bootstrap_audit_path=bootstrap_audit_path,
         bootstrap_progress_log_path=progress_log_path,
     )
@@ -298,6 +320,32 @@ def _compose_primary_canonical_notes(
     return composition
 
 
+def _build_story_layer(
+    *,
+    vault_root: Path,
+    bootstrap_result,
+    repo_path: Path,
+    progress_log_path: str | None,
+):
+    inventory = getattr(bootstrap_result, "inventory", None)
+    if inventory is None:
+        return type("_EmptyStoryBuild", (), {"chapter_paths": [], "summary_paths": []})()
+    synchronize_runtime_environment(repo_path)
+    env = load_runtime_environment(repo_path)
+    provider_name = env.provider
+    if not provider_name or not env.writer_model:
+        return type("_EmptyStoryBuild", (), {"chapter_paths": [], "summary_paths": []})()
+    return build_story_notes(
+        vault_root,
+        inventory=inventory,
+        config=StoryBuildConfig(
+            provider_name=provider_name,
+            model=env.writer_model,
+        ),
+        progress_log_path=progress_log_path,
+    )
+
+
 def _bootstrap_progress_log_path(vault_root: Path) -> str:
     return str(vault_root / "99_System" / "bootstrap_progress.jsonl")
 
@@ -319,6 +367,8 @@ def _write_bootstrap_audit(
     promoted_paths: list[str],
     pending_candidates: list[str],
     primary_composed_paths: list[str],
+    story_chapter_paths: list[str],
+    story_summary_paths: list[str],
     warnings: list[str],
 ) -> str:
     audit_path = vault_root / "99_System" / "bootstrap_audit.json"
@@ -332,10 +382,14 @@ def _write_bootstrap_audit(
                 "promoted_count": len(promoted_paths),
                 "pending_count": len(pending_candidates),
                 "primary_composed_count": len(primary_composed_paths),
+                "story_chapter_count": len(story_chapter_paths),
+                "story_summary_count": len(story_summary_paths),
                 "written_drafts": written_drafts[:100],
                 "promoted_paths": promoted_paths[:100],
                 "pending_candidates": pending_candidates[:100],
                 "primary_composed_paths": primary_composed_paths[:100],
+                "story_chapter_paths": story_chapter_paths[:100],
+                "story_summary_paths": story_summary_paths[:100],
                 "warnings": warnings[:100],
                 "primary_paths_by_category": {
                     "characters": [path for path in primary_composed_paths if "/03_Characters/Profiles/" in path.replace("\\", "/")],

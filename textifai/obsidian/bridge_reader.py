@@ -42,7 +42,7 @@ class ObsidianBridgeSnapshotReader:
             return []
         by_id = {note.note_id: note for note in self.snapshot.notes}
         related_ids = [*primary.outgoing_links, *primary.incoming_links]
-        related: list[ObsidianNote] = []
+        related_scored: list[tuple[tuple[int, int, str], ObsidianNote]] = []
         seen: set[str] = set()
         for related_id in related_ids:
             if related_id in seen:
@@ -51,10 +51,9 @@ class ObsidianBridgeSnapshotReader:
             if candidate is None:
                 continue
             seen.add(candidate.note_id)
-            related.append(candidate)
-            if len(related) >= limit:
-                break
-        return related
+            related_scored.append((_related_priority(candidate), candidate))
+        related_scored.sort(key=lambda item: item[0])
+        return [candidate for _, candidate in related_scored[:limit]]
 
     @property
     def snapshot_status(self) -> ValidatedObsidianSnapshot:
@@ -75,3 +74,23 @@ def resolve_obsidian_snapshot_path(
         if path.exists():
             return path
     return None
+
+
+def _related_priority(note: ObsidianNote) -> tuple[int, int, str]:
+    role = str(note.frontmatter.get("note_role") or "").strip().casefold()
+    stage = str(note.frontmatter.get("artifact_stage") or "").strip().casefold()
+    path = note.vault_relative_path.replace("\\", "/").casefold()
+    if role == "primary":
+        role_rank = 0
+    elif note.artifact_type == "chapter_summary":
+        role_rank = 1
+    elif note.artifact_type == "chapter":
+        role_rank = 2
+    elif role == "supporting":
+        role_rank = 3
+    elif "/99_import_staging/" in path:
+        role_rank = 6
+    else:
+        role_rank = 4
+    stage_rank = 0 if stage == "promoted_artifact" else 1
+    return (role_rank, stage_rank, note.title.casefold())

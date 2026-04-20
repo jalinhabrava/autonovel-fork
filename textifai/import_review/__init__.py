@@ -16,6 +16,7 @@ from textifai.import_review.contracts import (
 )
 from textifai.import_review.promotion_plan import build_promotion_plan
 from textifai.import_review.reviewer import ReviewPolicy, review_staged_artifact, review_staged_import
+from textifai.import_review.story_builder import StoryBuildConfig, StoryBuildResult, build_story_notes
 from textifai.import_review.staging_loader import LoadedStagedDraft, StagingImportBundle, load_staging_import_bundle
 from textifai.import_review.stable_writer import promote_controlled_import as _promote_controlled_import
 
@@ -56,6 +57,9 @@ __all__ = [
     "StableArtifactWrite",
     "StagedArtifactReview",
     "StagingImportBundle",
+    "StoryBuildConfig",
+    "StoryBuildResult",
+    "build_story_notes",
     "load_staging_import_bundle",
     "promote_controlled_import",
     "promote_reviewed_import",

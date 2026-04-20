@@ -69,7 +69,7 @@ class VaultSystemTests(unittest.TestCase):
                 text = store.read_chapter(1)
 
             self.assertEqual(text, "# Chapter One\nHello from vault")
-            self.assertEqual(store.chapter_path(1), vault_root / "05_Draft" / "Chapters" / "ch_01.md")
+            self.assertEqual(store.chapter_path(1), vault_root / "04_Story" / "Chapters" / "ch_01.md")
 
     def test_export_context_all_combines_logical_views(self):
         with tempfile.TemporaryDirectory() as tmp:
