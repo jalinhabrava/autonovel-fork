@@ -16,6 +16,8 @@ def classify_editorial_intent(
     state=None,
     author_understanding: AuthorIntentInterpretation | None = None,
 ) -> EditorialIntent | None:
+    if recognized_intent_name in {"validate_artifact", "reject_artifact", "persist_decision", "bootstrap_extract"}:
+        return None
     candidate_targets = _candidate_targets_from_entities(entity_results)
     if author_understanding and author_understanding.disambiguation is not None:
         candidate_targets = _dedupe_targets(candidate_targets + list(author_understanding.disambiguation.candidate_targets))
@@ -372,7 +374,11 @@ def _followup_mode(
     author_understanding: AuthorIntentInterpretation | None = None,
 ) -> str:
     if author_understanding is not None and author_understanding.disambiguation is not None:
-        if author_understanding.disambiguation.requires_user_confirmation and not author_understanding.disambiguation.preferred_target:
+        if (
+            author_understanding.needs_clarification
+            and author_understanding.disambiguation.requires_user_confirmation
+            and not author_understanding.disambiguation.preferred_target
+        ):
             return "require_clarification"
         if author_understanding.disambiguation.preferred_target is not None:
             return "prefer_candidate_targets"

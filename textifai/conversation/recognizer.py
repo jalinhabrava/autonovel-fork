@@ -233,14 +233,6 @@ def _infer_target_hint(
 ) -> tuple[str | None, str | None]:
     if request.target_hint:
         return request.target_hint, "request_hint"
-    if state is None or not state.last_target_id:
-        return None, None
-    if any(word in lowered for word in ("esta escena", "this scene")) and state.last_target_type == "scene":
-        return state.last_target_id, "conversation_state"
-    if any(word in lowered for word in ("este capítulo", "este capitulo", "this chapter")) and state.last_target_type == "chapter":
-        return state.last_target_id, "conversation_state"
-    if any(word in lowered for word in ("esta nota", "this note", "esto")):
-        return state.last_target_id, "conversation_state"
     return None, None
 
 

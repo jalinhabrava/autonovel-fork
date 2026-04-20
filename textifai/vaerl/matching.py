@@ -79,12 +79,6 @@ def _match_entry(
     if normalized in metadata_values:
         return (max(0.86 - kind_penalty + hint_bonus, 0.0), "metadata", "simple metadata id match", supporting_hints)
 
-    if mention.context_hint == "esta nota" and entry.artifact_type in {"lore", "decision"}:
-        return (max(0.42 - kind_penalty + hint_bonus, 0.0), "metadata", "generic note context hint", supporting_hints)
-    if mention.context_hint == "esta escena" and entry.artifact_type == "scene":
-        return (max(0.45 - kind_penalty + hint_bonus, 0.0), "metadata", "generic scene context hint", supporting_hints)
-    if mention.context_hint == "este capítulo" and entry.artifact_type == "chapter":
-        return (max(0.45 - kind_penalty + hint_bonus, 0.0), "metadata", "generic chapter context hint", supporting_hints)
     if supporting_hints:
         return (max(0.3 - kind_penalty + hint_bonus, 0.0), "metadata", "hint-supported candidate", supporting_hints)
     return (0.0, "title", "", [])

@@ -208,78 +208,39 @@ def _build_rule_interpretation(
     state: ConversationState | None,
 ) -> AuthorIntentInterpretation:
     raw_text = request.raw_text.strip()
-    token_count = _token_count(raw_text)
     candidate_targets = _candidate_targets_from_entity_results(entity_results)
     entity_hints = _entity_hints_from_entity_results(entity_results)
     disambiguation = disambiguate_targets(candidate_targets)
-    parts = _split_mixed_request_parts(raw_text, state=state, candidate_targets=candidate_targets)
-    primary_intent_type = _infer_primary_intent_type(
-        raw_text=raw_text,
-        recognized_intent_name=rule_intent.intent_name,
-        narrative_signals=narrative_signals,
-        token_count=token_count,
-        candidate_targets=candidate_targets,
-        request=request,
-        parts=parts,
+    primary_intent_type = _minimal_primary_intent_type(
+        rule_intent_name=rule_intent.intent_name,
         state=state,
-    )
-    editorial_diagnosis = _build_editorial_diagnosis(
-        text=raw_text,
-        primary_intent_type=primary_intent_type,
-        candidate_targets=candidate_targets,
-        narrative_signals=narrative_signals,
-        parts=parts,
-    )
-    has_mixed_request = len(parts) > 1 or primary_intent_type == "mixed_request"
-    author_goal_signals, preserve_signals, change_signals = _derive_signals(
-        raw_text,
-        narrative_signals,
-        candidate_targets=candidate_targets,
-        primary_intent_type=primary_intent_type,
-        parts=parts,
-        token_count=token_count,
-        editorial_diagnosis=editorial_diagnosis,
-    )
-    narrative_content_text = _extract_narrative_content(
-        raw_text,
-        primary_intent_type=primary_intent_type,
-        narrative_signals=narrative_signals,
-        candidate_targets=candidate_targets,
-        token_count=token_count,
-        editorial_diagnosis=editorial_diagnosis,
-    )
-    meta_instruction_text = _extract_meta_instruction(
-        raw_text,
-        primary_intent_type=primary_intent_type,
-        narrative_content_text=narrative_content_text,
-        editorial_diagnosis=editorial_diagnosis,
-    )
-    followup_reference_text = _extract_followup_reference(
-        raw_text,
-        parts,
-        state,
-        candidate_targets,
-        primary_intent_type=primary_intent_type,
-        token_count=token_count,
-        request_target_hint=request.target_hint,
-    )
-    needs_clarification = _needs_clarification(
-        primary_intent_type=primary_intent_type,
-        narrative_content_text=narrative_content_text,
-        followup_reference_text=followup_reference_text,
+        request=request,
         disambiguation=disambiguation,
-        editorial_diagnosis=editorial_diagnosis,
     )
-    clarification_reason = _clarification_reason(
-        primary_intent_type=primary_intent_type,
-        narrative_content_text=narrative_content_text,
-        followup_reference_text=followup_reference_text,
-        disambiguation=disambiguation,
-        editorial_diagnosis=editorial_diagnosis,
-    )
+    parts = _minimal_parts(raw_text=raw_text, primary_intent_type=primary_intent_type)
+    followup_reference_text = raw_text if primary_intent_type == "contextual_followup" else None
+    narrative_content_text = raw_text if primary_intent_type == "narrative_facts" else None
+    meta_instruction_text = raw_text if primary_intent_type in {
+        "narration_preparation",
+        "review_handoff",
+        "validation_request",
+        "structured_followup",
+    } else None
+    author_goal_signals, preserve_signals, change_signals = _minimal_author_signals(primary_intent_type)
+    editorial_diagnosis = {
+        "analysis_mode": "deterministic_minimal",
+        "supports_anchor_only_guidance": bool(disambiguation.preferred_target),
+        "issue_types": list((narrative_signals.issue_types if narrative_signals else []) or []),
+    }
+    needs_clarification = primary_intent_type == "unknown"
+    clarification_reason = "A provider-backed interpretation is required for freeform author requests." if needs_clarification else None
+    explicit_grounded_target = bool(rule_intent.target_id or rule_intent.target_type or request.target_hint)
+    if primary_intent_type == "validation_request" and not (disambiguation.preferred_target or explicit_grounded_target):
+        needs_clarification = True
+        clarification_reason = "Validation needs an explicit target or a resolved grounded target."
     metadata = {
         "analysis_source": "rule_based",
-        "gating_reason": "rule_first",
+        "gating_reason": "deterministic_minimal",
         "rule_intent_name": rule_intent.intent_name,
         "rule_intent_confidence": rule_intent.confidence,
         "has_narrative_content": bool(narrative_content_text),
@@ -292,8 +253,8 @@ def _build_rule_interpretation(
     )
     return build_rule_based_author_intent(
         primary_intent_type=primary_intent_type,
-        confidence=_rule_confidence(rule_intent, has_mixed_request=has_mixed_request, narrative_content_text=narrative_content_text),
-        has_mixed_request=has_mixed_request,
+        confidence=max(rule_intent.confidence, 0.2),
+        has_mixed_request=False,
         author_goal_signals=author_goal_signals,
         preserve_signals=preserve_signals,
         change_signals=change_signals,
@@ -309,6 +270,60 @@ def _build_rule_interpretation(
         source="rule_based",
         metadata=metadata,
     )
+
+
+def _minimal_primary_intent_type(
+    *,
+    rule_intent_name: str,
+    state: ConversationState | None,
+    request: ConversationRequest,
+    disambiguation: DisambiguationResult,
+) -> str:
+    mapping = {
+        "lookup_world": "narrative_facts",
+        "search_context": "narrative_facts",
+        "inspect_scene": "narrative_facts",
+        "inspect_chapter": "narrative_facts",
+        "prepare_narration": "narration_preparation",
+        "prepare_review": "review_handoff",
+        "validate_artifact": "validation_request",
+        "consistency_check": "validation_request",
+        "structured_followup": "structured_followup",
+        "validate_structure": "validation_request",
+    }
+    if rule_intent_name in mapping:
+        return mapping[rule_intent_name]
+    if state is not None and state.last_target_id and request.target_hint:
+        return "contextual_followup"
+    if disambiguation.preferred_target is not None and rule_intent_name == "unknown":
+        return "contextual_followup"
+    return "unknown"
+
+
+def _minimal_parts(*, raw_text: str, primary_intent_type: str) -> list[MixedRequestPart]:
+    if not raw_text:
+        return []
+    part_type = {
+        "contextual_followup": "followup_reference",
+        "narrative_facts": "narrative_content",
+        "narration_preparation": "narration_prep",
+        "review_handoff": "review_handoff",
+        "validation_request": "validation_request",
+        "structured_followup": "followup_reference",
+    }.get(primary_intent_type, "mixed")
+    return [MixedRequestPart(part_type=part_type, text=raw_text, confidence=0.6)]
+
+
+def _minimal_author_signals(primary_intent_type: str) -> tuple[list[str], list[str], list[str]]:
+    mapping = {
+        "narrative_facts": (["extract_story_facts"], [], ["extract_story_facts"]),
+        "narration_preparation": (["prepare_for_narration"], [], ["prepare_for_narration"]),
+        "review_handoff": (["prepare_for_review"], [], ["prepare_for_review"]),
+        "validation_request": (["anchor_canon"], ["preserve_validated_canon"], []),
+        "structured_followup": ([], [], []),
+        "contextual_followup": ([], [], []),
+    }
+    return mapping.get(primary_intent_type, ([], [], []))
 
 
 def _build_trivial_contextual_interpretation(

@@ -6,16 +6,6 @@ from textifai.vaerl.contracts import EntityHint, EntityMention, VaultIndexEntry
 from vault.schema import slugify
 
 
-GENERIC_CONTEXT_PATTERNS = (
-    (r"\besta nota\b", "note", "esta nota"),
-    (r"\besta escena\b", "scene", "esta escena"),
-    (r"\beste capítulo\b|\beste capitulo\b", "chapter", "este capítulo"),
-    (r"\blo del ([^,.!?;]+)", None, "lo del"),
-    (r"\bel ([^,.!?;]+)", None, "el"),
-    (r"\bla ([^,.!?;]+)", None, "la"),
-)
-
-
 def detect_mentions(
     *,
     text: str,
@@ -50,25 +40,6 @@ def detect_mentions(
             )
             break
 
-    for pattern, kind_hint, context_hint in GENERIC_CONTEXT_PATTERNS:
-        for match in re.finditer(pattern, lowered):
-            raw_value = text[match.start():match.end()]
-            mention_text = raw_value
-            if "(" in raw_value:
-                mention_text = raw_value.split("(", 1)[0].strip()
-            mentions.append(
-                EntityMention(
-                    surface_text=mention_text,
-                    normalized_text=slugify(_normalize_generic_match(match, raw_value)),
-                    mention_kind_hint=kind_hint,
-                    source="contextual_phrase",
-                    confidence=0.45 if kind_hint is None else 0.58,
-                    context_hint=context_hint,
-                    span_start=match.start(),
-                    span_end=match.end(),
-                )
-            )
-
     for hint in _normalize_entity_hints(entity_hints or []):
         if not hint.normalized_hint:
             continue
@@ -84,14 +55,6 @@ def detect_mentions(
         )
 
     return _dedupe_mentions(mentions)
-
-
-def _normalize_generic_match(match: re.Match[str], raw_value: str) -> str:
-    if match.lastindex:
-        captured = match.group(match.lastindex) or ""
-        if captured.strip():
-            return captured.strip()
-    return raw_value.strip()
 
 
 def _dedupe_mentions(mentions: list[EntityMention]) -> list[EntityMention]:
