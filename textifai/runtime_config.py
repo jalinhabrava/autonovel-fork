@@ -91,6 +91,31 @@ def update_env_values(base_dir: str | Path, updates: dict[str, str]) -> Path:
     return env_path
 
 
+def synchronize_runtime_environment(base_dir: str | Path = ".") -> dict[str, str]:
+    root = Path(base_dir).resolve()
+    env_path = root / ENV_FILE_NAME
+    values = _load_env_values(env_path)
+    keys = {
+        "AUTONOVEL_PROJECT_BACKEND",
+        "AUTONOVEL_VAULT_ROOT",
+        "AUTONOVEL_TEXT_PROVIDER",
+        "AUTONOVEL_WRITER_MODEL",
+        "AUTONOVEL_OPENAI_API_BASE_URL",
+        "OPENAI_API_KEY",
+        "AUTONOVEL_OPENAI_COMPATIBLE_API_BASE_URL",
+        "AUTONOVEL_OPENAI_COMPATIBLE_API_KEY",
+        "AUTONOVEL_OLLAMA_API_BASE_URL",
+        "AUTONOVEL_OLLAMA_API_KEY",
+    }
+    for key in keys:
+        value = values.get(key)
+        if value is None or value == "":
+            os.environ.pop(key, None)
+        else:
+            os.environ[key] = value
+    return values
+
+
 def runtime_banner(locale: str = DEFAULT_LOCALE) -> str:
     return get_translator(locale).t("shell.banner.title")
 

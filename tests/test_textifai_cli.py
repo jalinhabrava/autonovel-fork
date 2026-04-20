@@ -17,7 +17,7 @@ class TextifAICliTests(unittest.TestCase):
         self.assertEqual(code, 0)
         run_obsidian_cli_mock.assert_called_once_with(argv=["start"], repo_root=".")
 
-    def test_chat_uses_existing_runtime_environment(self):
+    def test_chat_requires_provider_readiness_for_author_flows(self):
         with tempfile.TemporaryDirectory() as tmp:
             base_dir = Path(tmp)
             vault_root = base_dir / "Vault"
@@ -38,8 +38,9 @@ class TextifAICliTests(unittest.TestCase):
                 code = main(["chat", "--base-dir", str(base_dir)])
 
             output = buffer.getvalue()
-            self.assertEqual(code, 0)
-            run_shell_mock.assert_called_once()
+            self.assertEqual(code, 1)
+            run_shell_mock.assert_not_called()
+            self.assertIn("Provider setup is still incomplete", output)
 
 
 if __name__ == "__main__":

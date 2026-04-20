@@ -6,7 +6,6 @@ import sys
 from dataclasses import asdict
 from pathlib import Path
 
-from providers.text_provider import get_text_provider_config_error
 from textifai.conversation.runtime_bridge import _load_known_characters, render_execution_result
 from textifai.conversation.contracts import ConversationRequest
 from textifai.conversation.executor import MinimalExecutionLayer
@@ -15,7 +14,12 @@ from textifai.import_review import load_staging_import_bundle
 from textifai.obsidian import evaluate_obsidian_operational_readiness, open_obsidian_source, validate_obsidian_snapshot
 from textifai.obsidian.setup import ObsidianProjectSetupConfig, prepare_obsidian_project
 from textifai.platform_paths import normalize_user_path, suggest_default_vault_root
-from textifai.runtime_config import load_runtime_environment
+from textifai.provider_onboarding import (
+    ProviderConfiguration,
+    configure_provider,
+    evaluate_provider_readiness,
+)
+from textifai.runtime_config import load_runtime_environment, synchronize_runtime_environment
 from textifai.session import create_session
 from textifai.vaerl.index import build_vault_index
 
@@ -32,7 +36,8 @@ def build_parser() -> argparse.ArgumentParser:
     _add_init_like_args(init_parser)
 
     status_parser = subparsers.add_parser("status", help="Inspect operational readiness for a vault.")
-    status_parser.add_argument("--vault-root", required=True)
+    status_parser.add_argument("--vault-root", required=False, default=None)
+    status_parser.add_argument("--skip-provider-probe", action="store_true")
 
     inspect_parser = subparsers.add_parser(
         "inspect",
@@ -52,12 +57,33 @@ def build_parser() -> argparse.ArgumentParser:
     ask_parser.add_argument("--vault-root", default=None)
     ask_parser.add_argument("--text", default=None, help="Question or request to send to TextifAI.")
     ask_parser.add_argument("--json", action="store_true", help="Emit JSON instead of a human summary.")
+
+    provider_parser = subparsers.add_parser(
+        "provider",
+        help="Inspect provider configuration and connectivity for author-facing flows.",
+    )
+    provider_parser.add_argument("--skip-connectivity-test", action="store_true")
+
+    configure_provider_parser = subparsers.add_parser(
+        "configure-provider",
+        help="Configure the provider used for author-facing LLM flows.",
+    )
+    configure_provider_parser.add_argument(
+        "--provider-kind",
+        choices=["openai", "openai_compatible", "local_openai_compatible", "ollama", "skip"],
+        default=None,
+    )
+    configure_provider_parser.add_argument("--api-base", default=None)
+    configure_provider_parser.add_argument("--api-key", default=None)
+    configure_provider_parser.add_argument("--model", default=None)
+    configure_provider_parser.add_argument("--skip-connectivity-test", action="store_true")
+    configure_provider_parser.add_argument("--json", action="store_true")
     return parser
 
 
 def run_cli(*, argv: list[str] | None = None, repo_root: str | Path) -> int:
     raw_argv = list(sys.argv[1:] if argv is None else argv)
-    known_commands = {"start", "init", "status", "inspect", "ask"}
+    known_commands = {"start", "init", "status", "inspect", "ask", "provider", "configure-provider"}
     if not raw_argv or raw_argv[0] not in known_commands:
         raw_argv = ["start", *raw_argv]
 
@@ -65,9 +91,46 @@ def run_cli(*, argv: list[str] | None = None, repo_root: str | Path) -> int:
     args = parser.parse_args(raw_argv)
     command = args.command or "start"
 
+    if command == "provider":
+        payload = asdict(
+            evaluate_provider_readiness(
+                repo_root,
+                run_connectivity_test=not args.skip_connectivity_test,
+            )
+        )
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        return 0 if payload["author_flows_available"] else 1
+
+    if command == "configure-provider":
+        readiness = _configure_provider_from_args(args, repo_root=repo_root)
+        if args.json:
+            print(json.dumps(asdict(readiness), indent=2, ensure_ascii=False))
+        else:
+            _print_provider_summary(readiness)
+        return 0 if readiness.author_flows_available or readiness.provider_name is None else 1
+
     if command == "status":
-        readiness = evaluate_obsidian_operational_readiness(normalize_user_path(args.vault_root))
-        print(json.dumps(asdict(readiness), indent=2, ensure_ascii=False))
+        env = load_runtime_environment(repo_root)
+        vault_root = normalize_user_path(args.vault_root) if args.vault_root else (
+            normalize_user_path(env.vault_root) if env.vault_root else None
+        )
+        if vault_root is None:
+            print(json.dumps({"error": "vault_root_missing"}, indent=2, ensure_ascii=False))
+            return 1
+        readiness = evaluate_obsidian_operational_readiness(vault_root)
+        provider_readiness = evaluate_provider_readiness(
+            repo_root,
+            run_connectivity_test=not args.skip_provider_probe,
+        )
+        payload = {
+            **asdict(readiness),
+            "vault_readiness": asdict(readiness),
+            "provider_readiness": asdict(provider_readiness),
+            "author_flows_available": bool(
+                provider_readiness.author_flows_available and readiness.can_answer_degraded_contextual
+            ),
+        }
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
         return 0
 
     if command == "inspect":
@@ -89,11 +152,18 @@ def run_cli(*, argv: list[str] | None = None, repo_root: str | Path) -> int:
 
     if command == "start":
         config = _interactive_config_from_args(args)
+        provider_readiness = _interactive_provider_configuration(repo_root=repo_root)
         result = prepare_obsidian_project(config, repo_root=repo_root)
         if args.json:
-            print(json.dumps(asdict(result), indent=2, ensure_ascii=False))
+            payload = {
+                **asdict(result),
+                "provider_readiness": asdict(provider_readiness),
+            }
+            print(
+                json.dumps(payload, indent=2, ensure_ascii=False)
+            )
         else:
-            _print_human_start_summary(result)
+            _print_human_start_summary(result, provider_readiness=provider_readiness)
         return 0
 
     mode = "existing_material" if (args.source_root or args.use_vault_root_as_source) else "new_project"
@@ -193,13 +263,7 @@ def _interactive_config_from_args(args: argparse.Namespace) -> ObsidianProjectSe
 
 
 def _inspect_vault(*, vault_root: Path, snapshot_path: str | None = None, repo_root: str | Path = ".") -> dict:
-    env = load_runtime_environment(repo_root)
-    provider_name = env.provider
-    provider_config_error = (
-        get_text_provider_config_error("author_response", provider_name)
-        if provider_name
-        else "provider_not_configured"
-    )
+    provider_readiness = evaluate_provider_readiness(repo_root)
     readiness = evaluate_obsidian_operational_readiness(vault_root)
     source = open_obsidian_source(vault_root, snapshot_path=snapshot_path)
     snapshot_validation = None
@@ -210,12 +274,8 @@ def _inspect_vault(*, vault_root: Path, snapshot_path: str | None = None, repo_r
     manifest_summary = _latest_manifest_stats(vault_root)
     return {
         "vault_root": str(vault_root),
-        "provider_readiness": {
-            "provider_name": provider_name,
-            "configured": bool(provider_name),
-            "available_for_author_response": provider_config_error is None,
-            "configuration_error": provider_config_error,
-        },
+        "provider_readiness": asdict(provider_readiness),
+        "author_flows_available": bool(provider_readiness.author_flows_available and readiness.can_answer_degraded_contextual),
         "readiness": asdict(readiness),
         "source_status": asdict(source.status),
         "snapshot_validation": asdict(snapshot_validation.status) if snapshot_validation is not None else None,
@@ -266,6 +326,7 @@ def _run_author_facing_query(
     emit_json: bool,
 ) -> int:
     repo_path = Path(repo_root).resolve()
+    synchronize_runtime_environment(repo_path)
     env = load_runtime_environment(repo_path)
     session = create_session(env)
     if vault_root is not None:
@@ -278,24 +339,18 @@ def _run_author_facing_query(
     if not query_text.strip():
         print("No request was provided.")
         return 1
-    provider_name = session.provider
-    provider_config_error = (
-        get_text_provider_config_error("author_response", provider_name)
-        if provider_name
-        else "provider_not_configured"
-    )
+    provider_readiness = evaluate_provider_readiness(repo_path)
     readiness = evaluate_obsidian_operational_readiness(session.vault_path)
-    if provider_config_error is not None:
+    if not provider_readiness.author_flows_available:
         payload = {
             "vault_root": str(session.vault_path),
             "author_facing_available": False,
             "reason": "provider_not_available",
-            "provider_name": provider_name,
-            "provider_configuration_error": provider_config_error,
+            "provider_readiness": asdict(provider_readiness),
             "readiness": asdict(readiness),
             "message": (
-                "Author-facing semantic guidance requires a configured text provider. "
-                "Inspect/status commands still work, but ask/chat cannot provide grounded author guidance without an LLM provider."
+                "Author-facing semantic guidance requires a reachable configured text provider. "
+                "Inspect and status still work, but ask cannot provide grounded author guidance until provider readiness is green."
             ),
         }
         _append_ask_trace(session.vault_path, payload)
@@ -320,7 +375,7 @@ def _run_author_facing_query(
             explanation_language=session.language_policy.interface_language,
             metadata={
                 "known_characters": known_characters,
-                "allow_live_provider": bool(session.provider),
+                "allow_live_provider": bool(provider_readiness.author_flows_available),
                 "allow_simulated_preview": False,
                 "provider_name": session.provider,
             },
@@ -363,14 +418,19 @@ def _append_ask_trace(vault_root: Path, payload: dict) -> None:
 
 def _prompt(message: str, *, default: str) -> str:
     suffix = f" [{default}]" if default else ""
-    value = input(f"{message}{suffix}: ").strip()
+    try:
+        value = input(f"{message}{suffix}: ").strip()
+    except EOFError:
+        value = ""
     return value or default
 
 
-def _print_human_start_summary(result) -> None:
+def _print_human_start_summary(result, *, provider_readiness) -> None:
     print(f"Vault ready: {result.vault_root}")
     print(f"Mode: {result.mode}")
     print(f"Current readiness: {result.readiness.operational_mode if result.readiness else 'unknown'}")
+    print(f"Provider mode: {provider_readiness.provider_mode}")
+    print(f"Provider ready for author flows: {'yes' if provider_readiness.author_flows_available else 'no'}")
     if result.plugin_status and result.plugin_status.install_succeeded:
         print("TextifAI Bridge was installed into the vault.")
     if result.bootstrap_written_drafts:
@@ -384,7 +444,113 @@ def _print_human_start_summary(result) -> None:
     print("3. Wait a few seconds; the plugin auto-exports snapshots on startup and after note changes.")
     print("4. If you need a force refresh, run 'Export TextifAI context snapshot' from the command palette.")
     print("")
+    if not provider_readiness.author_flows_available:
+        print("Provider status:")
+        print("1. Run `textifai provider` to inspect the current provider configuration.")
+        print("2. Run `textifai configure-provider` if you still need to configure or fix connectivity.")
+        print("")
     print("Then validate with:")
     print(f"uv run python scripts/textifai_obsidian.py inspect --vault-root {result.vault_root}")
     print("And for the first author-facing interaction:")
     print(f"uv run python scripts/textifai.py ask --vault-root {result.vault_root}")
+
+
+def _interactive_provider_configuration(*, repo_root: str | Path):
+    choice = _prompt(
+        "Select an LLM provider [1] OpenAI, [2] remote OpenAI-compatible, [3] local OpenAI-compatible, [4] Ollama, [5] skip for now",
+        default="5",
+    ).strip()
+    mapped = {
+        "1": "openai",
+        "2": "openai_compatible",
+        "3": "local_openai_compatible",
+        "4": "ollama",
+        "5": "skip",
+    }.get(choice, choice or "skip")
+    configuration = _build_provider_configuration(
+        provider_kind=mapped,
+        api_base=None,
+        api_key=None,
+        model=None,
+        interactive=True,
+    )
+    return configure_provider(base_dir=repo_root, configuration=configuration, test_connectivity=True)
+
+
+def _configure_provider_from_args(args: argparse.Namespace, *, repo_root: str | Path):
+    configuration = _build_provider_configuration(
+        provider_kind=args.provider_kind,
+        api_base=args.api_base,
+        api_key=args.api_key,
+        model=args.model,
+        interactive=args.provider_kind is None,
+    )
+    return configure_provider(
+        base_dir=repo_root,
+        configuration=configuration,
+        test_connectivity=not args.skip_connectivity_test,
+    )
+
+
+def _build_provider_configuration(
+    *,
+    provider_kind: str | None,
+    api_base: str | None,
+    api_key: str | None,
+    model: str | None,
+    interactive: bool,
+) -> ProviderConfiguration:
+    kind = provider_kind or "skip"
+    if interactive:
+        kind = _prompt(
+            "Provider kind [openai|openai_compatible|local_openai_compatible|ollama|skip]",
+            default="skip",
+        ).strip() or "skip"
+    if kind == "skip":
+        return ProviderConfiguration(provider_choice="skip")
+    if kind == "openai":
+        return ProviderConfiguration(
+            provider_choice="openai",
+            provider_name="openai",
+            api_base=api_base or (_prompt("OpenAI API base URL", default="https://api.openai.com/v1") if interactive else "https://api.openai.com/v1"),
+            api_key=api_key or (_prompt("OpenAI API key", default="") if interactive else ""),
+            model=model or (_prompt("OpenAI model", default="gpt-4.1-mini") if interactive else None),
+        )
+    if kind == "openai_compatible":
+        return ProviderConfiguration(
+            provider_choice="openai_compatible",
+            provider_name="openai_compatible",
+            api_base=api_base or (_prompt("OpenAI-compatible base URL", default="https://api.openai.com/v1") if interactive else None),
+            api_key=api_key or (_prompt("OpenAI-compatible API key", default="") if interactive else ""),
+            model=model or (_prompt("Model name", default="gpt-4.1-mini") if interactive else None),
+        )
+    if kind == "local_openai_compatible":
+        return ProviderConfiguration(
+            provider_choice="local_openai_compatible",
+            provider_name="openai_compatible",
+            api_base=api_base or (_prompt("Local OpenAI-compatible base URL", default="http://localhost:1234/v1") if interactive else "http://localhost:1234/v1"),
+            api_key=api_key or (_prompt("Local server API key (optional)", default="") if interactive else ""),
+            model=model or (_prompt("Local model name", default="local-model") if interactive else None),
+        )
+    if kind == "ollama":
+        return ProviderConfiguration(
+            provider_choice="ollama",
+            provider_name="ollama",
+            api_base=api_base or (_prompt("Ollama OpenAI-compatible base URL", default="http://localhost:11434/v1") if interactive else "http://localhost:11434/v1"),
+            api_key=api_key or (_prompt("Ollama API key (optional)", default="") if interactive else ""),
+            model=model or (_prompt("Ollama model", default="llama3.1") if interactive else None),
+        )
+    raise ValueError(f"Unsupported provider kind: {kind}")
+
+
+def _print_provider_summary(readiness) -> None:
+    print(f"Provider: {readiness.provider_name or 'not configured'}")
+    print(f"Mode: {readiness.provider_mode}")
+    print(f"Model: {readiness.provider_model or 'unknown'}")
+    print(f"Configured: {'yes' if readiness.provider_configured else 'no'}")
+    print(f"Reachable: {'yes' if readiness.provider_reachable else 'no'}")
+    print(f"Author flows available: {'yes' if readiness.author_flows_available else 'no'}")
+    if readiness.configuration_error:
+        print(f"Configuration error: {readiness.configuration_error}")
+    if readiness.connectivity_error:
+        print(f"Connectivity error: {readiness.connectivity_error}")

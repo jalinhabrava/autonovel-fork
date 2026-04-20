@@ -13,6 +13,8 @@ TextifAI now distinguishes between:
 Canonical product entrypoint:
 
 - `uv run textifai`
+- `uv run textifai provider`
+- `uv run textifai configure-provider`
 - `uv run textifai ask --vault-root ...`
 - `uv run textifai init --vault-root ...`
 - `uv run textifai status --vault-root ...`
@@ -36,7 +38,21 @@ It asks in English:
 - where the vault should live,
 - where the source documentation lives if needed,
 - the project title and working languages,
-- and whether the bridge plugin should be built now.
+- whether the bridge plugin should be built now,
+- and which LLM provider should back author-facing flows.
+
+Provider onboarding supports:
+
+- OpenAI
+- remote OpenAI-compatible providers
+- local OpenAI-compatible providers such as LM Studio
+- Ollama through its OpenAI-compatible endpoint
+- a `skip for now` mode that leaves TextifAI in non-author-facing mode
+
+Important:
+
+- `ask` and other author-facing semantic flows require a configured and reachable provider
+- if provider readiness is red, TextifAI should fail honestly instead of inventing editorial capability with local heuristics
 
 The short `init` command automatically chooses:
 
@@ -132,6 +148,9 @@ WSL remains supported through path normalization, but it is now treated as a dev
 The expected high-signal fields are:
 
 - `readiness.operational_mode`
+- `provider_readiness.provider_mode`
+- `provider_readiness.provider_reachable`
+- `provider_readiness.author_flows_available`
 - `source_status.reliability`
 - `source_note_count`
 - `raw_fragment_count`

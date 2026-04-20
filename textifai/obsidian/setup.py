@@ -15,7 +15,7 @@ from textifai.bootstrap import (
 from textifai.bootstrap.source_reader import discover_importable_source_paths
 from textifai.import_review import ReviewPolicy, promote_reviewed_import, review_import_stage
 from textifai.obsidian.readiness import ObsidianOperationalReadiness, evaluate_obsidian_operational_readiness
-from textifai.runtime_config import load_runtime_environment
+from textifai.runtime_config import load_runtime_environment, synchronize_runtime_environment
 from vault.bootstrap import bootstrap_vault, validate_vault
 
 
@@ -218,9 +218,10 @@ def prepare_obsidian_project(
 
 
 def _resolve_bootstrap_llm_analyzer(repo_root: Path) -> ProviderBackedBootstrapAnalyzer | None:
+    synchronize_runtime_environment(repo_root)
     env = load_runtime_environment(repo_root)
     provider_name = env.provider
-    if not provider_name:
+    if not provider_name or not env.writer_model:
         return None
     if get_text_provider_config_error("bootstrap_normalization", provider_name) is not None:
         return None

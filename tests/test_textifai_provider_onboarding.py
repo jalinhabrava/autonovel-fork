@@ -1,0 +1,97 @@
+import json
+import tempfile
+import unittest
+from pathlib import Path
+from unittest.mock import patch
+
+from textifai.obsidian.cli import run_cli
+from textifai.provider_onboarding import (
+    ProviderConfiguration,
+    ProviderReadiness,
+    configure_provider,
+    evaluate_provider_readiness,
+)
+
+
+class TextifAIProviderOnboardingTests(unittest.TestCase):
+    def test_configure_provider_skip_disables_author_flows(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base_dir = Path(tmp)
+
+            readiness = configure_provider(
+                base_dir=base_dir,
+                configuration=ProviderConfiguration(provider_choice="skip"),
+                test_connectivity=False,
+            )
+
+            env_text = (base_dir / ".env").read_text(encoding="utf-8")
+            self.assertIn("AUTONOVEL_TEXT_PROVIDER=", env_text)
+            self.assertFalse(readiness.provider_configured)
+            self.assertFalse(readiness.author_flows_available)
+            self.assertEqual(readiness.configuration_error, "provider_not_configured")
+
+    def test_evaluate_provider_readiness_reports_reachable_openai_compatible_provider(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base_dir = Path(tmp)
+            (base_dir / ".env").write_text(
+                "\n".join(
+                    [
+                        "AUTONOVEL_TEXT_PROVIDER=openai_compatible",
+                        "AUTONOVEL_OPENAI_COMPATIBLE_API_BASE_URL=http://localhost:1234/v1",
+                        "AUTONOVEL_OPENAI_COMPATIBLE_API_KEY=test-key",
+                        "AUTONOVEL_WRITER_MODEL=test-model",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            class _FakeProvider:
+                def generate(self, request):
+                    return type("Response", (), {"text": "OK", "model": "test-model"})()
+
+            with (
+                patch("textifai.provider_onboarding.resolve_text_request") as resolve_mock,
+                patch("textifai.provider_onboarding.get_text_provider") as provider_mock,
+            ):
+                resolve_mock.return_value = type("Resolved", (), {"model": "test-model"})()
+                provider_mock.return_value = _FakeProvider()
+
+                readiness = evaluate_provider_readiness(base_dir)
+
+            self.assertTrue(readiness.provider_configured)
+            self.assertTrue(readiness.provider_reachable)
+            self.assertTrue(readiness.author_flows_available)
+            self.assertEqual(readiness.provider_mode, "local_openai_compatible")
+            self.assertEqual(readiness.provider_model, "test-model")
+
+    def test_provider_cli_reports_json_payload(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base_dir = Path(tmp)
+            fake_readiness = ProviderReadiness(
+                provider_name="openai_compatible",
+                provider_mode="local_openai_compatible",
+                provider_model="test-model",
+                provider_configured=True,
+                provider_reachable=True,
+                author_flows_available=True,
+                available_for_author_response=True,
+                configuration_error=None,
+                connectivity_error=None,
+                api_base="http://localhost:1234/v1",
+            )
+            with patch("textifai.obsidian.cli.evaluate_provider_readiness") as readiness_mock, patch(
+                "builtins.print"
+            ) as print_mock:
+                readiness_mock.return_value = fake_readiness
+                code = run_cli(argv=["provider", "--skip-connectivity-test"], repo_root=base_dir)
+
+            self.assertEqual(code, 0)
+            printed = print_mock.call_args[0][0]
+            payload = json.loads(printed)
+            self.assertEqual(payload["provider_mode"], "local_openai_compatible")
+            self.assertTrue(payload["author_flows_available"])
+
+
+if __name__ == "__main__":
+    unittest.main()
