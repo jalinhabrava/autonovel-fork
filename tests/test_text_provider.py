@@ -62,7 +62,7 @@ class TextProviderTests(unittest.TestCase):
             {
                 "AUTONOVEL_WRITER_MODEL": "writer-from-env",
             },
-            clear=False,
+            clear=True,
         ):
             request = TextGenerationRequest(
                 task="draft_chapter",
@@ -149,6 +149,36 @@ class TextProviderTests(unittest.TestCase):
 
         self.assertEqual(response.text, "normalized text")
         self.assertEqual(response.provider_name, "openai")
+
+    def test_openai_gpt_five_models_use_max_completion_tokens(self):
+        captured = {}
+
+        def fake_post(*args, **kwargs):
+            captured["payload"] = kwargs["json"]
+            return DummyResponse({"choices": [{"message": {"content": "normalized text"}}]})
+
+        with patch.dict(
+            "os.environ",
+            {
+                "AUTONOVEL_TEXT_PROVIDER": "openai",
+                "OPENAI_API_KEY": "test-key",
+            },
+            clear=False,
+        ):
+            fake_httpx = make_fake_httpx(fake_post)
+            with patch.dict(sys.modules, {"httpx": fake_httpx}):
+                provider = get_text_provider("review_full")
+                response = provider.generate(
+                    TextGenerationRequest(
+                        task="review_full",
+                        model="gpt-5.4",
+                        messages=[TextMessage(role="user", content="ping")],
+                    )
+                )
+
+        self.assertEqual(response.text, "normalized text")
+        self.assertIn("max_completion_tokens", captured["payload"])
+        self.assertNotIn("max_tokens", captured["payload"])
 
     def test_smoke_factory_supports_all_registered_provider_aliases(self):
         cases = [

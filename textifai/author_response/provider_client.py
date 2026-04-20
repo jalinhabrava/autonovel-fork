@@ -33,7 +33,7 @@ class ConfiguredAuthorResponseClient:
             self.provider_name
             or str(prompt.dynamic_context_payload.get("provider_name") or "").strip()
             or os.environ.get("AUTONOVEL_TEXT_PROVIDER", "").strip()
-            or "anthropic"
+            or "openai"
         )
         return configured
 

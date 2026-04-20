@@ -191,8 +191,11 @@ class OpenAICompatibleTextProvider(BaseHTTPTextProvider):
             "model": resolved.model,
             "messages": messages,
             "temperature": resolved.temperature,
-            "max_tokens": resolved.max_tokens,
         }
+        if _uses_max_completion_tokens(resolved.model):
+            payload["max_completion_tokens"] = resolved.max_tokens
+        else:
+            payload["max_tokens"] = resolved.max_tokens
 
         raw = self._post_json(
             resolved,
@@ -301,6 +304,11 @@ def _deep_merge(base: dict[str, Any], extra: dict[str, Any]) -> dict[str, Any]:
         else:
             merged[key] = value
     return merged
+
+
+def _uses_max_completion_tokens(model: str | None) -> bool:
+    normalized = (model or "").strip().lower()
+    return normalized.startswith(("gpt-5", "o1", "o3", "o4"))
 
 
 @lru_cache(maxsize=1)

@@ -17,6 +17,7 @@ from textifai.obsidian.setup import ObsidianProjectSetupConfig, prepare_obsidian
 from textifai.platform_paths import normalize_user_path, suggest_default_vault_root
 from textifai.provider_onboarding import (
     ProviderConfiguration,
+    ProviderReadiness,
     configure_provider,
     evaluate_provider_readiness,
 )
@@ -64,6 +65,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Inspect provider configuration and connectivity for author-facing flows.",
     )
     provider_parser.add_argument("--skip-connectivity-test", action="store_true")
+    provider_parser.add_argument("--json", action="store_true", help="Emit JSON instead of a human summary.")
 
     configure_provider_parser = subparsers.add_parser(
         "configure-provider",
@@ -99,7 +101,10 @@ def run_cli(*, argv: list[str] | None = None, repo_root: str | Path) -> int:
                 run_connectivity_test=not args.skip_connectivity_test,
             )
         )
-        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        if args.json:
+            print(json.dumps(payload, indent=2, ensure_ascii=False))
+        else:
+            _print_provider_summary(ProviderReadiness(**payload))
         return 0 if payload["author_flows_available"] else 1
 
     if command == "configure-provider":

@@ -107,13 +107,40 @@ class TextifAIProviderOnboardingTests(unittest.TestCase):
                 "builtins.print"
             ) as print_mock:
                 readiness_mock.return_value = fake_readiness
-                code = run_cli(argv=["provider", "--skip-connectivity-test"], repo_root=base_dir)
+                code = run_cli(argv=["provider", "--skip-connectivity-test", "--json"], repo_root=base_dir)
 
             self.assertEqual(code, 0)
             printed = print_mock.call_args[0][0]
             payload = json.loads(printed)
             self.assertEqual(payload["provider_mode"], "local_openai_compatible")
             self.assertTrue(payload["author_flows_available"])
+
+    def test_provider_cli_accepts_json_flag(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base_dir = Path(tmp)
+            fake_readiness = ProviderReadiness(
+                provider_name="openai",
+                provider_mode="remote_openai",
+                provider_model="gpt-5.4",
+                provider_configured=True,
+                provider_reachable=True,
+                author_flows_available=True,
+                available_for_author_response=True,
+                configuration_error=None,
+                connectivity_error=None,
+                api_base="https://api.openai.com/v1",
+            )
+            with patch("textifai.obsidian.cli.evaluate_provider_readiness") as readiness_mock, patch(
+                "builtins.print"
+            ) as print_mock:
+                readiness_mock.return_value = fake_readiness
+                code = run_cli(argv=["provider", "--json"], repo_root=base_dir)
+
+            self.assertEqual(code, 0)
+            printed = print_mock.call_args[0][0]
+            payload = json.loads(printed)
+            self.assertEqual(payload["provider_name"], "openai")
+            self.assertEqual(payload["provider_mode"], "remote_openai")
 
 
 if __name__ == "__main__":
