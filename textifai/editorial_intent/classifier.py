@@ -3,7 +3,12 @@ from __future__ import annotations
 from dataclasses import asdict
 
 from textifai.author_understanding.contracts import AuthorIntentInterpretation
-from textifai.editorial_intent.contracts import CandidateTarget, EditorialIntent
+from textifai.editorial_intent.contracts import (
+    CandidateTarget,
+    EditorialIntent,
+    EDITORIAL_GOAL_CATALOG,
+    PRESERVE_CONSTRAINT_CATALOG,
+)
 from textifai.vaerl.contracts import EntityHint
 
 
@@ -26,9 +31,19 @@ def classify_editorial_intent(
     resolved_target = _resolve_target(candidate_targets, author_understanding)
     preserve_constraints, editorial_goals = _editorial_guidance(narrative_signals, author_understanding)
     if author_understanding is not None:
-        preserve_constraints = _dedupe(preserve_constraints + _normalize_signal_list(author_understanding.preserve_signals))
-        author_goals = [goal for goal in _normalize_signal_list(author_understanding.author_goal_signals) if goal != "mixed_request"]
-        author_changes = [goal for goal in _normalize_signal_list(author_understanding.change_signals) if goal != "mixed_request"]
+        preserve_constraints = _dedupe(
+            preserve_constraints + _normalize_catalog_signal_list(author_understanding.preserve_signals, PRESERVE_CONSTRAINT_CATALOG)
+        )
+        author_goals = [
+            goal
+            for goal in _normalize_catalog_signal_list(author_understanding.author_goal_signals, EDITORIAL_GOAL_CATALOG)
+            if goal != "mixed_request"
+        ]
+        author_changes = [
+            goal
+            for goal in _normalize_catalog_signal_list(author_understanding.change_signals, EDITORIAL_GOAL_CATALOG)
+            if goal != "mixed_request"
+        ]
         editorial_goals = _dedupe(editorial_goals + author_goals + author_changes)
 
     followup_mode = _followup_mode(candidate_targets, state, recognized_intent_name, author_understanding)
@@ -510,6 +525,15 @@ def _normalize_signal_list(values: list[str]) -> list[str]:
     return _dedupe([str(value).strip() for value in values if str(value).strip()])
 
 
+def _normalize_catalog_signal_list(values: list[str], catalog: tuple[str, ...]) -> list[str]:
+    normalized: list[str] = []
+    for value in values:
+        cleaned = str(value).strip()
+        if cleaned and cleaned in catalog:
+            normalized.append(cleaned)
+    return _dedupe(normalized)
+
+
 def _editorial_guidance(narrative_signals, author_understanding: AuthorIntentInterpretation | None) -> tuple[list[str], list[str]]:
     preserve_constraints: list[str] = []
     goals: list[str] = []
@@ -538,8 +562,10 @@ def _editorial_guidance(narrative_signals, author_understanding: AuthorIntentInt
             goals.extend(["evaluate_symbolic_canon_link", "test_deformed_historical_continuity"])
             preserve_constraints.append("preserve_validated_canon")
     if author_understanding is not None:
-        goals = _dedupe(goals + _normalize_signal_list(author_understanding.author_goal_signals))
-        preserve_constraints = _dedupe(preserve_constraints + _normalize_signal_list(author_understanding.preserve_signals))
+        goals = _dedupe(goals + _normalize_catalog_signal_list(author_understanding.author_goal_signals, EDITORIAL_GOAL_CATALOG))
+        preserve_constraints = _dedupe(
+            preserve_constraints + _normalize_catalog_signal_list(author_understanding.preserve_signals, PRESERVE_CONSTRAINT_CATALOG)
+        )
     return (_dedupe(preserve_constraints), _dedupe(goals))
 
 
