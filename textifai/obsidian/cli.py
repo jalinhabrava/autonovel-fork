@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from datetime import datetime, timezone
 from dataclasses import asdict
 from pathlib import Path
 
@@ -59,6 +60,11 @@ def build_parser() -> argparse.ArgumentParser:
     ask_parser.add_argument("--vault-root", default=None)
     ask_parser.add_argument("--text", default=None, help="Question or request to send to TextifAI.")
     ask_parser.add_argument("--json", action="store_true", help="Emit JSON instead of a human summary.")
+    ask_parser.add_argument(
+        "--trace-output",
+        default=None,
+        help="Optional JSON file path for persisting the full E2E trace during validation/debugging.",
+    )
 
     provider_parser = subparsers.add_parser(
         "provider",
@@ -154,6 +160,7 @@ def run_cli(*, argv: list[str] | None = None, repo_root: str | Path) -> int:
             vault_root=normalize_user_path(args.vault_root) if args.vault_root else None,
             text=args.text,
             emit_json=args.json,
+            trace_output=normalize_user_path(args.trace_output) if args.trace_output else None,
         )
 
     if command == "start":
@@ -330,6 +337,7 @@ def _run_author_facing_query(
     vault_root: Path | None,
     text: str | None,
     emit_json: bool,
+    trace_output: Path | None,
 ) -> int:
     repo_path = Path(repo_root).resolve()
     synchronize_runtime_environment(repo_path)
@@ -353,6 +361,7 @@ def _run_author_facing_query(
             query_text=query_text,
         )
         payload = {
+            "trace_metadata": _build_trace_metadata(mode="preview", trace_output=trace_output),
             "vault_root": str(session.vault_path),
             "author_facing_available": False,
             "reason": "provider_not_available",
@@ -365,6 +374,7 @@ def _run_author_facing_query(
             ),
         }
         _append_ask_trace(session.vault_path, payload)
+        _write_trace_artifact(trace_output, payload)
         if emit_json:
             print(json.dumps(payload, indent=2, ensure_ascii=False))
         else:
@@ -397,6 +407,7 @@ def _run_author_facing_query(
     if not rendered_response and execution is not None:
         rendered_response = render_execution_result(session, execution)
     payload = {
+        "trace_metadata": _build_trace_metadata(mode="full", trace_output=trace_output),
         "vault_root": str(session.vault_path),
         "author_facing_available": bool(rendered_response),
         "flow_name": turn.planned_task.flow_name,
@@ -405,6 +416,8 @@ def _run_author_facing_query(
         "author_facing_response": rendered_response,
         "response_generation_ready": turn.response_generation_ready,
         "response_support_summary": turn.response_support_summary,
+        "provider_readiness": asdict(provider_readiness),
+        "readiness": asdict(readiness),
         "provider_mode": turn.provider_mode,
         "response_generation_mode": turn.response_generation_mode,
         "pipeline_trace": _build_pipeline_trace(
@@ -413,6 +426,7 @@ def _run_author_facing_query(
         ),
     }
     _append_ask_trace(session.vault_path, payload)
+    _write_trace_artifact(trace_output, payload)
     if emit_json:
         print(json.dumps(payload, indent=2, ensure_ascii=False))
     else:
@@ -429,6 +443,22 @@ def _append_ask_trace(vault_root: Path, payload: dict) -> None:
     trace_path.parent.mkdir(parents=True, exist_ok=True)
     with trace_path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(payload, ensure_ascii=False) + "\n")
+
+
+def _write_trace_artifact(trace_output: Path | None, payload: dict) -> None:
+    if trace_output is None:
+        return
+    trace_output.parent.mkdir(parents=True, exist_ok=True)
+    trace_output.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
+def _build_trace_metadata(*, mode: str, trace_output: Path | None) -> dict:
+    return {
+        "trace_schema_version": "1.0",
+        "trace_mode": mode,
+        "recorded_at": datetime.now(timezone.utc).isoformat(),
+        "trace_output_path": str(trace_output) if trace_output is not None else None,
+    }
 
 
 def _build_pipeline_trace(*, turn, vault_root: Path) -> dict:

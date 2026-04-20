@@ -474,6 +474,70 @@ class TextifAIObsidianSetupTests(unittest.TestCase):
             self.assertIn("semantic_interpretation_prompt", payload["pipeline_trace_preview"])
             self.assertTrue((vault_root / "99_System" / "textifai_ask_trace.jsonl").exists())
 
+    def test_textifai_ask_trace_output_persists_preview_artifact(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            vault_root = base / "Vault"
+            plugin_root = _fake_plugin_repo(base / "plugin")
+            source_root = base / "Source"
+            trace_output = base / "artifacts" / "ask-trace.json"
+            source_root.mkdir()
+            (source_root / "lore.md").write_text("# Nushi\n\nLos Nushi son entidades del mundo.\n", encoding="utf-8")
+
+            prepare_obsidian_project(
+                ObsidianProjectSetupConfig(
+                    vault_root=str(vault_root),
+                    mode="existing_material",
+                    project_title="Ask Trace Project",
+                    source_root=str(source_root),
+                    primary_language="es",
+                    working_languages=["es"],
+                    install_bridge_plugin=True,
+                    build_bridge_plugin=False,
+                    plugin_repo_root=str(plugin_root),
+                ),
+                repo_root=base,
+            )
+            (base / ".env").write_text(
+                "\n".join(
+                    [
+                        "AUTONOVEL_PROJECT_BACKEND=vault",
+                        f"AUTONOVEL_VAULT_ROOT={vault_root}",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            completed = subprocess.run(
+                [
+                    "uv",
+                    "run",
+                    "python",
+                    "scripts/textifai.py",
+                    "ask",
+                    "--vault-root",
+                    str(vault_root),
+                    "--text",
+                    "Necesito una guía editorial sobre los Nushi.",
+                    "--json",
+                    "--trace-output",
+                    str(trace_output),
+                ],
+                cwd=Path(__file__).resolve().parents[1],
+                capture_output=True,
+                text=True,
+            )
+            payload = json.loads(completed.stdout)
+            persisted = json.loads(trace_output.read_text(encoding="utf-8"))
+
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertTrue(trace_output.exists())
+            self.assertEqual(persisted["reason"], "provider_not_available")
+            self.assertEqual(persisted["trace_metadata"]["trace_mode"], "preview")
+            self.assertEqual(persisted["trace_metadata"]["trace_output_path"], str(trace_output))
+            self.assertEqual(persisted["pipeline_trace_preview"], payload["pipeline_trace_preview"])
+
 
 def _fake_plugin_repo(path: Path) -> Path:
     path.mkdir(parents=True, exist_ok=True)
