@@ -4,7 +4,7 @@ import unittest
 
 import json
 
-from textifai.import_review.composer import _select_candidate_drafts, discover_primary_candidates
+from textifai.import_review.composer import _sanitize_aliases, _select_candidate_drafts, discover_primary_candidates
 from textifai.import_review.staging_loader import load_staging_import_bundle
 from vault.bootstrap import bootstrap_vault
 from vault.notes import write_or_update_note
@@ -165,6 +165,23 @@ class TextifAIImportReviewComposerTests(unittest.TestCase):
             selected = _select_candidate_drafts(candidate, drafts)
 
             self.assertEqual(selected[0].draft_id, "sera_profile")
+
+    def test_sanitize_aliases_drops_phrase_like_noise(self):
+        cleaned = _sanitize_aliases(
+            [
+                "Sera",
+                "Princesa de Thiseia",
+                "Vínculo entre Nushi y humanos",
+                "Serélyne",
+                "Liora",
+            ],
+            title="Sera",
+            canonical_subject="Sera",
+            related_subjects=["Thiseia"],
+            blocked_subject_keys={"liora"},
+        )
+
+        self.assertEqual(cleaned, ["Princesa de Thiseia", "Serélyne"])
 
 
 if __name__ == "__main__":

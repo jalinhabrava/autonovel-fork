@@ -15,6 +15,7 @@ def detect_mentions(
     mentions: list[EntityMention] = []
     lowered = text.casefold()
     for entry in index_entries:
+        token_fallback: EntityMention | None = None
         candidate_names = (
             [entry.title, entry.slug.replace("_", " ").replace("-", " ")]
             + list(entry.aliases)
@@ -24,6 +25,8 @@ def detect_mentions(
             normalized = name.strip()
             if len(normalized) < 3:
                 continue
+            if token_fallback is None:
+                token_fallback = _token_level_primary_match(text=text, lowered=lowered, entry=entry, name=normalized)
             match = re.search(r"(?<!\w)" + re.escape(normalized.casefold()) + r"(?!\w)", lowered)
             if match is None:
                 continue
@@ -39,6 +42,9 @@ def detect_mentions(
                 )
             )
             break
+        else:
+            if token_fallback is not None:
+                mentions.append(token_fallback)
 
     for hint in _normalize_entity_hints(entity_hints or []):
         if not hint.normalized_hint:
@@ -55,6 +61,26 @@ def detect_mentions(
         )
 
     return _dedupe_mentions(mentions)
+
+
+def _token_level_primary_match(*, text: str, lowered: str, entry: VaultIndexEntry, name: str) -> EntityMention | None:
+    if str((entry.frontmatter or {}).get("note_role") or "").strip().casefold() != "primary":
+        return None
+    tokens = [token for token in re.split(r"[\s_\-]+", name.strip()) if len(token) >= 5]
+    for token in tokens:
+        match = re.search(r"(?<!\w)" + re.escape(token.casefold()) + r"(?!\w)", lowered)
+        if match is None:
+            continue
+        return EntityMention(
+            surface_text=text[match.start():match.end()],
+            normalized_text=slugify(token),
+            mention_kind_hint=entry.artifact_type,
+            source="raw_text",
+            confidence=0.68,
+            span_start=match.start(),
+            span_end=match.end(),
+        )
+    return None
 
 
 def _dedupe_mentions(mentions: list[EntityMention]) -> list[EntityMention]:

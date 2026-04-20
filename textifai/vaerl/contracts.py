@@ -8,6 +8,7 @@ ENTITY_KIND_CATALOG = (
     "character",
     "scene",
     "chapter",
+    "chapter_summary",
     "lore",
     "decision",
     "location",

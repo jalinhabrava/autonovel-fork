@@ -139,6 +139,32 @@ class TextifAIVaERLResolverTests(unittest.TestCase):
             self.assertTrue(sera_result.candidate_entities)
             self.assertEqual(sera_result.candidate_entities[0].artifact_id, "sera")
 
+    def test_resolver_can_use_primary_title_token_for_shorter_place_reference(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            vault_root = Path(tmp) / "Vault"
+            bootstrap_vault(vault_root, title="Test Project")
+            (vault_root / "02_World" / "Lore" / "ducado_de_veredyn.md").write_text(
+                note_frontmatter(
+                    "lore",
+                    "Ducado de Veredyn",
+                    slug="ducado_de_veredyn",
+                    note_role="primary",
+                    artifact_stage="promoted_artifact",
+                )
+                + "\n\nEntidad política.\n",
+                encoding="utf-8",
+            )
+
+            results = resolve_text_against_vault(
+                text="Qué sabe el proyecto sobre Veredyn.",
+                vault_path=vault_root,
+            )
+
+            self.assertTrue(results)
+            veredyn_result = next(item for item in results if item.mention.normalized_text == "veredyn")
+            self.assertTrue(veredyn_result.candidate_entities)
+            self.assertEqual(veredyn_result.candidate_entities[0].artifact_id, "ducado_de_veredyn")
+
 
 if __name__ == "__main__":
     unittest.main()

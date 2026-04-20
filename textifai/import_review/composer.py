@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from providers.text_provider import TextGenerationRequest, TextMessage, get_text_provider, get_text_provider_config_error
+from providers.text_provider import TextGenerationRequest, TextMessage, TextProviderError, get_text_provider, get_text_provider_config_error
 from textifai.author_understanding.normalization import extract_json_payload
 from textifai.import_review.staging_loader import LoadedStagedDraft, StagingImportBundle, load_staging_import_bundle
 from textifai.obsidian import open_obsidian_source
@@ -77,6 +77,7 @@ def compose_primary_notes_from_staging(
     skipped_candidates: list[str] = []
     warnings: list[str] = []
     audit_entries: list[CompositionAuditEntry] = []
+    candidate_subject_keys = {candidate.subject_key for candidate in candidates}
     for index, candidate in enumerate(candidates, start=1):
         _emit_progress(progress_log_path, phase="compose_primary_notes", event="candidate_started", index=index, total=len(candidates), subject=candidate.display_name)
         draft_map = {draft.draft_id: draft for draft in bundle.drafts if draft.draft_id in set(candidate.draft_ids)}
@@ -163,15 +164,18 @@ def compose_primary_notes_from_staging(
         aliases = _sanitize_aliases(
             [
                 *_string_list(proposal.get("aliases")),
+                *candidate.aliases,
                 *([candidate.display_name] if slugify(candidate.display_name) != slugify(title) else []),
                 *([primary_subject] if slugify(primary_subject) != slugify(title) else []),
             ],
             title=title,
             canonical_subject=primary_subject,
             related_subjects=related_subjects,
+            blocked_subject_keys=candidate_subject_keys - {candidate.subject_key, slugify(title), slugify(primary_subject)},
         )
         duplicate_primary_path = _existing_primary_conflict_path(
             bundle.vault_root,
+            subject_key=candidate.subject_key,
             title=title,
             canonical_subject=primary_subject,
             aliases=aliases,
@@ -208,6 +212,8 @@ def compose_primary_notes_from_staging(
             related_subjects=related_subjects,
             source_drafts=selected_drafts,
         )
+        composition_language = _draft_language(selected_drafts)
+        aggregated_metadata = _aggregate_draft_metadata(selected_drafts)
         metadata = {
             "artifact_stage": "promoted_artifact",
             "promotion_status": "promoted_canonical",
@@ -218,6 +224,12 @@ def compose_primary_notes_from_staging(
             "related_subjects": ", ".join(related_subjects),
             "source_staging_drafts": ", ".join(draft.draft_id for draft in selected_drafts),
             "composed_from_staging": "true",
+            "note_language": composition_language,
+            "entities": ", ".join(aggregated_metadata["entities"]),
+            "topics": ", ".join(aggregated_metadata["topics"]),
+            "world_terms": ", ".join(aggregated_metadata["world_terms"]),
+            "character_refs": ", ".join(aggregated_metadata["character_refs"]),
+            "lore_refs": ", ".join(aggregated_metadata["lore_refs"]),
         }
         provenance = next((draft.provenance for draft in selected_drafts if draft.provenance is not None), None)
         if provenance is not None:
@@ -322,6 +334,7 @@ def _compose_candidate(
     provider = get_text_provider(config.task_name, config.provider_name)
     payload = {
         "goal": "Compose a primary Obsidian note only if the evidence supports a stable entity, place, or lore concept.",
+        "preferred_output_language": _draft_language(drafts),
         "candidate": {
             "display_name": candidate.display_name,
             "subject_key": candidate.subject_key,
@@ -365,21 +378,26 @@ def _compose_candidate(
             "If the evidence is only a local subsection or weak fragment, return note_type='skip'.",
             "When possible, choose a short canonical title that matches how an Obsidian note should be navigated.",
             "Use aliases for alternate names, nicknames, or full forms.",
+            "Write summary and key facts in the preferred output language when one is provided.",
+            "Make the note useful as a primary Obsidian page, not as a staging fragment.",
         ],
     }
-    response = provider.generate(
-        TextGenerationRequest(
-            task=config.task_name,
-            provider_name=config.provider_name,
-            model=config.model,
-            system="You are composing canonical Obsidian notes for TextifAI bootstrap. Return strict JSON only.",
-            messages=[TextMessage(role="user", content=json.dumps(payload, ensure_ascii=False))],
-            max_tokens=config.max_tokens,
-            temperature=config.temperature,
-            timeout_seconds=config.timeout_seconds,
-            retries=config.retries,
+    try:
+        response = provider.generate(
+            TextGenerationRequest(
+                task=config.task_name,
+                provider_name=config.provider_name,
+                model=config.model,
+                system="You are composing canonical Obsidian notes for TextifAI bootstrap. Return strict JSON only.",
+                messages=[TextMessage(role="user", content=json.dumps(payload, ensure_ascii=False))],
+                max_tokens=config.max_tokens,
+                temperature=config.temperature,
+                timeout_seconds=config.timeout_seconds,
+                retries=config.retries,
+            )
         )
-    )
+    except TextProviderError:
+        return None
     return extract_json_payload(response.text)
 
 
@@ -392,9 +410,12 @@ def _render_primary_note_body(
     related_subjects: list[str],
     source_drafts: list[LoadedStagedDraft],
 ) -> str:
+    wikilink_targets = [subject for subject in [*related_subjects, title] if subject.strip()]
+    summary = _wikify_plain_text(summary, wikilink_targets)
+    key_facts = [_wikify_plain_text(item, wikilink_targets) for item in key_facts]
     lines = []
     if summary:
-        lines.append("## Summary")
+        lines.append("## Overview")
         lines.append("")
         lines.append(summary.strip())
         lines.append("")
@@ -418,6 +439,61 @@ def _render_primary_note_body(
             lines.append(f"- {section} (`{Path(draft.staging_path).name}`)")
         lines.append("")
     return "\n".join(lines).strip()
+
+
+def _draft_language(drafts: list[LoadedStagedDraft]) -> str | None:
+    candidates: list[str] = []
+    for draft in drafts:
+        frontmatter = draft.frontmatter
+        for raw in (
+            frontmatter.get("note_language"),
+            frontmatter.get("dominant_language"),
+            frontmatter.get("detected_languages"),
+        ):
+            if raw is None:
+                continue
+            if isinstance(raw, str):
+                values = [item.strip() for item in raw.split(",")]
+            else:
+                values = [str(item).strip() for item in raw]
+            for value in values:
+                if value and value not in {"unknown", "mixed"}:
+                    candidates.append(value)
+    return candidates[0] if candidates else None
+
+
+def _wikify_plain_text(text: str, targets: list[str]) -> str:
+    result = text
+    protected: dict[str, str] = {}
+
+    def _protect(match: re.Match[str]) -> str:
+        token = f"__LINK_{len(protected)}__"
+        protected[token] = match.group(0)
+        return token
+
+    result = re.sub(r"\[\[[^\]]+\]\]", _protect, result)
+    for target in sorted({item.strip() for item in targets if item.strip()}, key=len, reverse=True):
+        escaped = re.escape(target)
+        pattern = re.compile(rf"(?<!\[\[)(?<![\w]){escaped}(?![\w])(?!\]\])")
+        result = pattern.sub(f"[[{target}]]", result)
+    for token, original in protected.items():
+        result = result.replace(token, original)
+    return result
+
+
+def _aggregate_draft_metadata(drafts: list[LoadedStagedDraft]) -> dict[str, list[str]]:
+    buckets = {
+        "entities": [],
+        "topics": [],
+        "world_terms": [],
+        "character_refs": [],
+        "lore_refs": [],
+    }
+    for draft in drafts:
+        frontmatter = draft.frontmatter
+        for key in buckets:
+            buckets[key].extend(_split_values(frontmatter.get(key)))
+    return {key: _dedupe(values) for key, values in buckets.items()}
 
 
 def _draft_subject_candidates(draft: LoadedStagedDraft) -> list[tuple[str, str, float]]:
@@ -509,14 +585,20 @@ def _sanitize_aliases(
     title: str,
     canonical_subject: str,
     related_subjects: list[str],
+    blocked_subject_keys: set[str] | None = None,
 ) -> list[str]:
     blocked = {slugify(title), slugify(canonical_subject), *(slugify(item) for item in related_subjects)}
+    blocked.update(blocked_subject_keys or set())
     cleaned: list[str] = []
     for alias in aliases:
         normalized = str(alias).strip()
         if not normalized:
             continue
         if slugify(normalized) in blocked:
+            continue
+        if len(normalized.split()) > 4:
+            continue
+        if any(mark in normalized for mark in {":", ";", ",", "(", ")", "—"}):
             continue
         cleaned.append(normalized)
     return _dedupe(cleaned)
@@ -525,11 +607,12 @@ def _sanitize_aliases(
 def _existing_primary_conflict_path(
     vault_root: str | Path,
     *,
+    subject_key: str,
     title: str,
     canonical_subject: str,
     aliases: list[str],
 ) -> str | None:
-    identity_keys = {slugify(title), slugify(canonical_subject), *(slugify(item) for item in aliases)}
+    identity_keys = {slugify(subject_key), slugify(title), slugify(canonical_subject)}
     source = open_obsidian_source(vault_root)
     for note in source.reader.list_notes():
         frontmatter = note.frontmatter or {}
@@ -539,8 +622,6 @@ def _existing_primary_conflict_path(
             slugify(note.title),
             slugify(note.note_id),
             slugify(str(frontmatter.get("canonical_subject") or "")),
-            *(slugify(alias) for alias in note.aliases),
-            *(slugify(alias) for alias in note.project_confirmed_aliases),
         }
         if identity_keys & {key for key in note_keys if key}:
             return note.path

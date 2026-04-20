@@ -104,6 +104,17 @@ def _match_entry(
             supporting_hints,
         )
 
+    title_tokens = {token for token in re_split_tokens(entry.title)}
+    slug_tokens = {token for token in re_split_tokens(entry.slug)}
+    alias_tokens = {token for alias in [*entry.aliases, *entry.project_confirmed_aliases] for token in re_split_tokens(alias)}
+    if len(normalized) >= 5 and normalized in title_tokens | slug_tokens | alias_tokens:
+        return (
+            _apply_entry_priority(max(0.74 - kind_penalty + hint_bonus, 0.0), entry),
+            "metadata",
+            "primary title token match",
+            supporting_hints,
+        )
+
     if supporting_hints:
         return (
             _apply_entry_priority(max(0.3 - kind_penalty + hint_bonus, 0.0), entry),
@@ -165,3 +176,7 @@ def _supporting_hints_for_entry(
         ):
             supporting.append(hint)
     return supporting
+
+
+def re_split_tokens(value: str) -> list[str]:
+    return [slugify(token) for token in str(value).replace("_", " ").replace("-", " ").split() if len(slugify(token)) >= 5]

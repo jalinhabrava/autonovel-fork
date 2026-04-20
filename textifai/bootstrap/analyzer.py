@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from providers.text_provider import TextGenerationRequest, TextMessage, get_text_provider, get_text_provider_config_error
+from providers.text_provider import TextProviderError
 from textifai.author_understanding.normalization import extract_json_payload
 from textifai.bootstrap.contracts import BOOTSTRAP_ARTIFACT_TYPE_CATALOG, SourceDocumentRecord, SourceFragment
 from textifai.bootstrap.prompt_builder import BootstrapPrompt, build_bootstrap_prompt
@@ -143,8 +144,19 @@ class ProviderBackedBootstrapAnalyzer:
         validated_extraction = None
         if not get_text_provider_config_error(self.derived_config.task_name, self.derived_config.provider_name) and escalation.required:
             interpreter = ProviderBackedDerivedSourceInterpreter(config=self.derived_config)
-            llm_payload = interpreter.interpret(seed=seed, escalation=escalation)
-            validated_extraction = validate_derived_extraction(seed=seed, payload=llm_payload)
+            try:
+                llm_payload = interpreter.interpret(seed=seed, escalation=escalation)
+                validated_extraction = validate_derived_extraction(seed=seed, payload=llm_payload)
+            except TextProviderError as exc:
+                _emit_progress(
+                    self.config.progress_log_path,
+                    phase="analyze_derived_document",
+                    event="provider_error",
+                    source_id=document.source_id,
+                    error=str(exc),
+                )
+                llm_payload = None
+                validated_extraction = validate_derived_extraction(seed=seed, payload=None)
         else:
             validated_extraction = validate_derived_extraction(seed=seed, payload=None)
 
@@ -283,19 +295,29 @@ class ProviderBackedBootstrapAnalyzer:
             sort_keys=True,
         )
         provider = get_text_provider(self.config.task_name, self.config.provider_name)
-        response = provider.generate(
-            TextGenerationRequest(
-                task=self.config.task_name,
-                provider_name=self.config.provider_name,
-                model=self.config.model,
-                system=prompt.system_prompt,
-                messages=[TextMessage(role="user", content=payload)],
-                max_tokens=self.config.max_tokens,
-                temperature=self.config.temperature,
-                timeout_seconds=self.config.timeout_seconds,
-                retries=self.config.retries,
+        try:
+            response = provider.generate(
+                TextGenerationRequest(
+                    task=self.config.task_name,
+                    provider_name=self.config.provider_name,
+                    model=self.config.model,
+                    system=prompt.system_prompt,
+                    messages=[TextMessage(role="user", content=payload)],
+                    max_tokens=self.config.max_tokens,
+                    temperature=self.config.temperature,
+                    timeout_seconds=self.config.timeout_seconds,
+                    retries=self.config.retries,
+                )
             )
-        )
+        except TextProviderError as exc:
+            _emit_progress(
+                self.config.progress_log_path,
+                phase="analyze_batch",
+                event="provider_error",
+                source_id=document.source_id,
+                error=str(exc),
+            )
+            return None
         raw_payload = extract_json_payload(response.text)
         if raw_payload is None:
             return None
