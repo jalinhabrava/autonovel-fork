@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import shutil
 import subprocess
+import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -13,7 +14,13 @@ from textifai.bootstrap import (
     confirm_and_write_bootstrap,
 )
 from textifai.bootstrap.source_reader import discover_importable_source_paths
-from textifai.import_review import ReviewPolicy, promote_reviewed_import, review_import_stage
+from textifai.import_review import (
+    CompositionConfig,
+    ReviewPolicy,
+    compose_primary_notes_from_staging,
+    promote_reviewed_import,
+    review_import_stage,
+)
 from textifai.obsidian.readiness import ObsidianOperationalReadiness, evaluate_obsidian_operational_readiness
 from textifai.runtime_config import load_runtime_environment, synchronize_runtime_environment
 from vault.bootstrap import bootstrap_vault, validate_vault
@@ -74,6 +81,9 @@ class ObsidianProjectSetupResult:
     source_files_considered: list[str] = field(default_factory=list)
     bootstrap_auto_promoted_paths: list[str] = field(default_factory=list)
     bootstrap_pending_candidates: list[str] = field(default_factory=list)
+    bootstrap_primary_composed_paths: list[str] = field(default_factory=list)
+    bootstrap_audit_path: str | None = None
+    bootstrap_progress_log_path: str | None = None
 
 
 def prepare_obsidian_project(
@@ -107,7 +117,11 @@ def prepare_obsidian_project(
     importer_reason = None
     promoted_paths: list[str] = []
     pending_candidates: list[str] = []
-    bootstrap_llm_analyzer = _resolve_bootstrap_llm_analyzer(repo_path)
+    composed_paths: list[str] = []
+    bootstrap_audit_path: str | None = None
+    progress_log_path: str | None = None
+    progress_log_path = _bootstrap_progress_log_path(vault_root)
+    bootstrap_llm_analyzer = _resolve_bootstrap_llm_analyzer(repo_path, progress_log_path=progress_log_path)
 
     if config.mode == "new_project":
         if not vault_root.exists() or not any(vault_root.iterdir()):
@@ -166,15 +180,35 @@ def prepare_obsidian_project(
         warnings.extend(list(bootstrap_result.warnings))
         import_strategy = "textifai_bootstrap_staging"
         notes.append("Existing source material was staged into the vault import workspace.")
+        _append_bootstrap_progress(
+            progress_log_path,
+            phase="bootstrap",
+            event="staging_written",
+            written_drafts=len(written_drafts),
+            source_file_count=len(preexisting_source_paths),
+        )
         if written_drafts:
             bundle, reviews, plan = review_import_stage(vault_root, policy=ReviewPolicy())
             promotion = promote_reviewed_import(vault_root, policy=ReviewPolicy(), confirmed=False)
             promoted_paths = list(promotion.promoted_paths)
             pending_candidates = list(promotion.pending_drafts)
+            composition = _compose_primary_canonical_notes(vault_root, repo_path=repo_path, progress_log_path=progress_log_path)
+            composed_paths = list(composition.written_paths)
             if promoted_paths:
                 notes.append(f"Automatically promoted {len(promoted_paths)} low-risk canonical artifacts.")
             elif pending_candidates:
                 notes.append("Imported material remains in staging until explicit promotion or stronger context is available.")
+            if composed_paths:
+                notes.append(f"Composed {len(composed_paths)} primary canonical notes from staged evidence.")
+            bootstrap_audit_path = _write_bootstrap_audit(
+                vault_root=vault_root,
+                source_files=[str(path) for path in preexisting_source_paths],
+                written_drafts=written_drafts,
+                promoted_paths=promoted_paths,
+                pending_candidates=pending_candidates,
+                primary_composed_paths=composed_paths,
+                warnings=warnings,
+            )
         if _all_markdown_sources(source_root) and config.importer_preference == "obsidian_importer_manual_if_markdown":
             importer_reason = (
                 "The official Obsidian Importer exists for Markdown, but TextifAI keeps using its own staging flow "
@@ -214,10 +248,13 @@ def prepare_obsidian_project(
         source_files_considered=[str(path) for path in preexisting_source_paths],
         bootstrap_auto_promoted_paths=promoted_paths,
         bootstrap_pending_candidates=pending_candidates,
+        bootstrap_primary_composed_paths=composed_paths,
+        bootstrap_audit_path=bootstrap_audit_path,
+        bootstrap_progress_log_path=progress_log_path,
     )
 
 
-def _resolve_bootstrap_llm_analyzer(repo_root: Path) -> ProviderBackedBootstrapAnalyzer | None:
+def _resolve_bootstrap_llm_analyzer(repo_root: Path, *, progress_log_path: str | None = None) -> ProviderBackedBootstrapAnalyzer | None:
     synchronize_runtime_environment(repo_root)
     env = load_runtime_environment(repo_root)
     provider_name = env.provider
@@ -234,8 +271,84 @@ def _resolve_bootstrap_llm_analyzer(repo_root: Path) -> ProviderBackedBootstrapA
             temperature=0.1,
             timeout_seconds=120,
             retries=1,
+            progress_log_path=progress_log_path,
         )
     )
+
+
+def _compose_primary_canonical_notes(
+    vault_root: Path,
+    *,
+    repo_path: Path,
+    progress_log_path: str | None,
+):
+    synchronize_runtime_environment(repo_path)
+    env = load_runtime_environment(repo_path)
+    provider_name = env.provider
+    if not provider_name or not env.writer_model:
+        return type("_EmptyComposition", (), {"written_paths": []})()
+    composition = compose_primary_notes_from_staging(
+        vault_root,
+        config=CompositionConfig(
+            provider_name=provider_name,
+            model=env.writer_model,
+        ),
+        progress_log_path=progress_log_path,
+    )
+    return composition
+
+
+def _bootstrap_progress_log_path(vault_root: Path) -> str:
+    return str(vault_root / "99_System" / "bootstrap_progress.jsonl")
+
+
+def _append_bootstrap_progress(path: str | None, **payload) -> None:
+    if not path:
+        return
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with target.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(payload, ensure_ascii=False) + "\n")
+
+
+def _write_bootstrap_audit(
+    *,
+    vault_root: Path,
+    source_files: list[str],
+    written_drafts: list[str],
+    promoted_paths: list[str],
+    pending_candidates: list[str],
+    primary_composed_paths: list[str],
+    warnings: list[str],
+) -> str:
+    audit_path = vault_root / "99_System" / "bootstrap_audit.json"
+    audit_path.parent.mkdir(parents=True, exist_ok=True)
+    audit_path.write_text(
+        json.dumps(
+            {
+                "vault_root": str(vault_root),
+                "source_files": source_files,
+                "written_draft_count": len(written_drafts),
+                "promoted_count": len(promoted_paths),
+                "pending_count": len(pending_candidates),
+                "primary_composed_count": len(primary_composed_paths),
+                "written_drafts": written_drafts[:100],
+                "promoted_paths": promoted_paths[:100],
+                "pending_candidates": pending_candidates[:100],
+                "primary_composed_paths": primary_composed_paths[:100],
+                "warnings": warnings[:100],
+                "primary_paths_by_category": {
+                    "characters": [path for path in primary_composed_paths if "/03_Characters/Profiles/" in path.replace("\\", "/")],
+                    "places": [path for path in primary_composed_paths if "/02_World/Places/" in path.replace("\\", "/")],
+                    "lore": [path for path in primary_composed_paths if "/02_World/Lore/" in path.replace("\\", "/")],
+                },
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    return str(audit_path)
 
 
 def ensure_obsidian_bridge_plugin(

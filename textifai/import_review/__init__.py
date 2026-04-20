@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from textifai.import_review.audit import write_import_audit
+from textifai.import_review.composer import CanonicalCompositionResult, CompositionConfig, compose_primary_notes_from_staging
 from textifai.import_review.contracts import (
     EXTRACTION_MODE_CATALOG,
     ExtractionProfile,
@@ -45,6 +46,8 @@ __all__ = [
     "EXTRACTION_MODE_CATALOG",
     "ExtractionProfile",
     "ImportAuditEntry",
+    "CanonicalCompositionResult",
+    "CompositionConfig",
     "LoadedStagedDraft",
     "PromotionDecision",
     "PromotionPlan",
@@ -60,4 +63,5 @@ __all__ = [
     "review_staged_artifact",
     "review_staged_import",
     "write_import_audit",
+    "compose_primary_notes_from_staging",
 ]

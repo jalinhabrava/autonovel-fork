@@ -23,6 +23,7 @@ VAULT_DIRS = {
     "voice": "01_Voice",
     "world": "02_World",
     "world_lore": "02_World/Lore",
+    "world_places": "02_World/Places",
     "characters": "03_Characters",
     "character_profiles": "03_Characters/Profiles",
     "outline": "04_Outline",

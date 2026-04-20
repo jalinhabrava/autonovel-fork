@@ -9,6 +9,7 @@ from vault.schema import NOTE_STATUSES, ROOT_NOTES, note_frontmatter, slugify
 NOTE_TYPE_DIRS = {
     "character": "character_profiles",
     "lore": "world_lore",
+    "place": "world_places",
     "scene": "outline_scenes",
     "decision": "canon_decisions",
     "chapter": "chapters",
@@ -21,6 +22,7 @@ NOTE_TYPE_DIRS = {
 NOTE_KIND_MAP = {
     "character": "character",
     "lore": "lore",
+    "place": "location",
     "scene": "scene",
     "decision": "canon_decision",
     "chapter": "chapter",

@@ -51,6 +51,26 @@ class TextifAIVaERLIndexTests(unittest.TestCase):
             self.assertIn("Sera", sera_entry.project_confirmed_aliases)
             self.assertIn("Ren", sera_entry.project_confirmed_aliases)
 
+    def test_related_subjects_do_not_become_alias_matches(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            vault_root = Path(tmp) / "Vault"
+            bootstrap_vault(vault_root, title="Test Project")
+            (vault_root / "02_World" / "Places" / "sundrael.md").write_text(
+                note_frontmatter(
+                    "location",
+                    "Sundraël",
+                    slug="sundrael",
+                    related_subjects="Sera,Ren",
+                )
+                + "\n\n[[sera]]\n",
+                encoding="utf-8",
+            )
+
+            entries = build_vault_index(vault_path=vault_root)
+            place_entry = next(entry for entry in entries if entry.artifact_id == "sundrael")
+
+            self.assertNotIn("Sera", place_entry.aliases)
+
 
 if __name__ == "__main__":
     unittest.main()

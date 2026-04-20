@@ -83,6 +83,7 @@ def _build_stable_write(
             "import_review_state": "promoted",
             "artifact_stage": "promoted_artifact",
             "promotion_status": "promoted_canonical",
+            "note_role": "supporting",
             "source_format": provenance.source_format,
             "extraction_mode": provenance.extraction_mode,
             "extraction_confidence": provenance.extraction_confidence,
@@ -91,6 +92,8 @@ def _build_stable_write(
             "semantic_class": draft.frontmatter.get("semantic_class"),
             "source_section_title": draft.frontmatter.get("source_section_title"),
             "fragment_role": draft.frontmatter.get("fragment_role"),
+            "aliases": draft.frontmatter.get("aliases"),
+            "related_subjects": draft.frontmatter.get("related_subjects"),
             "entities": draft.frontmatter.get("entities"),
             "topics": draft.frontmatter.get("topics"),
             "world_terms": draft.frontmatter.get("world_terms"),
@@ -132,6 +135,8 @@ def _note_type_from_path(path: Path) -> str:
         return "character"
     if "lore" in parts:
         return "lore"
+    if "places" in parts:
+        return "place"
     if "scenes" in parts:
         return "scene"
     if "chapters" in parts:

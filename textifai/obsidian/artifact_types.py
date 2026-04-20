@@ -25,6 +25,8 @@ def normalize_artifact_type(
         return "character"
     if normalized.startswith("02_world/lore/"):
         return "lore"
+    if normalized.startswith("02_world/places/"):
+        return "location"
     if normalized.startswith("04_outline/scenes/"):
         return "scene"
     if normalized.startswith("05_draft/chapters/"):
@@ -51,6 +53,7 @@ def _normalize_hint(value: object) -> str | None:
     mappings = {
         "character": "character",
         "lore": "lore",
+        "place": "location",
         "scene": "scene",
         "chapter": "chapter",
         "decision": "decision",

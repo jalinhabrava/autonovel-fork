@@ -100,6 +100,45 @@ class TextifAIVaERLResolverTests(unittest.TestCase):
             self.assertTrue(sera_result.candidate_entities)
             self.assertTrue(sera_result.related_artifacts_suggested)
 
+    def test_resolver_prioritizes_primary_canonical_note_over_staging(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            vault_root = Path(tmp) / "Vault"
+            bootstrap_vault(vault_root, title="Test Project")
+            (vault_root / "03_Characters" / "Profiles" / "sera.md").write_text(
+                note_frontmatter(
+                    "character",
+                    "Sera",
+                    slug="sera",
+                    canonical_subject="Sera",
+                    aliases="Serélyne Thiseriya d’Aelwen",
+                    note_role="primary",
+                    artifact_stage="promoted_artifact",
+                    import_review_state="promoted",
+                )
+                + "\n\n[[thiseia]]\n",
+                encoding="utf-8",
+            )
+            (vault_root / "99_Import_Staging" / "mixed").mkdir(parents=True, exist_ok=True)
+            (vault_root / "99_Import_Staging" / "mixed" / "sera_fragment.md").write_text(
+                note_frontmatter(
+                    "project_note",
+                    "Sera Relationship Fragment",
+                    slug="sera_fragment",
+                    canonical_subject="Sera",
+                    note_role="supporting",
+                    artifact_stage="candidate_artifact",
+                    character_refs="Sera,Ren",
+                )
+                + "\n\nFragmentary note.\n",
+                encoding="utf-8",
+            )
+
+            results = resolve_text_against_vault(text="Sera", vault_path=vault_root)
+            sera_result = next(item for item in results if item.mention.normalized_text == "sera")
+
+            self.assertTrue(sera_result.candidate_entities)
+            self.assertEqual(sera_result.candidate_entities[0].artifact_id, "sera")
+
 
 if __name__ == "__main__":
     unittest.main()

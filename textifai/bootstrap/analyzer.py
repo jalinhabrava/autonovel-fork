@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Protocol
 
 from providers.text_provider import TextGenerationRequest, TextMessage, get_text_provider, get_text_provider_config_error
@@ -74,6 +75,7 @@ class BootstrapLLMConfig:
     temperature: float = 0.1
     timeout_seconds: int = 120
     retries: int = 1
+    progress_log_path: str | None = None
 
 
 class ProviderBackedBootstrapAnalyzer:
@@ -94,6 +96,7 @@ class ProviderBackedBootstrapAnalyzer:
         if get_text_provider_config_error(self.config.task_name, self.config.provider_name):
             return None
         if _should_batch_document(text=text, fragments=fragments):
+            _emit_progress(self.config.progress_log_path, phase="analyze_document", event="batch_mode", source_id=document.source_id, fragment_count=len(fragments))
             return self._analyze_document_in_batches(config=config, document=document, fragments=fragments)
         analysis = self._analyze_fragment_batch(
             config=config,
@@ -104,6 +107,7 @@ class ProviderBackedBootstrapAnalyzer:
         if analysis is not None:
             return analysis
         if len(fragments) > 1:
+            _emit_progress(self.config.progress_log_path, phase="analyze_document", event="batch_fallback_after_full_failure", source_id=document.source_id, fragment_count=len(fragments))
             return self._analyze_document_in_batches(config=config, document=document, fragments=fragments)
         return None
 
@@ -206,7 +210,9 @@ class ProviderBackedBootstrapAnalyzer:
         fragments: list[SourceFragment],
     ) -> BootstrapDocumentAnalysis | None:
         analyses: list[BootstrapDocumentAnalysis] = []
-        for batch in _batched_fragments(fragments):
+        batches = _batched_fragments(fragments)
+        for index, batch in enumerate(batches, start=1):
+            _emit_progress(self.config.progress_log_path, phase="analyze_batch", event="batch_started", source_id=document.source_id, batch_index=index, batch_total=len(batches), batch_size=len(batch))
             analysis = self._analyze_fragment_batch_recursive(
                 config=config,
                 document=document,
@@ -214,6 +220,9 @@ class ProviderBackedBootstrapAnalyzer:
             )
             if analysis is not None:
                 analyses.append(analysis)
+                _emit_progress(self.config.progress_log_path, phase="analyze_batch", event="batch_succeeded", source_id=document.source_id, batch_index=index, fragment_analysis_count=len(analysis.fragment_analyses))
+            else:
+                _emit_progress(self.config.progress_log_path, phase="analyze_batch", event="batch_failed", source_id=document.source_id, batch_index=index)
         if not analyses:
             return None
         return _merge_document_analyses(document=document, analyses=analyses, total_fragments=fragments)
@@ -235,8 +244,10 @@ class ProviderBackedBootstrapAnalyzer:
         if analysis is not None:
             return analysis
         if len(fragments) <= 1:
+            _emit_progress(self.config.progress_log_path, phase="analyze_batch", event="single_fragment_failed", source_id=document.source_id, fragment_id=fragments[0].fragment_id if fragments else None)
             return None
         midpoint = max(1, len(fragments) // 2)
+        _emit_progress(self.config.progress_log_path, phase="analyze_batch", event="recursive_split", source_id=document.source_id, left_count=midpoint, right_count=len(fragments) - midpoint)
         left = self._analyze_fragment_batch_recursive(
             config=config,
             document=document,
@@ -521,6 +532,15 @@ def _merge_document_analyses(
         confidence=(sum(confidence_values) / len(confidence_values)) if confidence_values else 0.0,
         raw_payload={"batched": True, "batch_count": len(analyses), "payloads": raw_payloads},
     )
+
+
+def _emit_progress(path: str | None, **payload: Any) -> None:
+    if not path:
+        return
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with target.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(payload, ensure_ascii=False) + "\n")
 
 
 def _normalize_string_list(value: Any) -> list[str]:

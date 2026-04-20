@@ -56,20 +56,40 @@ def _match_entry(
     hint_bonus = min(0.2, sum(hint.confidence for hint in supporting_hints) * 0.12)
 
     if normalized == slug_norm:
-        return (max(0.94 - kind_penalty + hint_bonus, 0.0), "slug", "exact slug match", supporting_hints)
+        return (
+            _apply_entry_priority(max(0.94 - kind_penalty, 0.0), entry),
+            "slug",
+            "exact slug match",
+            supporting_hints,
+        )
     if normalized == title_norm:
-        return (max(0.92 - kind_penalty + hint_bonus, 0.0), "title", "exact title match", supporting_hints)
+        return (
+            _apply_entry_priority(max(0.92 - kind_penalty, 0.0), entry),
+            "title",
+            "exact title match",
+            supporting_hints,
+        )
     if normalized in alias_norms:
-        return (max(0.9 - kind_penalty + hint_bonus, 0.0), "alias", "exact alias match", supporting_hints)
+        return (
+            _apply_entry_priority(max(0.9 - kind_penalty, 0.0), entry),
+            "alias",
+            "exact alias match",
+            supporting_hints,
+        )
     if normalized in project_alias_norms:
         return (
-            max(0.95 - kind_penalty + hint_bonus, 0.0),
+            _apply_entry_priority(max(0.95 - kind_penalty, 0.0), entry),
             "project_confirmed_alias",
             "exact project-confirmed alias match",
             supporting_hints,
         )
     if entry.artifact_type == "character" and normalized in alias_norms + [title_norm]:
-        return (max(0.93 - kind_penalty + hint_bonus, 0.0), "known_name", "known character name match", supporting_hints)
+        return (
+            _apply_entry_priority(max(0.93 - kind_penalty, 0.0), entry),
+            "known_name",
+            "known character name match",
+            supporting_hints,
+        )
 
     metadata_values = []
     for key in ("entity_id", "character_id", "artifact_id"):
@@ -77,11 +97,43 @@ def _match_entry(
         if value:
             metadata_values.append(slugify(str(value)))
     if normalized in metadata_values:
-        return (max(0.86 - kind_penalty + hint_bonus, 0.0), "metadata", "simple metadata id match", supporting_hints)
+        return (
+            _apply_entry_priority(max(0.86 - kind_penalty, 0.0), entry),
+            "metadata",
+            "simple metadata id match",
+            supporting_hints,
+        )
 
     if supporting_hints:
-        return (max(0.3 - kind_penalty + hint_bonus, 0.0), "metadata", "hint-supported candidate", supporting_hints)
+        return (
+            _apply_entry_priority(max(0.3 - kind_penalty + hint_bonus, 0.0), entry),
+            "metadata",
+            "hint-supported candidate",
+            supporting_hints,
+        )
     return (0.0, "title", "", [])
+
+
+def _apply_entry_priority(score: float, entry: VaultIndexEntry) -> float:
+    frontmatter = entry.frontmatter or {}
+    role = str(frontmatter.get("note_role") or "").strip().casefold()
+    artifact_stage = str(frontmatter.get("artifact_stage") or "").strip().casefold()
+    import_state = str(frontmatter.get("import_review_state") or "").strip().casefold()
+    path = str(entry.path or "").replace("\\", "/").casefold()
+    boost = 0.0
+    if role == "primary":
+        boost += 0.08
+    elif role == "supporting":
+        boost += 0.03
+    if artifact_stage == "promoted_artifact":
+        boost += 0.05
+    elif artifact_stage == "candidate_artifact":
+        boost -= 0.04
+    if import_state == "promoted":
+        boost += 0.03
+    if "/99_import_staging/" in path:
+        boost -= 0.08
+    return max(0.0, min(1.0, score + boost))
 
 
 def _supporting_hints_for_entry(
