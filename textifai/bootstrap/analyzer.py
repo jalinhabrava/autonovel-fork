@@ -70,7 +70,7 @@ class BootstrapLLMConfig:
     task_name: str = "bootstrap_normalization"
     provider_name: str | None = None
     model: str | None = None
-    max_tokens: int = 1800
+    max_tokens: int = 4000
     temperature: float = 0.1
     timeout_seconds: int = 120
     retries: int = 1
@@ -93,35 +93,19 @@ class ProviderBackedBootstrapAnalyzer:
             return self._analyze_derived_document(document=document, text=text, fragments=fragments)
         if get_text_provider_config_error(self.config.task_name, self.config.provider_name):
             return None
-        prompt = build_bootstrap_prompt(config=config, document=document, text=text, fragments=fragments)
-        payload = json.dumps(
-            {
-                "prompt_version": prompt.prompt_version,
-                "user_payload": prompt.user_payload,
-                "required_output_schema": prompt.required_output_schema,
-                "catalogs": prompt.catalogs,
-            },
-            ensure_ascii=False,
-            sort_keys=True,
+        if _should_batch_document(text=text, fragments=fragments):
+            return self._analyze_document_in_batches(config=config, document=document, fragments=fragments)
+        analysis = self._analyze_fragment_batch(
+            config=config,
+            document=document,
+            text=text,
+            fragments=fragments,
         )
-        provider = get_text_provider(self.config.task_name, self.config.provider_name)
-        response = provider.generate(
-            TextGenerationRequest(
-                task=self.config.task_name,
-                provider_name=self.config.provider_name,
-                model=self.config.model,
-                system=prompt.system_prompt,
-                messages=[TextMessage(role="user", content=payload)],
-                max_tokens=self.config.max_tokens,
-                temperature=self.config.temperature,
-                timeout_seconds=self.config.timeout_seconds,
-                retries=self.config.retries,
-            )
-        )
-        raw_payload = extract_json_payload(response.text)
-        if raw_payload is None:
-            return None
-        return _normalize_analysis_payload(document=document, payload=raw_payload)
+        if analysis is not None:
+            return analysis
+        if len(fragments) > 1:
+            return self._analyze_document_in_batches(config=config, document=document, fragments=fragments)
+        return None
 
     def _analyze_derived_document(
         self,
@@ -213,6 +197,98 @@ class ProviderBackedBootstrapAnalyzer:
                 "review_status": review.review_status,
             },
         )
+
+    def _analyze_document_in_batches(
+        self,
+        *,
+        config,
+        document: SourceDocumentRecord,
+        fragments: list[SourceFragment],
+    ) -> BootstrapDocumentAnalysis | None:
+        analyses: list[BootstrapDocumentAnalysis] = []
+        for batch in _batched_fragments(fragments):
+            analysis = self._analyze_fragment_batch_recursive(
+                config=config,
+                document=document,
+                fragments=batch,
+            )
+            if analysis is not None:
+                analyses.append(analysis)
+        if not analyses:
+            return None
+        return _merge_document_analyses(document=document, analyses=analyses, total_fragments=fragments)
+
+    def _analyze_fragment_batch_recursive(
+        self,
+        *,
+        config,
+        document: SourceDocumentRecord,
+        fragments: list[SourceFragment],
+    ) -> BootstrapDocumentAnalysis | None:
+        text = _text_for_fragments(fragments)
+        analysis = self._analyze_fragment_batch(
+            config=config,
+            document=document,
+            text=text,
+            fragments=fragments,
+        )
+        if analysis is not None:
+            return analysis
+        if len(fragments) <= 1:
+            return None
+        midpoint = max(1, len(fragments) // 2)
+        left = self._analyze_fragment_batch_recursive(
+            config=config,
+            document=document,
+            fragments=fragments[:midpoint],
+        )
+        right = self._analyze_fragment_batch_recursive(
+            config=config,
+            document=document,
+            fragments=fragments[midpoint:],
+        )
+        parts = [item for item in (left, right) if item is not None]
+        if not parts:
+            return None
+        return _merge_document_analyses(document=document, analyses=parts, total_fragments=fragments)
+
+    def _analyze_fragment_batch(
+        self,
+        *,
+        config,
+        document: SourceDocumentRecord,
+        text: str,
+        fragments: list[SourceFragment],
+    ) -> BootstrapDocumentAnalysis | None:
+        prompt = build_bootstrap_prompt(config=config, document=document, text=text, fragments=fragments)
+        payload = json.dumps(
+            {
+                "prompt_version": prompt.prompt_version,
+                "user_payload": prompt.user_payload,
+                "required_output_schema": prompt.required_output_schema,
+                "catalogs": prompt.catalogs,
+            },
+            ensure_ascii=False,
+            sort_keys=True,
+        )
+        provider = get_text_provider(self.config.task_name, self.config.provider_name)
+        response = provider.generate(
+            TextGenerationRequest(
+                task=self.config.task_name,
+                provider_name=self.config.provider_name,
+                model=self.config.model,
+                system=prompt.system_prompt,
+                messages=[TextMessage(role="user", content=payload)],
+                max_tokens=self.config.max_tokens,
+                temperature=self.config.temperature,
+                timeout_seconds=self.config.timeout_seconds,
+                retries=self.config.retries,
+            )
+        )
+        raw_payload = extract_json_payload(response.text)
+        if raw_payload is None:
+            return None
+        return _normalize_analysis_payload(document=document, payload=raw_payload)
 
 
 def _derived_fragment_analyses(
@@ -371,6 +447,79 @@ def _normalize_analysis_payload(*, document: SourceDocumentRecord, payload: dict
         requires_confirmation=bool(payload.get("requires_confirmation", True)),
         confidence=_coerce_confidence(payload.get("confidence")),
         raw_payload=dict(payload),
+    )
+
+
+def _should_batch_document(*, text: str, fragments: list[SourceFragment]) -> bool:
+    if len(fragments) > 8:
+        return True
+    if len(text) > 12000:
+        return True
+    return False
+
+
+def _batched_fragments(fragments: list[SourceFragment], *, batch_size: int = 6) -> list[list[SourceFragment]]:
+    return [fragments[index : index + batch_size] for index in range(0, len(fragments), batch_size)]
+
+
+def _text_for_fragments(fragments: list[SourceFragment]) -> str:
+    return "\n\n".join(fragment.text.strip() for fragment in fragments if fragment.text.strip())
+
+
+def _merge_document_analyses(
+    *,
+    document: SourceDocumentRecord,
+    analyses: list[BootstrapDocumentAnalysis],
+    total_fragments: list[SourceFragment],
+) -> BootstrapDocumentAnalysis:
+    fragment_analyses: list[BootstrapFragmentAnalysis] = []
+    seen_fragment_ids: set[str] = set()
+    detected_languages: list[str] = []
+    coverage_notes: list[str] = []
+    unmapped_fragment_ids: list[str] = []
+    ambiguous_fragment_ids: list[str] = []
+    raw_payloads: list[dict[str, Any]] = []
+    confidence_values: list[float] = []
+    for analysis in analyses:
+        if analysis.dominant_language:
+            detected_languages.append(analysis.dominant_language)
+        detected_languages.extend(analysis.detected_languages)
+        coverage_notes.extend(analysis.coverage_notes)
+        unmapped_fragment_ids.extend(analysis.unmapped_fragment_ids)
+        ambiguous_fragment_ids.extend(analysis.ambiguous_fragment_ids)
+        raw_payloads.append(dict(analysis.raw_payload))
+        confidence_values.append(analysis.confidence)
+        for fragment_analysis in analysis.fragment_analyses:
+            if fragment_analysis.fragment_id in seen_fragment_ids:
+                continue
+            seen_fragment_ids.add(fragment_analysis.fragment_id)
+            fragment_analyses.append(fragment_analysis)
+    missing_fragment_ids = [
+        fragment.fragment_id
+        for fragment in total_fragments
+        if fragment.fragment_id not in seen_fragment_ids
+    ]
+    unmapped_fragment_ids.extend(missing_fragment_ids)
+    ambiguous_fragment_ids.extend(missing_fragment_ids)
+    deduped_languages = _normalize_string_list(detected_languages)
+    dominant_language = deduped_languages[0] if deduped_languages else document.dominant_language
+    return BootstrapDocumentAnalysis(
+        source_id=document.source_id,
+        dominant_language=dominant_language,
+        source_format=document.extension,
+        extraction_mode="native_text",
+        extraction_confidence=(sum(confidence_values) / len(confidence_values)) if confidence_values else 0.0,
+        structural_confidence=(sum(confidence_values) / len(confidence_values)) if confidence_values else 0.0,
+        llm_used=True,
+        detected_languages=deduped_languages,
+        has_mixed_language=len(deduped_languages) > 1,
+        fragment_analyses=fragment_analyses,
+        coverage_notes=_normalize_string_list(coverage_notes),
+        unmapped_fragment_ids=_normalize_string_list(unmapped_fragment_ids),
+        ambiguous_fragment_ids=_normalize_string_list(ambiguous_fragment_ids),
+        requires_confirmation=bool(missing_fragment_ids or any(analysis.requires_confirmation for analysis in analyses)),
+        confidence=(sum(confidence_values) / len(confidence_values)) if confidence_values else 0.0,
+        raw_payload={"batched": True, "batch_count": len(analyses), "payloads": raw_payloads},
     )
 
 

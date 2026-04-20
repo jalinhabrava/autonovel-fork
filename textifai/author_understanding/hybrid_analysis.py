@@ -158,7 +158,8 @@ class HybridAuthorUnderstandingAnalyzer:
         if llm_result is None:
             return _annotate_interpretation(route=route, interpretation=rule_interpretation, source="rule_based")
 
-        disambiguation = disambiguate_targets(_candidate_targets_from_entity_results(entity_results))
+        merged_candidate_targets = _candidate_targets_from_entity_results(entity_results) + list(llm_result.candidate_targets)
+        disambiguation = disambiguate_targets(merged_candidate_targets)
         merged = _merge_interpretations(
             rule_interpretation=rule_interpretation,
             llm_interpretation=llm_result,

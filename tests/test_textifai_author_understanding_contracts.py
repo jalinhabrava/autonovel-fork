@@ -8,6 +8,7 @@ from textifai.author_understanding.contracts import (
     MixedRequestAnalysis,
     MixedRequestPart,
 )
+from textifai.author_understanding.normalization import normalize_candidate_target
 from textifai.editorial_intent.contracts import CandidateTarget
 from textifai.vaerl.contracts import EntityHint
 
@@ -101,6 +102,17 @@ class TextifAIAuthorUnderstandingContractTests(unittest.TestCase):
         self.assertEqual(part.part_type, "narrative_content")
         with self.assertRaises(ValueError):
             MixedRequestPart(part_type="invented_part", text="x", confidence=0.5)
+
+    def test_candidate_target_normalization_coerces_character_voice_to_character(self):
+        target = normalize_candidate_target(
+            {
+                "target_id": "Sera",
+                "target_type": "character_voice",
+                "confidence": 0.56,
+            }
+        )
+        self.assertIsNotNone(target)
+        self.assertEqual(target.target_type, "character")
 
 
 if __name__ == "__main__":

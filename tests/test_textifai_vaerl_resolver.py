@@ -62,6 +62,44 @@ class TextifAIVaERLResolverTests(unittest.TestCase):
             self.assertFalse(ritual_result.resolved)
             self.assertGreaterEqual(len(ritual_result.candidate_entities), 2)
 
+    def test_unresolved_candidate_still_suggests_contextual_artifacts(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            vault_root = Path(tmp) / "Vault"
+            bootstrap_vault(vault_root, title="Test Project")
+            (vault_root / "99_Import_Staging" / "mixed").mkdir(parents=True, exist_ok=True)
+            (vault_root / "99_Import_Staging" / "mixed" / "sera_relationships.md").write_text(
+                note_frontmatter(
+                    "project_note",
+                    "Relationship Notes",
+                    slug="sera_relationships",
+                    entities="Sera,Ren",
+                    character_refs="Sera,Ren",
+                )
+                + "\n\nSera and Ren clash but trust each other.\n",
+                encoding="utf-8",
+            )
+            (vault_root / "99_Import_Staging" / "mixed" / "sera_profile.md").write_text(
+                note_frontmatter(
+                    "project_note",
+                    "Sera Voice Notes",
+                    slug="sera_voice_notes",
+                    canonical_subject="Sera",
+                    character_refs="Sera",
+                )
+                + "\n\nSera sounds controlled until she snaps.\n",
+                encoding="utf-8",
+            )
+
+            results = resolve_text_against_vault(
+                text="I need to review Sera's voice",
+                vault_path=vault_root,
+            )
+
+            sera_result = next(item for item in results if item.mention.normalized_text == "sera")
+            self.assertFalse(sera_result.resolved)
+            self.assertTrue(sera_result.candidate_entities)
+            self.assertTrue(sera_result.related_artifacts_suggested)
+
 
 if __name__ == "__main__":
     unittest.main()

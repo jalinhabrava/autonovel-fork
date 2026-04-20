@@ -103,7 +103,7 @@ def normalize_candidate_target(value: Any) -> CandidateTarget | None:
     if raw is None:
         return None
     target_id = str(raw.get("target_id") or raw.get("artifact_id") or "").strip()
-    target_type = str(raw.get("target_type") or raw.get("artifact_type") or "").strip()
+    target_type = _normalize_candidate_target_type(raw.get("target_type") or raw.get("artifact_type"))
     if not target_id or not target_type:
         return None
     return CandidateTarget(
@@ -348,6 +348,25 @@ def _coerce_mapping(value: Any) -> dict[str, Any] | None:
 
 def _dedupe_strings(values: list[str]) -> list[str]:
     return list(dict.fromkeys(value for value in values if value))
+
+
+def _normalize_candidate_target_type(value: Any) -> str:
+    raw = str(value or "").strip()
+    if not raw:
+        return ""
+    normalized = slugify(raw).replace("-", "_")
+    direct_catalog = {"character", "scene", "chapter", "lore", "decision", "location", "object", "note"}
+    if normalized in direct_catalog:
+        return normalized
+    if normalized.startswith("character_"):
+        return "character"
+    if normalized.startswith("scene_"):
+        return "scene"
+    if normalized.startswith("chapter_"):
+        return "chapter"
+    if normalized.startswith("lore_") or normalized.startswith("world_") or normalized.startswith("canon_"):
+        return "lore"
+    return normalized
 
 
 def _dedupe_candidate_targets(targets: list[CandidateTarget]) -> list[CandidateTarget]:

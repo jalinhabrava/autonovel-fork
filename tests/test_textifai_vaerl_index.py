@@ -28,6 +28,29 @@ class TextifAIVaERLIndexTests(unittest.TestCase):
             self.assertIn("magic_costs", lore_entry.links)
             self.assertIn("magic_costs", lore_entry.backlinks)
 
+    def test_vault_index_promotes_semantic_metadata_into_aliases(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            vault_root = Path(tmp) / "Vault"
+            bootstrap_vault(vault_root, title="Test Project")
+            (vault_root / "99_Import_Staging" / "characters").mkdir(parents=True, exist_ok=True)
+            (vault_root / "99_Import_Staging" / "characters" / "sera_group_note.md").write_text(
+                note_frontmatter(
+                    "character",
+                    "Sera Group Note",
+                    slug="sera_group_note",
+                    canonical_subject="Sera",
+                    character_refs="Sera,Ren",
+                )
+                + "\n\nSera keeps her hard edge.\n",
+                encoding="utf-8",
+            )
+
+            entries = build_vault_index(vault_path=vault_root)
+            sera_entry = next(entry for entry in entries if entry.artifact_id == "sera_group_note")
+
+            self.assertIn("Sera", sera_entry.project_confirmed_aliases)
+            self.assertIn("Ren", sera_entry.project_confirmed_aliases)
+
 
 if __name__ == "__main__":
     unittest.main()

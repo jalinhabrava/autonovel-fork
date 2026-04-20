@@ -25,14 +25,19 @@ def build_vault_index(
         frontmatter = dict(note.frontmatter)
         frontmatter.setdefault("_context_source_reliability", source.status.reliability)
         frontmatter.setdefault("_context_source_kind", source.status.source_kind)
+        metadata_aliases = _metadata_aliases(frontmatter)
+        aliases = _dedupe_strings([*note.aliases, *metadata_aliases.get("aliases", [])])
+        project_confirmed_aliases = _dedupe_strings(
+            [*note.project_confirmed_aliases, *metadata_aliases.get("project_confirmed_aliases", [])]
+        )
         entries.append(
             VaultIndexEntry(
                 artifact_id=note.note_id,
                 artifact_type=normalized_artifact_type,
                 title=note.title,
                 slug=note.note_id,
-                aliases=list(note.aliases),
-                project_confirmed_aliases=list(note.project_confirmed_aliases),
+                aliases=aliases,
+                project_confirmed_aliases=project_confirmed_aliases,
                 path=note.path,
                 links=list(note.outgoing_links),
                 backlinks=list(note.incoming_links),
@@ -84,3 +89,45 @@ def _merge_known_characters(
             frontmatter={"synthetic": True},
         )
     return list(by_id.values())
+
+
+def _metadata_aliases(frontmatter: dict[str, object]) -> dict[str, list[str]]:
+    aliases = _frontmatter_values(frontmatter, "entities")
+    confirmed = _frontmatter_values(frontmatter, "canonical_subject", "character_refs", "lore_refs")
+    return {
+        "aliases": _dedupe_strings(aliases),
+        "project_confirmed_aliases": _dedupe_strings(confirmed),
+    }
+
+
+def _frontmatter_values(frontmatter: dict[str, object], *keys: str) -> list[str]:
+    values: list[str] = []
+    for key in keys:
+        raw = frontmatter.get(key)
+        if raw is None:
+            continue
+        if isinstance(raw, list):
+            candidates = raw
+        else:
+            candidates = str(raw).split(",")
+        for item in candidates:
+            text = str(item).strip()
+            if len(slugify(text)) < 3:
+                continue
+            values.append(text)
+    return values
+
+
+def _dedupe_strings(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    deduped: list[str] = []
+    for value in values:
+        normalized = value.strip()
+        if not normalized:
+            continue
+        key = normalized.casefold()
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(normalized)
+    return deduped

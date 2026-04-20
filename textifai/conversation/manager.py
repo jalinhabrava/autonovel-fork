@@ -152,10 +152,12 @@ class ConversationManager:
         if self.session is not None and readiness is not None and readiness.can_query_vaerl:
             semantic_hints: list[str] = []
             for hint in author_understanding.entity_hints:
-                if hint.surface_form:
-                    semantic_hints.append(hint.surface_form)
-                if hint.normalized_form:
-                    semantic_hints.append(hint.normalized_form)
+                surface_form = getattr(hint, "surface_form", None) or getattr(hint, "hint_text", None)
+                normalized_form = getattr(hint, "normalized_form", None) or getattr(hint, "normalized_hint", None)
+                if surface_form:
+                    semantic_hints.append(surface_form)
+                if normalized_form:
+                    semantic_hints.append(normalized_form)
             entity_results = resolve_entities(
                 text=request.raw_text,
                 vault_path=self.session.vault_path,

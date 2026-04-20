@@ -1,12 +1,17 @@
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from textifai.bootstrap import (
     BootstrapDocumentAnalysis,
     BootstrapFragmentAnalysis,
+    BootstrapLLMConfig,
+    ProviderBackedBootstrapAnalyzer,
+    SourceDocumentRecord,
     VaultInitializationConfig,
     confirm_and_write_bootstrap,
+    segment_source_document,
     validate_bootstrap_result,
 )
 from vault.bootstrap import bootstrap_vault
@@ -191,6 +196,138 @@ class TextifAIBootstrapValidationTests(unittest.TestCase):
             self.assertIn("promotion_status: staged_candidate", text)
             self.assertIn("semantic_class: section_fragment", text)
 
+    def test_segmenter_keeps_nested_character_profile_sections_together(self):
+        document = SourceDocumentRecord(
+            source_id="characters_doc",
+            path="/tmp/characters.md",
+            relative_path="characters.md",
+            filename="characters.md",
+            extension="md",
+            size_bytes=0,
+            checksum="abc123",
+            dominant_language="es",
+            detected_languages=["es"],
+            has_mixed_language=False,
+            likely_content_kinds=["character"],
+            line_count=12,
+        )
+        text = "\n".join(
+            [
+                "## **🌟 PROTAGONISTAS**",
+                "",
+                "## ✒️ Nombre: Auren Velhar",
+                "",
+                "### **🎭 Rol narrativo:**",
+                "",
+                "Protagonista.",
+                "",
+                "### **💬 Frases clave:**",
+                "",
+                "* Ren no retrocede.",
+                "",
+                "## ✒️ Nombre: Serélyne Thiseriya d’Aelwen",
+                "",
+                "### **✒️ Apodo: Sera**",
+                "",
+                "### **🧬 Personalidad y comportamiento constante:**",
+                "",
+                "* Intensa, emocional y frontal.",
+            ]
+        )
+
+        fragments = segment_source_document(document, text)
+
+        self.assertLess(len(fragments), 6)
+        self.assertTrue(any("Nombre: Auren Velhar" in fragment.text and "Frases clave" in fragment.text for fragment in fragments))
+        self.assertTrue(any("Nombre: Serélyne Thiseriya" in fragment.text and "Apodo: Sera" in fragment.text for fragment in fragments))
+
+    def test_bootstrap_llm_analyzer_recovers_by_batching_when_full_document_fails(self):
+        document = SourceDocumentRecord(
+            source_id="characters_doc",
+            path="/tmp/characters.md",
+            relative_path="characters.md",
+            filename="characters.md",
+            extension="md",
+            size_bytes=0,
+            checksum="abc123",
+            dominant_language="es",
+            detected_languages=["es"],
+            has_mixed_language=False,
+            likely_content_kinds=["character"],
+            line_count=30,
+        )
+        fragments = [
+            _stub_fragment("frag_1", "## Ren\n\nRen profile"),
+            _stub_fragment("frag_2", "## Sera\n\nSera profile"),
+            _stub_fragment("frag_3", "## Nael\n\nNael profile"),
+        ]
+        analyzer = ProviderBackedBootstrapAnalyzer(
+            config=BootstrapLLMConfig(provider_name="test-provider", model="test-model")
+        )
+        config = VaultInitializationConfig(
+            vault_root="/tmp/vault",
+            mode="new_project",
+            project_title="Project",
+            primary_language="es",
+            working_languages=["es"],
+        )
+
+        def _fake_batch(*, config, document, text, fragments):
+            if len(fragments) > 1:
+                return None
+            fragment = fragments[0]
+            subject = fragment.text.splitlines()[0].lstrip("# ").strip()
+            return BootstrapDocumentAnalysis(
+                source_id=document.source_id,
+                dominant_language="es",
+                detected_languages=["es"],
+                llm_used=True,
+                confidence=0.9,
+                requires_confirmation=False,
+                fragment_analyses=[
+                    BootstrapFragmentAnalysis(
+                        fragment_id=fragment.fragment_id,
+                        artifact_type="character",
+                        confidence=0.9,
+                        title_hint=subject,
+                        canonical_subject=subject,
+                        semantic_class="character_profile",
+                        promotion_status="eligible_for_promotion",
+                        fragment_role="character_sheet",
+                        entities=[subject],
+                        topics=["profile"],
+                        world_terms=[],
+                        character_refs=[subject],
+                        lore_refs=[],
+                        language="es",
+                        detected_languages=["es"],
+                        register_signals=["markdown_heading"],
+                        needs_review=False,
+                        notes=["batched_llm_result"],
+                    )
+                ],
+            )
+
+        with (
+            patch("textifai.bootstrap.analyzer.get_text_provider_config_error", return_value=None),
+            patch.object(ProviderBackedBootstrapAnalyzer, "_analyze_fragment_batch", side_effect=_fake_batch),
+        ):
+            analysis = analyzer.analyze_document(
+                config=config,
+                document=document,
+                text="\n\n".join(fragment.text for fragment in fragments),
+                fragments=fragments,
+            )
+
+        self.assertIsNotNone(analysis)
+        assert analysis is not None
+        self.assertEqual(len(analysis.fragment_analyses), 3)
+        self.assertEqual(
+            sorted(fragment_analysis.canonical_subject for fragment_analysis in analysis.fragment_analyses),
+            ["Nael", "Ren", "Sera"],
+        )
+        self.assertTrue(analysis.raw_payload.get("batched"))
+
 
 class _StubBootstrapAnalyzer:
     def __init__(self, *, dominant_language: str, fragment_blueprints: list[dict]) -> None:
@@ -241,6 +378,25 @@ class _StubBootstrapAnalyzer:
             confidence=0.9,
             raw_payload={"stub": True},
         )
+
+
+def _stub_fragment(fragment_id: str, text: str):
+    from textifai.bootstrap.contracts import SourceFragment
+
+    return SourceFragment(
+        fragment_id=fragment_id,
+        source_id="characters_doc",
+        char_start=0,
+        char_end=len(text),
+        text=text,
+        literal_text_hash=fragment_id,
+        detected_kind="mixed_note",
+        kind_confidence=0.5,
+        language="es",
+        has_mixed_language=False,
+        register_signals=["markdown_heading"],
+        needs_review=False,
+    )
 
 
 if __name__ == "__main__":

@@ -12,7 +12,7 @@ def suggest_related_artifacts(
     index_entries: list[VaultIndexEntry],
 ) -> list[RelatedArtifactSuggestion]:
     if not resolution.resolved or not resolution.resolved_entity_id or not resolution.resolved_entity_type:
-        return []
+        return _candidate_backfill_suggestions(resolution)
 
     suggestions: list[RelatedArtifactSuggestion] = []
     by_id = {entry.artifact_id: entry for entry in index_entries}
@@ -67,3 +67,18 @@ def suggest_related_artifacts(
         seen.add(key)
         deduped.append(suggestion)
     return deduped[:MAX_RELATED_SUGGESTIONS]
+
+
+def _candidate_backfill_suggestions(resolution: EntityResolutionResult) -> list[RelatedArtifactSuggestion]:
+    suggestions: list[RelatedArtifactSuggestion] = []
+    for candidate in resolution.candidate_entities[:MAX_RELATED_SUGGESTIONS]:
+        suggestions.append(
+            RelatedArtifactSuggestion(
+                artifact_id=candidate.artifact_id,
+                artifact_type=candidate.artifact_type,
+                relation="direct_profile" if candidate.artifact_type == "character" else "direct_note",
+                confidence=max(min(candidate.confidence - 0.08, 0.89), 0.45),
+                path=candidate.path,
+            )
+        )
+    return suggestions

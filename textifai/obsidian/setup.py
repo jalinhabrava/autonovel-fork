@@ -230,7 +230,7 @@ def _resolve_bootstrap_llm_analyzer(repo_root: Path) -> ProviderBackedBootstrapA
             task_name="bootstrap_normalization",
             provider_name=provider_name,
             model=env.writer_model,
-            max_tokens=1800,
+            max_tokens=4000,
             temperature=0.1,
             timeout_seconds=120,
             retries=1,
