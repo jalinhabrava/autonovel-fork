@@ -10,6 +10,11 @@ NOTE_TYPE_DIRS = {
     "character": "character_profiles",
     "lore": "world_lore",
     "place": "world_places",
+    "magic": "world_magic",
+    "creature": "world_creatures",
+    "faction": "world_factions",
+    "object": "world_objects",
+    "history": "world_history",
     "scene": "outline_scenes",
     "decision": "canon_decisions",
     "chapter": "chapters",
@@ -24,6 +29,11 @@ NOTE_KIND_MAP = {
     "character": "character",
     "lore": "lore",
     "place": "location",
+    "magic": "magic",
+    "creature": "creature",
+    "faction": "faction",
+    "object": "object",
+    "history": "history",
     "scene": "scene",
     "decision": "canon_decision",
     "chapter": "chapter",
@@ -66,12 +76,13 @@ def write_or_update_note(
     adapter = VaultProjectAdapter(vault_root)
     note_path = adapter.note_path(note_type, slugify(slug))
     note_path.parent.mkdir(parents=True, exist_ok=True)
+    metadata = _merge_note_metadata(note_type=note_type, metadata=metadata)
     frontmatter = note_frontmatter(
         NOTE_KIND_MAP[note_type],
         title,
         status=status,
         slug=slugify(slug),
-        **(metadata or {}),
+        **metadata,
     )
     note_path.write_text(f"{frontmatter}\n\n# {title}\n\n{body.strip()}\n")
     return note_path
@@ -94,12 +105,13 @@ def write_root_artifact_note(
     adapter = VaultProjectAdapter(vault_root)
     note_path = adapter.artifact_path(artifact)
     note_path.parent.mkdir(parents=True, exist_ok=True)
+    metadata = _merge_root_metadata(artifact=artifact, metadata=metadata)
     frontmatter = note_frontmatter(
         ROOT_ARTIFACT_KINDS[artifact],
         title,
         status=status,
         slug=slugify(artifact),
-        **(metadata or {}),
+        **metadata,
     )
     note_path.write_text(f"{frontmatter}\n\n# {title}\n\n{body.strip()}\n")
     return note_path
@@ -204,3 +216,72 @@ def export_context(vault_root: str | Path, artifact: str) -> str:
         parts = [f"# {name.upper()}\n\n{adapter.read_artifact(name)}" for name in names]
         return "\n\n".join(parts)
     return adapter.read_artifact(artifact)
+
+
+def _merge_note_metadata(
+    *,
+    note_type: str,
+    metadata: dict[str, str | int | None] | None,
+) -> dict[str, str | int | list[str]]:
+    merged: dict[str, str | int | list[str]] = dict(metadata or {})
+    role = str(merged.get("note_role") or "").strip().casefold()
+    tags = _coerce_tags(merged.get("tags"))
+
+    if note_type in {"chapter", "chapter_summary"} or role in {"chapter", "chapter_summary"}:
+        tags.extend(["#chapters"])
+        merged.setdefault("graph_exclude", True)
+        merged.setdefault("retrieval_exclude", True)
+    elif note_type == "review" or role in {"review", "supporting"}:
+        tags.extend(["#review"])
+        merged.setdefault("graph_exclude", True)
+        merged.setdefault("retrieval_exclude", True)
+    else:
+        merged.setdefault("graph_exclude", False)
+        merged.setdefault("retrieval_exclude", False)
+
+    if role == "primary":
+        tags.extend(["#primary"])
+    merged["tags"] = _dedupe_tags(tags)
+    return merged
+
+
+def _merge_root_metadata(
+    *,
+    artifact: str,
+    metadata: dict[str, str | int | None] | None,
+) -> dict[str, str | int | list[str]]:
+    merged: dict[str, str | int | list[str]] = dict(metadata or {})
+    tags = _coerce_tags(merged.get("tags"))
+    if artifact in {"state", "results"}:
+        tags.extend(["#system"])
+        merged.setdefault("graph_exclude", True)
+        merged.setdefault("retrieval_exclude", True)
+    merged["tags"] = _dedupe_tags(tags)
+    return merged
+
+
+def _coerce_tags(raw: object) -> list[str]:
+    if raw is None:
+        return []
+    if isinstance(raw, list):
+        values = raw
+    else:
+        values = str(raw).split(",")
+    return [value.strip() for value in values if str(value).strip()]
+
+
+def _dedupe_tags(tags: list[str]) -> list[str]:
+    seen: set[str] = set()
+    result: list[str] = []
+    for tag in tags:
+        normalized = tag.strip()
+        if not normalized:
+            continue
+        if not normalized.startswith("#"):
+            normalized = f"#{normalized}"
+        key = normalized.casefold()
+        if key in seen:
+            continue
+        seen.add(key)
+        result.append(normalized)
+    return result

@@ -20,8 +20,8 @@ from vault.schema import slugify
 
 @dataclass(frozen=True)
 class StoryBuildConfig:
-    provider_name: str
-    model: str
+    provider_name: str | None
+    model: str | None
     task_name: str = "bootstrap_normalization"
     max_tokens: int = 1400
     temperature: float = 0.1
@@ -37,6 +37,7 @@ class StoryBuildConfig:
     tokens_per_minute_cap: int = 18000
     min_request_interval_seconds: float = 2.5
     chapter_map_batch_size: int = 8
+    chapter_map_candidate_multiplier: int = 4
     rate_limit_pause_retries: int = 4
     provider_cooldown_base_seconds: float = 20.0
     provider_cooldown_max_seconds: float = 180.0
@@ -178,7 +179,12 @@ def build_story_notes(
     source_texts = read_source_documents(inventory, progress_log_path=progress_log_path)
     canonical_notes = _canonical_note_catalog(vault_root)
 
-    candidate_boundaries, source_selection_audit = _discover_boundary_candidates(inventory=inventory, source_texts=source_texts)
+    candidate_boundaries, source_selection_audit = _discover_boundary_candidates(
+        inventory=inventory,
+        source_texts=source_texts,
+        max_chapters=config.max_chapters,
+        candidate_multiplier=config.chapter_map_candidate_multiplier,
+    )
     chapter_map = _build_chapter_map(
         vault_root=vault_root,
         config=config,
@@ -402,6 +408,8 @@ def _discover_boundary_candidates(
     *,
     inventory: SourceDocumentInventory,
     source_texts: dict[str, str],
+    max_chapters: int | None = None,
+    candidate_multiplier: int = 4,
 ) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
     candidates: list[dict[str, object]] = []
     source_audit: list[dict[str, object]] = []
@@ -418,7 +426,16 @@ def _discover_boundary_candidates(
         source_audit.append(audit_entry)
         if not include_source:
             continue
-        for candidate in structural_candidates:
+        limited_candidates = _limit_structural_candidates(
+            structural_candidates,
+            max_chapters=max_chapters,
+            multiplier=candidate_multiplier,
+        )
+        if len(limited_candidates) != len(structural_candidates):
+            audit_entry["subset_candidate_cap_applied"] = True
+            audit_entry["subset_candidate_count"] = len(limited_candidates)
+            audit_entry["subset_candidate_original_count"] = len(structural_candidates)
+        for candidate in limited_candidates:
             candidates.append(
                 {
                     "source_id": candidate.source_id,
@@ -439,6 +456,25 @@ def _discover_boundary_candidates(
             )
     candidates.sort(key=lambda item: (str(item["source_path"]), int(item.get("page") or 0), int(item["char_start"])))
     return candidates, source_audit
+
+
+def _limit_structural_candidates(
+    candidates: list[ChapterBoundaryCandidate],
+    *,
+    max_chapters: int | None,
+    multiplier: int,
+) -> list[ChapterBoundaryCandidate]:
+    if not candidates or not max_chapters:
+        return candidates
+    cap = max(max_chapters * max(multiplier, 1), max_chapters)
+    if len(candidates) <= cap:
+        return candidates
+    preserved: list[ChapterBoundaryCandidate] = []
+    for candidate in candidates:
+        preserved.append(candidate)
+        if len(preserved) >= cap:
+            break
+    return preserved
 
 
 def _build_chapter_map(
@@ -990,7 +1026,7 @@ def _canonical_note_catalog(vault_root: str | Path) -> list[dict[str, object]]:
         note_role = str(note.frontmatter.get("note_role") or "").strip().casefold()
         if note_role and note_role != "primary":
             continue
-        if note.artifact_type not in {"character", "location", "lore"}:
+        if note.artifact_type not in {"character", "location", "lore", "magic", "creature", "faction", "object", "history"}:
             continue
         aliases = []
         for raw in [*note.aliases, *note.project_confirmed_aliases]:

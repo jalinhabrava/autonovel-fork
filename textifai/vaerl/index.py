@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import ast
 
 from textifai.obsidian.artifact_types import normalize_artifact_type
 from textifai.obsidian import open_obsidian_source
@@ -19,11 +20,15 @@ def build_vault_index(
     for note in reader.list_notes():
         note_path = str(note.vault_relative_path).replace("\\", "/")
         note_role = str((note.frontmatter or {}).get("note_role") or "").strip().casefold()
+        tags = {str(tag).strip().casefold() for tag in _normalize_tags((note.frontmatter or {}).get("tags")) if str(tag).strip()}
+        retrieval_exclude = bool((note.frontmatter or {}).get("retrieval_exclude"))
         if "99_Import_Staging/" in note_path or note_path.startswith("99_Import_Staging/"):
             continue
         if "90_Review/" in note_path or note_path.startswith("90_Review/"):
             continue
-        if note_role == "review":
+        if note_role in {"review", "supporting"}:
+            continue
+        if retrieval_exclude or tags & {"#review", "#system", "#chapters"}:
             continue
         normalized_artifact_type = normalize_artifact_type(
             vault_relative_path=note.vault_relative_path,
@@ -139,3 +144,34 @@ def _dedupe_strings(values: list[str]) -> list[str]:
         seen.add(key)
         deduped.append(normalized)
     return deduped
+
+
+def _normalize_tags(raw: object) -> list[str]:
+    if raw is None:
+        return []
+    if isinstance(raw, list):
+        values = raw
+    else:
+        text = str(raw).strip()
+        if text.startswith("[") and text.endswith("]"):
+            try:
+                parsed = ast.literal_eval(text)
+            except (ValueError, SyntaxError):
+                parsed = None
+            values = parsed if isinstance(parsed, list) else [text]
+        elif "," in text:
+            values = text.split(",")
+        else:
+            values = [text]
+    normalized: list[str] = []
+    for value in values:
+        text = str(value).strip()
+        if not text:
+            continue
+        while len(text) >= 2 and (
+            (text.startswith('"') and text.endswith('"')) or (text.startswith("'") and text.endswith("'"))
+        ):
+            text = text[1:-1].strip()
+        if text:
+            normalized.append(text)
+    return normalized

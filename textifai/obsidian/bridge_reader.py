@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 from pathlib import Path
 
 from textifai.obsidian.contracts import ObsidianBridgeSnapshot, ObsidianNote, ValidatedObsidianSnapshot
@@ -27,7 +28,14 @@ class ObsidianBridgeSnapshotReader:
         notes = list(self.snapshot.notes)
         if include_system:
             return notes
-        return [note for note in notes if ".obsidian/" not in note.vault_relative_path and not note.vault_relative_path.startswith(".obsidian")]
+        return [
+            note
+            for note in notes
+            if ".obsidian/" not in note.vault_relative_path
+            and not note.vault_relative_path.startswith(".obsidian")
+            and "99_System/" not in note.vault_relative_path
+            and not note.vault_relative_path.startswith("99_System")
+        ]
 
     def get_note(self, note_id: str) -> ObsidianNote | None:
         normalized = slugify(note_id)
@@ -79,6 +87,11 @@ def resolve_obsidian_snapshot_path(
 def _related_priority(note: ObsidianNote) -> tuple[int, int, str]:
     role = str(note.frontmatter.get("note_role") or "").strip().casefold()
     stage = str(note.frontmatter.get("artifact_stage") or "").strip().casefold()
+    tags = {
+        str(tag).strip().casefold()
+        for tag in _normalize_tags(note.frontmatter.get("tags"))
+        if str(tag).strip()
+    }
     path = note.vault_relative_path.replace("\\", "/").casefold()
     if role == "primary":
         role_rank = 0
@@ -86,7 +99,7 @@ def _related_priority(note: ObsidianNote) -> tuple[int, int, str]:
         role_rank = 1
     elif role == "chapter" or note.artifact_type == "chapter":
         role_rank = 2
-    elif role == "review" or "/90_review/" in path:
+    elif role in {"review", "supporting"} or "/90_review/" in path or tags & {"#review", "#system"}:
         role_rank = 6
     elif note.artifact_type == "chapter_summary":
         role_rank = 1
@@ -98,3 +111,34 @@ def _related_priority(note: ObsidianNote) -> tuple[int, int, str]:
         role_rank = 4
     stage_rank = 0 if stage == "promoted_artifact" else 1
     return (role_rank, stage_rank, note.title.casefold())
+
+
+def _normalize_tags(raw: object) -> list[str]:
+    if raw is None:
+        return []
+    if isinstance(raw, list):
+        values = raw
+    else:
+        text = str(raw).strip()
+        if text.startswith("[") and text.endswith("]"):
+            try:
+                parsed = ast.literal_eval(text)
+            except (ValueError, SyntaxError):
+                parsed = None
+            values = parsed if isinstance(parsed, list) else [text]
+        elif "," in text:
+            values = text.split(",")
+        else:
+            values = [text]
+    normalized: list[str] = []
+    for value in values:
+        text = str(value).strip()
+        if not text:
+            continue
+        while len(text) >= 2 and (
+            (text.startswith('"') and text.endswith('"')) or (text.startswith("'") and text.endswith("'"))
+        ):
+            text = text[1:-1].strip()
+        if text:
+            normalized.append(text)
+    return normalized

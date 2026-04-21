@@ -20,6 +20,11 @@ class VaultProjectAdapter:
         self.hidden_review_dir = self.vault_root / VAULT_DIRS["review_hidden"]
         self.world_lore_dir = self.vault_root / VAULT_DIRS["world_lore"]
         self.world_places_dir = self.vault_root / VAULT_DIRS["world_places"]
+        self.world_magic_dir = self.vault_root / VAULT_DIRS["world_magic"]
+        self.world_creatures_dir = self.vault_root / VAULT_DIRS["world_creatures"]
+        self.world_factions_dir = self.vault_root / VAULT_DIRS["world_factions"]
+        self.world_objects_dir = self.vault_root / VAULT_DIRS["world_objects"]
+        self.world_history_dir = self.vault_root / VAULT_DIRS["world_history"]
         self.character_profiles_dir = self.vault_root / VAULT_DIRS["character_profiles"]
         self.outline_scenes_dir = self.vault_root / VAULT_DIRS["outline_scenes"]
         self.canon_decisions_dir = self.vault_root / VAULT_DIRS["canon_decisions"]
@@ -63,6 +68,11 @@ class VaultProjectAdapter:
             "character": self.character_profiles_dir,
             "lore": self.world_lore_dir,
             "place": self.world_places_dir,
+            "magic": self.world_magic_dir,
+            "creature": self.world_creatures_dir,
+            "faction": self.world_factions_dir,
+            "object": self.world_objects_dir,
+            "history": self.world_history_dir,
             "scene": self.outline_scenes_dir,
             "decision": self.canon_decisions_dir,
             "chapter": self.chapters_dir,

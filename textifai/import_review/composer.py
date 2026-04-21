@@ -20,8 +20,8 @@ _STRUCTURAL_PREFIX_RE = re.compile(r"^[^A-Za-z0-9À-ÿ一-龯ぁ-んァ-ン]+")
 
 @dataclass(frozen=True)
 class CompositionConfig:
-    provider_name: str
-    model: str
+    provider_name: str | None
+    model: str | None
     task_name: str = "bootstrap_normalization"
     max_tokens: int = 2200
     temperature: float = 0.1
@@ -119,7 +119,7 @@ def compose_primary_notes_from_staging(
             )
             _emit_progress(progress_log_path, phase="compose_primary_notes", event="candidate_skipped", subject=candidate.display_name, reason="llm_skip")
             continue
-        if note_type not in {"character", "place", "lore", "scene", "chapter"}:
+        if note_type not in {"character", "place", "lore", "magic", "creature", "faction", "object", "history", "scene", "chapter"}:
             skipped_candidates.append(candidate.subject_key)
             warnings.append(f"unsupported_composed_note_type:{candidate.display_name}:{note_type}")
             continue
@@ -140,6 +140,23 @@ def compose_primary_notes_from_staging(
                 )
             )
             _emit_progress(progress_log_path, phase="compose_primary_notes", event="candidate_skipped", subject=candidate.display_name, reason="confidence_below_threshold", confidence=confidence)
+            continue
+        if not _proposal_is_substantial(proposal):
+            skipped_candidates.append(candidate.subject_key)
+            audit_entries.append(
+                CompositionAuditEntry(
+                    subject_key=candidate.subject_key,
+                    display_name=candidate.display_name,
+                    should_write=False,
+                    note_type=note_type,
+                    title=str(proposal.get("title") or "").strip() or candidate.display_name,
+                    target_path=None,
+                    confidence=confidence,
+                    supporting_draft_ids=list(candidate.draft_ids),
+                    notes=["proposal_too_thin_for_primary", *_string_list(proposal.get("notes"))],
+                )
+            )
+            _emit_progress(progress_log_path, phase="compose_primary_notes", event="candidate_skipped", subject=candidate.display_name, reason="proposal_too_thin_for_primary")
             continue
         title = str(proposal.get("title") or candidate.display_name).strip() or candidate.display_name
         slug = slugify(str(proposal.get("slug") or title))
@@ -377,7 +394,7 @@ def _compose_candidate(
         ],
         "source_evidence": _build_source_evidence(bundle=bundle, candidate=candidate, drafts=drafts),
         "required_output_schema": {
-            "note_type": "character|place|lore|scene|chapter|skip",
+            "note_type": "character|place|lore|magic|creature|faction|object|history|scene|chapter|skip",
             "title": "string",
             "slug": "string",
             "canonical_subject": "string",
@@ -707,7 +724,7 @@ def _candidate_evidence_score(candidate: CanonicalCompositionCandidate, draft: L
         score += 0.8
     if candidate.display_name.casefold() in lowered_body[:320]:
         score += 1.0
-    if slugify(draft.artifact_type) in {"character", "lore", "location", "scene", "chapter"}:
+    if slugify(draft.artifact_type) in {"character", "lore", "location", "magic", "creature", "faction", "object", "history", "scene", "chapter"}:
         score += 0.15
     return score
 
@@ -768,6 +785,18 @@ def _draft_type_hint(draft: LoadedStagedDraft) -> str | None:
         return "character"
     if semantic_class in {"world_entity", "place", "location"}:
         return "place"
+    if artifact_type in {"magic", "creature", "faction", "object", "history"}:
+        return artifact_type
+    if semantic_class in {"magic", "magic_system", "mana", "spellcraft"}:
+        return "magic"
+    if semantic_class in {"creature", "beast", "spirit"}:
+        return "creature"
+    if semantic_class in {"faction", "institution", "organization", "council"}:
+        return "faction"
+    if semantic_class in {"object", "artifact", "relic"}:
+        return "object"
+    if semantic_class in {"history", "event_history", "era"}:
+        return "history"
     if artifact_type == "lore":
         return "lore"
     if artifact_type in {"scene", "chapter"}:
@@ -807,6 +836,13 @@ def _coerce_confidence(value: Any) -> float:
         return max(0.0, min(1.0, float(value)))
     except (TypeError, ValueError):
         return 0.0
+
+
+def _proposal_is_substantial(proposal: dict[str, Any]) -> bool:
+    summary = str(proposal.get("summary") or "").strip()
+    key_facts = _string_list(proposal.get("key_facts"))
+    related = _string_list(proposal.get("related_subjects"))
+    return bool(summary and len(summary) >= 80) or len(key_facts) >= 2 or (len(key_facts) >= 1 and len(related) >= 2)
 
 
 def _string_list(value: Any) -> list[str]:

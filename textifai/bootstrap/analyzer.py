@@ -94,6 +94,16 @@ class ProviderBackedBootstrapAnalyzer:
     ) -> BootstrapDocumentAnalysis | None:
         if document.extension in {"docx", "pdf", "doc"}:
             return self._analyze_derived_document(document=document, text=text, fragments=fragments)
+        if _should_defer_markdown_document_to_story_layer(document=document, text=text, fragments=fragments):
+            _emit_progress(
+                self.config.progress_log_path,
+                phase="analyze_document",
+                event="deferred_markdown_to_chapter_first",
+                source_id=document.source_id,
+                extracted_chars=len(text),
+                fragment_count=len(fragments),
+            )
+            return None
         if get_text_provider_config_error(self.config.task_name, self.config.provider_name):
             return None
         if _should_batch_document(text=text, fragments=fragments):
@@ -555,6 +565,30 @@ def _should_batch_document(*, text: str, fragments: list[SourceFragment]) -> boo
     if len(text) > 12000:
         return True
     return False
+
+
+def _should_defer_markdown_document_to_story_layer(
+    *,
+    document: SourceDocumentRecord,
+    text: str,
+    fragments: list[SourceFragment],
+) -> bool:
+    if document.extension != "md":
+        return False
+    if len(text) < 120_000 or len(fragments) < 18:
+        return False
+    try:
+        from textifai.import_review.chapterizer import discover_chapter_boundary_candidates
+
+        boundaries = discover_chapter_boundary_candidates(document, text)
+    except Exception:
+        return False
+    strong_boundaries = [
+        boundary
+        for boundary in boundaries
+        if boundary.title_number_hint or "markdown_heading" in boundary.signals or "toc_match" in boundary.signals
+    ]
+    return len(strong_boundaries) >= 3
 
 
 def _batched_fragments(fragments: list[SourceFragment], *, batch_size: int = 6) -> list[list[SourceFragment]]:

@@ -82,6 +82,11 @@ def _write_draft(staging_root: Path, draft: NormalizedArtifactDraft) -> Path:
         world_terms=",".join(draft.world_terms),
         character_refs=",".join(draft.character_refs),
         lore_refs=",".join(draft.lore_refs),
+        note_role="review",
+        review_state="review",
+        graph_exclude=True,
+        retrieval_exclude=True,
+        tags=["#review"],
     )
     body = [
         frontmatter,

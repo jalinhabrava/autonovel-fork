@@ -28,15 +28,15 @@ def normalize_artifact_type(
     if normalized.startswith("02_world/places/"):
         return "location"
     if normalized.startswith("02_world/magic/"):
-        return "lore"
+        return "magic"
     if normalized.startswith("02_world/creatures/"):
-        return "lore"
+        return "creature"
     if normalized.startswith("02_world/factions/"):
-        return "lore"
+        return "faction"
     if normalized.startswith("02_world/objects/"):
-        return "lore"
+        return "object"
     if normalized.startswith("02_world/history/"):
-        return "lore"
+        return "history"
     if normalized.startswith("04_story/chapter_summaries/"):
         return "chapter_summary"
     if normalized.startswith("04_story/chapters/"):
@@ -66,6 +66,11 @@ def _normalize_hint(value: object) -> str | None:
         "character": "character",
         "lore": "lore",
         "place": "location",
+        "magic": "magic",
+        "creature": "creature",
+        "faction": "faction",
+        "object": "object",
+        "history": "history",
         "scene": "scene",
         "chapter": "chapter",
         "chapter_summary": "chapter_summary",

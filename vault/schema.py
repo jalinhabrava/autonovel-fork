@@ -80,7 +80,8 @@ def note_frontmatter(kind: str, title: str, status: str = "proposed", **extra) -
     for key, value in extra.items():
         if value is None:
             continue
-        lines.append(f"{key}: {_yaml_scalar(value)}")
+        rendered = _yaml_field_lines(key, value)
+        lines.extend(rendered)
     lines.append("---")
     return "\n".join(lines)
 
@@ -91,6 +92,8 @@ def slugify(value: str) -> str:
 
 
 def _yaml_scalar(value: object) -> str:
+    if isinstance(value, (list, tuple)):
+        raise TypeError("Sequence values must be rendered with _yaml_field_lines.")
     if isinstance(value, bool):
         return "true" if value else "false"
     if isinstance(value, (int, float)):
@@ -98,4 +101,16 @@ def _yaml_scalar(value: object) -> str:
     text = "" if value is None else str(value)
     if re.fullmatch(r"[A-Za-z0-9._/\-]+", text):
         return text
-    return json.dumps(text, ensure_ascii=False)
+    escaped = text.replace("'", "''")
+    return f"'{escaped}'"
+
+
+def _yaml_field_lines(key: str, value: object) -> list[str]:
+    if isinstance(value, (list, tuple)):
+        items = [item for item in value if item is not None and str(item).strip()]
+        if not items:
+            return []
+        lines = [f"{key}:"]
+        lines.extend(f"  - {_yaml_scalar(item)}" for item in items)
+        return lines
+    return [f"{key}: {_yaml_scalar(value)}"]

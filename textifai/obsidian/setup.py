@@ -283,9 +283,8 @@ def prepare_obsidian_project(
 
 def _resolve_bootstrap_llm_analyzer(repo_root: Path, *, progress_log_path: str | None = None) -> ProviderBackedBootstrapAnalyzer | None:
     synchronize_runtime_environment(repo_root)
-    env = load_runtime_environment(repo_root)
-    provider_name = env.provider
-    if not provider_name or not env.writer_model:
+    provider_name, model = _resolve_bootstrap_provider_and_model(repo_root)
+    if not provider_name or not model:
         return None
     if get_text_provider_config_error("bootstrap_normalization", provider_name) is not None:
         return None
@@ -293,7 +292,7 @@ def _resolve_bootstrap_llm_analyzer(repo_root: Path, *, progress_log_path: str |
         config=BootstrapLLMConfig(
             task_name="bootstrap_normalization",
             provider_name=provider_name,
-            model=env.writer_model,
+            model=model,
             max_tokens=4000,
             temperature=0.1,
             timeout_seconds=120,
@@ -309,16 +308,20 @@ def _compose_primary_canonical_notes(
     repo_path: Path,
     progress_log_path: str | None,
 ):
+    import os
+
     synchronize_runtime_environment(repo_path)
-    env = load_runtime_environment(repo_path)
-    provider_name = env.provider
-    if not provider_name or not env.writer_model:
+    provider_name, model = _resolve_bootstrap_provider_and_model(repo_path)
+    if not provider_name or not model:
+        return type("_EmptyComposition", (), {"written_paths": []})()
+    if get_text_provider_config_error("bootstrap_normalization", provider_name) is not None:
         return type("_EmptyComposition", (), {"written_paths": []})()
     composition = compose_primary_notes_from_staging(
         vault_root,
         config=CompositionConfig(
             provider_name=provider_name,
-            model=env.writer_model,
+            model=model,
+            max_candidates=_coerce_optional_int(os.environ.get("TEXTIFAI_BOOTSTRAP_MAX_PRIMARY_CANDIDATES")) or 40,
         ),
         progress_log_path=progress_log_path,
     )
@@ -332,23 +335,44 @@ def _build_story_layer(
     repo_path: Path,
     progress_log_path: str | None,
 ):
+    import os
+
     inventory = getattr(bootstrap_result, "inventory", None)
     if inventory is None:
         return type("_EmptyStoryBuild", (), {"chapter_paths": [], "summary_paths": []})()
     synchronize_runtime_environment(repo_path)
-    env = load_runtime_environment(repo_path)
-    provider_name = env.provider
-    if not provider_name or not env.writer_model:
+    provider_name, model = _resolve_bootstrap_provider_and_model(repo_path)
+    if not provider_name or not model:
+        return type("_EmptyStoryBuild", (), {"chapter_paths": [], "summary_paths": []})()
+    if get_text_provider_config_error("bootstrap_normalization", provider_name) is not None:
         return type("_EmptyStoryBuild", (), {"chapter_paths": [], "summary_paths": []})()
     return build_story_notes(
         vault_root,
         inventory=inventory,
         config=StoryBuildConfig(
             provider_name=provider_name,
-            model=env.writer_model,
+            model=model,
+            max_chapters=_coerce_optional_int(os.environ.get("TEXTIFAI_BOOTSTRAP_MAX_CHAPTERS")),
         ),
         progress_log_path=progress_log_path,
     )
+
+
+def _resolve_bootstrap_provider_and_model(repo_root: Path) -> tuple[str | None, str | None]:
+    import os
+
+    env = load_runtime_environment(repo_root)
+    provider_name = os.environ.get("AUTONOVEL_BOOTSTRAP_PROVIDER", "").strip() or env.provider
+    model = os.environ.get("AUTONOVEL_BOOTSTRAP_MODEL", "").strip() or env.writer_model
+    return provider_name or None, model or None
+
+
+def _coerce_optional_int(value: str | None) -> int | None:
+    try:
+        parsed = int(str(value or "").strip())
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed > 0 else None
 
 
 def _bootstrap_progress_log_path(vault_root: Path) -> str:
@@ -400,6 +424,11 @@ def _write_bootstrap_audit(
                     "characters": [path for path in primary_composed_paths if "/03_Characters/Profiles/" in path.replace("\\", "/")],
                     "places": [path for path in primary_composed_paths if "/02_World/Places/" in path.replace("\\", "/")],
                     "lore": [path for path in primary_composed_paths if "/02_World/Lore/" in path.replace("\\", "/")],
+                    "magic": [path for path in primary_composed_paths if "/02_World/Magic/" in path.replace("\\", "/")],
+                    "creatures": [path for path in primary_composed_paths if "/02_World/Creatures/" in path.replace("\\", "/")],
+                    "factions": [path for path in primary_composed_paths if "/02_World/Factions/" in path.replace("\\", "/")],
+                    "objects": [path for path in primary_composed_paths if "/02_World/Objects/" in path.replace("\\", "/")],
+                    "history": [path for path in primary_composed_paths if "/02_World/History/" in path.replace("\\", "/")],
                 },
             },
             ensure_ascii=False,

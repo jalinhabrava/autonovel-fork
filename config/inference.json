@@ -138,6 +138,10 @@
       "retries": 1
     },
     "bootstrap_normalization": {
+      "provider_env": "AUTONOVEL_BOOTSTRAP_PROVIDER",
+      "provider": "lmstudio",
+      "model_env": "AUTONOVEL_BOOTSTRAP_MODEL",
+      "model": "qwen/qwen3.5-9b",
       "role": "judge",
       "temperature": 0.1,
       "max_tokens": 2000,
@@ -145,6 +149,10 @@
       "retries": 1
     },
     "derived_source_understanding": {
+      "provider_env": "AUTONOVEL_BOOTSTRAP_PROVIDER",
+      "provider": "lmstudio",
+      "model_env": "AUTONOVEL_BOOTSTRAP_MODEL",
+      "model": "qwen/qwen3.5-9b",
       "role": "judge",
       "temperature": 0.1,
       "max_tokens": 2200,

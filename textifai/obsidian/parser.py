@@ -34,7 +34,7 @@ def parse_obsidian_frontmatter(text: str) -> dict[str, Any]:
     for line in raw.splitlines():
         stripped = line.strip()
         if current_list_key and stripped.startswith("- "):
-            data.setdefault(current_list_key, []).append(stripped[2:].strip())
+            data.setdefault(current_list_key, []).append(_coerce_yaml_fallback_scalar(stripped[2:].strip()))
             continue
         key, sep, value = line.partition(":")
         if not sep:
@@ -73,6 +73,16 @@ def extract_heading_title(text: str) -> str | None:
 
 
 def normalize_aliases(value: Any) -> list[str]:
+    def _normalize_item(item: Any) -> str:
+        text = str(item).strip()
+        if (text.startswith('"') and text.endswith('"')) or (text.startswith("'") and text.endswith("'")):
+            try:
+                parsed = ast.literal_eval(text)
+            except (ValueError, SyntaxError):
+                return text[1:-1].strip()
+            return str(parsed).strip()
+        return text
+
     if value is None:
         return []
     if isinstance(value, str):
@@ -85,10 +95,10 @@ def normalize_aliases(value: Any) -> list[str]:
             except (ValueError, SyntaxError):
                 parsed = None
             if isinstance(parsed, list):
-                return [str(item).strip() for item in parsed if str(item).strip()]
-        return [stripped]
+                return [_normalize_item(item) for item in parsed if _normalize_item(item)]
+        return [_normalize_item(stripped)]
     if isinstance(value, list):
-        return [str(item).strip() for item in value if str(item).strip()]
+        return [_normalize_item(item) for item in value if _normalize_item(item)]
     return []
 
 
