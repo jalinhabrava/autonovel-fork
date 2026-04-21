@@ -23,7 +23,8 @@ class StoryBuildConfig:
     provider_name: str | None
     model: str | None
     task_name: str = "bootstrap_normalization"
-    max_tokens: int = 1400
+    max_tokens: int = 2400
+    entity_merge_max_tokens: int = 4200
     temperature: float = 0.1
     timeout_seconds: int = 120
     retries: int = 3
@@ -46,14 +47,17 @@ class StoryBuildConfig:
     rate_limit_audit_filename: str = "99_System/provider_rate_limit_audit.json"
     chapter_map_audit_filename: str = "99_System/chapter_map_audit.json"
     chapter_analysis_audit_filename: str = "99_System/chapter_analysis_audit.json"
+    chapter_analysis_raw_failures_filename: str = "99_System/chapter_analysis_raw_failures.jsonl"
     primary_update_audit_filename: str = "99_System/primary_update_audit.json"
     chapter_detection_audit_filename: str = "99_System/chapter_detection_audit.json"
+    entity_merge_audit_filename: str = "99_System/entity_merge_audit.json"
 
 
 @dataclass(frozen=True)
 class StoryBuildResult:
     chapter_paths: list[str] = field(default_factory=list)
     summary_paths: list[str] = field(default_factory=list)
+    primary_paths: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     audit: dict[str, object] = field(default_factory=dict)
 
@@ -199,6 +203,8 @@ def build_story_notes(
     summary_paths: list[str] = []
     chapter_analyses: list[dict[str, object]] = []
     primary_updates: list[dict[str, object]] = []
+    merge_audit: dict[str, object] = {"entity_count": 0, "entities": []}
+    raw_failures: list[dict[str, object]] = []
     checkpoint_dir = vault_root / config.checkpoint_dirname
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
@@ -248,6 +254,7 @@ def build_story_notes(
                 canonical_catalog=canonical_notes,
                 progress_paths=progress_paths,
                 rate_limiter=rate_limiter,
+                raw_failures=raw_failures,
             )
             if analysis_payload is not None and not analysis_payload.get("_loaded_from_checkpoint", False):
                 llm_calls_used += int(analysis_payload.get("_llm_calls_used") or 0)
@@ -265,6 +272,7 @@ def build_story_notes(
             )
             continue
 
+        normalized_analysis = _normalize_chapter_analysis_payload(analysis_payload, chapter)
         chapter_analyses.append(
             {
                 "chapter_title": chapter.original_title,
@@ -275,7 +283,7 @@ def build_story_notes(
                 "page_end": chapter.page_end,
                 "classification": chapter.classification,
                 "confidence": chapter.confidence,
-                "analysis": {key: value for key, value in analysis_payload.items() if not str(key).startswith("_")},
+                "analysis": normalized_analysis,
             }
         )
         _write_story_artifacts(
@@ -285,6 +293,7 @@ def build_story_notes(
             chapter_analyses=chapter_analyses,
             primary_updates=primary_updates,
             rate_limit_audit=rate_limiter.audit,
+            raw_failures=raw_failures,
         )
 
         chapter_body = "\n\n".join(["## Chapter Text", linked_text.strip()]).strip()
@@ -318,13 +327,13 @@ def build_story_notes(
         )
         chapter_paths.append(str(chapter_path))
 
-        summary_markdown = str(analysis_payload.get("summary_markdown") or "").strip()
+        summary_markdown = str(normalized_analysis.get("chapter_summary") or "").strip()
         if not summary_markdown:
             summary_markdown = (
                 _synthesize_chapter_summary(
                     config=config,
                     chapter=chapter,
-                    analysis_payload=analysis_payload,
+                    analysis_payload=normalized_analysis,
                     canonical_catalog=canonical_notes,
                     progress_paths=progress_paths,
                     rate_limiter=rate_limiter,
@@ -368,7 +377,7 @@ def build_story_notes(
         applied_updates = _apply_primary_updates(
             vault_root=vault_root,
             chapter=chapter,
-            analysis_payload=analysis_payload,
+            analysis_payload=normalized_analysis,
             primary_lookup=primary_lookup,
         )
         primary_updates.extend(applied_updates)
@@ -379,6 +388,7 @@ def build_story_notes(
             chapter_analyses=chapter_analyses,
             primary_updates=primary_updates,
             rate_limit_audit=rate_limiter.audit,
+            raw_failures=raw_failures,
         )
         _emit_progress_many(
             progress_paths,
@@ -390,14 +400,38 @@ def build_story_notes(
             primary_update_count=len(applied_updates),
         )
 
+    created_primary_paths: list[str] = []
+    if chapter_analyses:
+        merge_audit, created_primary_paths = _merge_and_write_primary_notes(
+            vault_root=vault_root,
+            config=config,
+            chapter_analyses=chapter_analyses,
+            primary_lookup=primary_lookup,
+            progress_paths=progress_paths,
+            rate_limiter=rate_limiter,
+        )
+        _write_story_artifacts(
+            vault_root=vault_root,
+            config=config,
+            chapter_map=chapter_map,
+            chapter_analyses=chapter_analyses,
+            primary_updates=primary_updates,
+            rate_limit_audit=rate_limiter.audit,
+            entity_merge_audit=merge_audit,
+            raw_failures=raw_failures,
+        )
+
     return StoryBuildResult(
         chapter_paths=chapter_paths,
         summary_paths=summary_paths,
+        primary_paths=created_primary_paths,
         warnings=warnings,
         audit={
             "chapter_map": [entry.__dict__ for entry in chapter_map],
             "chapter_analyses": chapter_analyses,
             "primary_updates": primary_updates,
+            "entity_merge_audit": merge_audit,
+            "raw_failures": raw_failures,
             "rate_limit_audit": rate_limiter.audit,
             "warnings": warnings,
         },
@@ -677,6 +711,7 @@ def _load_or_analyze_chapter(
     canonical_catalog: list[dict[str, object]],
     progress_paths: list[str],
     rate_limiter: _RateLimitController,
+    raw_failures: list[dict[str, object]],
 ) -> dict[str, object] | None:
     checkpoint_path = checkpoint_dir / f"{chapter.slug}.json"
     source_hash = slugify(f"{chapter.original_title}_{len(chapter.text)}_{chapter.source_path}")
@@ -723,6 +758,7 @@ def _load_or_analyze_chapter(
                 progress_paths=progress_paths,
                 rate_limiter=rate_limiter,
                 attempt=attempt,
+                raw_failures=raw_failures,
             )
             if payload is not None:
                 break
@@ -782,37 +818,16 @@ def _analyze_chapter_chunk(
     progress_paths: list[str],
     rate_limiter: _RateLimitController,
     attempt: int,
+    raw_failures: list[dict[str, object]],
 ) -> dict[str, object] | None:
     provider = get_text_provider(config.task_name, config.provider_name)
-    payload = {
-        "goal": "Extract chapter-level canonical updates for a fiction vault.",
-        "chapter_title": chapter.original_title,
-        "page_start": chapter.page_start,
-        "page_end": chapter.page_end,
-        "canonical_note_catalog": [item["title"] for item in canonical_catalog[:120]],
-        "chapter_excerpt": chapter_text[: config.max_chapter_excerpt_chars],
-        "required_output_schema": {
-            "summary_markdown": "string",
-            "characters": [{"name": "string", "aliases": ["string"], "facts": ["string"], "confidence": 0.0}],
-            "places": [{"name": "string", "aliases": ["string"], "facts": ["string"], "confidence": 0.0}],
-            "concepts": [{"name": "string", "aliases": ["string"], "facts": ["string"], "confidence": 0.0}],
-            "events": [{"title": "string", "summary": "string", "related_subjects": ["string"], "confidence": 0.0}],
-            "relations": [{"subjects": ["string"], "description": "string", "confidence": 0.0}],
-            "new_traits": [{"subject": "string", "trait": "string", "confidence": 0.0}],
-            "aliases": [{"subject": "string", "alias": "string", "confidence": 0.0}],
-            "review_items": ["string"],
-            "confidence": 0.0,
-        },
-        "rules": [
-            "Return JSON only.",
-            "Write the summary in the same dominant language as the excerpt.",
-            "Do not invent facts outside the excerpt.",
-            "Use short navigable names when possible and keep longer forms in aliases or facts.",
-            "Only include items with actual evidence in the excerpt.",
-            "If a field has no evidence, return an empty list, not prose.",
-        ],
-    }
-    estimated_tokens = _estimate_tokens(json.dumps(payload, ensure_ascii=False)) + config.max_tokens
+    dominant_language = _dominant_language_hint(chapter_text)
+    prompt = _render_chapter_analysis_prompt(
+        chapter=chapter,
+        chapter_text=chapter_text[: config.max_chapter_excerpt_chars],
+        dominant_language=dominant_language,
+    )
+    estimated_tokens = _estimate_tokens(prompt) + config.entity_merge_max_tokens
     rate_limiter.before_call(estimated_tokens=estimated_tokens, progress_paths=progress_paths)
     try:
         _emit_progress_many(
@@ -831,9 +846,12 @@ def _analyze_chapter_chunk(
                 task=config.task_name,
                 provider_name=config.provider_name,
                 model=config.model,
-                system="You are extracting grounded chapter-level narrative facts for an Obsidian fiction vault. Return strict JSON only.",
-                messages=[TextMessage(role="user", content=json.dumps(payload, ensure_ascii=False))],
-                max_tokens=config.max_tokens,
+                system=(
+                    "Extrae información estructurada de capítulos de novela para construir un vault narrativo. "
+                    "Devuelve solo JSON válido. Sin explicación. Sin fences."
+                ),
+                messages=[TextMessage(role="user", content=prompt)],
+                max_tokens=config.entity_merge_max_tokens,
                 temperature=0.0,
                 timeout_seconds=config.timeout_seconds,
                 retries=config.retries,
@@ -868,18 +886,15 @@ def _analyze_chapter_chunk(
         payload_present=payload is not None,
     )
     if payload is None:
-        return {
-            "summary_markdown": "",
-            "characters": [],
-            "places": [],
-            "concepts": [],
-            "events": [],
-            "relations": [],
-            "new_traits": [],
-            "aliases": [],
-            "review_items": ["llm_response_not_parseable"],
-            "confidence": 0.0,
-        }
+        raw_failures.append(
+            {
+                "chapter_title": chapter.original_title,
+                "chunk_index": chunk_index,
+                "attempt": attempt,
+                "response_text": response.text,
+            }
+        )
+        return {"chapter_title_original": chapter.original_title, "chapter_summary": "", "characters": [], "places": [], "concepts": [], "events": [], "relations": [], "unresolved_mentions": [{"surface": "llm_response_not_parseable", "type": "unknown", "facts": []}], "confidence": 0.0}
     return payload
 
 
@@ -895,11 +910,11 @@ def _synthesize_chapter_summary(
     provider = get_text_provider(config.task_name, config.provider_name)
     payload = {
         "goal": "Write a concise chapter summary for an Obsidian fiction vault using the grounded analysis and excerpt.",
-        "chapter_title": chapter.original_title,
+        "chapter_title_original": chapter.original_title,
         "canonical_note_catalog": [item["title"] for item in canonical_catalog[:120]],
-        "analysis_payload": {k: analysis_payload.get(k) for k in ("characters", "places", "concepts", "events", "relations", "new_traits")},
+        "analysis_payload": {k: analysis_payload.get(k) for k in ("characters", "places", "concepts", "events", "relations")},
         "chapter_excerpt": chapter.text[: config.max_summary_excerpt_chars],
-        "required_output_schema": {"summary_markdown": "string"},
+        "required_output_schema": {"chapter_summary": "string"},
         "rules": [
             "Return JSON only.",
             "Write in the same dominant language as the excerpt.",
@@ -922,6 +937,16 @@ def _synthesize_chapter_summary(
                 temperature=0.0,
                 timeout_seconds=config.timeout_seconds,
                 retries=config.retries,
+                response_format=_structured_response_format(
+                    provider_name=config.provider_name,
+                    schema_name="chapter_summary",
+                    schema={
+                        "type": "object",
+                        "additionalProperties": False,
+                        "properties": {"chapter_summary": {"type": "string"}},
+                        "required": ["chapter_summary"],
+                    },
+                ),
             )
         )
         rate_limiter.after_call(success=True)
@@ -929,9 +954,9 @@ def _synthesize_chapter_summary(
         rate_limiter.after_call(success=False, provider_error=str(exc))
         _emit_progress_many(progress_paths, phase="story_builder", event="provider_error", call_kind="chapter_summary_fallback", chapter_title=chapter.original_title, error=str(exc))
         return None
-    raw = extract_json_payload(response.text) or {}
+    raw = extract_json_payload(response.text) or _salvage_entity_merge_payload(response.text) or {}
     _emit_progress_many(progress_paths, phase="story_builder", event="llm_call_succeeded", call_kind="chapter_summary_fallback", chapter_title=chapter.original_title, response_chars=len(response.text))
-    return str(raw.get("summary_markdown") or "").strip() or None
+    return str(raw.get("chapter_summary") or raw.get("summary_markdown") or "").strip() or None
 
 
 def _apply_primary_updates(
@@ -944,7 +969,7 @@ def _apply_primary_updates(
     updates: list[dict[str, object]] = []
     for item_kind in ("characters", "places", "concepts"):
         for item in analysis_payload.get(item_kind, []) or []:
-            subject = str(item.get("name") or "").strip()
+            subject = str(item.get("surface") or item.get("name") or "").strip()
             if not subject:
                 continue
             note = _resolve_primary(subject, item.get("aliases", []) or [], primary_lookup)
@@ -967,6 +992,212 @@ def _apply_primary_updates(
                     }
                 )
     return updates
+
+
+def _normalize_chapter_analysis_payload(payload: dict[str, object], chapter: ChapterMapEntry) -> dict[str, object]:
+    def _entity_list(items: object, fallback_type: str) -> list[dict[str, object]]:
+        result: list[dict[str, object]] = []
+        if not isinstance(items, list):
+            return result
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            surface = str(item.get("surface") or item.get("name") or item.get("title") or "").strip()
+            if not surface:
+                continue
+            facts = [str(f).strip() for f in (item.get("facts") or []) if str(f).strip()]
+            aliases = [str(a).strip() for a in (item.get("aliases") or []) if str(a).strip()]
+            result.append(
+                {
+                    "surface": surface,
+                    "type": str(item.get("type") or fallback_type).strip() or fallback_type,
+                    "facts": facts,
+                    "aliases": aliases,
+                    "confidence": float(item.get("confidence") or 0.0),
+                }
+            )
+        return result
+
+    def _relation_list(items: object) -> list[dict[str, object]]:
+        result: list[dict[str, object]] = []
+        if not isinstance(items, list):
+            return result
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            rel_from = str(item.get("from") or "").strip()
+            rel_to = str(item.get("to") or "").strip()
+            rel_type = str(item.get("type") or "").strip() or "related"
+            if not rel_from or not rel_to:
+                subjects = [str(subject).strip() for subject in (item.get("subjects") or []) if str(subject).strip()]
+                if len(subjects) >= 2:
+                    rel_from, rel_to = subjects[0], subjects[1]
+            if not rel_from or not rel_to:
+                continue
+            facts = [str(f).strip() for f in (item.get("facts") or [item.get("description")]) if str(f).strip()]
+            result.append({"from": rel_from, "to": rel_to, "type": rel_type, "facts": facts})
+        return result
+
+    return {
+        "chapter_title_original": str(payload.get("chapter_title_original") or chapter.original_title).strip() or chapter.original_title,
+        "chapter_summary": str(payload.get("chapter_summary") or payload.get("summary_markdown") or "").strip(),
+        "characters": _entity_list(payload.get("characters"), "character"),
+        "places": _entity_list(payload.get("places"), "place"),
+        "concepts": _entity_list(payload.get("concepts"), "concept"),
+        "events": _entity_list(payload.get("events"), "event"),
+        "relations": _relation_list(payload.get("relations")),
+        "unresolved_mentions": _entity_list(payload.get("unresolved_mentions"), "unknown"),
+        "confidence": float(payload.get("confidence") or 0.0),
+    }
+
+
+def _merge_and_write_primary_notes(
+    *,
+    vault_root: Path,
+    config: StoryBuildConfig,
+    chapter_analyses: list[dict[str, object]],
+    primary_lookup: dict[str, dict[str, object]],
+    progress_paths: list[str],
+    rate_limiter: _RateLimitController,
+) -> tuple[dict[str, object], list[str]]:
+    provider = get_text_provider(config.task_name, config.provider_name)
+    merge_input = _build_entity_merge_input(chapter_analyses)
+    prompt = _render_entity_merge_prompt(merge_input)
+    estimated_tokens = _estimate_tokens(prompt) + config.max_tokens
+    rate_limiter.before_call(estimated_tokens=estimated_tokens, progress_paths=progress_paths)
+    created_paths: list[str] = []
+    merge_audit: dict[str, object] = {"entity_count": 0, "entities": []}
+    try:
+        _emit_progress_many(progress_paths, phase="story_builder", event="llm_call_started", call_kind="entity_merge", chapter_count=len(chapter_analyses))
+        response = provider.generate(
+            TextGenerationRequest(
+                task=config.task_name,
+                provider_name=config.provider_name,
+                model=config.model,
+                system=(
+                    "Fusiona entidades narrativas detectadas capítulo a capítulo para producir candidatas a primary notes. Devuelve solo JSON válido."
+                ),
+                messages=[TextMessage(role="user", content=prompt)],
+                max_tokens=config.max_tokens,
+                temperature=0.0,
+                timeout_seconds=config.timeout_seconds,
+                retries=config.retries,
+                response_format={"type": "json_object"},
+            )
+        )
+        rate_limiter.after_call(success=True)
+    except TextProviderError as exc:
+        rate_limiter.after_call(success=False, provider_error=str(exc))
+        _emit_progress_many(progress_paths, phase="story_builder", event="provider_error", call_kind="entity_merge", error=str(exc))
+        return {"entity_count": 0, "entities": [], "error": str(exc)}, []
+
+    raw = extract_json_payload(response.text) or {}
+    payload_present = bool(raw)
+    _emit_progress_many(progress_paths, phase="story_builder", event="llm_call_succeeded", call_kind="entity_merge", response_chars=len(response.text), payload_present=payload_present)
+    if not payload_present:
+        entities = _fallback_entities_from_chapter_analyses(chapter_analyses)
+        merge_audit = {
+            "entity_count": len(entities),
+            "entities": entities,
+            "raw_failure": response.text,
+            "fallback_used": True,
+        }
+        created_paths = _write_primary_entities(vault_root=vault_root, entities=entities, primary_lookup=primary_lookup)
+        return merge_audit, created_paths
+    entities = raw.get("entities", []) if isinstance(raw, dict) else []
+    merge_audit = {"entity_count": len(entities), "entities": entities, "fallback_used": False}
+    created_paths = _write_primary_entities(vault_root=vault_root, entities=entities, primary_lookup=primary_lookup)
+    return merge_audit, created_paths
+
+
+def _write_primary_entities(
+    *,
+    vault_root: Path,
+    entities: list[dict[str, object]],
+    primary_lookup: dict[str, dict[str, object]],
+) -> list[str]:
+    created_paths: list[str] = []
+    for entity in entities:
+        if not isinstance(entity, dict):
+            continue
+        if not entity.get("should_create_primary", True):
+            continue
+        note_type = str(entity.get("entity_kind") or "").strip().casefold()
+        if note_type not in {"character", "place", "lore", "magic", "creature", "faction", "object", "history"}:
+            continue
+        title = str(entity.get("canonical_name") or "").strip()
+        if not title:
+            continue
+        aliases = [str(alias).strip() for alias in (entity.get("aliases") or []) if str(alias).strip()]
+        existing = _resolve_primary(title, aliases, primary_lookup)
+        if existing is not None:
+            continue
+        slug = slugify(title)
+        summary = str(entity.get("summary") or "").strip()
+        key_facts = [str(fact).strip() for fact in (entity.get("key_facts") or []) if str(fact).strip()]
+        related = [str(item).strip() for item in (entity.get("related_entities") or []) if str(item).strip()]
+        chapters = [str(item).strip() for item in (entity.get("chapter_titles") or []) if str(item).strip()]
+        body = _render_generated_primary_note_body(
+            title=title,
+            summary=summary,
+            key_facts=key_facts,
+            related_subjects=related,
+            chapter_titles=chapters,
+        )
+        path = write_artifact_payload(
+            vault_root,
+            artifact_kind="note",
+            artifact_type=note_type,
+            entity_id=slug,
+            title=title,
+            body=body,
+            status="pending_revision",
+            metadata={
+                "artifact_stage": "promoted_artifact",
+                "promotion_status": "promoted_canonical",
+                "note_role": "primary",
+                "entity_kind": note_type,
+                "canonical_subject": title,
+                "aliases": ", ".join(_dedupe(aliases)),
+                "semantic_class": note_type,
+                "evidence_sources": ", ".join(chapters),
+                "confidence": float(entity.get("confidence") or 0.0),
+                "review_state": "canonical",
+            },
+        )
+        created_paths.append(str(path))
+        primary_lookup[slug] = {"path": str(path), "title": title}
+        for alias in aliases:
+            alias_key = slugify(alias)
+            if alias_key and alias_key not in primary_lookup:
+                primary_lookup[alias_key] = {"path": str(path), "title": title}
+    return created_paths
+
+
+def _render_generated_primary_note_body(
+    *,
+    title: str,
+    summary: str,
+    key_facts: list[str],
+    related_subjects: list[str],
+    chapter_titles: list[str],
+) -> str:
+    lines: list[str] = []
+    if summary:
+        lines.extend(["## Overview", "", summary.strip(), ""])
+    if key_facts:
+        lines.extend(["## Key Facts", ""])
+        lines.extend(f"- {fact}" for fact in key_facts[:12])
+        lines.append("")
+    if related_subjects:
+        lines.extend(["## Related", ""])
+        lines.extend(f"- [[{subject}]]" for subject in related_subjects[:12])
+        lines.append("")
+    if chapter_titles:
+        lines.extend(["## Source Chapters", ""])
+        lines.extend(f"- [[{chapter_title}]]" for chapter_title in chapter_titles[:12])
+        lines.append("")
+    return "\n".join(lines).strip()
 
 
 def _append_chapter_evidence(
@@ -1100,34 +1331,32 @@ def _chunk_chapter_text(text: str, *, max_chars: int) -> list[str]:
 
 def _merge_chapter_analysis_payloads(payloads: list[dict[str, object]]) -> dict[str, object]:
     merged: dict[str, object] = {
-        "summary_markdown": "",
+        "chapter_summary": "",
         "characters": [],
         "places": [],
         "concepts": [],
         "events": [],
         "relations": [],
-        "new_traits": [],
-        "aliases": [],
-        "review_items": [],
+        "unresolved_mentions": [],
         "confidence": 0.0,
     }
     summaries: list[str] = []
     confidence_values: list[float] = []
     for payload in payloads:
-        for key in ("characters", "places", "concepts", "events", "relations", "new_traits", "aliases", "review_items"):
+        for key in ("characters", "places", "concepts", "events", "relations", "unresolved_mentions"):
             items = payload.get(key)
             if isinstance(items, list):
                 merged[key] = [*merged[key], *items]
-        summary = str(payload.get("summary_markdown") or "").strip()
+        summary = str(payload.get("chapter_summary") or payload.get("summary_markdown") or "").strip()
         if summary:
             summaries.append(summary)
         try:
             confidence_values.append(float(payload.get("confidence") or 0.0))
         except (TypeError, ValueError):
             pass
-    merged["summary_markdown"] = "\n\n".join(summaries[:2]).strip()
+    merged["chapter_summary"] = "\n\n".join(summaries[:2]).strip()
     merged["confidence"] = max(confidence_values) if confidence_values else 0.0
-    for key in ("characters", "places", "concepts", "events", "relations", "new_traits", "aliases", "review_items"):
+    for key in ("characters", "places", "concepts", "events", "relations", "unresolved_mentions"):
         merged[key] = _dedupe_payload_items(list(merged[key]))
     return merged
 
@@ -1144,6 +1373,21 @@ def _dedupe_payload_items(items: list[object]) -> list[object]:
     return result
 
 
+def _dedupe(values: list[str]) -> list[str]:
+    result: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        text = str(value).strip()
+        if not text:
+            continue
+        key = text.casefold()
+        if key in seen:
+            continue
+        seen.add(key)
+        result.append(text)
+    return result
+
+
 def _write_story_artifacts(
     *,
     vault_root: Path,
@@ -1152,6 +1396,8 @@ def _write_story_artifacts(
     chapter_analyses: list[dict[str, object]],
     primary_updates: list[dict[str, object]],
     rate_limit_audit: dict[str, object],
+    entity_merge_audit: dict[str, object] | None = None,
+    raw_failures: list[dict[str, object]] | None = None,
 ) -> None:
     system_root = vault_root / "99_System"
     system_root.mkdir(parents=True, exist_ok=True)
@@ -1171,6 +1417,14 @@ def _write_story_artifacts(
         json.dumps(rate_limit_audit, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
+    (system_root / Path(config.entity_merge_audit_filename).name).write_text(
+        json.dumps(entity_merge_audit or {"entity_count": 0, "entities": []}, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    raw_failure_path = system_root / Path(config.chapter_analysis_raw_failures_filename).name
+    with raw_failure_path.open("w", encoding="utf-8") as handle:
+        for item in raw_failures or []:
+            handle.write(json.dumps(item, ensure_ascii=False) + "\n")
 
 
 def _write_chapter_map_audit(
@@ -1298,3 +1552,273 @@ def _page_for_offset(text: str, offset: int) -> int | None:
     if matches:
         return int(matches[-1].group(1))
     return None
+
+
+def _structured_response_format(*, provider_name: str | None, schema_name: str, schema: dict[str, object]) -> dict[str, object]:
+    if str(provider_name or "").strip().casefold() == "openai":
+        return {
+            "type": "json_schema",
+            "json_schema": {
+                "name": schema_name,
+                "strict": True,
+                "schema": schema,
+            },
+        }
+    return {"type": "json_object"}
+
+
+def _dominant_language_hint(text: str) -> str:
+    lowered = text.lower()
+    spanish_markers = (" el ", " la ", " los ", " las ", " que ", " una ", " de ", " y ")
+    score = sum(lowered.count(marker) for marker in spanish_markers)
+    return "es" if score >= 8 else "unknown"
+
+
+def _render_chapter_analysis_prompt(*, chapter: ChapterMapEntry, chapter_text: str, dominant_language: str) -> str:
+    language_line = (
+        "Escribe el resumen y los facts en el mismo idioma del capítulo."
+        if dominant_language == "es"
+        else "Write the summary and facts in the same language as the chapter."
+    )
+    return (
+        "Te voy a pasar un capítulo de una novela.\n"
+        "Quiero que:\n"
+        "- lo analices\n"
+        "- saques SOLO los nombres y elementos más relevantes para construir un vault narrativo\n"
+        "- detectes personajes, lugares, conceptos, eventos y relaciones solo si aparecen de forma clara y son importantes\n"
+        "- me devuelvas SOLO JSON válido\n"
+        f"- {language_line}\n"
+        "- no inventes hechos fuera del capítulo\n"
+        "- usa nombres navegables y cortos cuando sea posible\n\n"
+        "Límites de salida:\n"
+        "- chapter_summary: 3-5 frases\n"
+        "- characters: máximo 6\n"
+        "- places: máximo 5\n"
+        "- concepts: máximo 5\n"
+        "- events: máximo 5\n"
+        "- relations: máximo 5\n"
+        "- facts por elemento: máximo 3\n"
+        "- unresolved_mentions: máximo 5\n"
+        "- si hay demasiadas opciones, elige las más narrativamente importantes\n\n"
+        "Formato exacto:\n"
+        "{\n"
+        '  "chapter_title_original": "...",\n'
+        '  "chapter_summary": "...",\n'
+        '  "characters": [{"surface": "...", "type": "character", "facts": ["..."]}],\n'
+        '  "places": [{"surface": "...", "type": "place", "facts": ["..."]}],\n'
+        '  "concepts": [{"surface": "...", "type": "concept", "facts": ["..."]}],\n'
+        '  "events": [{"surface": "...", "type": "event", "facts": ["..."]}],\n'
+        '  "relations": [{"from": "...", "to": "...", "type": "...", "facts": ["..."]}],\n'
+        '  "unresolved_mentions": [{"surface": "...", "type": "unknown", "facts": ["..."]}]\n'
+        "}\n\n"
+        f"Título del capítulo: {chapter.original_title}\n\n"
+        "Texto del capítulo:\n"
+        f"{chapter_text.strip()}\n"
+    )
+
+
+def _build_entity_merge_input(chapter_analyses: list[dict[str, object]]) -> dict[str, object]:
+    grouped: dict[tuple[str, str], dict[str, object]] = {}
+    relation_samples: list[dict[str, object]] = []
+    for chapter in chapter_analyses:
+        chapter_title = str(chapter.get("chapter_title") or "").strip()
+        analysis = chapter.get("analysis") or {}
+        if not isinstance(analysis, dict):
+            continue
+        for bucket, entity_kind in (
+            ("characters", "character"),
+            ("places", "place"),
+            ("concepts", "lore"),
+            ("events", "history"),
+        ):
+            for item in analysis.get(bucket, []) or []:
+                if not isinstance(item, dict):
+                    continue
+                surface = str(item.get("surface") or "").strip()
+                if not surface:
+                    continue
+                key = (entity_kind, slugify(surface))
+                entry = grouped.setdefault(
+                    key,
+                    {
+                        "surface": surface,
+                        "entity_kind": entity_kind,
+                        "chapter_titles": [],
+                        "facts": [],
+                    },
+                )
+                if chapter_title and chapter_title not in entry["chapter_titles"]:
+                    entry["chapter_titles"].append(chapter_title)
+                for fact in item.get("facts", []) or []:
+                    fact_text = str(fact).strip()
+                    if fact_text and fact_text not in entry["facts"] and len(entry["facts"]) < 4:
+                        entry["facts"].append(fact_text)
+        for relation in analysis.get("relations", []) or []:
+            if not isinstance(relation, dict):
+                continue
+            relation_samples.append(
+                {
+                    "chapter_title": chapter_title,
+                    "from": str(relation.get("from") or "").strip(),
+                    "to": str(relation.get("to") or "").strip(),
+                    "type": str(relation.get("type") or "").strip(),
+                    "facts": [str(fact).strip() for fact in (relation.get("facts") or []) if str(fact).strip()][:2],
+                }
+            )
+    entities = sorted(grouped.values(), key=lambda item: (item["entity_kind"], item["surface"]))
+    return {"entity_count": len(entities), "entities": entities[:80], "relation_samples": relation_samples[:40]}
+
+
+def _render_entity_merge_prompt(merge_input: dict[str, object]) -> str:
+    return (
+        "Te paso entidades extraídas capítulo a capítulo de una novela.\n"
+        "Quiero que detectes cuáles pertenecen a la misma entidad y deberían fusionarse.\n"
+        "Devuelve SOLO JSON válido.\n"
+        "No inventes entidades no respaldadas.\n"
+        "Usa nombres canónicos navegables y cortos cuando sea posible.\n"
+        "Máximo 12 entidades en la salida.\n"
+        "Máximo 4 key_facts por entidad.\n"
+        "Máximo 4 related_entities por entidad.\n"
+        "Si una mención no merece primary note, pon should_create_primary=false y entity_kind='skip'.\n\n"
+        "Formato exacto:\n"
+        "{\n"
+        '  "entities": [\n'
+        "    {\n"
+        '      "canonical_name": "...",\n'
+        '      "entity_kind": "character|place|lore|magic|creature|faction|object|history|skip",\n'
+        '      "aliases": ["..."],\n'
+        '      "summary": "...",\n'
+        '      "key_facts": ["..."],\n'
+        '      "related_entities": ["..."],\n'
+        '      "source_mentions": ["..."],\n'
+        '      "chapter_titles": ["..."],\n'
+        '      "confidence": 0.0,\n'
+        '      "should_create_primary": true,\n'
+        '      "review_notes": ["..."]\n'
+        "    }\n"
+        "  ]\n"
+        "}\n\n"
+        "Datos extraídos:\n"
+        f"{json.dumps(merge_input, ensure_ascii=False)}\n"
+    )
+
+
+def _fallback_entities_from_chapter_analyses(chapter_analyses: list[dict[str, object]]) -> list[dict[str, object]]:
+    merge_input = _build_entity_merge_input(chapter_analyses)
+    entities: list[dict[str, object]] = []
+    for item in merge_input.get("entities", []):
+        if not isinstance(item, dict):
+            continue
+        surface = str(item.get("surface") or "").strip()
+        entity_kind = str(item.get("entity_kind") or "").strip().casefold()
+        chapter_titles = [str(title).strip() for title in (item.get("chapter_titles") or []) if str(title).strip()]
+        facts = [str(fact).strip() for fact in (item.get("facts") or []) if str(fact).strip()]
+        if entity_kind not in {"character", "place", "lore", "object", "history"}:
+            continue
+        if not _should_promote_fallback_entity(surface=surface, entity_kind=entity_kind, chapter_titles=chapter_titles):
+            continue
+        entities.append(
+            {
+                "canonical_name": surface,
+                "entity_kind": entity_kind,
+                "aliases": [],
+                "summary": _fallback_entity_summary(surface=surface, entity_kind=entity_kind, chapter_titles=chapter_titles, facts=facts),
+                "key_facts": facts[:4],
+                "related_entities": [],
+                "source_mentions": [surface],
+                "chapter_titles": chapter_titles,
+                "confidence": min(0.55 + (0.1 * min(len(chapter_titles), 3)), 0.9),
+                "should_create_primary": True,
+                "review_notes": ["fallback_from_chapter_entities_after_merge_parse_failure"],
+            }
+        )
+    return entities[:16]
+
+
+def _should_promote_fallback_entity(*, surface: str, entity_kind: str, chapter_titles: list[str]) -> bool:
+    if not surface:
+        return False
+    if len(chapter_titles) >= 2:
+        return True
+    if entity_kind in {"character", "place", "lore", "object"} and _looks_navigable_primary(surface):
+        return True
+    return False
+
+
+def _looks_navigable_primary(surface: str) -> bool:
+    stripped = surface.strip()
+    if len(stripped) < 3 or len(stripped) > 60:
+        return False
+    return any(char.isupper() for char in stripped[1:]) or stripped[:1].isupper()
+
+
+def _fallback_entity_summary(*, surface: str, entity_kind: str, chapter_titles: list[str], facts: list[str]) -> str:
+    if facts:
+        return facts[0]
+    chapter_part = ", ".join(chapter_titles[:3])
+    return f"{surface} aparece como {entity_kind} relevante en {chapter_part}."
+
+
+def _salvage_entity_merge_payload(text: str) -> dict[str, object] | None:
+    marker = '"entities"'
+    marker_index = text.find(marker)
+    if marker_index == -1:
+        return None
+    array_start = text.find("[", marker_index)
+    if array_start == -1:
+        return None
+    items: list[dict[str, object]] = []
+    depth = 0
+    in_string = False
+    escape = False
+    object_start: int | None = None
+    for index in range(array_start + 1, len(text)):
+        char = text[index]
+        if escape:
+            escape = False
+            continue
+        if char == "\\":
+            escape = True
+            continue
+        if char == '"':
+            in_string = not in_string
+            continue
+        if in_string:
+            continue
+        if char == "{":
+            if depth == 0:
+                object_start = index
+            depth += 1
+            continue
+        if char == "}":
+            if depth == 0:
+                continue
+            depth -= 1
+            if depth == 0 and object_start is not None:
+                chunk = text[object_start : index + 1]
+                try:
+                    payload = json.loads(chunk)
+                except json.JSONDecodeError:
+                    payload = None
+                if isinstance(payload, dict):
+                    items.append(payload)
+                object_start = None
+            continue
+        if char == "]" and depth == 0:
+            break
+    if not items:
+        return None
+    return {"entities": items}
+
+
+def _entity_schema(entity_type: str) -> dict[str, object]:
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "properties": {
+            "surface": {"type": "string"},
+            "type": {"type": "string", "enum": [entity_type]},
+            "facts": {"type": "array", "items": {"type": "string"}},
+        },
+        "required": ["surface", "type", "facts"],
+    }

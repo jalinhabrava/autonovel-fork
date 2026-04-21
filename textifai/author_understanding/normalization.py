@@ -66,7 +66,9 @@ def extract_json_payload(text: str) -> dict[str, Any] | None:
         try:
             payload = json.loads(candidate)
         except json.JSONDecodeError:
-            return None
+            payload = _lenient_json_object_parse(candidate)
+            if payload is None:
+                return None
         return payload if isinstance(payload, dict) else None
     start = candidate.find("{")
     end = candidate.rfind("}")
@@ -74,6 +76,17 @@ def extract_json_payload(text: str) -> dict[str, Any] | None:
         return None
     try:
         payload = json.loads(candidate[start : end + 1])
+    except json.JSONDecodeError:
+        payload = _lenient_json_object_parse(candidate[start : end + 1])
+        if payload is None:
+            return None
+    return payload if isinstance(payload, dict) else None
+
+
+def _lenient_json_object_parse(text: str) -> dict[str, Any] | None:
+    sanitized = re.sub(r"\\([^\"\\/bfnrtu])", r"\1", text)
+    try:
+        payload = json.loads(sanitized)
     except json.JSONDecodeError:
         return None
     return payload if isinstance(payload, dict) else None

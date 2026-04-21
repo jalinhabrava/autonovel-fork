@@ -28,11 +28,19 @@ class _FakeProvider:
                     "text": '{"decisions":[{"candidate_id":"%s","classification":"chapter","normalized_title":"Chapter 1: Arrival at Thiseia","chapter_number":"1","confidence":0.91,"reason":"isolated markdown heading starts a chapter-sized unit"}]}' % candidate_id
                 },
             )()
+        if "Merge chapter-level entities" in content:
+            return type(
+                "_Response",
+                (),
+                {
+                    "text": '{"entities":[{"canonical_name":"Sera","entity_kind":"character","aliases":["Serélyne"],"summary":"Princess tied to [[Thiseia]].","key_facts":["Princess of [[Thiseia]]."],"related_entities":["Thiseia"],"source_mentions":["Sera","Serélyne"],"chapter_titles":["Chapter 1: Arrival at Thiseia"],"confidence":0.93,"should_create_primary":true,"review_notes":[]},{"canonical_name":"Castle of Thiseia","entity_kind":"place","aliases":[],"summary":"A castle in [[Thiseia]].","key_facts":["Located in [[Thiseia]]."],"related_entities":["Thiseia","Sera"],"source_mentions":["Castle of Thiseia"],"chapter_titles":["Chapter 1: Arrival at Thiseia"],"confidence":0.85,"should_create_primary":true,"review_notes":[]}]}'  # noqa: E501
+                },
+            )()
         return type(
             "_Response",
             (),
             {
-                "text": '{"summary_markdown":"[[Sera]] wakes in the [[Castle of Thiseia]] and thinks about [[Thiseia]].","characters":[{"name":"Sera","aliases":["Serélyne"],"facts":["Princess of [[Thiseia]]."],"confidence":0.9}],"places":[{"name":"Castle of Thiseia","aliases":[],"facts":["A castle in [[Thiseia]]."],"confidence":0.8}],"concepts":[],"events":[],"relations":[],"new_traits":[],"aliases":[],"review_items":[],"confidence":0.86}'
+                "text": '{"chapter_title_original":"Chapter 1: Arrival at Thiseia","chapter_summary":"[[Sera]] wakes in the [[Castle of Thiseia]] and thinks about [[Thiseia]].","characters":[{"surface":"Sera","type":"character","facts":["Princess of [[Thiseia]]."]}],"places":[{"surface":"Castle of Thiseia","type":"place","facts":["A castle in [[Thiseia]]."]}],"concepts":[],"events":[],"relations":[],"unresolved_mentions":[],"confidence":0.86}'
             },
         )()
 
@@ -86,6 +94,7 @@ class TextifAIStoryBuilderTests(unittest.TestCase):
 
             self.assertEqual(len(result.chapter_paths), 1)
             self.assertEqual(len(result.summary_paths), 1)
+            self.assertIsInstance(result.primary_paths, list)
             chapter_text = Path(result.chapter_paths[0]).read_text(encoding="utf-8")
             summary_text = Path(result.summary_paths[0]).read_text(encoding="utf-8")
             self.assertIn("[[Sera]]", chapter_text)
@@ -99,6 +108,7 @@ class TextifAIStoryBuilderTests(unittest.TestCase):
             self.assertTrue((vault_root / "99_System" / "chapter_analysis_audit.json").exists())
             self.assertTrue((vault_root / "99_System" / "chapter_map_audit.json").exists())
             self.assertTrue((vault_root / "99_System" / "primary_update_audit.json").exists())
+            self.assertTrue((vault_root / "99_System" / "entity_merge_audit.json").exists())
 
 
 if __name__ == "__main__":

@@ -204,8 +204,6 @@ def prepare_obsidian_project(
             bundle, reviews, plan = review_import_stage(vault_root, policy=ReviewPolicy())
             promoted_paths = []
             pending_candidates = [draft.draft_id for draft in bundle.drafts]
-            composition = _compose_primary_canonical_notes(vault_root, repo_path=repo_path, progress_log_path=progress_log_path)
-            composed_paths = list(composition.written_paths)
             story_result = _build_story_layer(
                 vault_root=vault_root,
                 bootstrap_result=bootstrap_result,
@@ -214,6 +212,9 @@ def prepare_obsidian_project(
             )
             story_chapter_paths = list(story_result.chapter_paths)
             story_summary_paths = list(story_result.summary_paths)
+            composed_paths = list(getattr(story_result, "primary_paths", []))
+            composition = _compose_primary_canonical_notes(vault_root, repo_path=repo_path, progress_log_path=progress_log_path)
+            composed_paths.extend(path for path in composition.written_paths if path not in composed_paths)
             if pending_candidates:
                 notes.append("Imported material remains in hidden staging/review until explicit promotion or stronger canonical composition is available.")
             if composed_paths:
