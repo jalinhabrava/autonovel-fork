@@ -239,7 +239,7 @@ textifai doctor
 
 ## Useful Docs
 
-- [docs/ARCHITECTURE_NOTES.md](/home/david/projects/autonovel-fork/docs/ARCHITECTURE_NOTES.md)
+- [docs/BOOTSTRAP_V1_FLOW.md](/home/david/projects/autonovel-fork/docs/BOOTSTRAP_V1_FLOW.md)
 - [docs/VAULT_SCHEMA.md](/home/david/projects/autonovel-fork/docs/VAULT_SCHEMA.md)
 - [WORKFLOW.md](/home/david/projects/autonovel-fork/WORKFLOW.md)
 - [PIPELINE.md](/home/david/projects/autonovel-fork/PIPELINE.md)

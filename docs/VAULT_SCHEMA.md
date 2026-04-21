@@ -2,188 +2,127 @@
 
 ## Goal
 
-The vault is the persistent source of truth for a narrative project. It must be:
+The vault should support one simple bootstrap loop well:
 
-- readable by Obsidian,
-- writable by the pipeline,
-- safe for partial bootstrap from an existing manuscript,
-- and structured enough to reconstruct logical artifacts such as `world`, `characters`, `canon`, `voice`, and `outline`.
+- source documents in
+- chapter-level extraction
+- entity merge
+- canonical primaries out
+- review kept separate
+
+The vault is not meant to encode a giant semantic ontology. It should stay readable in Obsidian and useful for VaERL.
 
 ## Directory Layout
 
 ```text
 00_Project/
-  Project.md
-  Seed.md
-  Mystery.md
 01_Voice/
-  Voice.md
 02_World/
-  World.md
+  Places/
+  Magic/
+  Creatures/
+  Factions/
+  Objects/
+  History/
   Lore/
 03_Characters/
-  Characters.md
   Profiles/
-04_Outline/
-  Outline.md
-  Scenes/
-05_Draft/
-  Manuscript.md
+04_Story/
   Chapters/
+  Chapter_Summaries/
+05_Draft/
 06_Canon/
-  Canon.md
-  Decisions/
 07_Editorial/
-  Revision_Briefs/
-  Reviews/
-  Reader_Panel/
-  Logs/
-  Evaluations/
+90_Review/
+99_Import_Staging/
 99_System/
-  state.json
-  results.tsv
 _Templates/
 ```
 
-## Root Notes
+## Canonical Note Roles
 
-These are the top-level notes the pipeline can map back to its logical artifacts:
+Visible and useful roles:
 
-- `00_Project/Seed.md`
-- `01_Voice/Voice.md`
-- `02_World/World.md`
-- `03_Characters/Characters.md`
-- `04_Outline/Outline.md`
-- `06_Canon/Canon.md`
-- `07_Editorial/Reader_Panel/Arc_Summary.md`
-- `05_Draft/Manuscript.md`
+- `primary`
+- `chapter`
+- `chapter_summary`
 
-## Note Statuses
+Hidden operational role:
 
-Every structured note should support:
+- `review`
 
-- `proposed`
-- `pending_revision`
-- `validated`
-- `discarded`
+## Minimum Bootstrap Metadata
 
-This is required so a future bootstrap from an existing manuscript can populate notes without marking everything as canon immediately.
-
-## Minimum Frontmatter
-
-All structured notes should include at least:
+Canonical notes should carry enough metadata for Obsidian and VaERL, but no more than needed:
 
 ```yaml
 ---
 kind: character
-title: Cass Bellwright
-status: proposed
+title: Sera
+status: pending_revision
 schema_version: 1.0
-slug: cass_bellwright
-source: manual
+slug: sera
+note_role: primary
+entity_kind: character
+canonical_subject: Serélyne Thiseriya d’Aelwen
+aliases:
+  - Sera
+  - Serelyne
+review_state: canonical
+confidence: 0.92
+evidence_sources:
+  - /path/to/source.md
+tags:
+  - '#primary'
 ---
 ```
 
-Minimum common fields:
+Recommended fields:
 
 - `kind`
 - `title`
 - `status`
 - `schema_version`
-
-Common optional fields:
-
 - `slug`
-- `source`
-- `chapter`
+- `note_role`
+- `entity_kind`
+- `canonical_subject`
+- `aliases`
+- `review_state`
+- `confidence`
+- `evidence_sources`
+- `tags`
 
-## Logical Reconstruction
+## Hidden Material
 
-The vault adapter reconstructs logical views from:
+Review and staging remain important, but must stay out of the useful graph and out of normal retrieval.
 
-- root notes plus lore notes for `world`
-- root notes plus profile notes for `characters`
-- root notes plus scene notes for `outline`
-- root notes plus canon decision notes for `canon`
+Expected tags:
 
-Discarded notes are ignored in reconstructed views.
+- review/staging: `#review`
+- chapter/chapter_summary: `#chapters`
+- system: `#system`
+- primary: `#primary`
 
-## Responsibility Split
+Expected behavior:
 
-The vault adapter is intentionally storage-oriented:
+- `90_Review` is for unresolved material
+- `99_Import_Staging` is internal bootstrap workspace
+- `99_System` is operational output only
 
-- it reads and writes Markdown notes,
-- maintains the canonical vault layout,
-- and reconstructs logical views such as `world`, `characters`, `outline`, and `canon`.
+## Retrieval Policy
 
-Semantic digestion should live outside the adapter. The intended flow is:
+Normal retrieval should prefer:
 
-1. a reader or operator interacts through an Obsidian-facing CLI or interactive workflow,
-2. that workflow digests manuscript context into structured payloads,
-3. the vault ingestion layer persists those payloads with provenance and review status,
-4. the pipeline consumes the reconstructed logical views.
+1. exact canonical primaries
+2. nearby canonical primaries
+3. chapter summaries
+4. chapters
 
-This keeps storage concerns separate from higher-level editorial reasoning.
+Review and staging are not normal retrieval targets.
 
-## Provenance And Partial Bootstrap
+## V1 Constraint
 
-Structured notes may include richer provenance fields during bootstrap from an existing manuscript or an external interactive workflow:
+The current V1 should be treated as Markdown-first.
 
-- `source`
-- `source_path`
-- `source_chapters`
-- `source_span`
-- `origin_type`
-- `origin_ref`
-- `import_status`
-
-These fields let the system track whether a note was manually created, imported from an existing draft, or proposed by a future Obsidian CLI without forcing immediate canon validation.
-
-## Ingestion Payload Format
-
-The `ingest-context` entrypoint accepts a JSON payload produced by an external workflow. Example:
-
-```json
-{
-  "source_id": "obsidian-session-2026-04-17",
-  "artifacts": [
-    {
-      "artifact": "world",
-      "title": "World",
-      "status": "pending_revision",
-      "body": "Working synthesis from chapters 1-3.",
-      "metadata": {
-        "source": "obsidian_cli",
-        "source_chapters": "1-3",
-        "origin_type": "interactive_digest"
-      }
-    },
-    {
-      "artifact": "character",
-      "slug": "mara",
-      "title": "Mara",
-      "status": "proposed",
-      "body": "Unverified profile extracted from the draft.",
-      "metadata": {
-        "source": "obsidian_cli",
-        "source_chapters": "2",
-        "origin_type": "interactive_digest"
-      }
-    }
-  ]
-}
-```
-
-The ingestion layer persists this payload. It does not decide whether the extracted content is semantically correct; that responsibility remains with the interactive workflow and subsequent review steps.
-
-## Current Commands
-
-The current implementation exposes:
-
-- `init-vault`
-- `validate-vault`
-- `write-note`
-- `update-note`
-- `export-context`
-- `ingest-context`
-- `import-existing-chapters`
+The decisive capability is not “can we ingest every format,” but “can we reliably build canonical primaries from chapter-level structured outputs and merged entities.”
