@@ -116,14 +116,18 @@ def _related_priority(note: ObsidianNote) -> tuple[int, int, str]:
     path = note.vault_relative_path.replace("\\", "/").casefold()
     if role == "primary":
         role_rank = 0
+    elif role == "chapter_summary" or note.artifact_type == "chapter_summary":
+        role_rank = 1
+    elif role == "chapter" or note.artifact_type == "chapter":
+        role_rank = 2
+    elif role == "review" or "/90_review/" in path:
+        role_rank = 6
     elif note.artifact_type == "chapter_summary":
         role_rank = 1
     elif note.artifact_type == "chapter":
         role_rank = 2
-    elif role == "supporting":
-        role_rank = 3
     elif "/99_import_staging/" in path:
-        role_rank = 6
+        role_rank = 7
     else:
         role_rank = 4
     stage_rank = 0 if stage == "promoted_artifact" else 1

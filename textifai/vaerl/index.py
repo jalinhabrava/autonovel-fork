@@ -17,6 +17,14 @@ def build_vault_index(
     reader = source.reader
     entries: list[VaultIndexEntry] = []
     for note in reader.list_notes():
+        note_path = str(note.vault_relative_path).replace("\\", "/")
+        note_role = str((note.frontmatter or {}).get("note_role") or "").strip().casefold()
+        if "99_Import_Staging/" in note_path or note_path.startswith("99_Import_Staging/"):
+            continue
+        if "90_Review/" in note_path or note_path.startswith("90_Review/"):
+            continue
+        if note_role == "review":
+            continue
         normalized_artifact_type = normalize_artifact_type(
             vault_relative_path=note.vault_relative_path,
             frontmatter_kind=note.frontmatter.get("kind"),

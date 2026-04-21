@@ -17,7 +17,7 @@ class _FakeProvider:
             "_Response",
             (),
             {
-                "text": '{"title":"Chapter 1 Summary","summary_markdown":"[[Sera]] wakes in the [[Castle of Thiseia]] and thinks about [[Thiseia]]."}'
+                "text": '{"summary_markdown":"[[Sera]] wakes in the [[Castle of Thiseia]] and thinks about [[Thiseia]].","characters":[{"name":"Sera","aliases":["Serélyne"],"facts":["Princess of [[Thiseia]]."],"confidence":0.9}],"places":[{"name":"Castle of Thiseia","aliases":[],"facts":["A castle in [[Thiseia]]."],"confidence":0.8}],"concepts":[],"events":[],"relations":[],"new_traits":[],"aliases":[],"review_items":[],"confidence":0.86}'
             },
         )()
 
@@ -54,7 +54,7 @@ class TextifAIStoryBuilderTests(unittest.TestCase):
                 metadata={"note_role": "primary", "artifact_stage": "promoted_artifact"},
             )
             (source_root / "chapter_01.md").write_text(
-                "# Chapter 1\n\nSera wakes in the Castle of Thiseia and thinks about Thiseia.\n",
+                "# Chapter 1: Arrival at Thiseia\n\nSera wakes in the Castle of Thiseia and thinks about Thiseia.\n",
                 encoding="utf-8",
             )
             inventory = build_source_document_inventory(source_root)
@@ -78,6 +78,10 @@ class TextifAIStoryBuilderTests(unittest.TestCase):
             self.assertIn("[[Sera]]", summary_text)
             self.assertIn("/04_Story/Chapters/".strip("/"), result.chapter_paths[0])
             self.assertIn("/04_Story/Chapter_Summaries/".strip("/"), result.summary_paths[0])
+            self.assertIn("note_role: chapter", chapter_text)
+            self.assertIn("note_role: chapter_summary", summary_text)
+            self.assertTrue((vault_root / "99_System" / "chapter_detection_audit.json").exists())
+            self.assertTrue((vault_root / "99_System" / "chapter_analysis_audit.json").exists())
 
 
 if __name__ == "__main__":

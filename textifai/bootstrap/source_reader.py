@@ -66,10 +66,13 @@ def build_source_document_inventory(
             extraction_method = "native_text"
         else:
             method_notes = list(seed.metadata.get("method_notes", [])) if isinstance(seed.metadata, dict) else []
+            extracted_page_count = int(seed.metadata.get("page_count") or 0) if isinstance(seed.metadata, dict) else 0
             extraction_method = method_notes[0] if method_notes else (
                 seed.format_profile.extraction_method if seed.format_profile else None
             )
             extraction_warnings = list(dict.fromkeys([*seed.warnings, *method_notes]))
+        if source_format in {"md", "txt"}:
+            extracted_page_count = 0
         if detection.has_mixed_language:
             notes.append("mixed_language")
         if likely_content_kinds:
@@ -99,6 +102,7 @@ def build_source_document_inventory(
                 line_count=len(text.splitlines()) or 0,
                 extracted_char_count=len(text),
                 extracted_word_count=len(text.split()),
+                extracted_page_count=extracted_page_count,
                 extraction_method=extraction_method,
                 extraction_warnings=extraction_warnings,
                 notes=notes,
@@ -112,6 +116,7 @@ def build_source_document_inventory(
             source_format=source_format,
             extracted_char_count=len(text),
             extracted_word_count=len(text.split()),
+            extracted_page_count=extracted_page_count,
             extraction_method=extraction_method,
             extraction_warnings=extraction_warnings[:10],
         )

@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import time
 import json
+import random
 from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
@@ -99,7 +100,18 @@ class BaseHTTPTextProvider:
                 last_error = exc
                 if attempt >= attempts:
                     break
-                time.sleep(min(2 ** (attempt - 1), 4))
+                retry_after = 0.0
+                if isinstance(exc, httpx.HTTPStatusError) and exc.response is not None:
+                    header_value = exc.response.headers.get("retry-after", "").strip()
+                    try:
+                        retry_after = float(header_value)
+                    except ValueError:
+                        retry_after = 0.0
+                    if exc.response.status_code == 429:
+                        retry_after = max(retry_after, min(2 ** attempt, 20))
+                sleep_for = retry_after or min(2 ** (attempt - 1), 6)
+                sleep_for += random.uniform(0.0, 0.35)
+                time.sleep(sleep_for)
 
         raise TextProviderError(
             self.provider_name,

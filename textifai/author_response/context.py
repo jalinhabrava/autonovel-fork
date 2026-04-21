@@ -115,6 +115,14 @@ def _find_supporting_notes(
     pattern = re.compile(r"(?<!\w)" + re.escape(target_id.casefold()) + r"(?!\w)")
     scored: list[tuple[int, object]] = []
     for note in reader.list_notes():
+        vault_path = str(note.vault_relative_path).replace("\\", "/")
+        note_role = str(note.frontmatter.get("note_role") or "").strip().casefold()
+        if "99_Import_Staging/" in vault_path or vault_path.startswith("99_Import_Staging/"):
+            continue
+        if "90_Review/" in vault_path or vault_path.startswith("90_Review/"):
+            continue
+        if note_role == "review":
+            continue
         score = 0
         if target_type and note.artifact_type == target_type:
             score += 3
@@ -140,6 +148,12 @@ def _find_supporting_notes(
                 break
         if pattern.search(note.body_text.casefold()):
             score += 5
+        if note_role == "primary":
+            score += 4
+        elif note_role == "chapter_summary":
+            score += 2
+        elif note_role == "chapter":
+            score += 1
         if score > 0:
             scored.append((score, note))
     scored.sort(key=lambda item: (item[0], item[1].title.casefold()), reverse=True)

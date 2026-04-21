@@ -134,8 +134,12 @@ def _apply_entry_priority(score: float, entry: VaultIndexEntry) -> float:
     boost = 0.0
     if role == "primary":
         boost += 0.08
-    elif role == "supporting":
+    elif role == "chapter_summary":
         boost += 0.03
+    elif role == "chapter":
+        boost += 0.01
+    elif role == "review":
+        boost -= 0.14
     if artifact_stage == "promoted_artifact":
         boost += 0.05
     elif artifact_stage == "candidate_artifact":
@@ -144,6 +148,8 @@ def _apply_entry_priority(score: float, entry: VaultIndexEntry) -> float:
         boost += 0.03
     if "/99_import_staging/" in path:
         boost -= 0.08
+    if "/90_review/" in path:
+        boost -= 0.14
     return max(0.0, min(1.0, score + boost))
 
 

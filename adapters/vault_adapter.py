@@ -17,6 +17,7 @@ class VaultProjectAdapter:
         self.briefs_dir = self.vault_root / VAULT_DIRS["editorial_briefs"]
         self.edit_logs_dir = self.vault_root / VAULT_DIRS["editorial_logs"]
         self.eval_logs_dir = self.vault_root / VAULT_DIRS["editorial_eval"]
+        self.hidden_review_dir = self.vault_root / VAULT_DIRS["review_hidden"]
         self.world_lore_dir = self.vault_root / VAULT_DIRS["world_lore"]
         self.world_places_dir = self.vault_root / VAULT_DIRS["world_places"]
         self.character_profiles_dir = self.vault_root / VAULT_DIRS["character_profiles"]
@@ -67,7 +68,7 @@ class VaultProjectAdapter:
             "chapter": self.chapters_dir,
             "chapter_summary": self.chapter_summaries_dir,
             "revision_brief": self.briefs_dir,
-            "review": self.review_dir,
+            "review": self.hidden_review_dir,
             "reader_panel": self.reader_panel_dir,
         }
         try:

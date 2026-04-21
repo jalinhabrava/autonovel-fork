@@ -21,7 +21,6 @@ from textifai.import_review import (
     StoryBuildConfig,
     build_story_notes,
     compose_primary_notes_from_staging,
-    promote_reviewed_import,
     review_import_stage,
 )
 from textifai.obsidian.readiness import ObsidianOperationalReadiness, evaluate_obsidian_operational_readiness
@@ -203,9 +202,8 @@ def prepare_obsidian_project(
         )
         if written_drafts:
             bundle, reviews, plan = review_import_stage(vault_root, policy=ReviewPolicy())
-            promotion = promote_reviewed_import(vault_root, policy=ReviewPolicy(), confirmed=False)
-            promoted_paths = list(promotion.promoted_paths)
-            pending_candidates = list(promotion.pending_drafts)
+            promoted_paths = []
+            pending_candidates = [draft.draft_id for draft in bundle.drafts]
             composition = _compose_primary_canonical_notes(vault_root, repo_path=repo_path, progress_log_path=progress_log_path)
             composed_paths = list(composition.written_paths)
             story_result = _build_story_layer(
@@ -216,10 +214,8 @@ def prepare_obsidian_project(
             )
             story_chapter_paths = list(story_result.chapter_paths)
             story_summary_paths = list(story_result.summary_paths)
-            if promoted_paths:
-                notes.append(f"Automatically promoted {len(promoted_paths)} low-risk canonical artifacts.")
-            elif pending_candidates:
-                notes.append("Imported material remains in staging until explicit promotion or stronger context is available.")
+            if pending_candidates:
+                notes.append("Imported material remains in hidden staging/review until explicit promotion or stronger canonical composition is available.")
             if composed_paths:
                 notes.append(f"Composed {len(composed_paths)} primary canonical notes from staged evidence.")
             if story_chapter_paths:
@@ -442,6 +438,7 @@ def _write_source_extraction_audit(
                 "extraction_method": document.extraction_method,
                 "extraction_warnings": document.extraction_warnings,
                 "line_count": document.line_count,
+                "extracted_page_count": document.extracted_page_count,
                 "extracted_char_count": char_count,
                 "extracted_word_count": word_count,
                 "notes": document.notes,

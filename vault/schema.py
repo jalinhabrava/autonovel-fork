@@ -46,6 +46,7 @@ VAULT_DIRS = {
     "editorial_reader_panel": "07_Editorial/Reader_Panel",
     "editorial_logs": "07_Editorial/Logs",
     "editorial_eval": "07_Editorial/Evaluations",
+    "review_hidden": "90_Review",
     "templates": "_Templates",
     "system": "99_System",
 }

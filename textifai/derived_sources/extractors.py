@@ -21,6 +21,7 @@ TEXT_FORMATS = {"md", "txt"}
 DERIVED_FORMATS = {"docx", "pdf", "doc"}
 PDF_PYPDF_SIZE_LIMIT = 12_000_000
 PDF_LIGHT_EXTRACTION_SIZE_LIMIT = 8_000_000
+_PAGE_MARKER_TEMPLATE = "<<TEXTIFAI_PAGE_{page:04d}>>"
 
 
 @dataclass(frozen=True)
@@ -88,7 +89,7 @@ def _extract_light_source_cached(source_path_text: str, mtime_ns: int, size_byte
             metadata={"source_type": "native_text"},
         )
 
-    extracted_text, method_notes = _extract_derived_text(source_path, source_format, raw_bytes)
+    extracted_text, method_notes, extraction_metadata = _extract_derived_text(source_path, source_format, raw_bytes)
     blocks = _build_blocks(extracted_text)
     detection = detect_language_profile(extracted_text)
     quality = _collect_quality_signals(
@@ -131,27 +132,27 @@ def _extract_light_source_cached(source_path_text: str, mtime_ns: int, size_byte
         format_profile=profile,
         checksum=checksum,
         size_bytes=len(raw_bytes),
-        metadata={"source_type": "derived", "method_notes": method_notes},
+        metadata={"source_type": "derived", "method_notes": method_notes, **extraction_metadata},
     )
 
 
-def _extract_derived_text(path: Path, source_format: str, raw_bytes: bytes) -> tuple[str, list[str]]:
+def _extract_derived_text(path: Path, source_format: str, raw_bytes: bytes) -> tuple[str, list[str], dict[str, object]]:
     if source_format == "docx":
         text, notes = _extract_docx_text(path, raw_bytes)
         if text.strip():
-            return text, notes
-        return "", [*notes, "docx_text_unavailable"]
+            return text, notes, {}
+        return "", [*notes, "docx_text_unavailable"], {}
     if source_format == "pdf":
-        text, notes = _extract_pdf_text(path, raw_bytes)
+        text, notes, metadata = _extract_pdf_text(path, raw_bytes)
         if text.strip():
-            return text, notes
-        return "", [*notes, "pdf_text_unavailable"]
+            return text, notes, metadata
+        return "", [*notes, "pdf_text_unavailable"], metadata
     if source_format == "doc":
         text = _extract_doc_text(raw_bytes)
         if text.strip():
-            return text, ["doc_heuristic_extraction"]
-        return _decode_text(raw_bytes), ["doc_fallback_bytes"]
-    return _decode_text(raw_bytes), ["unknown_format_fallback"]
+            return text, ["doc_heuristic_extraction"], {}
+        return _decode_text(raw_bytes), ["doc_fallback_bytes"], {}
+    return _decode_text(raw_bytes), ["unknown_format_fallback"], {}
 
 
 def _extract_docx_text(path: Path, raw_bytes: bytes) -> tuple[str, list[str]]:
@@ -177,9 +178,10 @@ def _extract_docx_text(path: Path, raw_bytes: bytes) -> tuple[str, list[str]]:
     return "", notes
 
 
-def _extract_pdf_text(path: Path, raw_bytes: bytes) -> tuple[str, list[str]]:
+def _extract_pdf_text(path: Path, raw_bytes: bytes) -> tuple[str, list[str], dict[str, object]]:
     notes: list[str] = []
     literal_text = ""
+    page_count = 0
     try:
         from pypdf import PdfReader  # type: ignore
     except Exception:
@@ -188,8 +190,9 @@ def _extract_pdf_text(path: Path, raw_bytes: bytes) -> tuple[str, list[str]]:
     if PdfReader is not None and len(raw_bytes) <= PDF_PYPDF_SIZE_LIMIT:
         try:
             reader = PdfReader(str(path))
+            page_count = len(reader.pages)
             pages: list[str] = []
-            for page in reader.pages:
+            for page_index, page in enumerate(reader.pages, start=1):
                 page_text = ""
                 try:
                     page_text = page.extract_text(extraction_mode="layout") or ""
@@ -201,7 +204,7 @@ def _extract_pdf_text(path: Path, raw_bytes: bytes) -> tuple[str, list[str]]:
                     except Exception:
                         page_text = ""
                 if page_text.strip():
-                    pages.append(page_text)
+                    pages.append(f"{_PAGE_MARKER_TEMPLATE.format(page=page_index)}\n{page_text.strip()}")
             text = _normalize_pdf_text("\n\n".join(page.strip() for page in pages if page.strip()))
             if text.strip():
                 parsed_text = text
@@ -220,13 +223,14 @@ def _extract_pdf_text(path: Path, raw_bytes: bytes) -> tuple[str, list[str]]:
         notes.append("pdf_light_extraction_skipped_large")
     literal_text = _normalize_pdf_text(literal_text)
     selected_text, selected_note = _select_pdf_text_candidate(literal_text=literal_text, parsed_text=parsed_text)
+    metadata = {"page_count": page_count or None}
     if selected_text.strip():
-        return selected_text, [selected_note]
+        return selected_text, [selected_note], metadata
     if literal_text.strip():
-        return literal_text, ["pdf_literal_text"]
+        return literal_text, ["pdf_literal_text"], metadata
     if parsed_text.strip():
-        return parsed_text, ["pdf_parser:pypdf"]
-    return "", [*notes, "pdf_text_unavailable"]
+        return parsed_text, ["pdf_parser:pypdf"], metadata
+    return "", [*notes, "pdf_text_unavailable"], metadata
 
 
 def _extract_doc_text(raw_bytes: bytes) -> str:

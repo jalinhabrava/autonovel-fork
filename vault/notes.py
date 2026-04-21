@@ -15,7 +15,7 @@ NOTE_TYPE_DIRS = {
     "chapter": "chapters",
     "chapter_summary": "story_chapter_summaries",
     "revision_brief": "editorial_briefs",
-    "review": "editorial_reviews",
+    "review": "review_hidden",
     "reader_panel": "editorial_reader_panel",
 }
 

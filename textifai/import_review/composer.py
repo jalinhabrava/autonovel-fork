@@ -219,6 +219,7 @@ def compose_primary_notes_from_staging(
             "artifact_stage": "promoted_artifact",
             "promotion_status": "promoted_canonical",
             "note_role": "primary",
+            "entity_kind": note_type,
             "canonical_subject": primary_subject,
             "semantic_class": str(proposal.get("semantic_class") or note_type).strip() or note_type,
             "aliases": ", ".join(aliases),
@@ -226,6 +227,17 @@ def compose_primary_notes_from_staging(
             "source_staging_drafts": ", ".join(draft.draft_id for draft in selected_drafts),
             "composed_from_staging": "true",
             "note_language": composition_language,
+            "evidence_sources": ", ".join(
+                _dedupe(
+                    [
+                        str(draft.provenance.source_path)
+                        for draft in selected_drafts
+                        if draft.provenance is not None and str(draft.provenance.source_path).strip()
+                    ]
+                )
+            ),
+            "confidence": confidence,
+            "review_state": "canonical",
             "entities": ", ".join(aggregated_metadata["entities"]),
             "topics": ", ".join(aggregated_metadata["topics"]),
             "world_terms": ", ".join(aggregated_metadata["world_terms"]),

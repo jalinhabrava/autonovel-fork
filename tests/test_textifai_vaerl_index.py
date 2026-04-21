@@ -28,7 +28,7 @@ class TextifAIVaERLIndexTests(unittest.TestCase):
             self.assertIn("magic_costs", lore_entry.links)
             self.assertIn("magic_costs", lore_entry.backlinks)
 
-    def test_vault_index_only_promotes_canonical_subject_into_confirmed_aliases(self):
+    def test_vault_index_skips_staging_and_review_material(self):
         with tempfile.TemporaryDirectory() as tmp:
             vault_root = Path(tmp) / "Vault"
             bootstrap_vault(vault_root, title="Test Project")
@@ -44,12 +44,24 @@ class TextifAIVaERLIndexTests(unittest.TestCase):
                 + "\n\nSera keeps her hard edge.\n",
                 encoding="utf-8",
             )
+            (vault_root / "90_Review").mkdir(parents=True, exist_ok=True)
+            (vault_root / "90_Review" / "ren_review.md").write_text(
+                note_frontmatter(
+                    "review",
+                    "Ren Review",
+                    slug="ren_review",
+                    canonical_subject="Ren",
+                    note_role="review",
+                )
+                + "\n\nReview note.\n",
+                encoding="utf-8",
+            )
 
             entries = build_vault_index(vault_path=vault_root)
-            sera_entry = next(entry for entry in entries if entry.artifact_id == "sera_group_note")
+            artifact_ids = {entry.artifact_id for entry in entries}
 
-            self.assertIn("Sera", sera_entry.project_confirmed_aliases)
-            self.assertNotIn("Ren", sera_entry.project_confirmed_aliases)
+            self.assertNotIn("sera_group_note", artifact_ids)
+            self.assertNotIn("ren_review", artifact_ids)
 
     def test_related_subjects_do_not_become_alias_matches(self):
         with tempfile.TemporaryDirectory() as tmp:
