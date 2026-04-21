@@ -13,6 +13,21 @@ from vault.notes import write_or_update_note
 
 class _FakeProvider:
     def generate(self, request):
+        content = request.messages[0].content
+        if "Classify structural boundary candidates" in content:
+            candidate_id = "candidate_001"
+            if '"candidate_id"' in content:
+                import json
+
+                payload = json.loads(content)
+                candidate_id = payload["candidates"][0]["candidate_id"]
+            return type(
+                "_Response",
+                (),
+                {
+                    "text": '{"decisions":[{"candidate_id":"%s","classification":"chapter","normalized_title":"Chapter 1: Arrival at Thiseia","chapter_number":"1","confidence":0.91,"reason":"isolated markdown heading starts a chapter-sized unit"}]}' % candidate_id
+                },
+            )()
         return type(
             "_Response",
             (),
@@ -66,7 +81,7 @@ class TextifAIStoryBuilderTests(unittest.TestCase):
                 result = build_story_notes(
                     vault_root,
                     inventory=inventory,
-                    config=StoryBuildConfig(provider_name="openai", model="gpt-5.4"),
+                    config=StoryBuildConfig(provider_name="openai", model="gpt-5.4", max_chapters=1),
                 )
 
             self.assertEqual(len(result.chapter_paths), 1)
@@ -82,6 +97,8 @@ class TextifAIStoryBuilderTests(unittest.TestCase):
             self.assertIn("note_role: chapter_summary", summary_text)
             self.assertTrue((vault_root / "99_System" / "chapter_detection_audit.json").exists())
             self.assertTrue((vault_root / "99_System" / "chapter_analysis_audit.json").exists())
+            self.assertTrue((vault_root / "99_System" / "chapter_map_audit.json").exists())
+            self.assertTrue((vault_root / "99_System" / "primary_update_audit.json").exists())
 
 
 if __name__ == "__main__":

@@ -30,6 +30,7 @@ class TextGenerationRequest:
     temperature: float | None = None
     timeout_seconds: int | None = None
     retries: int | None = None
+    response_format: dict[str, Any] | None = None
     extra_headers: dict[str, str] = field(default_factory=dict)
 
 
@@ -53,6 +54,7 @@ class ResolvedTextRequest:
     temperature: float
     timeout_seconds: int
     retries: int
+    response_format: dict[str, Any] | None
     extra_headers: dict[str, str]
 
 
@@ -101,7 +103,8 @@ class BaseHTTPTextProvider:
                 if attempt >= attempts:
                     break
                 retry_after = 0.0
-                if isinstance(exc, httpx.HTTPStatusError) and exc.response is not None:
+                http_status_error = getattr(httpx, "HTTPStatusError", None)
+                if http_status_error is not None and isinstance(exc, http_status_error) and exc.response is not None:
                     header_value = exc.response.headers.get("retry-after", "").strip()
                     try:
                         retry_after = float(header_value)
@@ -337,6 +340,8 @@ def _build_openai_payload(resolved: ResolvedTextRequest) -> dict[str, Any]:
         model=resolved.model,
     )
     payload[token_field] = resolved.max_tokens
+    if resolved.response_format is not None:
+        payload["response_format"] = resolved.response_format
     return payload
 
 
@@ -424,6 +429,7 @@ def resolve_text_request(request: TextGenerationRequest) -> ResolvedTextRequest:
             else settings.get("timeout_seconds", 600)
         ),
         retries=int(request.retries if request.retries is not None else settings.get("retries", 2)),
+        response_format=request.response_format,
         extra_headers=_deep_merge(settings.get("extra_headers", {}), request.extra_headers),
     )
 

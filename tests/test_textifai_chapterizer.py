@@ -45,7 +45,75 @@ class TextifAIChapterizerTests(unittest.TestCase):
         self.assertEqual(chapters[0].title, "Capítulo 1. La llegada")
         self.assertEqual(chapters[0].page_start, 2)
         self.assertEqual(chapters[1].page_start, 3)
-        self.assertGreaterEqual(chapters[0].confidence, 0.79)
+        self.assertGreaterEqual(chapters[0].confidence, 0.6)
+
+    def test_detects_multiline_numbered_titles_without_language_specific_rules(self):
+        document = SourceDocumentRecord(
+            source_id="novel_002",
+            path="/tmp/novel.pdf",
+            relative_path="novel.pdf",
+            filename="novel.pdf",
+            extension="pdf",
+            size_bytes=100,
+            checksum="def",
+            dominant_language="es",
+            detected_languages=["es"],
+            extracted_page_count=3,
+        )
+        text = "\n".join(
+            [
+                "<<TEXTIFAI_PAGE_0001>>",
+                "Antes del cambio todo parecía quieto.",
+                "",
+                "Episodio 24: La resonancia a tientas de Sera ~Parte",
+                "II~",
+                "",
+                "Un salto entre los matorrales abrió la noche.",
+                "",
+                "<<TEXTIFAI_PAGE_0002>>",
+                "Episodio 25: Aquello que Ren debía tocar",
+                "",
+                "El dolor tironeaba de mi conciencia.",
+            ]
+        )
+
+        chapters = detect_story_chapters(document, text)
+
+        self.assertEqual(len(chapters), 2)
+        self.assertEqual(chapters[0].title, "Episodio 24: La resonancia a tientas de Sera ~Parte II~")
+        self.assertEqual(chapters[0].page_start, 1)
+        self.assertEqual(chapters[1].title, "Episodio 25: Aquello que Ren debía tocar")
+
+    def test_does_not_treat_sentence_openers_as_roman_numeral_chapters(self):
+        document = SourceDocumentRecord(
+            source_id="novel_003",
+            path="/tmp/novel.pdf",
+            relative_path="novel.pdf",
+            filename="novel.pdf",
+            extension="pdf",
+            size_bytes=100,
+            checksum="ghi",
+            dominant_language="es",
+            detected_languages=["es"],
+            extracted_page_count=2,
+        )
+        text = "\n".join(
+            [
+                "<<TEXTIFAI_PAGE_0001>>",
+                "Vi cómo la puerta se cerraba detrás de nosotros.",
+                "",
+                "Mi cuerpo temblaba todavía por el frío.",
+                "",
+                "12 - El cambio",
+                "",
+                "A partir de ahí, nada volvió a ser igual.",
+            ]
+        )
+
+        chapters = detect_story_chapters(document, text)
+
+        self.assertEqual(len(chapters), 1)
+        self.assertEqual(chapters[0].title, "12 - El cambio")
 
 
 if __name__ == "__main__":

@@ -153,7 +153,19 @@ class ProviderBackedBootstrapAnalyzer:
         )
         llm_payload = None
         validated_extraction = None
-        if not get_text_provider_config_error(self.derived_config.task_name, self.derived_config.provider_name) and escalation.required:
+        page_count = int(seed.metadata.get("page_count") or 0) if isinstance(seed.metadata, dict) else 0
+        defer_to_chapter_first = page_count >= 40 or len(seed.raw_extracted_text) >= 150_000
+        if defer_to_chapter_first:
+            _emit_progress(
+                self.config.progress_log_path,
+                phase="analyze_derived_document",
+                event="deferred_to_chapter_first",
+                source_id=document.source_id,
+                extracted_chars=len(seed.raw_extracted_text),
+                page_count=page_count,
+            )
+            validated_extraction = validate_derived_extraction(seed=seed, payload=None)
+        elif not get_text_provider_config_error(self.derived_config.task_name, self.derived_config.provider_name) and escalation.required:
             interpreter = ProviderBackedDerivedSourceInterpreter(config=self.derived_config)
             try:
                 _emit_progress(
