@@ -148,6 +148,157 @@ def _pick_best_name(variants: list[dict[str, Any]]) -> tuple[str, str]:
     return str(ranked[0]["name"]), str(ranked[0]["naming_quality"])
 
 
+def _merge_unique_strings(*groups: list[str]) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    for group in groups:
+        for item in group:
+            normalized = normalize_entity_text(item)
+            key = normalize_entity_key(normalized)
+            if not normalized or key in seen:
+                continue
+            seen.add(key)
+            out.append(normalized)
+    return out
+
+
+def _entity_strength(entity: dict[str, Any]) -> tuple[int, int, int, float]:
+    quality = _QUALITY_RANK.get(str(entity.get("naming_quality") or "unknown"), 0)
+    chapter_count = len(entity.get("chapter_refs") or [])
+    relation_count = len(entity.get("relationships") or [])
+    confidence = float(entity.get("confidence") or 0.0)
+    return (quality, chapter_count, relation_count, confidence)
+
+
+def _merge_resolved_pair(left: dict[str, Any], right: dict[str, Any]) -> dict[str, Any]:
+    preferred = left if _entity_strength(left) >= _entity_strength(right) else right
+    secondary = right if preferred is left else left
+    variants = [
+        {
+            "name": preferred.get("canonical_name") or "",
+            "naming_quality": preferred.get("naming_quality") or "unknown",
+            "support_count": max(1, len(preferred.get("source_mentions") or [])),
+            "chapter_coverage": len(preferred.get("chapter_refs") or []),
+            "avg_confidence": float(preferred.get("confidence") or 0.0),
+        },
+        {
+            "name": secondary.get("canonical_name") or "",
+            "naming_quality": secondary.get("naming_quality") or "unknown",
+            "support_count": max(1, len(secondary.get("source_mentions") or [])),
+            "chapter_coverage": len(secondary.get("chapter_refs") or []),
+            "avg_confidence": float(secondary.get("confidence") or 0.0),
+        },
+    ]
+    canonical_name, naming_quality = _pick_best_name(variants)
+    return {
+        **preferred,
+        "canonical_name": canonical_name,
+        "canonical_candidate": canonical_name,
+        "naming_quality": naming_quality,
+        "aliases": _merge_unique_strings(
+            preferred.get("aliases") or [],
+            secondary.get("aliases") or [],
+            [secondary.get("canonical_name") or ""],
+        ),
+        "rejected_aliases": _merge_unique_strings(
+            preferred.get("rejected_aliases") or [],
+            secondary.get("rejected_aliases") or [],
+        ),
+        "summary": str(preferred.get("summary") or secondary.get("summary") or "").strip(),
+        "key_facts": _merge_unique_strings(preferred.get("key_facts") or [], secondary.get("key_facts") or [])[:5],
+        "relationships": _merge_relationships((preferred.get("relationships") or []) + (secondary.get("relationships") or []))[:5],
+        "chapter_refs": _merge_unique_strings(preferred.get("chapter_refs") or [], secondary.get("chapter_refs") or []),
+        "source_mentions": _merge_unique_strings(preferred.get("source_mentions") or [], secondary.get("source_mentions") or []),
+        "confidence": max(float(preferred.get("confidence") or 0.0), float(secondary.get("confidence") or 0.0)),
+        "is_stable_entity": bool(preferred.get("is_stable_entity")) or bool(secondary.get("is_stable_entity")),
+        "needs_review": bool(preferred.get("needs_review")) or bool(secondary.get("needs_review")),
+        "review_reason": str(preferred.get("review_reason") or secondary.get("review_reason") or "").strip(),
+        "review_state": "review"
+        if bool(preferred.get("needs_review")) or bool(secondary.get("needs_review"))
+        else "canonical",
+    }
+
+
+def _names_for_overlap(entity: dict[str, Any]) -> set[str]:
+    names = [
+        entity.get("canonical_name") or "",
+        *(entity.get("aliases") or []),
+        *(entity.get("source_mentions") or []),
+    ]
+    return {normalize_entity_key(name) for name in names if normalize_entity_text(name)}
+
+
+def _coalesce_same_kind_entities(entities: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    ordered = list(entities)
+    consumed: set[int] = set()
+    merged: list[dict[str, Any]] = []
+    for index, entity in enumerate(ordered):
+        if index in consumed:
+            continue
+        current = entity
+        current_names = _names_for_overlap(current)
+        for other_index in range(index + 1, len(ordered)):
+            if other_index in consumed:
+                continue
+            other = ordered[other_index]
+            if str(current.get("entity_kind") or "") != str(other.get("entity_kind") or ""):
+                continue
+            other_names = _names_for_overlap(other)
+            overlap = current_names & other_names
+            if not overlap:
+                continue
+            if any(
+                _QUALITY_RANK.get(str(candidate.get("naming_quality") or "unknown"), 0) >= _QUALITY_RANK["proper_name"]
+                for candidate in (current, other)
+            ) or overlap:
+                current = _merge_resolved_pair(current, other)
+                current_names = _names_for_overlap(current)
+                consumed.add(other_index)
+        merged.append(current)
+    return merged
+
+
+def _enforce_cross_kind_priority(entities: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    adjusted: list[dict[str, Any]] = []
+    for entity in entities:
+        names = _names_for_overlap(entity)
+        entity_kind = str(entity.get("entity_kind") or "")
+        naming_quality = str(entity.get("naming_quality") or "unknown")
+        stronger_character = None
+        for candidate in entities:
+            if candidate is entity:
+                continue
+            if str(candidate.get("entity_kind") or "") != "character":
+                continue
+            if str(candidate.get("naming_quality") or "unknown") not in {"proper_name", "title_plus_name"}:
+                continue
+            if names & _names_for_overlap(candidate):
+                if stronger_character is None or _entity_strength(candidate) > _entity_strength(stronger_character):
+                    stronger_character = candidate
+        if stronger_character and entity_kind != "character":
+            adjusted.append(
+                {
+                    **entity,
+                    "needs_review": True,
+                    "review_state": "review",
+                    "review_reason": f"Type conflict with stronger character identity {stronger_character.get('canonical_name')}.",
+                }
+            )
+            continue
+        if stronger_character and entity_kind == "character" and naming_quality == "descriptor":
+            adjusted.append(
+                {
+                    **entity,
+                    "needs_review": True,
+                    "review_state": "review",
+                    "review_reason": f"Descriptor cluster overlaps stronger named character {stronger_character.get('canonical_name')}.",
+                }
+            )
+            continue
+        adjusted.append(entity)
+    return adjusted
+
+
 def resolve_entity_clusters(
     *,
     global_data: dict[str, Any],
@@ -340,6 +491,8 @@ def resolve_entity_clusters(
             }
         )
 
+    resolved_entities = _coalesce_same_kind_entities(resolved_entities)
+    resolved_entities = _enforce_cross_kind_priority(resolved_entities)
     resolved_entities.sort(key=lambda item: (str(item.get("entity_kind") or ""), str(item.get("canonical_name") or "").lower()))
     return (
         resolved_entities,

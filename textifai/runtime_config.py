@@ -113,6 +113,15 @@ def synchronize_runtime_environment(base_dir: str | Path = ".") -> dict[str, str
     root = Path(base_dir).resolve()
     env_path = root / ENV_FILE_NAME
     values = _load_env_values(env_path, include_process_env=False)
+    bootstrap_override_keys = {
+        "AUTONOVEL_BOOTSTRAP_PROVIDER",
+        "AUTONOVEL_BOOTSTRAP_MODEL",
+    }
+    process_overrides = {
+        key: os.environ[key]
+        for key in bootstrap_override_keys
+        if os.environ.get(key, "").strip()
+    }
     keys = {
         "AUTONOVEL_PROJECT_BACKEND",
         "AUTONOVEL_VAULT_ROOT",
@@ -134,7 +143,7 @@ def synchronize_runtime_environment(base_dir: str | Path = ".") -> dict[str, str
         "AUTONOVEL_OLLAMA_API_KEY",
     }
     for key in keys:
-        value = values.get(key)
+        value = process_overrides.get(key, values.get(key))
         if value is None or value == "":
             os.environ.pop(key, None)
         else:

@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from textifai.bootstrap.source_reader import build_source_document_inventory
+from textifai.bootstrap.language import sample_text_for_language_detection
 from textifai.import_review.bootstrap_profile import build_bootstrap_profile
 from textifai.import_review.entity_cleanup import cleanup_resolved_entities
 from textifai.import_review.entity_cluster_resolution import resolve_entity_clusters
@@ -248,6 +249,74 @@ class StructuredBootstrapV1Tests(unittest.TestCase):
         self.assertEqual(plan.chapter_extraction_default_model, "gpt-4o-mini")
         self.assertIn("chapter_extraction.default_model", audit["empirical_evidence"])
 
+    def test_resolve_model_plan_rejects_empirically_bad_global_normalization_model(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            telemetry_path = Path(tmp) / "telemetry.json"
+            telemetry_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "records": [
+                            {
+                                "timestamp": "2026-04-21T10:00:00+00:00",
+                                "provider_name": "openai",
+                                "phase": "global_normalization",
+                                "complexity_bucket": "large_or_complex",
+                                "model": "gpt-4-turbo",
+                                "success": False,
+                                "json_valid": False,
+                                "latency_seconds": 3.4,
+                                "estimated_total_cost": 5000,
+                                "subdivided": True,
+                                "stalled": True,
+                                "timed_out": False,
+                            }
+                            for _ in range(6)
+                        ],
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+            profile = build_bootstrap_profile(
+                work_title="Test",
+                language="es",
+                chapters=[type("_Chapter", (), {"title": "Uno", "text": "Texto breve."})()],
+                estimate_tokens=lambda text: max(1, len(text) // 4),
+            )
+            snapshot = ProviderSnapshot(
+                provider_name="openai",
+                fetched_at="2026-04-22T10:00:00+00:00",
+                source="test",
+                available_models=["gpt-4-turbo", "gpt-4.1-mini", "gpt-4o-mini"],
+                models=[
+                    ProviderModelSnapshot("gpt-4-turbo", True, get_model_capabilities("gpt-4-turbo")),
+                    ProviderModelSnapshot("gpt-4.1-mini", True, get_model_capabilities("gpt-4.1-mini")),
+                    ProviderModelSnapshot("gpt-4o-mini", True, get_model_capabilities("gpt-4o-mini")),
+                ],
+            )
+            advisor = type(
+                "_Advisor",
+                (),
+                {
+                    "model_used": "gpt-4o-mini",
+                    "plan": {
+                        "global_normalization": {"default_model": "gpt-4-turbo"},
+                    },
+                },
+            )()
+            plan, audit = resolve_model_plan(
+                provider_name="openai",
+                requested_model="auto",
+                snapshot=snapshot,
+                profile=profile,
+                advisor=advisor,
+                telemetry_path=telemetry_path,
+                empirical_policy=EmpiricalPolicy(min_samples_for_hard_preference=8),
+            )
+        self.assertNotEqual(plan.global_normalization_default_model, "gpt-4-turbo")
+        self.assertIn("global_normalization.default_model", audit["empirical_evidence"])
+
     def test_build_canonical_entity_map_reduces_global_payload(self):
         canonical_map = build_canonical_entity_map(
             {
@@ -363,6 +432,54 @@ class StructuredBootstrapV1Tests(unittest.TestCase):
         self.assertEqual(clusters_audit["cluster_count"], 1)
         self.assertEqual(resolution_audit["resolved_entity_count"], 1)
 
+    def test_entity_cluster_resolution_demotes_cross_kind_conflict_against_character(self):
+        resolved, _, _ = resolve_entity_clusters(
+            global_data={
+                "entities": [
+                    {
+                        "canonical_name": "Sera",
+                        "canonical_candidate": "Sera",
+                        "entity_kind": "character",
+                        "aliases": ["la princesa"],
+                        "summary": "Protagonista.",
+                        "key_facts": ["Huye del castillo.", "Su magia es anómala."],
+                        "relationships": [],
+                        "chapter_refs": ["ch_001", "ch_002"],
+                        "source_mentions": ["Sera", "la princesa"],
+                        "confidence": 0.95,
+                        "review_state": "canonical",
+                        "naming_quality": "proper_name",
+                        "is_stable_entity": True,
+                        "needs_review": False,
+                        "review_reason": "",
+                    },
+                    {
+                        "canonical_name": "Sera",
+                        "canonical_candidate": "Sera",
+                        "entity_kind": "concept",
+                        "aliases": ["magia rota"],
+                        "summary": "Tema de su herencia.",
+                        "key_facts": ["Idea abstracta."],
+                        "relationships": [],
+                        "chapter_refs": ["ch_001"],
+                        "source_mentions": ["Sera"],
+                        "confidence": 0.82,
+                        "review_state": "canonical",
+                        "naming_quality": "proper_name",
+                        "is_stable_entity": True,
+                        "needs_review": False,
+                        "review_reason": "",
+                    },
+                ]
+            },
+            chapter_outputs=[],
+        )
+        character = next(item for item in resolved if item["entity_kind"] == "character")
+        concept = next(item for item in resolved if item["entity_kind"] == "concept")
+        self.assertEqual(character["canonical_name"], "Sera")
+        self.assertTrue(concept["needs_review"])
+        self.assertIn("Type conflict", concept["review_reason"])
+
     def test_entity_cleanup_demotes_descriptor_entities_and_reports_metrics(self):
         cleaned, cleanup_audit, promotion_audit = cleanup_resolved_entities(
             entities=[
@@ -412,6 +529,12 @@ class StructuredBootstrapV1Tests(unittest.TestCase):
         self.assertEqual(cleanup_audit["discarded_count"], 1)
         self.assertEqual(cleanup_audit["descriptor_primary_rate"], 0.0)
         self.assertEqual(promotion_audit["decisions"][1]["decision"], "discard")
+
+    def test_language_detection_sampling_caps_large_text(self):
+        text = ("Hola mundo. " * 5000) + ("This is English. " * 5000) + ("日本語です。" * 5000)
+        sampled = sample_text_for_language_detection(text)
+        self.assertLess(len(sampled), len(text))
+        self.assertLessEqual(len(sampled), 24000 + 2)
 
     def test_recurring_chapter_entities_can_be_promoted_when_global_canon_misses_them(self):
         promoted = _promote_recurring_chapter_entities(

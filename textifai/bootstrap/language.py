@@ -113,6 +113,18 @@ def detect_language_profile(text: str) -> DetectedLanguageProfile:
     )
 
 
+def sample_text_for_language_detection(text: str, *, max_chars: int = 24000) -> str:
+    compact = str(text or "")
+    if len(compact) <= max_chars:
+        return compact
+    segment_size = max(2000, max_chars // 3)
+    head = compact[:segment_size]
+    mid_start = max(0, (len(compact) // 2) - (segment_size // 2))
+    middle = compact[mid_start : mid_start + segment_size]
+    tail = compact[-segment_size:]
+    return "\n".join([head, middle, tail])
+
+
 def build_language_profile(
     inventory: SourceDocumentInventory,
     fragments_by_source: dict[str, list[SourceFragment]],
@@ -129,7 +141,7 @@ def build_language_profile(
 
     for document in inventory.documents:
         text = source_texts.get(document.source_id, "")
-        detected = detect_language_profile(text)
+        detected = detect_language_profile(sample_text_for_language_detection(text))
         document_languages[document.source_id] = list(detected.detected_languages)
         if detected.dominant_language is not None:
             detected_counts[detected.dominant_language] += 1

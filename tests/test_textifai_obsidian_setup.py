@@ -11,7 +11,7 @@ from textifai.conversation.executor import MinimalExecutionLayer
 from textifai.conversation.manager import ConversationManager
 from textifai.obsidian import evaluate_obsidian_operational_readiness
 from textifai.obsidian.setup import ObsidianProjectSetupConfig, _resolve_bootstrap_provider_and_model, prepare_obsidian_project
-from textifai.runtime_config import load_runtime_environment, update_env_values
+from textifai.runtime_config import load_runtime_environment, synchronize_runtime_environment, update_env_values
 from textifai.session import create_session
 from vault.bootstrap import bootstrap_vault
 from vault.schema import note_frontmatter
@@ -49,6 +49,23 @@ class TextifAIObsidianSetupTests(unittest.TestCase):
                 provider, model = _resolve_bootstrap_provider_and_model(base)
             self.assertEqual(provider, "openai")
             self.assertEqual(model, "auto")
+
+    def test_synchronize_runtime_environment_preserves_explicit_bootstrap_overrides(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            (base / ".env").write_text("AUTONOVEL_TEXT_PROVIDER=openai\nAUTONOVEL_WRITER_MODEL=gpt-5.4\n", encoding="utf-8")
+            with patch.dict(
+                "os.environ",
+                {
+                    "AUTONOVEL_BOOTSTRAP_PROVIDER": "openai",
+                    "AUTONOVEL_BOOTSTRAP_MODEL": "gpt-4.1-mini",
+                },
+                clear=True,
+            ):
+                synchronize_runtime_environment(base)
+                provider, model = _resolve_bootstrap_provider_and_model(base)
+            self.assertEqual(provider, "openai")
+            self.assertEqual(model, "gpt-4.1-mini")
 
     def test_readiness_blocks_context_when_vault_missing(self):
         with tempfile.TemporaryDirectory() as tmp:

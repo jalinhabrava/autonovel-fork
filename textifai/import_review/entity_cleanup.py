@@ -167,6 +167,10 @@ def cleanup_resolved_entities(
                 decision = "discard"
                 decision_reason = "discarded_due_to_weak_naming_quality"
 
+        if bool(entity.get("needs_review")) and decision == "primary":
+            decision = "review"
+            decision_reason = "demoted_due_to_needs_review"
+
         final_entity = {
             **entity,
             "review_state": "canonical" if decision == "primary" else "review",

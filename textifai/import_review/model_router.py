@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from textifai.import_review.bootstrap_profile import BootstrapProfile
-from textifai.import_review.empirical_ranker import EmpiricalPolicy, rank_models_with_evidence
+from textifai.import_review.empirical_ranker import EmpiricalPolicy, build_evidence_map, load_empirical_records, rank_models_with_evidence
 from textifai.import_review.model_advisor import AdvisorRecommendation
 from textifai.import_review.model_registry import get_model_capabilities
 from textifai.import_review.provider_snapshot import ProviderSnapshot
@@ -82,6 +82,7 @@ def resolve_model_plan(
 
     empirical_evidence: dict[str, Any] = {}
     guardrail_checks: list[dict[str, Any]] = []
+    telemetry_records = load_empirical_records(telemetry_path)
 
     def resolve_phase(
         *,
@@ -118,6 +119,41 @@ def resolve_model_plan(
                 safe_default_model,
             ]
             valid_candidates = [candidate for candidate in _dedupe_preserve_order(valid_candidates) if candidate in snapshot.available_models]
+        evidence_map = build_evidence_map(
+            records=telemetry_records,
+            phase=phase,
+            complexity_bucket=complexity_bucket,
+            policy=empirical_policy,
+        )
+        filtered_candidates: list[str] = []
+        for candidate in valid_candidates:
+            rejected, reason = _empirically_reject_candidate(
+                candidate,
+                phase=phase,
+                evidence_map=evidence_map,
+                policy=empirical_policy,
+            )
+            guardrail_checks.append(
+                {
+                    "phase": phase,
+                    "subcase": subcase,
+                    "model": candidate,
+                    "valid": not rejected,
+                    "reason": reason if rejected else "empirically_allowed",
+                }
+            )
+            if not rejected:
+                filtered_candidates.append(candidate)
+        if filtered_candidates:
+            valid_candidates = filtered_candidates
+        else:
+            valid_candidates = [
+                candidate
+                for candidate in _dedupe_preserve_order(
+                    [safe_long_context_model if needs_long_context else safe_structured_model, safe_default_model]
+                )
+                if candidate in snapshot.available_models
+            ]
         ranked_candidates, evidence_rows = rank_models_with_evidence(
             models=valid_candidates,
             phase=phase,
@@ -204,6 +240,8 @@ def _validate_candidate(
 ) -> tuple[bool, str]:
     if candidate not in snapshot.available_models:
         return False, "not_available_in_snapshot"
+    if phase == "global_normalization" and candidate in {"gpt-4-turbo", "gpt-4-turbo-2024-04-09"}:
+        return False, "phase_denylist_global_normalization"
     capabilities = get_model_capabilities(candidate)
     if not capabilities.supports_structured_outputs:
         return False, "structured_outputs_required"
@@ -214,6 +252,25 @@ def _validate_candidate(
     if phase == "chapter_reduction" and capabilities.max_output_tokens < 3000:
         return False, "insufficient_output_for_chapter_reduction"
     return True, "ok"
+
+
+def _empirically_reject_candidate(
+    candidate: str,
+    *,
+    phase: str,
+    evidence_map: dict[str, Any],
+    policy: EmpiricalPolicy,
+) -> tuple[bool, str]:
+    evidence = evidence_map.get(candidate)
+    if evidence is None:
+        return False, "no_empirical_evidence"
+    if evidence.weighted_samples < max(1.0, float(policy.min_samples_for_hard_preference) * 0.5):
+        return False, "insufficient_empirical_samples"
+    if phase == "global_normalization" and evidence.json_valid_rate <= 0.25:
+        return True, "empirical_reject_low_json_valid_rate"
+    if phase == "global_normalization" and evidence.stall_rate >= 0.5:
+        return True, "empirical_reject_high_stall_rate"
+    return False, "empirically_allowed"
 
 
 def _select_safe_model(snapshot: ProviderSnapshot, preferred: tuple[str, ...]) -> str:

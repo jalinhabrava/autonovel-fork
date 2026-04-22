@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 
 from textifai.bootstrap.contracts import SourceDocumentInventory, SourceDocumentRecord
-from textifai.bootstrap.language import detect_language_profile
+from textifai.bootstrap.language import detect_language_profile, sample_text_for_language_detection
 from vault.schema import VAULT_DIRS
 
 
@@ -57,7 +57,7 @@ def build_source_document_inventory(
         text = seed.raw_extracted_text
         if not text.strip() and source_format in {"md", "txt"}:
             text = path.read_text(encoding="utf-8", errors="replace")
-        detection = detect_language_profile(text)
+        detection = detect_language_profile(sample_text_for_language_detection(text))
         likely_content_kinds = _guess_content_kinds(path, text)
         notes = [f"source_format:{source_format}"]
         extraction_method = None

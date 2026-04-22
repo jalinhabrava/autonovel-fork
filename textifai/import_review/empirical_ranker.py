@@ -56,7 +56,7 @@ def rank_models_with_evidence(
     telemetry_path: Path,
     policy: EmpiricalPolicy,
 ) -> tuple[list[str], list[dict[str, Any]]]:
-    evidence_map = _build_evidence_map(
+    evidence_map = build_evidence_map(
         records=load_empirical_records(telemetry_path),
         phase=phase,
         complexity_bucket=complexity_bucket,
@@ -72,6 +72,21 @@ def rank_models_with_evidence(
     )
     evidence_rows = [asdict(evidence_map[model]) for model in ranked if model in evidence_map]
     return ranked, evidence_rows
+
+
+def build_evidence_map(
+    *,
+    records: list[dict[str, Any]],
+    phase: str,
+    complexity_bucket: str,
+    policy: EmpiricalPolicy,
+) -> dict[str, EmpiricalEvidence]:
+    return _build_evidence_map(
+        records=records,
+        phase=phase,
+        complexity_bucket=complexity_bucket,
+        policy=policy,
+    )
 
 
 def make_empirical_record(
