@@ -10,6 +10,10 @@ from textifai.bootstrap.source_reader import build_source_document_inventory
 from textifai.obsidian.json_import import import_json_to_vault
 from textifai.import_review.structured_bootstrap_v1 import (
     NovelBootstrapV1Config,
+    _extract_title_entity_hints,
+    _promote_recurring_chapter_entities,
+    _promote_title_hint_entities,
+    _stabilize_character_entities_with_title_hints,
     assemble_obsidian_import,
     _build_global_normalization_batches,
     build_canonical_entity_map,
@@ -175,6 +179,105 @@ class StructuredBootstrapV1Tests(unittest.TestCase):
         self.assertEqual(assembled["entities"][0]["chapter_refs"], ["ch_001"])
         self.assertEqual(assembled["entities"][0]["source_mentions"], ["Sera"])
 
+    def test_recurring_chapter_entities_can_be_promoted_when_global_canon_misses_them(self):
+        promoted = _promote_recurring_chapter_entities(
+            global_entities=[],
+            chapter_outputs=[
+                {
+                    "chapter_id": "ch_001",
+                    "characters": [{"surface": "Sera", "canonical": "Sera", "facts": ["Princesa aislada."], "confidence": 0.95}],
+                    "places": [],
+                    "concepts": [],
+                    "events": [],
+                    "relations": [],
+                },
+                {
+                    "chapter_id": "ch_002",
+                    "characters": [{"surface": "Sera", "canonical": "Sera", "facts": ["Su magia es inestable."], "confidence": 0.94}],
+                    "places": [],
+                    "concepts": [],
+                    "events": [],
+                    "relations": [],
+                },
+            ],
+        )
+        names = [item["canonical_name"] for item in promoted]
+        self.assertIn("Sera", names)
+
+    def test_title_entity_hints_capture_explicit_named_focus(self):
+        self.assertEqual(
+            _extract_title_entity_hints("Episodio 1: La magia Rota y la herencia silenciosa de Sera"),
+            ["Sera"],
+        )
+        self.assertEqual(
+            _extract_title_entity_hints("Episodio 3: El ritual del humo de Ren· Parte 1"),
+            ["Ren"],
+        )
+
+    def test_title_hint_entities_can_promote_missing_focal_identity(self):
+        promoted = _promote_title_hint_entities(
+            global_entities=[],
+            chapter_outputs=[
+                {
+                    "chapter_id": "ch_002",
+                    "chapter_title_original": "Episodio 1: La magia rota y la herencia silenciosa de Sera",
+                    "chapter_summary": "Sera decide abandonar el castillo.",
+                    "characters": [{"surface": "Ren", "canonical": "Ren", "facts": ["Su magia es inestable."], "confidence": 0.9}],
+                },
+                {
+                    "chapter_id": "ch_003",
+                    "chapter_title_original": "Episodio 2: La huída y el límite de la forma de Sera",
+                    "chapter_summary": "Sera escapa del castillo.",
+                    "characters": [{"surface": "Ren", "canonical": "Ren", "facts": ["Huye hacia el bosque."], "confidence": 0.9}],
+                },
+            ],
+        )
+        names = [item["canonical_name"] for item in promoted]
+        self.assertIn("Sera", names)
+
+    def test_stabilize_character_entities_filters_title_conflicted_refs(self):
+        stabilized = _stabilize_character_entities_with_title_hints(
+            [
+                {
+                    "canonical_name": "Ren",
+                    "entity_kind": "character",
+                    "summary": "Ren mezcla hechos de otra protagonista.",
+                    "aliases": [],
+                    "key_facts": ["Hecho contaminado."],
+                    "relationships": [],
+                    "chapter_refs": ["ch_002", "ch_004", "ch_005"],
+                    "source_mentions": ["Ren"],
+                    "confidence": 0.95,
+                    "review_state": "canonical",
+                }
+            ],
+            [
+                {
+                    "chapter_id": "ch_002",
+                    "chapter_title_original": "Episodio 1: La magia rota y la herencia silenciosa de Sera",
+                    "chapter_summary": "Sera se enfrenta al castillo.",
+                    "characters": [{"surface": "Ren", "canonical": "Ren", "facts": ["Hecho contaminado."], "confidence": 0.9}],
+                },
+                {
+                    "chapter_id": "ch_004",
+                    "chapter_title_original": "Episodio 3: El ritual del humo de Ren Parte 1",
+                    "chapter_summary": "Ren participa en el ritual.",
+                    "characters": [{"surface": "Ren", "canonical": "Ren", "facts": ["Participa en un ritual cargado de tensión."], "confidence": 0.95}],
+                },
+                {
+                    "chapter_id": "ch_005",
+                    "chapter_title_original": "Episodio 4: El ritual del humo de Ren Parte 2",
+                    "chapter_summary": "Ren protege la campanilla.",
+                    "characters": [{"surface": "Ren", "canonical": "Ren", "facts": ["Protege la campanilla durante un ataque."], "confidence": 0.95}],
+                },
+            ],
+            language="es",
+        )
+        ren = stabilized[0]
+        self.assertEqual(ren["chapter_refs"], ["ch_004", "ch_005"])
+        self.assertNotIn("Hecho contaminado.", ren["key_facts"])
+        self.assertIn("Ren", ren["summary"])
+
     def test_global_normalization_batches_split_chapters_by_budget(self):
         chapter = type("_Chapter", (), {})
         chapters = []
@@ -277,6 +380,7 @@ class StructuredBootstrapV1Tests(unittest.TestCase):
             self.assertIn("#system", manifest)
             chapter_note = next((vault_root / "04_Story/Chapters").glob("*.md")).read_text(encoding="utf-8")
             self.assertIn("#chapter", chapter_note)
+            self.assertIn("## Resumen", chapter_note)
 
     def test_json_import_preserves_existing_system_artifacts(self):
         with tempfile.TemporaryDirectory() as tmp:

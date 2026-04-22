@@ -23,6 +23,49 @@ PRIMARY_DIRS = {
     "history": "02_World/History",
 }
 
+_SECTION_LABELS = {
+    "es": {
+        "overview": "Resumen",
+        "key_facts": "Datos Clave",
+        "relationships": "Relaciones",
+        "source_chapters": "Capítulos Fuente",
+        "summary": "Resumen",
+        "chapter_text": "Texto del Capítulo",
+        "characters": "Personajes",
+        "places": "Lugares",
+        "concepts": "Conceptos",
+        "events": "Eventos",
+        "relations": "Relaciones",
+        "linked_primaries": "Primarias Enlazadas",
+        "chapter_summary_suffix": "Resumen",
+        "import_manifest": "Manifiesto de Importación",
+        "unknown_language": "desconocido",
+        "no_summary": "Sin resumen.",
+    }
+}
+
+
+def _labels_for_language(language: str | None) -> dict[str, str]:
+    normalized = str(language or "").strip().casefold()
+    return _SECTION_LABELS.get(normalized, {
+        "overview": "Overview",
+        "key_facts": "Key Facts",
+        "relationships": "Relationships",
+        "source_chapters": "Source Chapters",
+        "summary": "Summary",
+        "chapter_text": "Chapter Text",
+        "characters": "Characters",
+        "places": "Places",
+        "concepts": "Concepts",
+        "events": "Events",
+        "relations": "Relations",
+        "linked_primaries": "Linked Primaries",
+        "chapter_summary_suffix": "Summary",
+        "import_manifest": "Import Manifest",
+        "unknown_language": "unknown",
+        "no_summary": "No summary.",
+    })
+
 
 def slugify(text: str) -> str:
     text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
@@ -105,6 +148,7 @@ def build_wikifier(primary_titles: list[str]):
 def import_json_to_vault(*, source_json: Path, vault_root: Path) -> dict[str, Any]:
     payload = json.loads(source_json.read_text(encoding="utf-8"))
     work = payload.get("work") or {}
+    labels = _labels_for_language(work.get("language"))
     chapters = payload.get("chapters") or []
     entities = payload.get("entities") or []
     preserved_system_dir: Path | None = None
@@ -174,13 +218,13 @@ def import_json_to_vault(*, source_json: Path, vault_root: Path) -> dict[str, An
         is_review = review_state != "canonical"
         body_lines = [f"# {title}", ""]
         if summary:
-            body_lines += ["## Overview", "", summary, ""]
+            body_lines += [f"## {labels['overview']}", "", summary, ""]
         if key_facts:
-            body_lines += ["## Key Facts", ""]
+            body_lines += [f"## {labels['key_facts']}", ""]
             body_lines += [f"- {wikify(fact)}" for fact in key_facts[:12]]
             body_lines += [""]
         if relationships:
-            body_lines += ["## Relationships", ""]
+            body_lines += [f"## {labels['relationships']}", ""]
             for rel in relationships[:12]:
                 if not isinstance(rel, dict):
                     continue
@@ -195,7 +239,7 @@ def import_json_to_vault(*, source_json: Path, vault_root: Path) -> dict[str, An
                 body_lines.append(line)
             body_lines += [""]
         if chapter_titles:
-            body_lines += ["## Source Chapters", ""]
+            body_lines += [f"## {labels['source_chapters']}", ""]
             body_lines += [f"- [[{title_ref}]]" for title_ref in chapter_titles[:20]]
             body_lines += [""]
 
@@ -242,11 +286,16 @@ def import_json_to_vault(*, source_json: Path, vault_root: Path) -> dict[str, An
         linked_primaries: list[str] = []
         chapter_body = [f"# {title}", ""]
         if summary:
-            chapter_body += ["## Summary", "", summary, ""]
+            chapter_body += [f"## {labels['summary']}", "", summary, ""]
         if text:
-            chapter_body += ["## Chapter Text", "", text, ""]
+            chapter_body += [f"## {labels['chapter_text']}", "", text, ""]
 
-        for heading, key in [("Characters", "characters"), ("Places", "places"), ("Concepts", "concepts"), ("Events", "events")]:
+        for heading, key in [
+            (labels["characters"], "characters"),
+            (labels["places"], "places"),
+            (labels["concepts"], "concepts"),
+            (labels["events"], "events"),
+        ]:
             items = chapter.get(key) or []
             if not items:
                 continue
@@ -266,7 +315,7 @@ def import_json_to_vault(*, source_json: Path, vault_root: Path) -> dict[str, An
 
         relations = chapter.get("relations") or []
         if relations:
-            chapter_body += ["## Relations", ""]
+            chapter_body += [f"## {labels['relations']}", ""]
             for rel in relations[:20]:
                 if not isinstance(rel, dict):
                     continue
@@ -314,7 +363,7 @@ def import_json_to_vault(*, source_json: Path, vault_root: Path) -> dict[str, An
         summary_frontmatter.update(
             {
                 "kind": "chapter_summary",
-                "title": f"{title} Summary",
+                "title": f"{title} {labels['chapter_summary_suffix']}",
                 "slug": f"{slug}_summary",
                 "note_role": "chapter_summary",
                 "entity_kind": "chapter_summary",
@@ -322,9 +371,9 @@ def import_json_to_vault(*, source_json: Path, vault_root: Path) -> dict[str, An
                 "summary_for_chapter": chapter_path.name,
             }
         )
-        summary_body = [f"# {title} Summary", "", summary or "Sin resumen.", ""]
+        summary_body = [f"# {title} {labels['chapter_summary_suffix']}", "", summary or labels["no_summary"], ""]
         if linked_primaries:
-            summary_body += ["## Linked Primaries", ""]
+            summary_body += [f"## {labels['linked_primaries']}", ""]
             summary_body += [f"- [[{name}]]" for name in linked_primaries[:20]]
             summary_body += [""]
         summary_path = vault_root / "04_Story/Chapter_Summaries" / f"{slug}_summary.md"
@@ -353,7 +402,7 @@ def import_json_to_vault(*, source_json: Path, vault_root: Path) -> dict[str, An
         vault_root / "01_Project" / "import_manifest.md",
         frontmatter={
             "kind": "project_note",
-            "title": "Import Manifest",
+            "title": labels["import_manifest"],
             "status": "pending_revision",
             "schema_version": "1.0",
             "slug": "import_manifest",
@@ -361,7 +410,7 @@ def import_json_to_vault(*, source_json: Path, vault_root: Path) -> dict[str, An
             "promotion_status": "promoted_canonical",
             "note_role": "system",
             "entity_kind": "system",
-            "canonical_subject": "Import Manifest",
+            "canonical_subject": labels["import_manifest"],
             "aliases": "",
             "semantic_class": "import_manifest",
             "evidence_sources": str(source_json),
@@ -372,11 +421,11 @@ def import_json_to_vault(*, source_json: Path, vault_root: Path) -> dict[str, An
             "tags": ["#system"],
         },
         body_lines=[
-            "# Import Manifest",
+            f"# {labels['import_manifest']}",
             "",
             f"- Source JSON: `{source_json}`",
             f"- Title: {work.get('title', 'Unknown')}",
-            f"- Language: {work.get('language', 'unknown')}",
+            f"- Language: {work.get('language', labels['unknown_language'])}",
             f"- Chapters: {len(chapters)}",
             f"- Primaries: {len(created_primary_paths)}",
             "",

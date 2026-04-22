@@ -5,6 +5,7 @@ import base64
 import mimetypes
 import os
 import random
+import re
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -14,7 +15,10 @@ from providers.text_provider import TextGenerationRequest, TextMessage, TextProv
 from textifai.author_understanding.normalization import extract_json_payload
 from textifai.bootstrap import SourceDocumentInventory
 from textifai.bootstrap.source_reader import read_source_documents
+from textifai.import_review.batch_planner import PlannedBatch, pack_items_by_budget, split_markdown_semantically
 from textifai.import_review.chapterizer import detect_story_chapters
+from textifai.import_review.model_registry import get_model_capabilities
+from textifai.import_review.token_budget import TokenBudget, build_token_budget, fits_within_budget
 
 
 GLOBAL_NORMALIZATION_PROMPT = """You are a narrative entity normalization system.
@@ -153,6 +157,28 @@ Examples of mergeable variants:
 
 Do NOT merge merely because two items are similar.
 Merge only when identity is strongly supported by the work.
+
+If two named identities remain plausibly distinct, keep them separate.
+Do not merge one named character into another merely because they share:
+
+* a role,
+* a title,
+* a burden,
+* a magical anomaly,
+* or a narrative position.
+
+Explicit personal names take precedence over titles or descriptive labels unless the work clearly confirms they are the same entity.
+
+==================================================
+LANGUAGE OUTPUT RULES
+=====================
+
+Write all summaries, key_facts, relationship facts, reasons, and normalization notes in LANGUAGE.
+
+Keep names, aliases, chapter IDs, and source mentions in the forms supported by the work,
+but the explanatory prose must stay in LANGUAGE.
+
+Do not mix English and Spanish inside explanatory prose unless the input text itself quotes a foreign-language expression that matters narratively.
 
 ==================================================
 FACT FILTERING RULES
@@ -360,6 +386,7 @@ GLOBAL CANON USAGE RULES
 ========================
 
 You will receive a CANONICAL_ENTITY_MAP produced from the full novel.
+You may also receive TITLE_ENTITY_HINTS extracted structurally from the chapter title.
 
 You must:
 
@@ -378,6 +405,12 @@ If confidence < 0.80:
 * place ambiguous cases in unresolved_mentions if important
 
 Do NOT override the canonical map unless the chapter provides strong contradictory evidence.
+
+If a named identity in the chapter conflicts with a descriptive or titled alias from the canonical map,
+prefer the explicit named identity unless the chapter or the global canon clearly confirms the merge.
+
+If TITLE_ENTITY_HINTS contains an explicit proper name and the chapter supports it,
+preserve that named identity instead of coercing it into a different canonical entity.
 
 ==================================================
 RELEVANCE FILTER
@@ -483,6 +516,22 @@ If a chapter-level fact would make a poor addition to an Obsidian note, exclude 
 If an item is already fully explained by the canonical map and the chapter adds nothing durable, omit it from the chapter extraction.
 
 ==================================================
+LANGUAGE OUTPUT RULES
+=====================
+
+Write all explanatory prose in LANGUAGE.
+
+This includes:
+
+* chapter_summary
+* facts
+* relation facts
+* unresolved mention facts
+
+Keep names and source surfaces in the forms supported by the work,
+but do not mix English and Spanish inside explanatory prose unless the source itself requires a quoted expression.
+
+==================================================
 FINAL SELF-CHECK
 ================
 
@@ -495,6 +544,92 @@ Before output:
 """
 
 
+CHAPTER_PARTIAL_EXTRACTION_PROMPT = """You are a narrative chapter subchunk extraction system.
+
+Analyze ONE partial segment of a chapter and return only persistent or structurally relevant signals.
+
+Return ONLY valid JSON.
+Do not include markdown fences.
+Do not include commentary.
+Do not invent canon beyond the provided canonical entity map.
+
+==================================================
+OUTPUT SCHEMA
+=============
+
+{
+"chapter_id": "...",
+"chunk_id": "...",
+"partial_signals": {
+"characters": [{"surface": "...", "canonical": "...", "facts": ["..."], "confidence": 0.0}],
+"places": [{"surface": "...", "canonical": "...", "facts": ["..."], "confidence": 0.0}],
+"concepts": [{"surface": "...", "canonical": "...", "facts": ["..."], "confidence": 0.0}],
+"events": [{"surface": "...", "canonical": "...", "facts": ["..."], "confidence": 0.0}],
+"relations": [{"from_surface": "...", "from_canonical": "...", "to_surface": "...", "to_canonical": "...", "relation_type": "...", "facts": ["..."], "confidence": 0.0}],
+"unresolved_mentions": [{"surface": "...", "possible_kind": "...", "facts": ["..."], "confidence": 0.0}],
+"candidate_summary_points": ["..."]
+}
+}
+
+==================================================
+RULES
+=====
+
+Write all explanatory prose in LANGUAGE.
+Keep explicit names separate unless identity is clearly confirmed.
+Use TITLE_ENTITY_HINTS as additional identity evidence when the title explicitly names a focal entity.
+Do not output chapter_text_markdown.
+Prefer high-signal durable facts over local choreography.
+"""
+
+
+CHAPTER_REDUCTION_PROMPT = """You are a narrative chapter reducer.
+
+You will receive partial signals extracted from multiple subchunks of the same chapter.
+Produce the final normalized chapter JSON for downstream Obsidian ingestion.
+
+Return ONLY valid JSON.
+Do not include markdown fences.
+Do not include commentary.
+
+==================================================
+OUTPUT SCHEMA
+=============
+
+{
+"work": {
+"title": "...",
+"language": "..."
+},
+"chapters": [
+{
+"chapter_id": "...",
+"chapter_title_original": "...",
+"chapter_title_canonical": "...",
+"sequence_index": 0,
+"chapter_summary": "...",
+"characters": [{"surface": "...", "canonical": "...", "facts": ["..."], "confidence": 0.0}],
+"places": [{"surface": "...", "canonical": "...", "facts": ["..."], "confidence": 0.0}],
+"concepts": [{"surface": "...", "canonical": "...", "facts": ["..."], "confidence": 0.0}],
+"events": [{"surface": "...", "canonical": "...", "facts": ["..."], "confidence": 0.0}],
+"relations": [{"from_surface": "...", "from_canonical": "...", "to_surface": "...", "to_canonical": "...", "relation_type": "...", "facts": ["..."], "confidence": 0.0}],
+"unresolved_mentions": [{"surface": "...", "possible_kind": "...", "facts": ["..."], "confidence": 0.0}]
+}
+]
+}
+
+==================================================
+RULES
+=====
+
+Write all explanatory prose in LANGUAGE.
+Do not merge different named entities unless the combined partial signals strongly confirm the identity.
+If uncertainty remains, keep the explicit surface as canonical and leave the ambiguity in unresolved_mentions.
+Use the canonical entity map when there is a safe match.
+Use TITLE_ENTITY_HINTS as a guardrail when the chapter title explicitly names a focal entity.
+"""
+
+
 @dataclass(frozen=True)
 class NovelBootstrapV1Config:
     provider_name: str | None
@@ -503,8 +638,10 @@ class NovelBootstrapV1Config:
     chapter_task_name: str = "bootstrap_chapter_extraction"
     global_max_tokens: int = 9000
     chapter_max_tokens: int = 3000
-    global_batch_input_token_budget: int = 90000
+    chapter_reduce_max_tokens: int = 3000
+    global_batch_input_token_budget: int | None = 6000
     global_batch_prompt_overhead_tokens: int = 5000
+    chapter_chunk_overlap_paragraphs: int = 1
     temperature: float = 0.0
     timeout_seconds: int = 600
     retries: int = 1
@@ -695,6 +832,13 @@ def build_canonical_entity_map(
 def assemble_obsidian_import(*, global_data: dict[str, Any], chapter_outputs: list[dict[str, Any]]) -> dict[str, Any]:
     work = global_data.get("work", {})
     entities = enrich_global_entities_conservative(global_data.get("entities", []) or [], chapter_outputs)
+    entities = _promote_recurring_chapter_entities(entities, chapter_outputs)
+    entities = _promote_title_hint_entities(entities, chapter_outputs)
+    entities = _stabilize_character_entities_with_title_hints(
+        entities,
+        chapter_outputs,
+        language=str(work.get("language") or "unknown"),
+    )
     chapters = sorted(chapter_outputs, key=lambda ch: (ch.get("sequence_index", 0), ch.get("chapter_id", "")))
     return {"work": work, "chapters": chapters, "entities": entities}
 
@@ -756,6 +900,270 @@ def build_entity_index(global_entities: list[dict[str, Any]]) -> dict[str, dict[
         if name:
             idx[name] = ent
     return idx
+
+
+def _promote_recurring_chapter_entities(
+    global_entities: list[dict[str, Any]],
+    chapter_outputs: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    entity_index = build_entity_index(global_entities)
+    candidates: dict[tuple[str, str], dict[str, Any]] = {}
+    section_kind = {"characters": "character", "places": "place", "concepts": "concept", "events": "event"}
+
+    for chapter in chapter_outputs:
+        chapter_id = str(chapter.get("chapter_id") or "").strip()
+        for section, entity_kind in section_kind.items():
+            for item in chapter.get(section, []) or []:
+                if not isinstance(item, dict):
+                    continue
+                canonical = str(item.get("canonical") or item.get("surface") or "").strip()
+                surface = str(item.get("surface") or canonical).strip()
+                if not canonical or canonical in entity_index:
+                    continue
+                key = (entity_kind, canonical)
+                bucket = candidates.setdefault(
+                    key,
+                    {
+                        "canonical_name": canonical,
+                        "entity_kind": entity_kind,
+                        "preferred_slug": "",
+                        "aliases": [],
+                        "summary": "",
+                        "key_facts": [],
+                        "relationships": [],
+                        "chapter_refs": [],
+                        "source_mentions": [],
+                        "confidence_values": [],
+                        "review_state": "review",
+                    },
+                )
+                bucket["aliases"] = unique_preserve_order(bucket["aliases"] + ([surface] if surface else []))
+                bucket["key_facts"] = unique_preserve_order(bucket["key_facts"] + (item.get("facts") or []))[:5]
+                bucket["chapter_refs"] = unique_preserve_order(bucket["chapter_refs"] + ([chapter_id] if chapter_id else []))
+                bucket["source_mentions"] = unique_preserve_order(bucket["source_mentions"] + ([surface] if surface else []))
+                bucket["confidence_values"].append(float(item.get("confidence") or 0.0))
+
+    promoted: list[dict[str, Any]] = []
+    for candidate in candidates.values():
+        chapter_refs = candidate["chapter_refs"]
+        avg_confidence = (
+            sum(candidate["confidence_values"]) / len(candidate["confidence_values"])
+            if candidate["confidence_values"]
+            else 0.0
+        )
+        if len(chapter_refs) < 2 and avg_confidence < 0.9:
+            continue
+        summary = ""
+        if candidate["key_facts"]:
+            summary = candidate["key_facts"][0]
+        review_state = "canonical" if len(chapter_refs) >= 2 and avg_confidence >= 0.85 else "review"
+        promoted.append(
+            {
+                "canonical_name": candidate["canonical_name"],
+                "entity_kind": candidate["entity_kind"],
+                "preferred_slug": "",
+                "aliases": candidate["aliases"],
+                "summary": summary,
+                "key_facts": candidate["key_facts"],
+                "relationships": [],
+                "chapter_refs": chapter_refs,
+                "source_mentions": candidate["source_mentions"],
+                "confidence": avg_confidence,
+                "review_state": review_state,
+            }
+        )
+
+    merged = [*global_entities, *promoted]
+    merged.sort(key=lambda e: (e.get("entity_kind", ""), str(e.get("canonical_name", "")).lower()))
+    return merged
+
+
+def _promote_title_hint_entities(
+    global_entities: list[dict[str, Any]],
+    chapter_outputs: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    entity_index = build_entity_index(global_entities)
+    title_candidates: dict[str, dict[str, Any]] = {}
+
+    for chapter in chapter_outputs:
+        title = str(chapter.get("chapter_title_original") or chapter.get("chapter_title_canonical") or "").strip()
+        chapter_id = str(chapter.get("chapter_id") or "").strip()
+        hints = _extract_title_entity_hints(title)
+        for hint in hints:
+            if not hint or hint in entity_index:
+                continue
+            bucket = title_candidates.setdefault(
+                hint,
+                {
+                    "canonical_name": hint,
+                    "entity_kind": "character",
+                    "preferred_slug": "",
+                    "aliases": [],
+                    "summary_candidates": [],
+                    "key_facts": [],
+                    "chapter_refs": [],
+                    "source_mentions": [],
+                },
+            )
+            bucket["chapter_refs"] = unique_preserve_order(bucket["chapter_refs"] + ([chapter_id] if chapter_id else []))
+            bucket["source_mentions"] = unique_preserve_order(bucket["source_mentions"] + [hint])
+            summary = str(chapter.get("chapter_summary") or "").strip()
+            if summary:
+                bucket["summary_candidates"].append(summary)
+            for character in chapter.get("characters", []) or []:
+                if not isinstance(character, dict):
+                    continue
+                surface = str(character.get("surface") or "").strip()
+                canonical = str(character.get("canonical") or surface).strip()
+                if canonical != hint and surface != hint:
+                    continue
+                facts = [str(fact).strip() for fact in (character.get("facts") or []) if str(fact).strip()]
+                bucket["key_facts"] = unique_preserve_order(bucket["key_facts"] + facts)[:5]
+
+    promoted: list[dict[str, Any]] = []
+    for bucket in title_candidates.values():
+        if len(bucket["chapter_refs"]) < 2:
+            continue
+        summary = (
+            f"{bucket['canonical_name']} aparece como identidad focal explícita en varios títulos de capítulo y concentra un tramo reconocible del foco narrativo."
+            if not bucket["key_facts"]
+            else f"{bucket['canonical_name']} aparece como identidad focal explícita en varios capítulos de la obra."
+        )
+        promoted.append(
+            {
+                "canonical_name": bucket["canonical_name"],
+                "entity_kind": "character",
+                "preferred_slug": "",
+                "aliases": bucket["aliases"],
+                "summary": summary,
+                "key_facts": bucket["key_facts"],
+                "relationships": [],
+                "chapter_refs": bucket["chapter_refs"],
+                "source_mentions": bucket["source_mentions"],
+                "confidence": 0.9,
+                "review_state": "canonical",
+            }
+        )
+
+    merged = [*global_entities, *promoted]
+    merged.sort(key=lambda e: (e.get("entity_kind", ""), str(e.get("canonical_name", "")).lower()))
+    return merged
+
+
+def _stabilize_character_entities_with_title_hints(
+    global_entities: list[dict[str, Any]],
+    chapter_outputs: list[dict[str, Any]],
+    *,
+    language: str,
+) -> list[dict[str, Any]]:
+    chapter_title_hints: dict[str, list[str]] = {}
+    chapter_character_mentions: dict[str, list[dict[str, Any]]] = {}
+    chapter_summaries: dict[str, str] = {}
+    for chapter in chapter_outputs:
+        chapter_id = str(chapter.get("chapter_id") or "").strip()
+        if not chapter_id:
+            continue
+        title = str(chapter.get("chapter_title_original") or chapter.get("chapter_title_canonical") or "").strip()
+        chapter_title_hints[chapter_id] = _extract_title_entity_hints(title)
+        chapter_character_mentions[chapter_id] = [
+            item for item in (chapter.get("characters") or []) if isinstance(item, dict)
+        ]
+        chapter_summaries[chapter_id] = str(chapter.get("chapter_summary") or "").strip()
+
+    stabilized: list[dict[str, Any]] = []
+    for entity in global_entities:
+        if str(entity.get("entity_kind") or "").strip() != "character":
+            stabilized.append(entity)
+            continue
+
+        canonical_name = str(entity.get("canonical_name") or "").strip()
+        if not canonical_name:
+            stabilized.append(entity)
+            continue
+
+        chapter_refs = [str(ref).strip() for ref in (entity.get("chapter_refs") or []) if str(ref).strip()]
+        aligned_refs: list[str] = []
+        neutral_refs: list[str] = []
+        conflicting_refs: list[str] = []
+        for chapter_ref in chapter_refs:
+            hints = chapter_title_hints.get(chapter_ref, [])
+            if not hints:
+                neutral_refs.append(chapter_ref)
+                continue
+            if canonical_name in hints:
+                aligned_refs.append(chapter_ref)
+            else:
+                conflicting_refs.append(chapter_ref)
+
+        # Keep original entity untouched unless title evidence clearly points to contamination.
+        if not aligned_refs or not conflicting_refs:
+            stabilized.append(entity)
+            continue
+
+        kept_refs = unique_preserve_order(aligned_refs + neutral_refs)
+        if not kept_refs:
+            stabilized.append(entity)
+            continue
+
+        local_facts: list[str] = []
+        for chapter_ref in kept_refs:
+            for mention in chapter_character_mentions.get(chapter_ref, []):
+                surface = str(mention.get("surface") or "").strip()
+                canonical = str(mention.get("canonical") or surface).strip()
+                if canonical != canonical_name and surface != canonical_name:
+                    continue
+                facts = [str(fact).strip() for fact in (mention.get("facts") or []) if str(fact).strip()]
+                local_facts = unique_preserve_order(local_facts + facts)[:5]
+
+        summary = str(entity.get("summary") or "").strip()
+        if local_facts:
+            summary = _compose_entity_summary_from_local_facts(
+                canonical_name=canonical_name,
+                key_facts=local_facts,
+                language=language,
+            )
+        elif conflicting_refs and summary:
+            summary = _strip_entity_summary_to_safe_sentence(summary, canonical_name=canonical_name, language=language)
+
+        stabilized.append(
+            {
+                **entity,
+                "summary": summary,
+                "key_facts": local_facts or (entity.get("key_facts") or []),
+                "chapter_refs": kept_refs,
+            }
+        )
+
+    stabilized.sort(key=lambda e: (e.get("entity_kind", ""), str(e.get("canonical_name", "")).lower()))
+    return stabilized
+
+
+def _compose_entity_summary_from_local_facts(*, canonical_name: str, key_facts: list[str], language: str) -> str:
+    if not key_facts:
+        return ""
+    lead = key_facts[0].rstrip(".")
+    follow_up = key_facts[1].rstrip(".") if len(key_facts) > 1 else ""
+    if str(language).lower().startswith("es"):
+        summary = f"{canonical_name} destaca en los capítulos analizados por un papel persistente en la historia. {lead}."
+        if follow_up:
+            summary += f" {follow_up}."
+        return summary
+    summary = f"{canonical_name} has a persistent role across the analyzed chapters. {lead}."
+    if follow_up:
+        summary += f" {follow_up}."
+    return summary
+
+
+def _strip_entity_summary_to_safe_sentence(summary: str, *, canonical_name: str, language: str) -> str:
+    cleaned = re.sub(r"\s+", " ", summary).strip()
+    if not cleaned:
+        return summary
+    first_sentence = re.split(r"(?<=[.!?])\s+", cleaned, maxsplit=1)[0].strip()
+    if canonical_name.casefold() in first_sentence.casefold():
+        return first_sentence
+    if str(language).lower().startswith("es"):
+        return f"{canonical_name} mantiene una presencia narrativa persistente en los capítulos analizados."
+    return f"{canonical_name} maintains a persistent narrative presence across the analyzed chapters."
 
 
 def extract_local_entity_mentions(chapter: dict[str, Any]) -> list[dict[str, Any]]:
@@ -839,75 +1247,54 @@ def _build_global_normalization_batches(
     chapters: list[Any],
     config: NovelBootstrapV1Config,
 ) -> tuple[list[list[dict[str, Any]]], dict[str, Any]]:
-    batches: list[list[dict[str, Any]]] = []
-    audit_batches: list[dict[str, Any]] = []
-    current_batch: list[dict[str, Any]] = []
-    budget = max(config.global_batch_input_token_budget, config.global_batch_prompt_overhead_tokens + 1000)
-    budget_method = "openai_responses_input_tokens" if config.provider_name == "openai" else "estimated_chars_div_4"
+    capabilities = get_model_capabilities(config.model)
+    budget = _build_global_token_budget(config=config)
     chapter_rows: list[dict[str, Any]] = []
-
-    for sequence_index, chapter in enumerate(chapters, start=1):
-        chapter_item = {
+    chapter_items = [
+        {
             "sequence_index": sequence_index,
             "title": chapter.title,
             "text": chapter.text,
         }
-        candidate_batch = current_batch + [chapter_item]
-        candidate_tokens, token_method = _count_global_batch_input_tokens(
+        for sequence_index, chapter in enumerate(chapters, start=1)
+    ]
+
+    def measure_batch(candidate: list[dict[str, Any]]) -> tuple[int, str]:
+        tokens, token_method = _count_global_batch_input_tokens(
             work_title=work_title,
             language=language,
-            batch=candidate_batch,
+            batch=candidate,
             config=config,
         )
-        chapter_rows.append(
-            {
-                "chapter_id": f"ch_{sequence_index:03d}",
-                "chapter_title": chapter.title,
-                "candidate_batch_size": len(candidate_batch),
-                "candidate_input_tokens": candidate_tokens,
-                "token_count_method": token_method,
-            }
-        )
-        if current_batch and candidate_tokens > budget:
-            batch_tokens, batch_method = _count_global_batch_input_tokens(
-                work_title=work_title,
-                language=language,
-                batch=current_batch,
-                config=config,
-            )
-            batches.append(current_batch)
-            audit_batches.append(
+        if candidate:
+            chapter_rows.append(
                 {
-                    "batch_index": len(batches),
-                    "chapter_ids": [f"ch_{item['sequence_index']:03d}" for item in current_batch],
-                    "chapter_count": len(current_batch),
-                    "input_tokens": batch_tokens,
-                    "token_count_method": batch_method,
-                    "budget": budget,
+                    "chapter_id": f"ch_{candidate[-1]['sequence_index']:03d}",
+                    "chapter_title": candidate[-1]["title"],
+                    "candidate_batch_size": len(candidate),
+                    "candidate_input_tokens": tokens,
+                    "token_count_method": token_method,
                 }
             )
-            current_batch = []
-            candidate_batch = [chapter_item]
-        current_batch.append(chapter_item)
+        return tokens, token_method
 
-    if current_batch:
-        batches.append(current_batch)
-        batch_tokens, batch_method = _count_global_batch_input_tokens(
-            work_title=work_title,
-            language=language,
-            batch=current_batch,
-            config=config,
-        )
-        audit_batches.append(
-            {
-                "batch_index": len(batches),
-                "chapter_ids": [f"ch_{item['sequence_index']:03d}" for item in current_batch],
-                "chapter_count": len(current_batch),
-                "input_tokens": batch_tokens,
-                "token_count_method": batch_method,
-                "budget": budget,
-            }
-        )
+    planned_batches = pack_items_by_budget(
+        items=chapter_items,
+        budget=budget,
+        measure_tokens=measure_batch,
+    )
+    batches = [planned.items for planned in planned_batches]
+    audit_batches = [
+        {
+            "batch_index": index,
+            "chapter_ids": [f"ch_{item['sequence_index']:03d}" for item in planned.items],
+            "chapter_count": len(planned.items),
+            "input_tokens": planned.input_tokens,
+            "token_count_method": planned.token_count_method,
+            "budget": budget.usable_input_budget,
+        }
+        for index, planned in enumerate(planned_batches, start=1)
+    ]
     return (
         batches,
         {
@@ -915,13 +1302,47 @@ def _build_global_normalization_batches(
             "language": language,
             "provider_name": config.provider_name,
             "model": config.model,
-            "budget_tokens": budget,
-            "budget_method": budget_method,
+            "model_capabilities": {
+                "context_window": capabilities.context_window,
+                "max_output_tokens": capabilities.max_output_tokens,
+                "recommended_output_reserve": capabilities.recommended_output_reserve,
+                "recommended_safety_margin": capabilities.recommended_safety_margin,
+                "supports_structured_outputs": capabilities.supports_structured_outputs,
+            },
+            "budget_tokens": budget.usable_input_budget,
+            "reserved_output_tokens": budget.reserved_output_tokens,
+            "safety_margin": budget.safety_margin,
+            "budget_method": "model_registry_plus_counted_input",
             "chapter_count": len(chapters),
             "batch_count": len(batches),
             "candidate_measurements": chapter_rows,
             "batches": audit_batches,
         },
+    )
+
+
+def _build_global_token_budget(*, config: NovelBootstrapV1Config) -> TokenBudget:
+    capabilities = get_model_capabilities(config.model)
+    override_budget = config.global_batch_input_token_budget
+    budget = build_token_budget(
+        capabilities=capabilities,
+        requested_output_tokens=config.global_max_tokens,
+    )
+    if override_budget is None:
+        return budget
+    return TokenBudget(
+        context_window=budget.context_window,
+        reserved_output_tokens=budget.reserved_output_tokens,
+        safety_margin=budget.safety_margin,
+        usable_input_budget=min(budget.usable_input_budget, override_budget),
+    )
+
+
+def _build_chapter_token_budget(*, config: NovelBootstrapV1Config) -> TokenBudget:
+    capabilities = get_model_capabilities(config.model)
+    return build_token_budget(
+        capabilities=capabilities,
+        requested_output_tokens=max(config.chapter_max_tokens, config.chapter_reduce_max_tokens),
     )
 
 
@@ -1188,16 +1609,36 @@ def _run_chapter_extraction(
     request_trace_path: Path | None = None,
 ) -> dict[str, Any] | None:
     provider = get_text_provider(config.chapter_task_name, config.provider_name)
-    prompt = (
-        f"{CHAPTER_EXTRACTION_PROMPT}\n\n"
-        f"WORK_TITLE: {work_title}\n"
-        f"LANGUAGE: {language}\n\n"
-        f"CHAPTER_ID: {chapter_id}\n"
-        f"SEQUENCE_INDEX: {sequence_index}\n"
-        f"CHAPTER_TITLE: {chapter_title}\n\n"
-        f"CANONICAL_ENTITY_MAP:\n{json.dumps(canonical_entity_map, ensure_ascii=False)}\n\n"
-        f"CHAPTER_TEXT:\n{chapter_text}"
+    prompt = _build_chapter_extraction_prompt(
+        work_title=work_title,
+        language=language,
+        chapter_id=chapter_id,
+        sequence_index=sequence_index,
+        chapter_title=chapter_title,
+        chapter_text=chapter_text,
+        canonical_entity_map=canonical_entity_map,
     )
+    chapter_budget = _build_chapter_token_budget(config=config)
+    input_tokens, token_method = _count_prompt_input_tokens(
+        prompt=prompt,
+        provider_name=config.provider_name,
+        model=str(config.model or ""),
+        timeout_seconds=config.timeout_seconds,
+    )
+    if not fits_within_budget(input_tokens=input_tokens, budget=chapter_budget):
+        return _run_chapter_extraction_chunked(
+            provider=provider,
+            work_title=work_title,
+            language=language,
+            chapter_id=chapter_id,
+            sequence_index=sequence_index,
+            chapter_title=chapter_title,
+            chapter_text=chapter_text,
+            canonical_entity_map=canonical_entity_map,
+            config=config,
+            budget=chapter_budget,
+            request_trace_path=request_trace_path,
+        )
     if request_trace_path is not None:
         _write_json_trace(
             request_trace_path,
@@ -1215,6 +1656,8 @@ def _run_chapter_extraction(
                     "temperature": config.temperature,
                     "max_tokens": config.chapter_max_tokens,
                     "response_format": {"type": "json_object"},
+                    "input_tokens": input_tokens,
+                    "input_token_method": token_method,
                 },
             },
         )
@@ -1239,6 +1682,198 @@ def _run_chapter_extraction(
     if not isinstance(payload, dict):
         return None
     return payload
+
+
+def _build_chapter_extraction_prompt(
+    *,
+    work_title: str,
+    language: str,
+    chapter_id: str,
+    sequence_index: int,
+    chapter_title: str,
+    chapter_text: str,
+    canonical_entity_map: list[dict[str, Any]],
+) -> str:
+    title_entity_hints = _extract_title_entity_hints(chapter_title)
+    return (
+        f"{CHAPTER_EXTRACTION_PROMPT}\n\n"
+        f"WORK_TITLE: {work_title}\n"
+        f"LANGUAGE: {language}\n\n"
+        f"CHAPTER_ID: {chapter_id}\n"
+        f"SEQUENCE_INDEX: {sequence_index}\n"
+        f"CHAPTER_TITLE: {chapter_title}\n\n"
+        f"TITLE_ENTITY_HINTS: {json.dumps(title_entity_hints, ensure_ascii=False)}\n\n"
+        f"CANONICAL_ENTITY_MAP:\n{json.dumps(canonical_entity_map, ensure_ascii=False)}\n\n"
+        f"CHAPTER_TEXT:\n{chapter_text}"
+    )
+
+
+def _count_prompt_input_tokens(
+    *,
+    prompt: str,
+    provider_name: str | None,
+    model: str,
+    timeout_seconds: int,
+) -> tuple[int, str]:
+    if provider_name == "openai":
+        counted = _count_openai_input_tokens_for_prompt(
+            model=model,
+            prompt=prompt,
+            timeout_seconds=timeout_seconds,
+        )
+        if counted is not None:
+            return counted, "openai_responses_input_tokens"
+    return _estimate_token_count(prompt), "estimated_chars_div_4"
+
+
+def _run_chapter_extraction_chunked(
+    *,
+    provider,
+    work_title: str,
+    language: str,
+    chapter_id: str,
+    sequence_index: int,
+    chapter_title: str,
+    chapter_text: str,
+    canonical_entity_map: list[dict[str, Any]],
+    config: NovelBootstrapV1Config,
+    budget: TokenBudget,
+    request_trace_path: Path | None,
+) -> dict[str, Any] | None:
+    partial_budget = max(1000, budget.usable_input_budget - 4000)
+    subchunks = split_markdown_semantically(
+        chapter_text=chapter_text,
+        max_chunk_tokens=partial_budget,
+        estimate_tokens=_estimate_token_count,
+        overlap_paragraphs=config.chapter_chunk_overlap_paragraphs,
+    )
+    title_entity_hints = _extract_title_entity_hints(chapter_title)
+    partial_payloads: list[dict[str, Any]] = []
+    for chunk_index, chunk_text in enumerate(subchunks, start=1):
+        prompt = (
+            f"{CHAPTER_PARTIAL_EXTRACTION_PROMPT}\n\n"
+            f"WORK_TITLE: {work_title}\n"
+            f"LANGUAGE: {language}\n\n"
+            f"CHAPTER_ID: {chapter_id}\n"
+            f"CHUNK_ID: {chapter_id}_part_{chunk_index:02d}\n"
+            f"CHAPTER_TITLE: {chapter_title}\n\n"
+            f"TITLE_ENTITY_HINTS: {json.dumps(title_entity_hints, ensure_ascii=False)}\n\n"
+            f"CANONICAL_ENTITY_MAP:\n{json.dumps(canonical_entity_map, ensure_ascii=False)}\n\n"
+            f"CHUNK_TEXT:\n{chunk_text}"
+        )
+        try:
+            response = provider.generate(
+                TextGenerationRequest(
+                    task=config.chapter_task_name,
+                    provider_name=config.provider_name,
+                    model=config.model,
+                    system="Return only valid JSON for one chapter subchunk extraction.",
+                    messages=[TextMessage(role="user", content=prompt)],
+                    max_tokens=config.chapter_max_tokens,
+                    temperature=config.temperature,
+                    timeout_seconds=config.timeout_seconds,
+                    retries=config.retries,
+                    response_format={"type": "json_object"},
+                )
+            )
+        except TextProviderError:
+            return None
+        payload = extract_json_payload(response.text)
+        if not isinstance(payload, dict):
+            return None
+        partial_payloads.append(payload)
+
+    reduction_prompt = (
+        f"{CHAPTER_REDUCTION_PROMPT}\n\n"
+        f"WORK_TITLE: {work_title}\n"
+        f"LANGUAGE: {language}\n\n"
+        f"CHAPTER_ID: {chapter_id}\n"
+        f"SEQUENCE_INDEX: {sequence_index}\n"
+        f"CHAPTER_TITLE: {chapter_title}\n\n"
+        f"TITLE_ENTITY_HINTS: {json.dumps(title_entity_hints, ensure_ascii=False)}\n\n"
+        f"CANONICAL_ENTITY_MAP:\n{json.dumps(canonical_entity_map, ensure_ascii=False)}\n\n"
+        f"PARTIAL_SIGNALS:\n{json.dumps(partial_payloads, ensure_ascii=False)}"
+    )
+    if request_trace_path is not None:
+        _write_json_trace(
+            request_trace_path,
+            {
+                "provider": config.provider_name,
+                "task": config.chapter_task_name,
+                "endpoint": _chapter_endpoint_for_provider(config.provider_name),
+                "headers": _redacted_openai_headers(),
+                "payload": {
+                    "mode": "chapter_reduction",
+                    "model": config.model,
+                    "subchunk_count": len(subchunks),
+                    "messages": [
+                        {"role": "system", "content": "Return only valid JSON for chapter reduction."},
+                        {"role": "user", "content": reduction_prompt},
+                    ],
+                    "temperature": config.temperature,
+                    "max_tokens": config.chapter_reduce_max_tokens,
+                    "response_format": {"type": "json_object"},
+                },
+            },
+        )
+    try:
+        response = provider.generate(
+            TextGenerationRequest(
+                task=config.chapter_task_name,
+                provider_name=config.provider_name,
+                model=config.model,
+                system="Return only valid JSON for chapter reduction.",
+                messages=[TextMessage(role="user", content=reduction_prompt)],
+                max_tokens=config.chapter_reduce_max_tokens,
+                temperature=config.temperature,
+                timeout_seconds=config.timeout_seconds,
+                retries=config.retries,
+                response_format={"type": "json_object"},
+            )
+        )
+    except TextProviderError:
+        return None
+    payload = extract_json_payload(response.text)
+    if not isinstance(payload, dict):
+        return None
+    return payload
+
+
+def _extract_title_entity_hints(chapter_title: str) -> list[str]:
+    cleaned = re.sub(r"\[[^\]]+\]\([^)]+\)", "", str(chapter_title or ""))
+    cleaned = cleaned.replace("*", " ").replace("·", " ")
+    blocked = {
+        "episodio",
+        "episode",
+        "capitulo",
+        "capítulo",
+        "chapter",
+        "parte",
+        "part",
+        "prologo",
+        "prólogo",
+        "prologue",
+        "interludio",
+        "interlude",
+    }
+    tokens = [token.strip(" .,:;!?()[]{}\"'") for token in cleaned.split()]
+    candidates = [
+        token
+        for token in tokens
+        if token
+        and len(token) > 2
+        and any(char.isalpha() for char in token)
+        and token[0].isupper()
+        and not token.isupper()
+        and not any(char.isdigit() for char in token)
+        and token.casefold() not in blocked
+    ]
+    if not candidates:
+        return []
+    last = candidates[-1]
+    if len(candidates) >= 2 and candidates[-2].lower() in {"de", "del", "of"}:
+        return [f"{candidates[-2]} {last}", last]
+    return [last]
 
 
 def _select_primary_novel_document(inventory: SourceDocumentInventory, source_texts: dict[str, str]):
