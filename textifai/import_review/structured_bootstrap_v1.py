@@ -16,8 +16,13 @@ from textifai.author_understanding.normalization import extract_json_payload
 from textifai.bootstrap import SourceDocumentInventory
 from textifai.bootstrap.source_reader import read_source_documents
 from textifai.import_review.batch_planner import PlannedBatch, pack_items_by_budget, split_markdown_semantically
+from textifai.import_review.bootstrap_profile import build_bootstrap_profile, classify_chapter_complexity
+from textifai.import_review.empirical_ranker import EmpiricalPolicy, append_empirical_record, make_empirical_record
+from textifai.import_review.model_advisor import maybe_advise_model_plan
 from textifai.import_review.chapterizer import detect_story_chapters
 from textifai.import_review.model_registry import get_model_capabilities
+from textifai.import_review.model_router import ResolvedModelPlan, resolve_model_plan
+from textifai.import_review.provider_snapshot import build_provider_snapshot
 from textifai.import_review.token_budget import TokenBudget, build_token_budget, fits_within_budget
 from textifai.runtime_config import synchronize_runtime_environment
 
@@ -635,6 +640,7 @@ Use TITLE_ENTITY_HINTS as a guardrail when the chapter title explicitly names a 
 class NovelBootstrapV1Config:
     provider_name: str | None
     model: str | None
+    advisor_task_name: str = "bootstrap_model_advisor"
     global_task_name: str = "bootstrap_global_normalization"
     chapter_task_name: str = "bootstrap_chapter_extraction"
     global_max_tokens: int = 9000
@@ -652,6 +658,10 @@ class NovelBootstrapV1Config:
     max_global_text_chars: int = 350000
     max_chapters: int | None = None
     request_trace_sample_chapters: int = 3
+    empirical_min_samples_for_hard_preference: int = 8
+    empirical_confidence_weight: float = 0.7
+    empirical_cold_start_mode: str = "prefer_defaults"
+    empirical_freshness_half_life_days: float = 21.0
 
 
 @dataclass(frozen=True)
@@ -660,6 +670,7 @@ class NovelBootstrapV1Result:
     chapter_count: int
     global_normalization_path: str
     global_batch_audit_path: str
+    model_plan_audit_path: str
     canonical_entity_map_path: str
     chapter_outputs_dir: str
     chapters_enriched_path: str
@@ -703,6 +714,46 @@ def run_structured_bootstrap_v1(
     request_trace_dir.mkdir(parents=True, exist_ok=True)
 
     warnings: list[str] = []
+    repo_root = Path(__file__).resolve().parents[2]
+    telemetry_path = repo_root / ".textifai" / "bootstrap_model_telemetry.json"
+    provider_snapshot_path = system_root / "provider_snapshot.json"
+    model_plan_audit_path = system_root / "model_plan_audit.json"
+    bootstrap_profile = build_bootstrap_profile(
+        work_title=work_title,
+        language=language,
+        chapters=chapters,
+        estimate_tokens=_estimate_token_count,
+    )
+    provider_snapshot = build_provider_snapshot(
+        provider_name=config.provider_name,
+        requested_model=config.model,
+        timeout_seconds=config.timeout_seconds,
+        cache_path=provider_snapshot_path,
+    )
+    advisor_recommendation = maybe_advise_model_plan(
+        provider_name=config.provider_name,
+        advisor_task_name=config.advisor_task_name,
+        requested_model=config.model,
+        snapshot=provider_snapshot,
+        profile=bootstrap_profile,
+        timeout_seconds=config.timeout_seconds,
+        retries=config.retries,
+    )
+    resolved_model_plan, model_plan_audit = resolve_model_plan(
+        provider_name=config.provider_name,
+        requested_model=config.model,
+        snapshot=provider_snapshot,
+        profile=bootstrap_profile,
+        advisor=advisor_recommendation,
+        telemetry_path=telemetry_path,
+        empirical_policy=EmpiricalPolicy(
+            min_samples_for_hard_preference=config.empirical_min_samples_for_hard_preference,
+            confidence_weight=config.empirical_confidence_weight,
+            cold_start_mode=config.empirical_cold_start_mode,
+            freshness_half_life_days=config.empirical_freshness_half_life_days,
+        ),
+    )
+    model_plan_audit_path.write_text(json.dumps(model_plan_audit, ensure_ascii=False, indent=2), encoding="utf-8")
 
     global_batch_audit_path = system_root / "global_batch_plan_audit.json"
     global_payload = _run_global_normalization(
@@ -715,6 +766,8 @@ def run_structured_bootstrap_v1(
         request_trace_dir=request_trace_dir,
         audit_path=global_batch_audit_path,
         progress_log_path=progress_log_path,
+        resolved_model_plan=resolved_model_plan,
+        telemetry_path=telemetry_path,
     )
     if global_payload is None:
         return None
@@ -745,6 +798,8 @@ def run_structured_bootstrap_v1(
             chapter_text=chapter.text,
             canonical_entity_map=canonical_entity_map,
             config=config,
+            resolved_model_plan=resolved_model_plan,
+            telemetry_path=telemetry_path,
             request_trace_path=(
                 request_trace_dir / f"{chapter_id}_request.json"
                 if index <= max(0, config.request_trace_sample_chapters)
@@ -799,6 +854,7 @@ def run_structured_bootstrap_v1(
         chapter_count=len(chapters),
         global_normalization_path=str(global_normalization_path),
         global_batch_audit_path=str(global_batch_audit_path),
+        model_plan_audit_path=str(model_plan_audit_path),
         canonical_entity_map_path=str(canonical_entity_map_path),
         chapter_outputs_dir=str(chapter_outputs_dir),
         chapters_enriched_path=str(chapters_enriched_path),
@@ -1251,10 +1307,11 @@ def _build_global_normalization_batches(
     language: str,
     chapters: list[Any],
     config: NovelBootstrapV1Config,
+    resolved_model_plan: ResolvedModelPlan | None = None,
 ) -> tuple[list[list[dict[str, Any]]], dict[str, Any]]:
-    global_model = _resolve_structured_model(config, phase="global_normalization")
+    global_model = _resolve_structured_model(config, phase="global_normalization", resolved_model_plan=resolved_model_plan)
     capabilities = get_model_capabilities(global_model)
-    budget = _build_global_token_budget(config=config)
+    budget = _build_global_token_budget(config=config, resolved_model_plan=resolved_model_plan)
     chapter_rows: list[dict[str, Any]] = []
     chapter_items = [
         {
@@ -1273,6 +1330,7 @@ def _build_global_normalization_batches(
             language=language,
             batch=candidate,
             config=config,
+            resolved_model_plan=resolved_model_plan,
         )
         if candidate:
             chapter_rows.append(
@@ -1308,6 +1366,7 @@ def _build_global_normalization_batches(
             "chapter_ids": [f"ch_{item['sequence_index']:03d}" for item in planned.items],
             "chapter_count": len(planned.items),
             "input_tokens": planned.input_tokens,
+            "estimated_total_cost": planned.estimated_total_cost,
             "token_count_method": planned.token_count_method,
             "budget": budget.usable_input_budget,
         }
@@ -1359,9 +1418,8 @@ def _estimate_global_batch_complexity_penalty(
         penalty += min(1200, max(0, len(text) // 2500))
     return penalty
 
-
-def _build_global_token_budget(*, config: NovelBootstrapV1Config) -> TokenBudget:
-    capabilities = get_model_capabilities(_resolve_structured_model(config, phase="global_normalization"))
+def _build_global_token_budget(*, config: NovelBootstrapV1Config, resolved_model_plan: ResolvedModelPlan | None = None) -> TokenBudget:
+    capabilities = get_model_capabilities(_resolve_structured_model(config, phase="global_normalization", resolved_model_plan=resolved_model_plan))
     override_budget = config.global_batch_input_token_budget
     budget = build_token_budget(
         capabilities=capabilities,
@@ -1377,8 +1435,8 @@ def _build_global_token_budget(*, config: NovelBootstrapV1Config) -> TokenBudget
     )
 
 
-def _build_chapter_token_budget(*, config: NovelBootstrapV1Config) -> TokenBudget:
-    capabilities = get_model_capabilities(_resolve_structured_model(config, phase="chapter_extraction"))
+def _build_chapter_token_budget(*, config: NovelBootstrapV1Config, resolved_model_plan: ResolvedModelPlan | None = None) -> TokenBudget:
+    capabilities = get_model_capabilities(_resolve_structured_model(config, phase="chapter_extraction", resolved_model_plan=resolved_model_plan))
     return build_token_budget(
         capabilities=capabilities,
         requested_output_tokens=max(config.chapter_max_tokens, config.chapter_reduce_max_tokens),
@@ -1391,8 +1449,9 @@ def _count_global_batch_input_tokens(
     language: str,
     batch: list[dict[str, Any]],
     config: NovelBootstrapV1Config,
+    resolved_model_plan: ResolvedModelPlan | None = None,
 ) -> tuple[int, str]:
-    global_model = _resolve_structured_model(config, phase="global_normalization")
+    global_model = _resolve_structured_model(config, phase="global_normalization", resolved_model_plan=resolved_model_plan)
     prompt = _build_global_normalization_prompt(
         work_title=work_title,
         language=language,
@@ -1534,8 +1593,10 @@ def _run_global_normalization(
     request_trace_dir: Path | None = None,
     audit_path: Path | None = None,
     progress_log_path: str | None = None,
+    resolved_model_plan: ResolvedModelPlan | None = None,
+    telemetry_path: Path | None = None,
 ) -> dict[str, Any] | None:
-    global_model = _resolve_structured_model(config, phase="global_normalization")
+    global_model = _resolve_structured_model(config, phase="global_normalization", resolved_model_plan=resolved_model_plan)
     _ = source_text
     _ = source_path
     provider = get_text_provider(config.global_task_name, config.provider_name)
@@ -1544,6 +1605,7 @@ def _run_global_normalization(
         language=language,
         chapters=chapters,
         config=config,
+        resolved_model_plan=resolved_model_plan,
     )
     if audit_path is not None:
         audit_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1568,6 +1630,7 @@ def _run_global_normalization(
                 batch_meta_by_key=batch_meta_by_key,
                 request_trace_dir=request_trace_dir,
                 progress_log_path=progress_log_path,
+                telemetry_path=telemetry_path,
             )
         )
 
@@ -1588,6 +1651,7 @@ def _run_global_normalization_batch_with_fallbacks(
     batch_meta_by_key: dict[tuple[str, ...], dict[str, Any]],
     request_trace_dir: Path | None,
     progress_log_path: str | None,
+    telemetry_path: Path | None,
     subdivision_depth: int = 0,
 ) -> list[dict[str, Any]]:
     batch_text = _render_global_batch_text(batch, max_chars=config.max_global_text_chars)
@@ -1633,6 +1697,7 @@ def _run_global_normalization_batch_with_fallbacks(
 
     last_error: str | None = None
     for failure_attempt in range(1, config.global_batch_failure_retry_threshold + 1):
+        started_at = time.perf_counter()
         try:
             response = provider.generate(
                 TextGenerationRequest(
@@ -1669,6 +1734,20 @@ def _run_global_normalization_batch_with_fallbacks(
                 entity_count=len(normalized.get("entities") or []),
                 subdivision_depth=subdivision_depth,
             )
+            if telemetry_path is not None:
+                append_empirical_record(
+                    telemetry_path,
+                    make_empirical_record(
+                        provider_name=str(config.provider_name or ""),
+                        phase="global_normalization",
+                        complexity_bucket="large_or_complex" if len(batch) > 1 else "medium_complex",
+                        model=global_model,
+                        success=True,
+                        json_valid=True,
+                        latency_seconds=time.perf_counter() - started_at,
+                        estimated_total_cost=int(batch_meta.get("estimated_total_cost") or 0),
+                    ),
+                )
             return [normalized]
         except TextProviderError as exc:
             last_error = str(exc)
@@ -1682,6 +1761,23 @@ def _run_global_normalization_batch_with_fallbacks(
                 subdivision_depth=subdivision_depth,
                 error=last_error,
             )
+            if telemetry_path is not None and failure_attempt == config.global_batch_failure_retry_threshold:
+                append_empirical_record(
+                    telemetry_path,
+                    make_empirical_record(
+                        provider_name=str(config.provider_name or ""),
+                        phase="global_normalization",
+                        complexity_bucket="large_or_complex" if len(batch) > 1 else "medium_complex",
+                        model=global_model,
+                        success=False,
+                        json_valid=False,
+                        latency_seconds=time.perf_counter() - started_at,
+                        estimated_total_cost=int(batch_meta.get("estimated_total_cost") or 0),
+                        subdivided=len(batch) > 1,
+                        stalled=True,
+                        timed_out="timeout" in last_error.casefold(),
+                    ),
+                )
 
     if len(batch) > 1:
         midpoint = max(1, len(batch) // 2)
@@ -1711,6 +1807,7 @@ def _run_global_normalization_batch_with_fallbacks(
                 batch_meta_by_key=batch_meta_by_key,
                 request_trace_dir=request_trace_dir,
                 progress_log_path=progress_log_path,
+                telemetry_path=telemetry_path,
                 subdivision_depth=subdivision_depth + 1,
             )
         )
@@ -1726,6 +1823,7 @@ def _run_global_normalization_batch_with_fallbacks(
                 batch_meta_by_key=batch_meta_by_key,
                 request_trace_dir=request_trace_dir,
                 progress_log_path=progress_log_path,
+                telemetry_path=telemetry_path,
                 subdivision_depth=subdivision_depth + 1,
             )
         )
@@ -1753,6 +1851,8 @@ def _run_chapter_extraction(
     chapter_text: str,
     canonical_entity_map: list[dict[str, Any]],
     config: NovelBootstrapV1Config,
+    resolved_model_plan: ResolvedModelPlan | None = None,
+    telemetry_path: Path | None = None,
     request_trace_path: Path | None = None,
 ) -> dict[str, Any] | None:
     provider = get_text_provider(config.chapter_task_name, config.provider_name)
@@ -1765,13 +1865,20 @@ def _run_chapter_extraction(
         chapter_text=chapter_text,
         canonical_entity_map=canonical_entity_map,
     )
+    chapter_complexity = classify_chapter_complexity(
+        title=chapter_title,
+        text=chapter_text,
+        input_tokens=_estimate_token_count(chapter_text),
+    )
     chapter_model = _resolve_structured_model(
         config,
         phase="chapter_extraction",
         input_tokens=_estimate_token_count(draft_prompt),
+        complexity_bucket=chapter_complexity,
+        resolved_model_plan=resolved_model_plan,
     )
     prompt = draft_prompt
-    chapter_budget = _build_chapter_token_budget(config=config)
+    chapter_budget = _build_chapter_token_budget(config=config, resolved_model_plan=resolved_model_plan)
     input_tokens, token_method = _count_prompt_input_tokens(
         prompt=prompt,
         provider_name=config.provider_name,
@@ -1790,6 +1897,8 @@ def _run_chapter_extraction(
             canonical_entity_map=canonical_entity_map,
             config=config,
             budget=chapter_budget,
+            resolved_model_plan=resolved_model_plan,
+            telemetry_path=telemetry_path,
             request_trace_path=request_trace_path,
         )
     if request_trace_path is not None:
@@ -1815,6 +1924,7 @@ def _run_chapter_extraction(
             },
         )
     try:
+        started_at = time.perf_counter()
         response = provider.generate(
             TextGenerationRequest(
                 task=config.chapter_task_name,
@@ -1830,10 +1940,53 @@ def _run_chapter_extraction(
             )
         )
     except TextProviderError:
+        if telemetry_path is not None:
+            append_empirical_record(
+                telemetry_path,
+                make_empirical_record(
+                    provider_name=str(config.provider_name or ""),
+                    phase="chapter_extraction",
+                    complexity_bucket=chapter_complexity,
+                    model=chapter_model,
+                    success=False,
+                    json_valid=False,
+                    latency_seconds=0.0,
+                    estimated_total_cost=input_tokens + config.chapter_max_tokens,
+                    stalled=True,
+                ),
+            )
         return None
     payload = extract_json_payload(response.text)
     if not isinstance(payload, dict):
+        if telemetry_path is not None:
+            append_empirical_record(
+                telemetry_path,
+                make_empirical_record(
+                    provider_name=str(config.provider_name or ""),
+                    phase="chapter_extraction",
+                    complexity_bucket=chapter_complexity,
+                    model=chapter_model,
+                    success=False,
+                    json_valid=False,
+                    latency_seconds=time.perf_counter() - started_at,
+                    estimated_total_cost=input_tokens + config.chapter_max_tokens,
+                ),
+            )
         return None
+    if telemetry_path is not None:
+        append_empirical_record(
+            telemetry_path,
+            make_empirical_record(
+                provider_name=str(config.provider_name or ""),
+                phase="chapter_extraction",
+                complexity_bucket=chapter_complexity,
+                model=chapter_model,
+                success=True,
+                json_valid=True,
+                latency_seconds=time.perf_counter() - started_at,
+                estimated_total_cost=input_tokens + config.chapter_max_tokens,
+            ),
+        )
     return payload
 
 
@@ -1891,6 +2044,8 @@ def _run_chapter_extraction_chunked(
     canonical_entity_map: list[dict[str, Any]],
     config: NovelBootstrapV1Config,
     budget: TokenBudget,
+    resolved_model_plan: ResolvedModelPlan | None,
+    telemetry_path: Path | None,
     request_trace_path: Path | None,
 ) -> dict[str, Any] | None:
     partial_budget = max(1000, budget.usable_input_budget - 4000)
@@ -1907,6 +2062,8 @@ def _run_chapter_extraction_chunked(
             config,
             phase="chapter_partial_extraction",
             input_tokens=_estimate_token_count(chunk_text),
+            complexity_bucket="large_or_complex",
+            resolved_model_plan=resolved_model_plan,
         )
         prompt = (
             f"{CHAPTER_PARTIAL_EXTRACTION_PROMPT}\n\n"
@@ -1920,6 +2077,7 @@ def _run_chapter_extraction_chunked(
             f"CHUNK_TEXT:\n{chunk_text}"
         )
         try:
+            partial_started_at = time.perf_counter()
             response = provider.generate(
                 TextGenerationRequest(
                     task=config.chapter_task_name,
@@ -1935,10 +2093,54 @@ def _run_chapter_extraction_chunked(
                 )
             )
         except TextProviderError:
+            if telemetry_path is not None:
+                append_empirical_record(
+                    telemetry_path,
+                    make_empirical_record(
+                        provider_name=str(config.provider_name or ""),
+                        phase="chapter_partial_extraction",
+                        complexity_bucket="large_or_complex",
+                        model=partial_model,
+                        success=False,
+                        json_valid=False,
+                        latency_seconds=0.0,
+                        estimated_total_cost=_estimate_token_count(prompt) + config.chapter_max_tokens,
+                        stalled=True,
+                    ),
+                )
             return None
         payload = extract_json_payload(response.text)
         if not isinstance(payload, dict):
+            if telemetry_path is not None:
+                append_empirical_record(
+                    telemetry_path,
+                    make_empirical_record(
+                        provider_name=str(config.provider_name or ""),
+                        phase="chapter_partial_extraction",
+                        complexity_bucket="large_or_complex",
+                        model=partial_model,
+                        success=False,
+                        json_valid=False,
+                        latency_seconds=time.perf_counter() - partial_started_at,
+                        estimated_total_cost=_estimate_token_count(prompt) + config.chapter_max_tokens,
+                    ),
+                )
             return None
+        if telemetry_path is not None:
+            append_empirical_record(
+                telemetry_path,
+                make_empirical_record(
+                    provider_name=str(config.provider_name or ""),
+                    phase="chapter_partial_extraction",
+                    complexity_bucket="large_or_complex",
+                    model=partial_model,
+                    success=True,
+                    json_valid=True,
+                    latency_seconds=time.perf_counter() - partial_started_at,
+                    estimated_total_cost=_estimate_token_count(prompt) + config.chapter_max_tokens,
+                    subdivided=True,
+                ),
+            )
         partial_payloads.append(payload)
 
     reduction_prompt = (
@@ -1956,6 +2158,8 @@ def _run_chapter_extraction_chunked(
         config,
         phase="chapter_reduction",
         input_tokens=_estimate_token_count(reduction_prompt),
+        complexity_bucket="large_or_complex",
+        resolved_model_plan=resolved_model_plan,
     )
     if request_trace_path is not None:
         _write_json_trace(
@@ -1980,6 +2184,7 @@ def _run_chapter_extraction_chunked(
             },
         )
     try:
+        reduction_started_at = time.perf_counter()
         response = provider.generate(
             TextGenerationRequest(
                 task=config.chapter_task_name,
@@ -1995,10 +2200,56 @@ def _run_chapter_extraction_chunked(
             )
         )
     except TextProviderError:
+        if telemetry_path is not None:
+            append_empirical_record(
+                telemetry_path,
+                make_empirical_record(
+                    provider_name=str(config.provider_name or ""),
+                    phase="chapter_reduction",
+                    complexity_bucket="large_or_complex",
+                    model=reduction_model,
+                    success=False,
+                    json_valid=False,
+                    latency_seconds=0.0,
+                    estimated_total_cost=_estimate_token_count(reduction_prompt) + config.chapter_reduce_max_tokens,
+                    stalled=True,
+                    subdivided=True,
+                ),
+            )
         return None
     payload = extract_json_payload(response.text)
     if not isinstance(payload, dict):
+        if telemetry_path is not None:
+            append_empirical_record(
+                telemetry_path,
+                make_empirical_record(
+                    provider_name=str(config.provider_name or ""),
+                    phase="chapter_reduction",
+                    complexity_bucket="large_or_complex",
+                    model=reduction_model,
+                    success=False,
+                    json_valid=False,
+                    latency_seconds=time.perf_counter() - reduction_started_at,
+                    estimated_total_cost=_estimate_token_count(reduction_prompt) + config.chapter_reduce_max_tokens,
+                    subdivided=True,
+                ),
+            )
         return None
+    if telemetry_path is not None:
+        append_empirical_record(
+            telemetry_path,
+            make_empirical_record(
+                provider_name=str(config.provider_name or ""),
+                phase="chapter_reduction",
+                complexity_bucket="large_or_complex",
+                model=reduction_model,
+                success=True,
+                json_valid=True,
+                latency_seconds=time.perf_counter() - reduction_started_at,
+                estimated_total_cost=_estimate_token_count(reduction_prompt) + config.chapter_reduce_max_tokens,
+                subdivided=True,
+            ),
+        )
     return payload
 
 
@@ -2058,11 +2309,29 @@ def _resolve_structured_model(
     *,
     phase: str,
     input_tokens: int | None = None,
+    complexity_bucket: str | None = None,
+    resolved_model_plan: ResolvedModelPlan | None = None,
 ) -> str:
     requested = str(config.model or "").strip()
     provider = str(config.provider_name or "").strip().casefold()
     if requested and requested.casefold() != "auto":
         return requested
+    if resolved_model_plan is not None:
+        if phase == "global_normalization":
+            return resolved_model_plan.global_normalization_default_model
+        if phase == "chapter_extraction":
+            if complexity_bucket == "large_or_complex":
+                return resolved_model_plan.chapter_extraction_large_chapter_model
+            if complexity_bucket == "medium_complex":
+                return resolved_model_plan.chapter_extraction_high_complexity_model
+            return resolved_model_plan.chapter_extraction_default_model
+        if phase == "chapter_partial_extraction":
+            return resolved_model_plan.chapter_partial_extraction_default_model
+        if phase == "chapter_reduction":
+            return resolved_model_plan.chapter_reduction_default_model
+        if phase == "entity_cleanup":
+            return resolved_model_plan.entity_cleanup_default_model
+        return resolved_model_plan.safe_default_model
     if provider == "openai":
         token_count = max(int(input_tokens or 0), 0)
         if phase == "global_normalization":

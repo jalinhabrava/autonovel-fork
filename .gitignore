@@ -5,6 +5,7 @@ __pycache__/
 *.pyc
 .env
 .venv/
+.textifai/
 .codex
 node_modules/
 results.tsv

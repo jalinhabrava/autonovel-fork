@@ -7,6 +7,11 @@ from pathlib import Path
 from unittest.mock import patch
 
 from textifai.bootstrap.source_reader import build_source_document_inventory
+from textifai.import_review.bootstrap_profile import build_bootstrap_profile
+from textifai.import_review.empirical_ranker import EmpiricalPolicy
+from textifai.import_review.model_router import resolve_model_plan
+from textifai.import_review.provider_snapshot import ProviderModelSnapshot, ProviderSnapshot, build_provider_snapshot
+from textifai.import_review.model_registry import get_model_capabilities
 from textifai.obsidian.json_import import import_json_to_vault
 from textifai.import_review.structured_bootstrap_v1 import (
     NovelBootstrapV1Config,
@@ -129,6 +134,102 @@ class _StructuredBootstrapFakeProvider:
 
 
 class StructuredBootstrapV1Tests(unittest.TestCase):
+    def test_build_provider_snapshot_uses_openai_models_api_when_available(self):
+        fake_payload = {
+            "data": [
+                {"id": "gpt-4o-mini"},
+                {"id": "gpt-4.1-mini"},
+                {"id": "text-embedding-3-small"},
+            ]
+        }
+        with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}, clear=False), patch(
+            "textifai.import_review.provider_snapshot.httpx.get"
+        ) as mock_get:
+            mock_get.return_value.json.return_value = fake_payload
+            mock_get.return_value.raise_for_status.return_value = None
+            snapshot = build_provider_snapshot(
+                provider_name="openai",
+                requested_model="auto",
+                timeout_seconds=30,
+            )
+        self.assertEqual(snapshot.source, "openai_models_api")
+        self.assertEqual(snapshot.available_models, ["gpt-4.1-mini", "gpt-4o-mini"])
+
+    def test_resolve_model_plan_prefers_empirical_winner_within_guardrails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            telemetry_path = Path(tmp) / "telemetry.json"
+            telemetry_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "records": [
+                            {
+                                "timestamp": "2026-04-21T10:00:00+00:00",
+                                "provider_name": "openai",
+                                "phase": "chapter_extraction",
+                                "complexity_bucket": "small_clean",
+                                "model": "gpt-4o-mini",
+                                "success": True,
+                                "json_valid": True,
+                                "latency_seconds": 1.2,
+                                "estimated_total_cost": 3000,
+                                "subdivided": False,
+                                "stalled": False,
+                                "timed_out": False,
+                            },
+                            {
+                                "timestamp": "2026-04-21T10:00:00+00:00",
+                                "provider_name": "openai",
+                                "phase": "chapter_extraction",
+                                "complexity_bucket": "small_clean",
+                                "model": "gpt-4o-mini",
+                                "success": True,
+                                "json_valid": True,
+                                "latency_seconds": 1.0,
+                                "estimated_total_cost": 2800,
+                                "subdivided": False,
+                                "stalled": False,
+                                "timed_out": False,
+                            },
+                        ],
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+            profile = build_bootstrap_profile(
+                work_title="Test",
+                language="es",
+                chapters=[
+                    type("_Chapter", (), {"title": "Uno", "text": "Texto breve."})(),
+                    type("_Chapter", (), {"title": "Dos", "text": "Texto breve."})(),
+                ],
+                estimate_tokens=lambda text: max(1, len(text) // 4),
+            )
+            snapshot = ProviderSnapshot(
+                provider_name="openai",
+                fetched_at="2026-04-22T10:00:00+00:00",
+                source="test",
+                available_models=["gpt-4o-mini", "gpt-4.1-mini"],
+                models=[
+                    ProviderModelSnapshot("gpt-4o-mini", True, get_model_capabilities("gpt-4o-mini")),
+                    ProviderModelSnapshot("gpt-4.1-mini", True, get_model_capabilities("gpt-4.1-mini")),
+                ],
+            )
+            plan, audit = resolve_model_plan(
+                provider_name="openai",
+                requested_model="auto",
+                snapshot=snapshot,
+                profile=profile,
+                advisor=None,
+                telemetry_path=telemetry_path,
+                empirical_policy=EmpiricalPolicy(
+                    min_samples_for_hard_preference=2,
+                ),
+            )
+        self.assertEqual(plan.chapter_extraction_default_model, "gpt-4o-mini")
+        self.assertIn("chapter_extraction.default_model", audit["empirical_evidence"])
+
     def test_build_canonical_entity_map_reduces_global_payload(self):
         canonical_map = build_canonical_entity_map(
             {
@@ -489,6 +590,7 @@ class StructuredBootstrapV1Tests(unittest.TestCase):
             self.assertEqual(result.chapter_count, 2)
             self.assertTrue(Path(result.global_normalization_path).exists())
             self.assertTrue(Path(result.global_batch_audit_path).exists())
+            self.assertTrue(Path(result.model_plan_audit_path).exists())
             self.assertTrue(Path(result.canonical_entity_map_path).exists())
             self.assertTrue(Path(result.obsidian_import_path).exists())
             chapter_files = sorted(Path(result.chapter_outputs_dir).glob("*.json"))
