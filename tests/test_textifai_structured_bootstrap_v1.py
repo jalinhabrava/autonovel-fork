@@ -8,6 +8,8 @@ from unittest.mock import patch
 
 from textifai.bootstrap.source_reader import build_source_document_inventory
 from textifai.import_review.bootstrap_profile import build_bootstrap_profile
+from textifai.import_review.entity_cleanup import cleanup_resolved_entities
+from textifai.import_review.entity_cluster_resolution import resolve_entity_clusters
 from textifai.import_review.empirical_ranker import EmpiricalPolicy
 from textifai.import_review.model_router import resolve_model_plan
 from textifai.import_review.provider_snapshot import ProviderModelSnapshot, ProviderSnapshot, build_provider_snapshot
@@ -45,6 +47,7 @@ class _StructuredBootstrapFakeProvider:
                             "entities": [
                                 {
                                     "canonical_name": "Sera",
+                                    "canonical_candidate": "Sera",
                                     "entity_kind": "character",
                                     "preferred_slug": "sera",
                                     "aliases": ["Serelyne"],
@@ -55,9 +58,14 @@ class _StructuredBootstrapFakeProvider:
                                     "source_mentions": ["Sera", "Serelyne"],
                                     "confidence": 0.95,
                                     "review_state": "canonical",
+                                    "naming_quality": "proper_name",
+                                    "is_stable_entity": True,
+                                    "needs_review": False,
+                                    "review_reason": "",
                                 },
                                 {
                                     "canonical_name": "Thiseia",
+                                    "canonical_candidate": "Thiseia",
                                     "entity_kind": "place",
                                     "preferred_slug": "thiseia",
                                     "aliases": [],
@@ -68,6 +76,10 @@ class _StructuredBootstrapFakeProvider:
                                     "source_mentions": ["Thiseia"],
                                     "confidence": 0.91,
                                     "review_state": "canonical",
+                                    "naming_quality": "proper_name",
+                                    "is_stable_entity": True,
+                                    "needs_review": False,
+                                    "review_reason": "",
                                 },
                             ],
                             "merge_plan": [
@@ -108,6 +120,9 @@ class _StructuredBootstrapFakeProvider:
                                     {
                                         "surface": "Sera",
                                         "canonical": "Sera",
+                                        "canonical_candidate": "Sera",
+                                        "naming_quality": "proper_name",
+                                        "needs_review": False,
                                         "facts": ["Aparece activamente en el capítulo."],
                                         "confidence": 0.95,
                                     }
@@ -116,6 +131,9 @@ class _StructuredBootstrapFakeProvider:
                                     {
                                         "surface": "Thiseia",
                                         "canonical": "Thiseia",
+                                        "canonical_candidate": "Thiseia",
+                                        "naming_quality": "proper_name",
+                                        "needs_review": False,
                                         "facts": ["Es el marco del capítulo."],
                                         "confidence": 0.9,
                                     }
@@ -242,12 +260,17 @@ class StructuredBootstrapV1Tests(unittest.TestCase):
                         "key_facts": ["Uno", "Dos", "Tres", "Cuatro", "Cinco"],
                         "review_state": "canonical",
                         "confidence": 0.9,
+                        "canonical_candidate": "Sera",
+                        "naming_quality": "proper_name",
+                        "needs_review": False,
                     }
                 ]
             }
         )
         self.assertEqual(canonical_map[0]["canonical_name"], "Sera")
         self.assertEqual(len(canonical_map[0]["key_facts"]), 4)
+        self.assertEqual(canonical_map[0]["canonical_candidate"], "Sera")
+        self.assertEqual(canonical_map[0]["naming_quality"], "proper_name")
 
     def test_assemble_obsidian_import_enriches_chapter_refs(self):
         assembled = assemble_obsidian_import(
@@ -256,6 +279,7 @@ class StructuredBootstrapV1Tests(unittest.TestCase):
                 "entities": [
                     {
                         "canonical_name": "Sera",
+                        "canonical_candidate": "Sera",
                         "entity_kind": "character",
                         "summary": "Princesa",
                         "aliases": [],
@@ -265,6 +289,12 @@ class StructuredBootstrapV1Tests(unittest.TestCase):
                         "source_mentions": [],
                         "confidence": 0.9,
                         "review_state": "canonical",
+                        "naming_quality": "proper_name",
+                        "is_stable_entity": True,
+                        "needs_review": False,
+                        "review_reason": "",
+                        "promotion_status": "promoted_canonical",
+                        "note_role": "primary",
                     }
                 ],
             },
@@ -281,6 +311,107 @@ class StructuredBootstrapV1Tests(unittest.TestCase):
         )
         self.assertEqual(assembled["entities"][0]["chapter_refs"], ["ch_001"])
         self.assertEqual(assembled["entities"][0]["source_mentions"], ["Sera"])
+
+    def test_entity_cluster_resolution_prefers_proper_name_over_descriptor(self):
+        resolved, clusters_audit, resolution_audit = resolve_entity_clusters(
+            global_data={
+                "entities": [
+                    {
+                        "canonical_name": "Mireia",
+                        "canonical_candidate": "Mireia",
+                        "entity_kind": "character",
+                        "aliases": ["señora de las infusiones imposibles"],
+                        "summary": "Madre de Nael.",
+                        "key_facts": ["Es la madre de Nael.", "Mantiene una presencia doméstica persistente."],
+                        "relationships": [{"target": "Nael", "type": "familial", "facts": ["Es su madre."]}],
+                        "chapter_refs": ["ch_006", "ch_007"],
+                        "source_mentions": ["Mireia", "señora de las infusiones imposibles"],
+                        "confidence": 0.93,
+                        "review_state": "canonical",
+                        "naming_quality": "proper_name",
+                        "is_stable_entity": True,
+                        "needs_review": False,
+                        "review_reason": "",
+                    }
+                ]
+            },
+            chapter_outputs=[
+                {
+                    "chapter_id": "ch_006",
+                    "chapter_title_original": "Episodio 6: Las infusiones imposibles de Mireia",
+                    "characters": [
+                        {
+                            "surface": "señora de las infusiones imposibles",
+                            "canonical": "señora de las infusiones imposibles",
+                            "canonical_candidate": "Mireia",
+                            "naming_quality": "descriptor",
+                            "needs_review": True,
+                            "facts": ["Cuida de Nael en un contexto doméstico."],
+                            "confidence": 0.88,
+                        }
+                    ],
+                    "places": [],
+                    "concepts": [],
+                    "events": [],
+                    "relations": [],
+                    "unresolved_mentions": [],
+                }
+            ],
+        )
+        self.assertEqual(resolved[0]["canonical_name"], "Mireia")
+        self.assertIn("señora de las infusiones imposibles", resolved[0]["aliases"])
+        self.assertEqual(clusters_audit["cluster_count"], 1)
+        self.assertEqual(resolution_audit["resolved_entity_count"], 1)
+
+    def test_entity_cleanup_demotes_descriptor_entities_and_reports_metrics(self):
+        cleaned, cleanup_audit, promotion_audit = cleanup_resolved_entities(
+            entities=[
+                {
+                    "canonical_name": "Sera",
+                    "entity_kind": "character",
+                    "summary": "Protagonista con magia inestable.",
+                    "aliases": ["Serelyne"],
+                    "key_facts": ["Huye del castillo.", "Su magia altera el equilibrio político."],
+                    "relationships": [{"target": "Thiseia", "type": "located_in", "facts": ["Pertenece al reino."]}],
+                    "chapter_refs": ["ch_001", "ch_002"],
+                    "source_mentions": ["Sera", "Serelyne"],
+                    "confidence": 0.95,
+                    "review_state": "canonical",
+                    "naming_quality": "proper_name",
+                    "is_stable_entity": True,
+                    "needs_review": False,
+                    "review_reason": "",
+                },
+                {
+                    "canonical_name": "señora de las infusiones imposibles",
+                    "entity_kind": "character",
+                    "summary": "Figura doméstica vista una sola vez.",
+                    "aliases": [],
+                    "key_facts": ["Prepara infusiones."],
+                    "relationships": [],
+                    "chapter_refs": ["ch_006"],
+                    "source_mentions": ["señora de las infusiones imposibles"],
+                    "confidence": 0.55,
+                    "review_state": "review",
+                    "naming_quality": "descriptor",
+                    "is_stable_entity": False,
+                    "needs_review": True,
+                    "review_reason": "Descriptor sin nombre estable.",
+                },
+            ],
+            chapter_outputs=[
+                {"chapter_id": "ch_001", "chapter_title_original": "Episodio 1: La magia rota y la herencia silenciosa de Sera"},
+                {"chapter_id": "ch_002", "chapter_title_original": "Episodio 2: La huída y el límite de la forma de Sera"},
+                {"chapter_id": "ch_006", "chapter_title_original": "Episodio 6: Las infusiones imposibles"},
+            ],
+        )
+        self.assertEqual(len(cleaned), 1)
+        self.assertEqual(cleaned[0]["canonical_name"], "Sera")
+        self.assertEqual(cleaned[0]["promotion_status"], "promoted_canonical")
+        self.assertEqual(cleanup_audit["primary_count"], 1)
+        self.assertEqual(cleanup_audit["discarded_count"], 1)
+        self.assertEqual(cleanup_audit["descriptor_primary_rate"], 0.0)
+        self.assertEqual(promotion_audit["decisions"][1]["decision"], "discard")
 
     def test_recurring_chapter_entities_can_be_promoted_when_global_canon_misses_them(self):
         promoted = _promote_recurring_chapter_entities(
@@ -592,6 +723,10 @@ class StructuredBootstrapV1Tests(unittest.TestCase):
             self.assertTrue(Path(result.global_batch_audit_path).exists())
             self.assertTrue(Path(result.model_plan_audit_path).exists())
             self.assertTrue(Path(result.canonical_entity_map_path).exists())
+            self.assertTrue(Path(result.entity_clusters_audit_path).exists())
+            self.assertTrue(Path(result.entity_resolution_audit_path).exists())
+            self.assertTrue(Path(result.entity_cleanup_audit_path).exists())
+            self.assertTrue(Path(result.promotion_decisions_audit_path).exists())
             self.assertTrue(Path(result.obsidian_import_path).exists())
             chapter_files = sorted(Path(result.chapter_outputs_dir).glob("*.json"))
             self.assertEqual(len(chapter_files), 2)

@@ -180,6 +180,11 @@ def _normalize_relationships(relationships: list[dict[str, Any]] | None) -> list
 
 
 def should_promote_entity(entity: dict[str, Any]) -> bool:
+    explicit_status = str(entity.get("promotion_status") or "").strip().casefold()
+    if explicit_status == "promoted_canonical":
+        return True
+    if explicit_status == "pending_review":
+        return False
     title = normalize_title(str(entity.get("canonical_name") or entity.get("canonical_subject") or ""))
     key_facts = dedupe([str(fact).strip() for fact in (entity.get("key_facts") or []) if str(fact).strip()])
     relationships = _normalize_relationships(entity.get("relationships") or [])
@@ -239,10 +244,26 @@ def _merge_entities(base: dict[str, Any], extra: dict[str, Any]) -> dict[str, An
     merged["source_mentions"] = dedupe((preferred.get("source_mentions") or []) + (secondary.get("source_mentions") or []))
     merged["relationships"] = _normalize_relationships((preferred.get("relationships") or []) + (secondary.get("relationships") or []))
     merged["confidence"] = max(float(preferred.get("confidence") or 0.0), float(secondary.get("confidence") or 0.0))
-    merged["review_state"] = "canonical" if (
-        str(preferred.get("review_state") or "").casefold() == "canonical"
-        or str(secondary.get("review_state") or "").casefold() == "canonical"
-    ) else "review"
+    preferred_status = str(preferred.get("promotion_status") or "").strip().casefold()
+    secondary_status = str(secondary.get("promotion_status") or "").strip().casefold()
+    if "promoted_canonical" in {preferred_status, secondary_status}:
+        merged["promotion_status"] = "promoted_canonical"
+        merged["review_state"] = "canonical"
+        merged["note_role"] = "primary"
+    elif "pending_review" in {preferred_status, secondary_status}:
+        merged["promotion_status"] = "pending_review"
+        merged["review_state"] = "review"
+        merged["note_role"] = "review"
+    else:
+        merged["review_state"] = "canonical" if (
+            str(preferred.get("review_state") or "").casefold() == "canonical"
+            or str(secondary.get("review_state") or "").casefold() == "canonical"
+        ) else "review"
+        merged["promotion_status"] = "promoted_canonical" if merged["review_state"] == "canonical" else "pending_review"
+        merged["note_role"] = "primary" if merged["review_state"] == "canonical" else "review"
+    merged["naming_quality"] = str(preferred.get("naming_quality") or secondary.get("naming_quality") or "unknown")
+    merged["needs_review"] = bool(preferred.get("needs_review", False) or secondary.get("needs_review", False))
+    merged["review_reason"] = str(preferred.get("review_reason") or secondary.get("review_reason") or "").strip()
     return merged
 
 
@@ -297,9 +318,13 @@ def _canonical_primary_index(entities: list[dict[str, Any]]) -> dict[str, dict[s
         normalized_title = normalize_title(str(entity.get("canonical_name") or ""))
         if not normalized_title:
             continue
-        if str(entity.get("review_state") or "canonical").casefold() != "canonical":
+        explicit_status = str(entity.get("promotion_status") or "").strip().casefold()
+        if explicit_status:
+            if explicit_status != "promoted_canonical":
+                continue
+        elif str(entity.get("review_state") or "canonical").casefold() != "canonical":
             continue
-        if not should_promote_entity(entity):
+        if explicit_status != "promoted_canonical" and not should_promote_entity(entity):
             continue
         index[normalized_title] = {
             **entity,
@@ -315,9 +340,13 @@ def _review_entity_index(entities: list[dict[str, Any]]) -> dict[str, dict[str, 
         normalized_title = normalize_title(str(entity.get("canonical_name") or ""))
         if not normalized_title:
             continue
-        if str(entity.get("review_state") or "canonical").casefold() != "review":
+        explicit_status = str(entity.get("promotion_status") or "").strip().casefold()
+        if explicit_status:
+            if explicit_status != "pending_review":
+                continue
+        elif str(entity.get("review_state") or "canonical").casefold() != "review":
             continue
-        if not _should_materialize_review_entity(entity):
+        if explicit_status != "pending_review" and not _should_materialize_review_entity(entity):
             continue
         index[normalized_title] = {
             **entity,
@@ -382,9 +411,21 @@ def resolve_wikilinks(text: str, canonical_index: dict[str, dict[str, Any]]) -> 
 
 def _normalize_frontmatter_entity(entity: dict[str, Any], *, role: str) -> dict[str, Any]:
     normalized_title = normalize_title(str(entity.get("canonical_name") or entity.get("canonical_subject") or ""))
+    explicit_note_role = str(entity.get("note_role") or "").strip()
+    explicit_promotion = str(entity.get("promotion_status") or "").strip().casefold()
     review_state = "review" if str(entity.get("review_state") or "").strip().casefold() == "review" else "canonical"
-    note_role = "review" if review_state == "review" else role
-    promotion_status = "pending_review" if review_state == "review" else "promoted_canonical"
+    if explicit_promotion == "pending_review":
+        review_state = "review"
+    elif explicit_promotion == "promoted_canonical":
+        review_state = "canonical"
+    note_role = explicit_note_role or ("review" if review_state == "review" else role)
+    if note_role == "review":
+        promotion_status = "pending_review"
+        review_state = "review"
+    else:
+        promotion_status = "promoted_canonical"
+        if review_state != "review":
+            review_state = "canonical"
     return {
         "canonical_subject": normalized_title,
         "display_title": normalized_title,

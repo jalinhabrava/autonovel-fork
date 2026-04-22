@@ -17,6 +17,8 @@ from textifai.bootstrap.contracts import SourceDocumentInventory
 from textifai.bootstrap.source_reader import read_source_documents
 from textifai.import_review.batch_planner import PlannedBatch, pack_items_by_budget, split_markdown_semantically
 from textifai.import_review.bootstrap_profile import build_bootstrap_profile, classify_chapter_complexity
+from textifai.import_review.entity_cleanup import cleanup_resolved_entities
+from textifai.import_review.entity_cluster_resolution import resolve_entity_clusters
 from textifai.import_review.empirical_ranker import EmpiricalPolicy, append_empirical_record, make_empirical_record
 from textifai.import_review.model_advisor import maybe_advise_model_plan
 from textifai.import_review.chapterizer import detect_story_chapters
@@ -58,6 +60,7 @@ OUTPUT SCHEMA
 "entities": [
 {
 "canonical_name": "...",
+"canonical_candidate": "...",
 "entity_kind": "...",
 "preferred_slug": "...",
 "aliases": ["..."],
@@ -73,7 +76,11 @@ OUTPUT SCHEMA
 "chapter_refs": ["..."],
 "source_mentions": ["..."],
 "confidence": 0.0,
-"review_state": "canonical"
+"review_state": "canonical",
+"naming_quality": "proper_name",
+"is_stable_entity": true,
+"needs_review": false,
+"review_reason": ""
 }
 ],
 "merge_plan": [
@@ -174,6 +181,29 @@ Do not merge one named character into another merely because they share:
 * or a narrative position.
 
 Explicit personal names take precedence over titles or descriptive labels unless the work clearly confirms they are the same entity.
+
+==================================================
+NAMING QUALITY RULES
+====================
+
+Each entity must classify naming_quality as one of:
+
+* proper_name
+* title_plus_name
+* descriptor
+* pronoun_like
+* unknown
+
+Use proper_name when the work provides a stable explicit personal or place name.
+Use title_plus_name when the work repeatedly uses a titled form with a stable name.
+Use descriptor when the label is contextual or descriptive rather than a true stable name.
+Use pronoun_like for pronouns or speaker placeholders.
+Use unknown only when the naming status is genuinely unclear.
+
+canonical_candidate should be the strongest current candidate for later cross-chapter resolution.
+is_stable_entity should be true only when the entity appears durable enough to track across the work.
+needs_review should be true when naming or identity remains uncertain.
+review_reason should briefly explain the uncertainty in LANGUAGE when needs_review is true.
 
 ==================================================
 LANGUAGE OUTPUT RULES
@@ -336,6 +366,9 @@ OUTPUT SCHEMA
 {
 "surface": "...",
 "canonical": "...",
+"canonical_candidate": "...",
+"naming_quality": "proper_name",
+"needs_review": false,
 "facts": ["..."],
 "confidence": 0.0
 }
@@ -344,6 +377,9 @@ OUTPUT SCHEMA
 {
 "surface": "...",
 "canonical": "...",
+"canonical_candidate": "...",
+"naming_quality": "proper_name",
+"needs_review": false,
 "facts": ["..."],
 "confidence": 0.0
 }
@@ -352,6 +388,9 @@ OUTPUT SCHEMA
 {
 "surface": "...",
 "canonical": "...",
+"canonical_candidate": "...",
+"naming_quality": "proper_name",
+"needs_review": false,
 "facts": ["..."],
 "confidence": 0.0
 }
@@ -360,6 +399,9 @@ OUTPUT SCHEMA
 {
 "surface": "...",
 "canonical": "...",
+"canonical_candidate": "...",
+"naming_quality": "proper_name",
+"needs_review": false,
 "facts": ["..."],
 "confidence": 0.0
 }
@@ -417,6 +459,18 @@ prefer the explicit named identity unless the chapter or the global canon clearl
 
 If TITLE_ENTITY_HINTS contains an explicit proper name and the chapter supports it,
 preserve that named identity instead of coercing it into a different canonical entity.
+
+Each extracted item must set canonical_candidate to the strongest local candidate for later entity resolution.
+
+Each extracted item must classify naming_quality as one of:
+
+* proper_name
+* title_plus_name
+* descriptor
+* pronoun_like
+* unknown
+
+Set needs_review = true when the mention remains semantically important but the identity is still uncertain.
 
 ==================================================
 RELEVANCE FILTER
@@ -674,6 +728,10 @@ class NovelBootstrapV1Result:
     canonical_entity_map_path: str
     chapter_outputs_dir: str
     chapters_enriched_path: str
+    entity_clusters_audit_path: str
+    entity_resolution_audit_path: str
+    entity_cleanup_audit_path: str
+    promotion_decisions_audit_path: str
     obsidian_import_path: str
     warnings: list[str] = field(default_factory=list)
 
@@ -842,8 +900,26 @@ def run_structured_bootstrap_v1(
     chapters_enriched_path = system_root / "chapters_enriched.json"
     chapters_enriched_path.write_text(json.dumps(chapters_enriched, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    obsidian_import = assemble_obsidian_import(
+    resolved_entities, entity_clusters_audit, entity_resolution_audit = resolve_entity_clusters(
         global_data=global_payload,
+        chapter_outputs=[item["chapters"][0] for item in chapter_outputs if item.get("chapters")],
+    )
+    entity_clusters_audit_path = system_root / "entity_clusters_audit.json"
+    entity_clusters_audit_path.write_text(json.dumps(entity_clusters_audit, ensure_ascii=False, indent=2), encoding="utf-8")
+    entity_resolution_audit_path = system_root / "entity_resolution_audit.json"
+    entity_resolution_audit_path.write_text(json.dumps(entity_resolution_audit, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    cleaned_entities, entity_cleanup_audit, promotion_decisions_audit = cleanup_resolved_entities(
+        entities=resolved_entities,
+        chapter_outputs=[item["chapters"][0] for item in chapter_outputs if item.get("chapters")],
+    )
+    entity_cleanup_audit_path = system_root / "entity_cleanup_audit.json"
+    entity_cleanup_audit_path.write_text(json.dumps(entity_cleanup_audit, ensure_ascii=False, indent=2), encoding="utf-8")
+    promotion_decisions_audit_path = system_root / "promotion_decisions_audit.json"
+    promotion_decisions_audit_path.write_text(json.dumps(promotion_decisions_audit, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    obsidian_import = assemble_obsidian_import(
+        global_data={**global_payload, "entities": cleaned_entities},
         chapter_outputs=[item["chapters"][0] for item in chapter_outputs if item.get("chapters")],
     )
     obsidian_import_path = system_root / "obsidian_import.json"
@@ -858,6 +934,10 @@ def run_structured_bootstrap_v1(
         canonical_entity_map_path=str(canonical_entity_map_path),
         chapter_outputs_dir=str(chapter_outputs_dir),
         chapters_enriched_path=str(chapters_enriched_path),
+        entity_clusters_audit_path=str(entity_clusters_audit_path),
+        entity_resolution_audit_path=str(entity_resolution_audit_path),
+        entity_cleanup_audit_path=str(entity_cleanup_audit_path),
+        promotion_decisions_audit_path=str(promotion_decisions_audit_path),
         obsidian_import_path=str(obsidian_import_path),
         warnings=warnings,
     )
@@ -884,6 +964,9 @@ def build_canonical_entity_map(
                 "key_facts": (ent.get("key_facts", []) or [])[:max_key_facts],
                 "review_state": review_state,
                 "confidence": ent.get("confidence", 0.0),
+                "canonical_candidate": ent.get("canonical_candidate", ent.get("canonical_name", "")),
+                "naming_quality": ent.get("naming_quality", "unknown"),
+                "needs_review": ent.get("needs_review", review_state != "canonical"),
             }
         )
     canonical_map.sort(key=lambda x: (str(x["entity_kind"]), str(x["canonical_name"]).lower()))
@@ -893,13 +976,6 @@ def build_canonical_entity_map(
 def assemble_obsidian_import(*, global_data: dict[str, Any], chapter_outputs: list[dict[str, Any]]) -> dict[str, Any]:
     work = global_data.get("work", {})
     entities = enrich_global_entities_conservative(global_data.get("entities", []) or [], chapter_outputs)
-    entities = _promote_recurring_chapter_entities(entities, chapter_outputs)
-    entities = _promote_title_hint_entities(entities, chapter_outputs)
-    entities = _stabilize_character_entities_with_title_hints(
-        entities,
-        chapter_outputs,
-        language=str(work.get("language") or "unknown"),
-    )
     chapters = sorted(chapter_outputs, key=lambda ch: (ch.get("sequence_index", 0), ch.get("chapter_id", "")))
     return {"work": work, "chapters": chapters, "entities": entities}
 
@@ -2371,9 +2447,24 @@ def _normalize_global_payload(
             "language": str(work.get("language") or language).strip() or language,
             "normalization_notes": unique_preserve_order(normalization_notes),
         },
-        "entities": entities if isinstance(entities, list) else [],
+        "entities": [],
         "merge_plan": merge_plan if isinstance(merge_plan, list) else [],
     }
+    for raw in entities if isinstance(entities, list) else []:
+        if not isinstance(raw, dict):
+            continue
+        canonical_name = str(raw.get("canonical_name") or raw.get("canonical_candidate") or "").strip()
+        normalized["entities"].append(
+            {
+                **raw,
+                "canonical_name": canonical_name,
+                "canonical_candidate": str(raw.get("canonical_candidate") or canonical_name).strip() or canonical_name,
+                "naming_quality": str(raw.get("naming_quality") or "unknown").strip() or "unknown",
+                "is_stable_entity": bool(raw.get("is_stable_entity", False)),
+                "needs_review": bool(raw.get("needs_review", str(raw.get("review_state") or "").casefold() == "review")),
+                "review_reason": str(raw.get("review_reason") or "").strip(),
+            }
+        )
     return normalized
 
 
@@ -2405,6 +2496,24 @@ def _normalize_chapter_payload(
     for key in ("characters", "places", "concepts", "events", "relations", "unresolved_mentions"):
         if not isinstance(chapter.get(key), list):
             chapter[key] = []
+    for key in ("characters", "places", "concepts", "events"):
+        normalized_items: list[dict[str, Any]] = []
+        for item in chapter.get(key, []):
+            if not isinstance(item, dict):
+                continue
+            surface = str(item.get("surface") or "").strip()
+            canonical = str(item.get("canonical") or surface).strip() or surface
+            normalized_items.append(
+                {
+                    **item,
+                    "surface": surface,
+                    "canonical": canonical,
+                    "canonical_candidate": str(item.get("canonical_candidate") or canonical or surface).strip() or canonical,
+                    "naming_quality": str(item.get("naming_quality") or "unknown").strip() or "unknown",
+                    "needs_review": bool(item.get("needs_review", False)),
+                }
+            )
+        chapter[key] = normalized_items
     return {
         "work": {
             "title": str(work.get("title") or work_title).strip() or work_title,
