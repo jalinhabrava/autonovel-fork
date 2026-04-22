@@ -133,7 +133,7 @@ class TextifAIObsidianSetupTests(unittest.TestCase):
             self.assertTrue((vault_root / ".obsidian").exists())
             self.assertTrue((vault_root / "00_Project" / "Project.md").exists())
 
-    def test_prepare_existing_material_writes_staging_and_explains_official_importer_tradeoff(self):
+    def test_prepare_existing_material_reports_when_structured_bootstrap_is_unavailable(self):
         with tempfile.TemporaryDirectory() as tmp:
             base = Path(tmp)
             vault_root = base / "Vault"
@@ -158,9 +158,9 @@ class TextifAIObsidianSetupTests(unittest.TestCase):
                 repo_root=base,
             )
 
-            self.assertEqual(result.import_strategy_used, "textifai_bootstrap_staging")
-            self.assertTrue(result.bootstrap_written_drafts)
-            self.assertTrue(result.bootstrap_pending_candidates or result.bootstrap_auto_promoted_paths)
+            self.assertEqual(result.import_strategy_used, "structured_bootstrap_v1_unavailable")
+            self.assertFalse(result.bootstrap_written_drafts)
+            self.assertIn("structured_bootstrap_v1_failed", result.bootstrap_warnings)
             self.assertFalse(result.official_obsidian_importer_used)
             self.assertIsNotNone(result.official_obsidian_importer_reason)
             self.assertEqual(result.readiness.source_reliability, "vault_reader_only")
@@ -189,7 +189,8 @@ class TextifAIObsidianSetupTests(unittest.TestCase):
             )
 
             self.assertTrue(result.vault_ready)
-            self.assertTrue(result.bootstrap_written_drafts)
+            self.assertFalse(result.bootstrap_written_drafts)
+            self.assertEqual(result.import_strategy_used, "structured_bootstrap_v1_unavailable")
             self.assertGreaterEqual(len(result.source_files_considered), 2)
             self.assertTrue(any(path.endswith("fichas.md") for path in result.source_files_considered))
             self.assertTrue((folder / "00_Project" / "Project.md").exists())
@@ -320,7 +321,8 @@ class TextifAIObsidianSetupTests(unittest.TestCase):
 
             self.assertEqual(payload["mode"], "existing_material")
             self.assertTrue(payload["vault_ready"])
-            self.assertTrue(payload["bootstrap_written_drafts"])
+            self.assertFalse(payload["bootstrap_written_drafts"])
+            self.assertEqual(payload["import_strategy_used"], "structured_bootstrap_v1_unavailable")
             self.assertEqual(payload["plugin_status"]["install_succeeded"], True)
 
     def test_short_obsidian_status_wrapper_reports_readiness(self):

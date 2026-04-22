@@ -7,22 +7,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from providers.text_provider import get_text_provider_config_error
-from textifai.bootstrap import (
-    BootstrapLLMConfig,
-    ProviderBackedBootstrapAnalyzer,
-    VaultInitializationConfig,
-    confirm_and_write_bootstrap,
-)
 from textifai.bootstrap.source_reader import build_source_document_inventory, discover_importable_source_paths
 from textifai.bootstrap.source_reader import read_source_documents
-from textifai.import_review import (
-    CompositionConfig,
-    ReviewPolicy,
-    StoryBuildConfig,
-    build_story_notes,
-    compose_primary_notes_from_staging,
-    review_import_stage,
-)
 from textifai.import_review.structured_bootstrap_v1 import NovelBootstrapV1Config, run_structured_bootstrap_v1
 from textifai.obsidian.json_import import import_json_to_vault
 from textifai.obsidian.readiness import ObsidianOperationalReadiness, evaluate_obsidian_operational_readiness
@@ -131,7 +117,6 @@ def prepare_obsidian_project(
     source_extraction_audit_path: str | None = None
     progress_log_path: str | None = None
     progress_log_path = _bootstrap_progress_log_path(vault_root)
-    bootstrap_llm_analyzer = _resolve_bootstrap_llm_analyzer(repo_path, progress_log_path=progress_log_path)
 
     if config.mode == "new_project":
         if not vault_root.exists() or not any(vault_root.iterdir()):
@@ -154,7 +139,6 @@ def prepare_obsidian_project(
         source_root = source_root_path or vault_root
         if not source_root.exists():
             raise FileNotFoundError(f"Source root does not exist: {source_root}")
-        bootstrap_mode = "import_into_existing_vault"
         if not vault_root.exists() or not any(vault_root.iterdir()):
             bootstrap_vault(
                 vault_root,
@@ -163,14 +147,12 @@ def prepare_obsidian_project(
                 allow_existing_content=True,
             )
             vault_created = True
-            bootstrap_mode = "new_project"
         elif validate_vault(vault_root):
             bootstrap_vault(
                 vault_root,
                 title=config.project_title or source_root.name or "TextifAI Project",
                 allow_existing_content=True,
             )
-            bootstrap_mode = "import_into_existing_vault"
             notes.append("Existing folder was converted into a TextifAI vault without disturbing prior material.")
         inventory = build_source_document_inventory(
             source_root,
@@ -215,75 +197,16 @@ def prepare_obsidian_project(
                 summary_count=len(story_summary_paths),
             )
         else:
-            bootstrap_result = confirm_and_write_bootstrap(
-                VaultInitializationConfig(
-                    vault_root=str(vault_root),
-                    mode=bootstrap_mode,
-                    project_title=config.project_title or source_root.name or "TextifAI Project",
-                    primary_language=config.primary_language,
-                    working_languages=list(config.working_languages),
-                    create_base_structure=True,
-                    use_import_staging=True,
-                ),
-                source_root=source_root,
-                source_paths=preexisting_source_paths or None,
-                llm_analyzer=bootstrap_llm_analyzer,
-            )
-            written_drafts = list(bootstrap_result.written_drafts)
-            warnings.extend(list(bootstrap_result.warnings))
-            if bootstrap_result.inventory is not None and source_extraction_audit_path is None:
-                source_extraction_audit_path = _write_source_extraction_audit(
-                    vault_root=vault_root,
-                    inventory=bootstrap_result.inventory,
-                )
-            import_strategy = "textifai_bootstrap_staging"
-            notes.append("Existing source material was staged into the vault import workspace.")
+            import_strategy = "structured_bootstrap_v1_unavailable"
+            warnings.append("structured_bootstrap_v1_failed")
+            notes.append("Structured bootstrap v1 did not complete, and the legacy staging fallback is now archived and disabled.")
             _append_bootstrap_progress(
                 progress_log_path,
                 phase="bootstrap",
-                event="staging_written",
-                written_drafts=len(written_drafts),
+                event="structured_bootstrap_unavailable",
                 source_file_count=len(preexisting_source_paths),
             )
-            if written_drafts:
-                bundle, reviews, plan = review_import_stage(vault_root, policy=ReviewPolicy())
-                promoted_paths = []
-                pending_candidates = [draft.draft_id for draft in bundle.drafts]
-                story_result = _build_story_layer(
-                    vault_root=vault_root,
-                    bootstrap_result=bootstrap_result,
-                    repo_path=repo_path,
-                    progress_log_path=progress_log_path,
-                )
-                story_chapter_paths = list(story_result.chapter_paths)
-                story_summary_paths = list(story_result.summary_paths)
-                composed_paths = list(getattr(story_result, "primary_paths", []))
-                composition = _compose_primary_canonical_notes(vault_root, repo_path=repo_path, progress_log_path=progress_log_path)
-                composed_paths.extend(path for path in composition.written_paths if path not in composed_paths)
-                if pending_candidates:
-                    notes.append("Imported material remains in hidden staging/review until explicit promotion or stronger canonical composition is available.")
-                if composed_paths:
-                    notes.append(f"Composed {len(composed_paths)} primary canonical notes from staged evidence.")
-                if story_chapter_paths:
-                    notes.append(f"Wrote {len(story_chapter_paths)} canonical chapter notes.")
-                if story_summary_paths:
-                    notes.append(f"Wrote {len(story_summary_paths)} chapter summaries with Obsidian links.")
-                bootstrap_audit_path = _write_bootstrap_audit(
-                    vault_root=vault_root,
-                    source_files=[str(path) for path in preexisting_source_paths],
-                    written_drafts=written_drafts,
-                    promoted_paths=promoted_paths,
-                    pending_candidates=pending_candidates,
-                    primary_composed_paths=composed_paths,
-                    story_chapter_paths=story_chapter_paths,
-                    story_summary_paths=story_summary_paths,
-                    warnings=warnings,
-                )
-            if _all_markdown_sources(source_root) and config.importer_preference == "obsidian_importer_manual_if_markdown":
-                importer_reason = (
-                    "The official Obsidian Importer exists for Markdown, but TextifAI keeps using its own staging flow "
-                    "because it needs a reproducible, provenance-aware, reviewable path outside the app."
-                )
+            importer_reason = "Legacy staging fallback archived; rerun with structured bootstrap settings or inspect model plan audit."
 
     plugin_status = None
     if config.install_bridge_plugin:
@@ -324,27 +247,6 @@ def prepare_obsidian_project(
         bootstrap_audit_path=bootstrap_audit_path,
         bootstrap_progress_log_path=progress_log_path,
         source_extraction_audit_path=source_extraction_audit_path,
-    )
-
-
-def _resolve_bootstrap_llm_analyzer(repo_root: Path, *, progress_log_path: str | None = None) -> ProviderBackedBootstrapAnalyzer | None:
-    synchronize_runtime_environment(repo_root)
-    provider_name, model = _resolve_bootstrap_provider_and_model(repo_root)
-    if not provider_name or not model:
-        return None
-    if get_text_provider_config_error("bootstrap_normalization", provider_name) is not None:
-        return None
-    return ProviderBackedBootstrapAnalyzer(
-        config=BootstrapLLMConfig(
-            task_name="bootstrap_normalization",
-            provider_name=provider_name,
-            model=model,
-            max_tokens=4000,
-            temperature=0.1,
-            timeout_seconds=120,
-            retries=1,
-            progress_log_path=progress_log_path,
-        )
     )
 
 
@@ -395,62 +297,6 @@ def _run_structured_bootstrap_pipeline(
     return result
 
 
-def _compose_primary_canonical_notes(
-    vault_root: Path,
-    *,
-    repo_path: Path,
-    progress_log_path: str | None,
-):
-    import os
-
-    synchronize_runtime_environment(repo_path)
-    provider_name, model = _resolve_bootstrap_provider_and_model(repo_path)
-    if not provider_name or not model:
-        return type("_EmptyComposition", (), {"written_paths": []})()
-    if get_text_provider_config_error("bootstrap_normalization", provider_name) is not None:
-        return type("_EmptyComposition", (), {"written_paths": []})()
-    composition = compose_primary_notes_from_staging(
-        vault_root,
-        config=CompositionConfig(
-            provider_name=provider_name,
-            model=model,
-            max_candidates=_coerce_optional_int(os.environ.get("TEXTIFAI_BOOTSTRAP_MAX_PRIMARY_CANDIDATES")) or 40,
-        ),
-        progress_log_path=progress_log_path,
-    )
-    return composition
-
-
-def _build_story_layer(
-    *,
-    vault_root: Path,
-    bootstrap_result,
-    repo_path: Path,
-    progress_log_path: str | None,
-):
-    import os
-
-    inventory = getattr(bootstrap_result, "inventory", None)
-    if inventory is None:
-        return type("_EmptyStoryBuild", (), {"chapter_paths": [], "summary_paths": []})()
-    synchronize_runtime_environment(repo_path)
-    provider_name, model = _resolve_bootstrap_provider_and_model(repo_path)
-    if not provider_name or not model:
-        return type("_EmptyStoryBuild", (), {"chapter_paths": [], "summary_paths": []})()
-    if get_text_provider_config_error("bootstrap_normalization", provider_name) is not None:
-        return type("_EmptyStoryBuild", (), {"chapter_paths": [], "summary_paths": []})()
-    return build_story_notes(
-        vault_root,
-        inventory=inventory,
-        config=StoryBuildConfig(
-            provider_name=provider_name,
-            model=model,
-            max_chapters=_coerce_optional_int(os.environ.get("TEXTIFAI_BOOTSTRAP_MAX_CHAPTERS")),
-        ),
-        progress_log_path=progress_log_path,
-    )
-
-
 def _resolve_bootstrap_provider_and_model(repo_root: Path) -> tuple[str | None, str | None]:
     import os
 
@@ -479,57 +325,6 @@ def _append_bootstrap_progress(path: str | None, **payload) -> None:
     target.parent.mkdir(parents=True, exist_ok=True)
     with target.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(payload, ensure_ascii=False) + "\n")
-
-
-def _write_bootstrap_audit(
-    *,
-    vault_root: Path,
-    source_files: list[str],
-    written_drafts: list[str],
-    promoted_paths: list[str],
-    pending_candidates: list[str],
-    primary_composed_paths: list[str],
-    story_chapter_paths: list[str],
-    story_summary_paths: list[str],
-    warnings: list[str],
-) -> str:
-    audit_path = vault_root / "99_System" / "bootstrap_audit.json"
-    audit_path.parent.mkdir(parents=True, exist_ok=True)
-    audit_path.write_text(
-        json.dumps(
-            {
-                "vault_root": str(vault_root),
-                "source_files": source_files,
-                "written_draft_count": len(written_drafts),
-                "promoted_count": len(promoted_paths),
-                "pending_count": len(pending_candidates),
-                "primary_composed_count": len(primary_composed_paths),
-                "story_chapter_count": len(story_chapter_paths),
-                "story_summary_count": len(story_summary_paths),
-                "written_drafts": written_drafts[:100],
-                "promoted_paths": promoted_paths[:100],
-                "pending_candidates": pending_candidates[:100],
-                "primary_composed_paths": primary_composed_paths[:100],
-                "story_chapter_paths": story_chapter_paths[:100],
-                "story_summary_paths": story_summary_paths[:100],
-                "warnings": warnings[:100],
-                "primary_paths_by_category": {
-                    "characters": [path for path in primary_composed_paths if "/03_Characters/Profiles/" in path.replace("\\", "/")],
-                    "places": [path for path in primary_composed_paths if "/02_World/Places/" in path.replace("\\", "/")],
-                    "lore": [path for path in primary_composed_paths if "/02_World/Lore/" in path.replace("\\", "/")],
-                    "magic": [path for path in primary_composed_paths if "/02_World/Magic/" in path.replace("\\", "/")],
-                    "creatures": [path for path in primary_composed_paths if "/02_World/Creatures/" in path.replace("\\", "/")],
-                    "factions": [path for path in primary_composed_paths if "/02_World/Factions/" in path.replace("\\", "/")],
-                    "objects": [path for path in primary_composed_paths if "/02_World/Objects/" in path.replace("\\", "/")],
-                    "history": [path for path in primary_composed_paths if "/02_World/History/" in path.replace("\\", "/")],
-                },
-            },
-            ensure_ascii=False,
-            indent=2,
-        ),
-        encoding="utf-8",
-    )
-    return str(audit_path)
 
 
 def _write_source_extraction_audit(
@@ -647,12 +442,6 @@ def ensure_obsidian_bridge_plugin(
         built_main_js=str(main_js_path),
         warnings=warnings,
     )
-
-
-def _all_markdown_sources(source_root: Path) -> bool:
-    files = [path for path in source_root.rglob("*") if path.is_file()]
-    return bool(files) and all(path.suffix.lower() == ".md" for path in files)
-
 
 def _run_npm_command(plugin_root: Path, args: list[str]) -> None:
     primary = ["npm", *args]

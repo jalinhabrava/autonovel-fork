@@ -13,7 +13,7 @@ from typing import Any
 
 from providers.text_provider import TextGenerationRequest, TextMessage, TextProviderError, get_text_provider, get_text_provider_config_error
 from textifai.author_understanding.normalization import extract_json_payload
-from textifai.bootstrap import SourceDocumentInventory
+from textifai.bootstrap.contracts import SourceDocumentInventory
 from textifai.bootstrap.source_reader import read_source_documents
 from textifai.import_review.batch_planner import PlannedBatch, pack_items_by_budget, split_markdown_semantically
 from textifai.import_review.bootstrap_profile import build_bootstrap_profile, classify_chapter_complexity
