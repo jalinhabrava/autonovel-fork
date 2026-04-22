@@ -23,13 +23,13 @@ class VaultSystemTests(unittest.TestCase):
             self.assertTrue((vault_root / "00_Project" / "Project.md").exists())
             self.assertTrue((vault_root / "99_System" / "state.json").exists())
 
-    def test_vault_adapter_reconstructs_world_from_lore_notes(self):
+    def test_vault_adapter_reconstructs_world_from_concept_notes(self):
         with tempfile.TemporaryDirectory() as tmp:
             vault_root = Path(tmp) / "NovelVault"
             bootstrap_vault(vault_root, title="My Vault Novel")
             write_or_update_note(
                 vault_root,
-                note_type="lore",
+                note_type="concept",
                 slug="harmonic-law",
                 title="Harmonic Law",
                 status="validated",
@@ -37,9 +37,9 @@ class VaultSystemTests(unittest.TestCase):
             )
             write_or_update_note(
                 vault_root,
-                note_type="lore",
+                note_type="concept",
                 slug="discarded-note",
-                title="Discarded Lore",
+                title="Discarded Concept",
                 status="rejected",
                 body="Should not appear.",
             )
@@ -47,9 +47,9 @@ class VaultSystemTests(unittest.TestCase):
             adapter = VaultProjectAdapter(vault_root)
             world = adapter.read_artifact("world")
 
-            self.assertIn("Lore Notes", world)
+            self.assertIn("Concept Notes", world)
             self.assertIn("Harmonic Law", world)
-            self.assertNotIn("Discarded Lore", world)
+            self.assertNotIn("Discarded Concept", world)
 
     def test_project_store_can_target_vault_backend(self):
         with tempfile.TemporaryDirectory() as tmp:

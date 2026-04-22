@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from vault.schema import NOTE_STATUSES, slugify
-from vault.notes import NOTE_TYPE_DIRS, ROOT_ARTIFACT_KINDS
+from vault.notes import NOTE_TYPE_DIRS, ROOT_ARTIFACT_KINDS, normalize_note_type
 
 
 def build_context_pack(
@@ -60,6 +60,7 @@ def validate_artifact_payload(payload: dict) -> dict:
     artifact_kind = payload.get("artifact_kind", "note")
     artifact_type = payload.get("artifact_type")
     if artifact_kind == "note":
+        artifact_type = normalize_note_type(artifact_type)
         if artifact_type not in NOTE_TYPE_DIRS:
             raise ValueError(f"Unsupported artifact_type {artifact_type!r}. Expected one of {tuple(NOTE_TYPE_DIRS)}.")
     elif artifact_kind == "root_artifact":

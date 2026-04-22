@@ -49,6 +49,7 @@ from textifai.followthrough.validation import build_followthrough_result, build_
 from textifai.obsidian import evaluate_obsidian_operational_readiness
 from textifai.render import render_help
 from textifai.session import TextifAISession
+from vault.notes import normalize_note_type
 from textifai.conversation.state import ConversationState
 from textifai.vaerl.contracts import EntityCandidate, EntityMention, EntityResolutionResult, RelatedArtifactSuggestion
 
@@ -604,7 +605,7 @@ class MinimalExecutionLayer:
             editorial_intent=editorial_intent,
             entity_results=entity_results,
         )
-        supporting_canon = [snippet for snippet in vault_context if snippet["artifact_type"] == "lore"][:4]
+        supporting_canon = [snippet for snippet in vault_context if snippet["artifact_type"] in {"concept", "event", "decision"}][:4]
         prompt = build_anchored_author_prompt(
             request=request or _fallback_request_from_execution(task, execution),
             task=task,
@@ -813,11 +814,11 @@ class MinimalExecutionLayer:
                 type="missing_target",
                 flow_name=task.flow_name,
                 success=False,
-                result_summary="A narrower lore anchor is still needed before running a strict consistency check.",
+                result_summary="A narrower concept or event anchor is still needed before running a strict consistency check.",
                 result={
                     "author_request_text_original": task.metadata.get("raw_request_text"),
                     "request_type": editorial_intent.request_type if editorial_intent is not None else "validation_request",
-                    "reason": "Multiple plausible lore targets remain unresolved for strict consistency validation.",
+                    "reason": "Multiple plausible concept or event targets remain unresolved for strict consistency validation.",
                     "candidate_targets": _candidate_targets_from_editorial_intent(editorial_intent),
                     "resolved_target": None,
                 },
@@ -1100,6 +1101,7 @@ def _request_to_dict(request) -> dict:
 
 
 def _artifact_payload_from_target(session: TextifAISession, target_type: str, target_id: str) -> dict | None:
+    target_type = normalize_note_type(target_type)
     path = VaultProjectAdapter(session.vault_path).note_path(target_type, target_id)
     if not path.exists():
         return None
@@ -1178,6 +1180,7 @@ def _candidate_targets_from_editorial_intent(editorial_intent: EditorialIntent |
 
 
 def _resolve_note_target(session: TextifAISession, target_type: str, target_id: str) -> dict | None:
+    target_type = normalize_note_type(target_type)
     try:
         path = VaultProjectAdapter(session.vault_path).note_path(target_type, target_id)
     except KeyError:

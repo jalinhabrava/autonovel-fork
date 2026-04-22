@@ -32,11 +32,12 @@ def suggest_related_artifacts(
     )
 
     relation_map = {
-        "character": {"scene": "linked_scene", "chapter": "linked_chapter", "lore": "linked_lore", "decision": "linked_canon"},
-        "lore": {"decision": "linked_canon", "scene": "linked_scene", "chapter": "linked_chapter"},
-        "decision": {"lore": "linked_lore", "scene": "linked_scene", "chapter": "linked_chapter"},
-        "scene": {"lore": "linked_lore", "decision": "linked_canon", "chapter": "linked_chapter"},
-        "chapter": {"scene": "linked_scene", "lore": "linked_lore", "decision": "linked_canon"},
+        "character": {"scene": "linked_scene", "chapter": "linked_chapter", "concept": "linked_concept", "event": "linked_event", "decision": "linked_canon"},
+        "concept": {"decision": "linked_canon", "scene": "linked_scene", "chapter": "linked_chapter", "event": "linked_event"},
+        "event": {"decision": "linked_canon", "scene": "linked_scene", "chapter": "linked_chapter", "concept": "linked_concept"},
+        "decision": {"concept": "linked_concept", "event": "linked_event", "scene": "linked_scene", "chapter": "linked_chapter"},
+        "scene": {"concept": "linked_concept", "event": "linked_event", "decision": "linked_canon", "chapter": "linked_chapter"},
+        "chapter": {"scene": "linked_scene", "concept": "linked_concept", "event": "linked_event", "decision": "linked_canon"},
     }
     allowed = relation_map.get(entry.artifact_type, {})
 

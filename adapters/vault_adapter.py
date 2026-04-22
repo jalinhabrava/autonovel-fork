@@ -18,6 +18,8 @@ class VaultProjectAdapter:
         self.edit_logs_dir = self.vault_root / VAULT_DIRS["editorial_logs"]
         self.eval_logs_dir = self.vault_root / VAULT_DIRS["editorial_eval"]
         self.hidden_review_dir = self.vault_root / VAULT_DIRS["review_hidden"]
+        self.world_concepts_dir = self.vault_root / VAULT_DIRS["world_concepts"]
+        self.world_events_dir = self.vault_root / VAULT_DIRS["world_events"]
         self.world_lore_dir = self.vault_root / VAULT_DIRS["world_lore"]
         self.world_places_dir = self.vault_root / VAULT_DIRS["world_places"]
         self.world_magic_dir = self.vault_root / VAULT_DIRS["world_magic"]
@@ -63,16 +65,16 @@ class VaultProjectAdapter:
         (self.vault_root / ".obsidian").mkdir(exist_ok=True)
 
     def note_path(self, note_type: str, slug: str) -> Path:
+        note_type = _normalize_note_type(note_type)
         slug = slugify(slug)
         mapping = {
             "character": self.character_profiles_dir,
-            "lore": self.world_lore_dir,
+            "concept": self.world_concepts_dir,
             "place": self.world_places_dir,
-            "magic": self.world_magic_dir,
             "creature": self.world_creatures_dir,
             "faction": self.world_factions_dir,
             "object": self.world_objects_dir,
-            "history": self.world_history_dir,
+            "event": self.world_events_dir,
             "scene": self.outline_scenes_dir,
             "decision": self.canon_decisions_dir,
             "chapter": self.chapters_dir,
@@ -92,7 +94,10 @@ class VaultProjectAdapter:
         root_text = root_path.read_text() if root_path.exists() else default
 
         if artifact_name == "world":
-            return self._combine_notes(root_text, "Lore Notes", self.world_lore_dir)
+            text = root_text
+            text = self._combine_notes(text, "Concept Notes", self.world_concepts_dir)
+            text = self._combine_notes(text, "Event Notes", self.world_events_dir)
+            return text
         if artifact_name == "characters":
             return self._combine_notes(root_text, "Character Notes", self.character_profiles_dir)
         if artifact_name == "outline":
@@ -186,3 +191,13 @@ class VaultProjectAdapter:
         except ValueError:
             return text
         return "\n".join(lines[closing + 1:]).lstrip()
+
+
+def _normalize_note_type(note_type: str) -> str:
+    normalized = str(note_type or "").strip().casefold()
+    return {
+        "lore": "concept",
+        "magic": "concept",
+        "history": "event",
+        "location": "place",
+    }.get(normalized, normalized)

@@ -3,18 +3,18 @@ from __future__ import annotations
 from pathlib import Path
 
 from adapters.vault_adapter import VaultProjectAdapter
+from textifai.obsidian.taxonomy import taxonomy_tags
 from vault.schema import NOTE_STATUSES, ROOT_NOTES, note_frontmatter, slugify
 
 
 NOTE_TYPE_DIRS = {
     "character": "character_profiles",
-    "lore": "world_lore",
+    "concept": "world_concepts",
     "place": "world_places",
-    "magic": "world_magic",
     "creature": "world_creatures",
     "faction": "world_factions",
     "object": "world_objects",
-    "history": "world_history",
+    "event": "world_events",
     "scene": "outline_scenes",
     "decision": "canon_decisions",
     "chapter": "chapters",
@@ -27,13 +27,12 @@ NOTE_TYPE_DIRS = {
 
 NOTE_KIND_MAP = {
     "character": "character",
-    "lore": "lore",
-    "place": "location",
-    "magic": "magic",
+    "concept": "concept",
+    "place": "place",
     "creature": "creature",
     "faction": "faction",
     "object": "object",
-    "history": "history",
+    "event": "event",
     "scene": "scene",
     "decision": "canon_decision",
     "chapter": "chapter",
@@ -68,6 +67,7 @@ def write_or_update_note(
     status: str = "proposed",
     metadata: dict[str, str | int | None] | None = None,
 ) -> Path:
+    note_type = normalize_note_type(note_type)
     if status not in NOTE_STATUSES:
         raise ValueError(f"Invalid note status {status!r}. Expected one of {NOTE_STATUSES}.")
     if note_type not in NOTE_TYPE_DIRS:
@@ -124,6 +124,7 @@ def update_note_status(
     slug: str,
     status: str,
 ) -> Path:
+    note_type = normalize_note_type(note_type)
     if status not in NOTE_STATUSES:
         raise ValueError(f"Invalid note status {status!r}. Expected one of {NOTE_STATUSES}.")
     if note_type not in NOTE_TYPE_DIRS:
@@ -166,6 +167,7 @@ def artifact_path_for(
 ) -> Path:
     adapter = VaultProjectAdapter(vault_root)
     if artifact_kind == "note":
+        artifact_type = normalize_note_type(artifact_type)
         if artifact_type not in NOTE_TYPE_DIRS:
             raise ValueError(f"Unsupported note type: {artifact_type}")
         return adapter.note_path(artifact_type, slugify(entity_id))
@@ -188,6 +190,7 @@ def write_artifact_payload(
     metadata: dict[str, str | int | None] | None = None,
 ) -> Path:
     if artifact_kind == "note":
+        artifact_type = normalize_note_type(artifact_type)
         return write_or_update_note(
             vault_root,
             note_type=artifact_type,
@@ -223,6 +226,7 @@ def _merge_note_metadata(
     note_type: str,
     metadata: dict[str, str | int | None] | None,
 ) -> dict[str, str | int | list[str]]:
+    note_type = normalize_note_type(note_type)
     merged: dict[str, str | int | list[str]] = dict(metadata or {})
     role = str(merged.get("note_role") or "").strip().casefold()
     tags = _coerce_tags(merged.get("tags"))
@@ -241,6 +245,11 @@ def _merge_note_metadata(
 
     if role == "primary":
         tags.extend(["#primary"])
+    if note_type in {"character", "concept", "place", "faction", "object", "creature", "event"}:
+        subkind = str(merged.get("entity_subkind") or "").strip().casefold() or None
+        tags.extend(taxonomy_tags(note_role="primary" if role == "primary" else "review" if role == "review" else "system", entity_kind=note_type, entity_subkind=subkind)[1:] if role in {"primary", "review"} else [f"#{note_type}"])
+        if subkind:
+            tags.append(f"#{subkind}")
     merged["tags"] = _dedupe_tags(tags)
     return merged
 
@@ -285,3 +294,13 @@ def _dedupe_tags(tags: list[str]) -> list[str]:
         seen.add(key)
         result.append(normalized)
     return result
+
+
+def normalize_note_type(note_type: str) -> str:
+    normalized = str(note_type or "").strip().casefold()
+    return {
+        "lore": "concept",
+        "magic": "concept",
+        "history": "event",
+        "location": "place",
+    }.get(normalized, normalized)

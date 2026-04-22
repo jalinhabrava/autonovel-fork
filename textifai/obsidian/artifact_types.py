@@ -23,12 +23,16 @@ def normalize_artifact_type(
 
     if normalized.startswith("03_characters/profiles/"):
         return "character"
+    if normalized.startswith("02_world/concepts/"):
+        return "concept"
+    if normalized.startswith("02_world/events/"):
+        return "event"
     if normalized.startswith("02_world/lore/"):
-        return "lore"
+        return "concept"
     if normalized.startswith("02_world/places/"):
-        return "location"
+        return "place"
     if normalized.startswith("02_world/magic/"):
-        return "magic"
+        return "concept"
     if normalized.startswith("02_world/creatures/"):
         return "creature"
     if normalized.startswith("02_world/factions/"):
@@ -36,7 +40,7 @@ def normalize_artifact_type(
     if normalized.startswith("02_world/objects/"):
         return "object"
     if normalized.startswith("02_world/history/"):
-        return "history"
+        return "event"
     if normalized.startswith("04_story/chapter_summaries/"):
         return "chapter_summary"
     if normalized.startswith("04_story/chapters/"):
@@ -48,7 +52,7 @@ def normalize_artifact_type(
     if normalized.startswith("99_import_staging/99_import_staging/characters/") or normalized.startswith("99_import_staging/characters/"):
         return "character"
     if normalized.startswith("99_import_staging/99_import_staging/lore/") or normalized.startswith("99_import_staging/lore/"):
-        return "lore"
+        return "concept"
     if normalized.startswith("99_import_staging/99_import_staging/scenes/") or normalized.startswith("99_import_staging/scenes/"):
         return "scene"
     if normalized.startswith("99_import_staging/99_import_staging/chapters/") or normalized.startswith("99_import_staging/chapters/"):
@@ -64,19 +68,20 @@ def _normalize_hint(value: object) -> str | None:
         return None
     mappings = {
         "character": "character",
-        "lore": "lore",
-        "place": "location",
-        "magic": "magic",
+        "lore": "concept",
+        "concept": "concept",
+        "place": "place",
+        "location": "place",
+        "magic": "concept",
         "creature": "creature",
         "faction": "faction",
         "object": "object",
-        "history": "history",
+        "history": "event",
+        "event": "event",
         "scene": "scene",
         "chapter": "chapter",
         "chapter_summary": "chapter_summary",
         "decision": "decision",
-        "location": "location",
-        "object": "object",
         "canon_decision": "decision",
         "mixed_note": "note",
         "project_note": "note",

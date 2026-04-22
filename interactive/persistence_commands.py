@@ -171,10 +171,10 @@ def _consistency_report(vault_root: str | Path, artifact: dict) -> dict:
     text = f"{artifact['title']}\n{artifact['body']}"
     implied_characters = infer_characters(text, character_titles)
     canon_refs = [entry["id"] for entry in pack["hard_constraints"] if entry["artifact_type"] in {"canon", "decision"}]
-    lore_refs = [
+    knowledge_refs = [
         entry["id"]
         for entry in pack["hard_constraints"] + pack["narrative_context"]
-        if entry["artifact_type"] in {"world", "lore", "timeline"}
+        if entry["artifact_type"] in {"world", "concept", "event", "timeline"}
     ]
 
     issues: list[dict] = []
@@ -214,7 +214,7 @@ def _consistency_report(vault_root: str | Path, artifact: dict) -> dict:
                     "severity": "high",
                     "blocking": artifact["artifact_type"] != "decision",
                     "message": (
-                        f"The note introduces '{term}' without support in validated lore or canon."
+                        f"The note introduces '{term}' without support in validated concept/event knowledge or canon."
                     ),
                     "suggested_action": "Constrain the ability or add an explicit canon decision before persisting.",
                 }
@@ -237,9 +237,9 @@ def _consistency_report(vault_root: str | Path, artifact: dict) -> dict:
         )
         suggestions.append("Review validated world/canon limits before updating this note.")
 
-    if artifact["artifact_type"] in {"scene", "chapter", "lore"} and not (canon_refs or lore_refs):
-        implications.append("This note introduces content without explicit canon/lore references.")
-        suggestions.append("Consider linking this note to existing lore or validating the new implication in canon.")
+    if artifact["artifact_type"] in {"scene", "chapter", "concept", "event"} and not (canon_refs or knowledge_refs):
+        implications.append("This note introduces content without explicit canon/concept references.")
+        suggestions.append("Consider linking this note to existing concepts or validating the new implication in canon.")
 
     if artifact["artifact_type"] == "character" and not implied_characters:
         suggestions.append("Consider linking this profile to existing character relations or scenes for traceability.")
@@ -262,7 +262,7 @@ def _consistency_report(vault_root: str | Path, artifact: dict) -> dict:
         "target_id": artifact["entity_id"],
         "characters": implied_characters,
         "canon_refs": canon_refs,
-        "lore_refs": lore_refs,
+        "lore_refs": knowledge_refs,
         "issues": issues,
         "implications": implications,
         "suggested_actions": _unique(suggestions),

@@ -9,7 +9,7 @@ from vault.schema import NOTE_STATUSES, VAULT_SCHEMA_VERSION, slugify
 
 
 ROOT_ARTIFACTS = {"seed", "mystery", "voice", "world", "characters", "outline", "canon", "manuscript", "arc_summary"}
-STRUCTURED_NOTE_TYPES = {"character", "lore", "scene", "decision", "review", "reader_panel", "revision_brief"}
+STRUCTURED_NOTE_TYPES = {"character", "concept", "event", "scene", "decision", "review", "reader_panel", "revision_brief"}
 
 
 def import_existing_chapters(

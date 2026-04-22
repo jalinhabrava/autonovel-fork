@@ -31,13 +31,18 @@ from textifai.render import (
     render_request_summary,
 )
 from textifai.session import TextifAISession
-from vault.notes import NOTE_TYPE_DIRS
+from vault.notes import NOTE_TYPE_DIRS, normalize_note_type
 from vault.schema import VAULT_DIRS
 
 
 NOTE_TYPE_ALIASES = {
     "character": "character",
-    "lore": "lore",
+    "concept": "concept",
+    "event": "event",
+    "place": "place",
+    "faction": "faction",
+    "object": "object",
+    "creature": "creature",
     "scene": "scene",
     "decision": "decision",
     "chapter": "chapter",
@@ -253,7 +258,7 @@ def _run_bootstrap(session: TextifAISession, args: list[str], *, input_fn=input)
         "voice": "voice",
         "characters": "character",
         "canon": "decision",
-        "timeline": "lore",
+        "timeline": "event",
     }[subtype]
     resolution = session.resolve_language(artifact_type=artifact_type, operation_origin="user")
     kwargs["artifact_language"] = resolution.artifact_target_language
@@ -464,6 +469,7 @@ def _resolve_note_target(session: TextifAISession, target: str) -> dict | None:
         normalized_type = NOTE_TYPE_ALIASES.get(note_type.strip().lower())
         if normalized_type is None:
             return None
+        normalized_type = normalize_note_type(normalized_type)
         path = VaultProjectAdapter(session.vault_path).note_path(normalized_type, slug.strip())
         if not path.exists():
             return None
@@ -512,5 +518,5 @@ def _infer_note_type_from_path(session: TextifAISession, path: Path) -> str | No
     for note_type, attr_name in NOTE_TYPE_DIRS.items():
         prefix = VAULT_DIRS[attr_name].rstrip("/")
         if relative_text.startswith(prefix + "/") or relative_text == prefix:
-            return note_type
+            return normalize_note_type(note_type)
     return None

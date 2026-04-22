@@ -185,13 +185,13 @@ class TextifAIConversationManagerTests(unittest.TestCase):
             self.assertEqual(turn.provider_mode, "disabled")
             self.assertIsNone(turn.author_facing_response)
 
-    def test_manager_uses_recent_lore_target_for_validate_this_note(self):
+    def test_manager_uses_recent_concept_target_for_validate_this_note(self):
         with tempfile.TemporaryDirectory() as tmp:
             base_dir = Path(tmp)
             vault_root = base_dir / "Vault"
             bootstrap_vault(vault_root, title="Test Project")
-            (vault_root / "02_World" / "Lore" / "magic_limits.md").write_text(
-                note_frontmatter("lore", "Magic Limits", slug="magic_limits") + "\n\n"
+            (vault_root / "02_World" / "Concepts" / "magic_limits.md").write_text(
+                note_frontmatter("concept", "Magic Limits", slug="magic_limits") + "\n\n"
             )
             (base_dir / ".env").write_text(
                 "\n".join(
@@ -214,13 +214,13 @@ class TextifAIConversationManagerTests(unittest.TestCase):
             manager.state = manager.state.__class__(
                 **{
                     **manager.state.__dict__,
-                    "last_target_type": "lore",
+                    "last_target_type": "concept",
                     "last_target_id": "magic_limits",
                 }
             )
             session.conversation_state = manager.state
             request = ConversationRequest(
-                raw_text="validate lore:magic_limits",
+                raw_text="validate concept:magic_limits",
                 source="user",
                 mode="normal",
                 interface_language="es",
@@ -232,7 +232,7 @@ class TextifAIConversationManagerTests(unittest.TestCase):
             )
             turn = manager.handle_request(request)
             self.assertEqual(turn.result_type, "pending_confirmation")
-            self.assertEqual(manager.state.pending_operation.target_type, "lore")
+            self.assertEqual(manager.state.pending_operation.target_type, "concept")
             self.assertEqual(manager.state.pending_operation.target_id, "magic_limits")
 
     def test_manager_returns_minimal_followup_clarification_for_esta_nota(self):
@@ -240,8 +240,8 @@ class TextifAIConversationManagerTests(unittest.TestCase):
             base_dir = Path(tmp)
             vault_root = base_dir / "Vault"
             bootstrap_vault(vault_root, title="Test Project")
-            (vault_root / "02_World" / "Lore" / "magic_limits.md").write_text(
-                note_frontmatter("lore", "Magic Limits", slug="magic_limits") + "\n\n"
+            (vault_root / "02_World" / "Concepts" / "magic_limits.md").write_text(
+                note_frontmatter("concept", "Magic Limits", slug="magic_limits") + "\n\n"
             )
             (base_dir / ".env").write_text(
                 "\n".join(
@@ -256,7 +256,7 @@ class TextifAIConversationManagerTests(unittest.TestCase):
             session = create_session(load_runtime_environment(base_dir))
             manager = ConversationManager(session=session, executor=MinimalExecutionLayer(session=session))
             state = create_conversation_state(explanation_language="es", artifact_target_language="ja")
-            manager.state = state.__class__(**{**state.__dict__, "last_target_type": "lore", "last_target_id": "magic_limits"})
+            manager.state = state.__class__(**{**state.__dict__, "last_target_type": "concept", "last_target_id": "magic_limits"})
             session.conversation_state = manager.state
             request = ConversationRequest(
                 raw_text="esta nota",
@@ -282,11 +282,11 @@ class TextifAIConversationManagerTests(unittest.TestCase):
             base_dir = Path(tmp)
             vault_root = base_dir / "Vault"
             bootstrap_vault(vault_root, title="Test Project")
-            (vault_root / "02_World" / "Lore" / "memory_ritual.md").write_text(
-                note_frontmatter("lore", "Memory Ritual", slug="memory_ritual", aliases=["ritual de memoria"]) + "\n\n"
+            (vault_root / "02_World" / "Concepts" / "memory_ritual.md").write_text(
+                note_frontmatter("concept", "Memory Ritual", slug="memory_ritual", aliases=["ritual de memoria"]) + "\n\n"
             )
-            (vault_root / "02_World" / "Lore" / "harbor_map.md").write_text(
-                note_frontmatter("lore", "Harbor Map", slug="harbor_map", aliases=["mapa"]) + "\n\n"
+            (vault_root / "02_World" / "Concepts" / "harbor_map.md").write_text(
+                note_frontmatter("concept", "Harbor Map", slug="harbor_map", aliases=["mapa"]) + "\n\n"
             )
             (base_dir / ".env").write_text(
                 "\n".join(
@@ -301,7 +301,7 @@ class TextifAIConversationManagerTests(unittest.TestCase):
             session = create_session(load_runtime_environment(base_dir))
             manager = ConversationManager(session=session, executor=MinimalExecutionLayer(session=session))
             request = ConversationRequest(
-                raw_text="check lore:harbor_map",
+                raw_text="check concept:harbor_map",
                 source="user",
                 mode="normal",
                 interface_language="es",
@@ -315,7 +315,7 @@ class TextifAIConversationManagerTests(unittest.TestCase):
             self.assertEqual(turn.planned_task.flow_name, "consistency_check_flow")
             self.assertEqual(turn.result_type, "consistency_report")
             self.assertEqual(turn.planned_task.target_id, "harbor_map")
-            self.assertEqual(turn.planned_task.target_type, "lore")
+            self.assertEqual(turn.planned_task.target_type, "concept")
 
     def test_manager_routes_prep_for_narration_to_previous_editorial_result(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -416,16 +416,16 @@ class TextifAIConversationManagerTests(unittest.TestCase):
             self.assertIsNotNone(remembered["narration_prep"])
             self.assertEqual(remembered["narration_prep"]["source_kind"], "beat_outline")
 
-    def test_manager_anchors_canon_contradiction_to_lore_target_with_vaerl(self):
+    def test_manager_anchors_canon_contradiction_to_concept_target_with_vaerl(self):
         with tempfile.TemporaryDirectory() as tmp:
             base_dir = Path(tmp)
             vault_root = base_dir / "Vault"
             bootstrap_vault(vault_root, title="Test Project")
-            (vault_root / "02_World" / "Lore" / "memory_ritual.md").write_text(
-                note_frontmatter("lore", "Memory Ritual", slug="memory_ritual", aliases=["ritual de memoria"]) + "\n\n"
+            (vault_root / "02_World" / "Concepts" / "memory_ritual.md").write_text(
+                note_frontmatter("concept", "Memory Ritual", slug="memory_ritual", aliases=["ritual de memoria"]) + "\n\n"
             )
-            (vault_root / "02_World" / "Lore" / "ritual_notes.md").write_text(
-                note_frontmatter("lore", "Ritual Notes", slug="ritual_notes", aliases=["ritual"]) + "\n\n"
+            (vault_root / "02_World" / "Concepts" / "ritual_notes.md").write_text(
+                note_frontmatter("concept", "Ritual Notes", slug="ritual_notes", aliases=["ritual"]) + "\n\n"
             )
             (base_dir / ".env").write_text(
                 "\n".join(
@@ -440,7 +440,7 @@ class TextifAIConversationManagerTests(unittest.TestCase):
             session = create_session(load_runtime_environment(base_dir))
             manager = ConversationManager(session=session, executor=MinimalExecutionLayer(session=session))
             request = ConversationRequest(
-                raw_text="check lore:ritual_notes",
+                raw_text="check concept:ritual_notes",
                 source="user",
                 mode="normal",
                 interface_language="es",
@@ -452,7 +452,7 @@ class TextifAIConversationManagerTests(unittest.TestCase):
             )
             turn = manager.handle_request(request)
             self.assertEqual(turn.planned_task.flow_name, "consistency_check_flow")
-            self.assertEqual(turn.planned_task.target_type, "lore")
+            self.assertEqual(turn.planned_task.target_type, "concept")
             self.assertEqual(turn.planned_task.target_id, "ritual_notes")
 
 
