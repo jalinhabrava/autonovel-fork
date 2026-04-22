@@ -71,23 +71,41 @@ def ensure_env_file(base_dir: str | Path = ".") -> Path:
 
 def update_env_values(base_dir: str | Path, updates: dict[str, str]) -> Path:
     env_path = ensure_env_file(base_dir)
-    lines = env_path.read_text().splitlines()
-    key_to_index: dict[str, int] = {}
-    for index, line in enumerate(lines):
+    original_lines = env_path.read_text().splitlines()
+    key_values: dict[str, str] = {}
+    key_first_index: dict[str, int] = {}
+
+    for index, line in enumerate(original_lines):
         stripped = line.strip()
         if not stripped or stripped.startswith("#") or "=" not in line:
             continue
-        key = line.split("=", 1)[0].strip()
-        key_to_index[key] = index
+        key, value = line.split("=", 1)
+        key = key.strip()
+        key_values[key] = value.strip()
+        key_first_index.setdefault(key, index)
 
     for key, value in updates.items():
-        rendered = f"{key}={value}"
-        if key in key_to_index:
-            lines[key_to_index[key]] = rendered
-        else:
-            lines.append(rendered)
+        key_values[key] = value
+        key_first_index.setdefault(key, len(original_lines) + len(key_first_index))
 
-    env_path.write_text("\n".join(lines).rstrip() + "\n")
+    rebuilt_lines: list[str] = []
+    seen_keys: set[str] = set()
+    for line in original_lines:
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in line:
+            rebuilt_lines.append(line)
+            continue
+        key = line.split("=", 1)[0].strip()
+        if key in seen_keys:
+            continue
+        seen_keys.add(key)
+        rebuilt_lines.append(f"{key}={key_values[key]}")
+
+    missing_keys = [key for key in key_first_index if key not in seen_keys]
+    for key in sorted(missing_keys, key=lambda item: key_first_index[item]):
+        rebuilt_lines.append(f"{key}={key_values[key]}")
+
+    env_path.write_text("\n".join(rebuilt_lines).rstrip() + "\n")
     return env_path
 
 

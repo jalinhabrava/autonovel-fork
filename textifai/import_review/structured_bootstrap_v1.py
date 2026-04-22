@@ -642,6 +642,9 @@ class NovelBootstrapV1Config:
     chapter_reduce_max_tokens: int = 3000
     global_batch_input_token_budget: int | None = 6000
     global_batch_prompt_overhead_tokens: int = 5000
+    global_batch_complexity_penalty_base: int = 500
+    global_batch_complexity_penalty_per_chapter: int = 250
+    global_batch_failure_retry_threshold: int = 2
     chapter_chunk_overlap_paragraphs: int = 1
     temperature: float = 0.0
     timeout_seconds: int = 600
@@ -1262,6 +1265,8 @@ def _build_global_normalization_batches(
         for sequence_index, chapter in enumerate(chapters, start=1)
     ]
 
+    max_total_cost = capabilities.context_window - budget.safety_margin
+
     def measure_batch(candidate: list[dict[str, Any]]) -> tuple[int, str]:
         tokens, token_method = _count_global_batch_input_tokens(
             work_title=work_title,
@@ -1281,10 +1286,20 @@ def _build_global_normalization_batches(
             )
         return tokens, token_method
 
+    def measure_total_cost(candidate: list[dict[str, Any]], input_tokens: int) -> int:
+        expected_output_tokens = min(
+            config.global_max_tokens,
+            800 + (len(candidate) * 450),
+        )
+        complexity_penalty = _estimate_global_batch_complexity_penalty(candidate, config=config)
+        return input_tokens + expected_output_tokens + complexity_penalty
+
     planned_batches = pack_items_by_budget(
         items=chapter_items,
         budget=budget,
         measure_tokens=measure_batch,
+        measure_total_cost=measure_total_cost,
+        max_total_cost=max_total_cost,
     )
     batches = [planned.items for planned in planned_batches]
     audit_batches = [
@@ -1313,6 +1328,7 @@ def _build_global_normalization_batches(
                 "supports_structured_outputs": capabilities.supports_structured_outputs,
             },
             "budget_tokens": budget.usable_input_budget,
+            "max_total_cost": max_total_cost,
             "reserved_output_tokens": budget.reserved_output_tokens,
             "safety_margin": budget.safety_margin,
             "budget_method": "model_registry_plus_counted_input",
@@ -1322,6 +1338,26 @@ def _build_global_normalization_batches(
             "batches": audit_batches,
         },
     )
+
+
+def _estimate_global_batch_complexity_penalty(
+    batch: list[dict[str, Any]],
+    *,
+    config: NovelBootstrapV1Config,
+) -> int:
+    penalty = config.global_batch_complexity_penalty_base
+    for item in batch:
+        title = str(item.get("title") or "")
+        text = str(item.get("text") or "")
+        penalty += config.global_batch_complexity_penalty_per_chapter
+        if "[" in title or "]" in title or "(" in title or ")" in title or "*" in title or "http" in title.casefold():
+            penalty += 200
+        markdown_noise = text.count("[[") + text.count("]]") + text.count("](") + text.casefold().count("http")
+        heading_count = len(re.findall(r"(?m)^#+\s+", text))
+        penalty += min(800, markdown_noise * 20)
+        penalty += min(600, heading_count * 40)
+        penalty += min(1200, max(0, len(text) // 2500))
+    return penalty
 
 
 def _build_global_token_budget(*, config: NovelBootstrapV1Config) -> TokenBudget:
@@ -1513,43 +1549,90 @@ def _run_global_normalization(
         audit_path.parent.mkdir(parents=True, exist_ok=True)
         audit_path.write_text(json.dumps(batch_audit, ensure_ascii=False, indent=2), encoding="utf-8")
     batch_payloads: list[dict[str, Any]] = []
+    batch_meta_by_key = {
+        tuple(item["chapter_ids"]): item
+        for item in batch_audit.get("batches", [])
+        if item.get("chapter_ids")
+    }
 
     for batch_index, batch in enumerate(chapter_batches, start=1):
-        batch_text = _render_global_batch_text(batch, max_chars=config.max_global_text_chars)
-        if not batch_text.strip():
-            continue
-        batch_chapter_ids = [f"ch_{item['sequence_index']:03d}" for item in batch]
-        _append_progress(
-            progress_log_path,
-            phase="structured_bootstrap_v1",
-            event="global_normalization_batch_started",
-            batch_index=batch_index,
-            chapter_ids=batch_chapter_ids,
-            estimated_input_tokens=batch_audit.get("batches", [{}])[batch_index - 1].get("input_tokens"),
-            token_count_method=batch_audit.get("batches", [{}])[batch_index - 1].get("token_count_method"),
-        )
-        prompt = _build_global_normalization_prompt(
-            work_title=work_title,
-            language=language,
-            batch_index=batch_index,
-            batch=batch,
-        )
-        if request_trace_dir is not None and batch_index == 1:
-            _write_json_trace(
-                request_trace_dir / "global_normalization_batch_001_request.json",
-                {
-                    "provider": config.provider_name,
-                    "task": config.global_task_name,
-                    "payload": {
-                        "model": config.model,
-                        "resolved_model": global_model,
-                        "messages": [{"role": "user", "content": prompt}],
-                        "temperature": config.temperature,
-                        "max_tokens": config.global_max_tokens,
-                        "response_format": {"type": "json_object"},
-                    },
-                },
+        batch_payloads.extend(
+            _run_global_normalization_batch_with_fallbacks(
+                provider=provider,
+                work_title=work_title,
+                language=language,
+                batch=batch,
+                batch_index=batch_index,
+                global_model=global_model,
+                config=config,
+                batch_meta_by_key=batch_meta_by_key,
+                request_trace_dir=request_trace_dir,
+                progress_log_path=progress_log_path,
             )
+        )
+
+    if not batch_payloads:
+        return None
+    return _merge_global_normalization_batches(batch_payloads, work_title=work_title, language=language)
+
+
+def _run_global_normalization_batch_with_fallbacks(
+    *,
+    provider,
+    work_title: str,
+    language: str,
+    batch: list[dict[str, Any]],
+    batch_index: int,
+    global_model: str,
+    config: NovelBootstrapV1Config,
+    batch_meta_by_key: dict[tuple[str, ...], dict[str, Any]],
+    request_trace_dir: Path | None,
+    progress_log_path: str | None,
+    subdivision_depth: int = 0,
+) -> list[dict[str, Any]]:
+    batch_text = _render_global_batch_text(batch, max_chars=config.max_global_text_chars)
+    if not batch_text.strip():
+        return []
+    batch_chapter_ids = [f"ch_{item['sequence_index']:03d}" for item in batch]
+    batch_key = tuple(batch_chapter_ids)
+    batch_meta = batch_meta_by_key.get(batch_key, {})
+    prompt = _build_global_normalization_prompt(
+        work_title=work_title,
+        language=language,
+        batch_index=batch_index,
+        batch=batch,
+    )
+    _append_progress(
+        progress_log_path,
+        phase="structured_bootstrap_v1",
+        event="global_normalization_batch_started",
+        batch_index=batch_index,
+        chapter_ids=batch_chapter_ids,
+        estimated_input_tokens=batch_meta.get("input_tokens"),
+        estimated_total_cost=batch_meta.get("estimated_total_cost"),
+        token_count_method=batch_meta.get("token_count_method"),
+        subdivision_depth=subdivision_depth,
+    )
+
+    if request_trace_dir is not None and batch_index == 1 and subdivision_depth == 0:
+        _write_json_trace(
+            request_trace_dir / "global_normalization_batch_001_request.json",
+            {
+                "provider": config.provider_name,
+                "task": config.global_task_name,
+                "payload": {
+                    "model": config.model,
+                    "resolved_model": global_model,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "temperature": config.temperature,
+                    "max_tokens": config.global_max_tokens,
+                    "response_format": {"type": "json_object"},
+                },
+            },
+        )
+
+    last_error: str | None = None
+    for failure_attempt in range(1, config.global_batch_failure_retry_threshold + 1):
         try:
             response = provider.generate(
                 TextGenerationRequest(
@@ -1565,41 +1648,99 @@ def _run_global_normalization(
                     response_format={"type": "json_object"},
                 )
             )
-        except TextProviderError:
+            payload = extract_json_payload(response.text)
+            normalized = _normalize_global_payload(
+                payload,
+                work_title=work_title,
+                language=language,
+                batch_note=f"batch_{batch_index}:{','.join(batch_chapter_ids)}",
+            )
+            if request_trace_dir is not None and batch_index == 1 and subdivision_depth == 0:
+                _write_json_trace(
+                    request_trace_dir / "global_normalization_batch_001_response.json",
+                    {"raw_text": response.text},
+                )
+            _append_progress(
+                progress_log_path,
+                phase="structured_bootstrap_v1",
+                event="global_normalization_batch_completed",
+                batch_index=batch_index,
+                chapter_ids=batch_chapter_ids,
+                entity_count=len(normalized.get("entities") or []),
+                subdivision_depth=subdivision_depth,
+            )
+            return [normalized]
+        except TextProviderError as exc:
+            last_error = str(exc)
             _append_progress(
                 progress_log_path,
                 phase="structured_bootstrap_v1",
                 event="global_normalization_batch_failed",
                 batch_index=batch_index,
                 chapter_ids=batch_chapter_ids,
+                failure_attempt=failure_attempt,
+                subdivision_depth=subdivision_depth,
+                error=last_error,
             )
-            continue
-        payload = extract_json_payload(response.text)
-        batch_payloads.append(
-            _normalize_global_payload(
-                payload,
-                work_title=work_title,
-                language=language,
-                batch_note=f"batch_{batch_index}:{','.join(batch_chapter_ids)}",
-            )
-        )
-        if request_trace_dir is not None and batch_index == 1:
-            _write_json_trace(
-                request_trace_dir / "global_normalization_batch_001_response.json",
-                {"raw_text": response.text},
-            )
+
+    if len(batch) > 1:
+        midpoint = max(1, len(batch) // 2)
+        left = batch[:midpoint]
+        right = batch[midpoint:]
         _append_progress(
             progress_log_path,
             phase="structured_bootstrap_v1",
-            event="global_normalization_batch_completed",
+            event="global_normalization_batch_subdivided",
             batch_index=batch_index,
             chapter_ids=batch_chapter_ids,
-            entity_count=len(batch_payloads[-1].get("entities") or []),
+            subdivision_depth=subdivision_depth,
+            left_chapter_ids=[f"ch_{item['sequence_index']:03d}" for item in left],
+            right_chapter_ids=[f"ch_{item['sequence_index']:03d}" for item in right],
+            error=last_error,
         )
+        payloads: list[dict[str, Any]] = []
+        payloads.extend(
+            _run_global_normalization_batch_with_fallbacks(
+                provider=provider,
+                work_title=work_title,
+                language=language,
+                batch=left,
+                batch_index=batch_index,
+                global_model=global_model,
+                config=config,
+                batch_meta_by_key=batch_meta_by_key,
+                request_trace_dir=request_trace_dir,
+                progress_log_path=progress_log_path,
+                subdivision_depth=subdivision_depth + 1,
+            )
+        )
+        payloads.extend(
+            _run_global_normalization_batch_with_fallbacks(
+                provider=provider,
+                work_title=work_title,
+                language=language,
+                batch=right,
+                batch_index=batch_index,
+                global_model=global_model,
+                config=config,
+                batch_meta_by_key=batch_meta_by_key,
+                request_trace_dir=request_trace_dir,
+                progress_log_path=progress_log_path,
+                subdivision_depth=subdivision_depth + 1,
+            )
+        )
+        return payloads
 
-    if not batch_payloads:
-        return None
-    return _merge_global_normalization_batches(batch_payloads, work_title=work_title, language=language)
+    _append_progress(
+        progress_log_path,
+        phase="structured_bootstrap_v1",
+        event="global_normalization_batch_abandoned",
+        batch_index=batch_index,
+        chapter_ids=batch_chapter_ids,
+        subdivision_depth=subdivision_depth,
+        error=last_error,
+    )
+    return []
 
 
 def _run_chapter_extraction(

@@ -10,6 +10,7 @@ from textifai.bootstrap.source_reader import build_source_document_inventory
 from textifai.obsidian.json_import import import_json_to_vault
 from textifai.import_review.structured_bootstrap_v1 import (
     NovelBootstrapV1Config,
+    _estimate_global_batch_complexity_penalty,
     _resolve_structured_model,
     _extract_title_entity_hints,
     _promote_recurring_chapter_entities,
@@ -302,6 +303,18 @@ class StructuredBootstrapV1Tests(unittest.TestCase):
         self.assertGreaterEqual(len(batches), 2)
         self.assertEqual(batches[0][0]["sequence_index"], 1)
         self.assertEqual(audit["batch_count"], len(batches))
+        self.assertIn("max_total_cost", audit)
+
+    def test_global_normalization_complexity_penalty_increases_for_noisy_batches(self):
+        clean = _estimate_global_batch_complexity_penalty(
+            [{"title": "Chapter 1", "text": "Texto limpio."}],
+            config=NovelBootstrapV1Config(provider_name="openai", model="auto"),
+        )
+        noisy = _estimate_global_batch_complexity_penalty(
+            [{"title": "Episode [Link](http://example.com) *Noisy*", "text": "[[Sera]] http://example.com\n# Head\n" * 20}],
+            config=NovelBootstrapV1Config(provider_name="openai", model="auto"),
+        )
+        self.assertGreater(noisy, clean)
 
     def test_auto_model_selection_prefers_phase_appropriate_openai_models(self):
         self.assertEqual(

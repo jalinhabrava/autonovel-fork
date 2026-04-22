@@ -15,6 +15,7 @@ class PlannedBatch:
     items: list[dict[str, Any]]
     input_tokens: int
     token_count_method: str
+    estimated_total_cost: int = 0
 
 
 def pack_items_by_budget(
@@ -22,6 +23,8 @@ def pack_items_by_budget(
     items: list[dict[str, Any]],
     budget: TokenBudget,
     measure_tokens: Callable[[list[dict[str, Any]]], tuple[int, str]],
+    measure_total_cost: Callable[[list[dict[str, Any]], int], int] | None = None,
+    max_total_cost: int | None = None,
 ) -> list[PlannedBatch]:
     batches: list[PlannedBatch] = []
     current: list[dict[str, Any]] = []
@@ -29,16 +32,47 @@ def pack_items_by_budget(
     for item in items:
         candidate = current + [item]
         candidate_tokens, method = measure_tokens(candidate)
-        if current and not fits_within_budget(input_tokens=candidate_tokens, budget=budget):
+        candidate_cost = (
+            measure_total_cost(candidate, candidate_tokens)
+            if measure_total_cost is not None
+            else candidate_tokens
+        )
+        exceeds_input = not fits_within_budget(input_tokens=candidate_tokens, budget=budget)
+        exceeds_total_cost = max_total_cost is not None and candidate_cost > max_total_cost
+        if current and (exceeds_input or exceeds_total_cost):
             current_tokens, current_method = measure_tokens(current)
-            batches.append(PlannedBatch(items=list(current), input_tokens=current_tokens, token_count_method=current_method))
+            current_cost = (
+                measure_total_cost(current, current_tokens)
+                if measure_total_cost is not None
+                else current_tokens
+            )
+            batches.append(
+                PlannedBatch(
+                    items=list(current),
+                    input_tokens=current_tokens,
+                    token_count_method=current_method,
+                    estimated_total_cost=current_cost,
+                )
+            )
             current = [item]
         else:
             current = candidate
 
     if current:
         current_tokens, current_method = measure_tokens(current)
-        batches.append(PlannedBatch(items=list(current), input_tokens=current_tokens, token_count_method=current_method))
+        current_cost = (
+            measure_total_cost(current, current_tokens)
+            if measure_total_cost is not None
+            else current_tokens
+        )
+        batches.append(
+            PlannedBatch(
+                items=list(current),
+                input_tokens=current_tokens,
+                token_count_method=current_method,
+                estimated_total_cost=current_cost,
+            )
+        )
     return batches
 
 

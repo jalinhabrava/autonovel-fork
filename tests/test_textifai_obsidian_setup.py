@@ -11,13 +11,36 @@ from textifai.conversation.executor import MinimalExecutionLayer
 from textifai.conversation.manager import ConversationManager
 from textifai.obsidian import evaluate_obsidian_operational_readiness
 from textifai.obsidian.setup import ObsidianProjectSetupConfig, _resolve_bootstrap_provider_and_model, prepare_obsidian_project
-from textifai.runtime_config import load_runtime_environment
+from textifai.runtime_config import load_runtime_environment, update_env_values
 from textifai.session import create_session
 from vault.bootstrap import bootstrap_vault
 from vault.schema import note_frontmatter
 
 
 class TextifAIObsidianSetupTests(unittest.TestCase):
+    def test_update_env_values_deduplicates_provider_keys(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            (base / ".env").write_text(
+                "\n".join(
+                    [
+                        "AUTONOVEL_TEXT_PROVIDER=",
+                        "OPENAI_API_KEY=test-key",
+                        "AUTONOVEL_TEXT_PROVIDER=openai",
+                        "AUTONOVEL_WRITER_MODEL=",
+                        "AUTONOVEL_WRITER_MODEL=gpt-5.4",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            update_env_values(base, {"AUTONOVEL_TEXT_PROVIDER": "openai", "AUTONOVEL_WRITER_MODEL": "gpt-5.4"})
+            rendered = (base / ".env").read_text(encoding="utf-8").splitlines()
+            self.assertEqual(sum(1 for line in rendered if line.startswith("AUTONOVEL_TEXT_PROVIDER=")), 1)
+            self.assertEqual(sum(1 for line in rendered if line.startswith("AUTONOVEL_WRITER_MODEL=")), 1)
+            self.assertIn("AUTONOVEL_TEXT_PROVIDER=openai", rendered)
+            self.assertIn("AUTONOVEL_WRITER_MODEL=gpt-5.4", rendered)
+
     def test_bootstrap_model_defaults_to_auto_when_not_explicitly_set(self):
         with tempfile.TemporaryDirectory() as tmp:
             base = Path(tmp)
