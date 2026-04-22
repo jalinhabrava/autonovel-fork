@@ -148,7 +148,15 @@ def _normalize_aliases(values: list[str] | str | None) -> list[str]:
     if isinstance(values, list):
         raw_values = values
     else:
-        raw_values = str(values).split(",")
+        text = str(values).strip()
+        if text.startswith("[") and text.endswith("]"):
+            try:
+                parsed = json.loads(text)
+                raw_values = parsed if isinstance(parsed, list) else str(values).split(",")
+            except json.JSONDecodeError:
+                raw_values = str(values).split(",")
+        else:
+            raw_values = str(values).split(",")
     return dedupe([str(item).strip() for item in raw_values if str(item).strip()])
 
 
@@ -352,14 +360,19 @@ def resolve_wikilinks(text: str, canonical_index: dict[str, dict[str, Any]]) -> 
         raw = match.group(1)
         target = normalize_title(raw.split("|", 1)[0].split("#", 1)[0])
         token = f"__WIKILINK_{len(protected)}__"
-        if target in canonical_index:
-            protected[token] = f"[[{target}]]"
+        matched = _resolve_canonical_subject(target, canonical_index)
+        if matched is not None:
+            protected[token] = f"[[{matched}]]"
         else:
             protected[token] = normalize_title(raw.split("|", 1)[-1]) or normalize_title(raw)
         return token
 
     working = re.sub(r"\[\[([^\]]+)\]\]", protect, text)
-    for title in sorted(canonical_index.keys(), key=len, reverse=True):
+    for title in sorted(
+        {normalize_title(str(entity.get("canonical_name") or key)) for key, entity in canonical_index.items()},
+        key=len,
+        reverse=True,
+    ):
         pattern = re.compile(rf"(?<!\[\[)(?<![\w]){re.escape(title)}(?![\w])(?!\]\])")
         working = pattern.sub(f"[[{title}]]", working)
     for token, original in protected.items():
@@ -385,8 +398,21 @@ def _normalize_frontmatter_entity(entity: dict[str, Any], *, role: str) -> dict[
 
 
 def _safe_primary_link(name: str, canonical_index: dict[str, dict[str, Any]]) -> str:
+    matched = _resolve_canonical_subject(name, canonical_index)
+    return f"[[{matched}]]" if matched else normalize_title(name)
+
+
+def _resolve_canonical_subject(name: str, canonical_index: dict[str, dict[str, Any]]) -> str | None:
     normalized = normalize_title(name)
-    return f"[[{normalized}]]" if normalized in canonical_index else normalized
+    if not normalized:
+        return None
+    if normalized in canonical_index:
+        return normalize_title(str(canonical_index[normalized].get("canonical_name") or normalized))
+    lookup_key = _title_key(normalized)
+    for key, entity in canonical_index.items():
+        if _title_key(key) == lookup_key:
+            return normalize_title(str(entity.get("canonical_name") or key))
+    return None
 
 
 def validate_vault(vault_root: Path) -> None:
@@ -412,7 +438,7 @@ def validate_vault(vault_root: Path) -> None:
         if review_state != "review" and "/90_Review/" in note_path.as_posix():
             errors.append(f"canonical note inside review folder: {note_path}")
         if note_role == "primary" and promotion_status == "promoted_canonical":
-            canonical_index.add(canonical_subject)
+            canonical_index.add(_title_key(canonical_subject))
 
         raw_frontmatter = text.split("---\n", 2)[1] if text.startswith("---\n") and text.count("---\n") >= 2 else ""
         tag_lines = raw_frontmatter.splitlines()
@@ -438,15 +464,13 @@ def validate_vault(vault_root: Path) -> None:
         text = note_path.read_text(encoding="utf-8")
         frontmatter = parse_obsidian_frontmatter(text)
         linked_primary_subjects = frontmatter.get("linked_primary_subjects") or []
-        if not isinstance(linked_primary_subjects, list):
-            linked_primary_subjects = [item.strip() for item in str(linked_primary_subjects).split(",") if item.strip()]
-        normalized_subjects = [normalize_title(item) for item in linked_primary_subjects if normalize_title(item)]
+        normalized_subjects = [_title_key(item) for item in _normalize_aliases(linked_primary_subjects) if normalize_title(item)]
         if any(item not in canonical_index for item in normalized_subjects):
             errors.append(f"linked_primary_subjects contains non-canonical targets: {note_path}")
         for link in extract_obsidian_links(text):
-            resolved = normalize_title(link.replace("_", " "))
+            resolved = _title_key(link.replace("_", " "))
             if resolved not in canonical_index:
-                errors.append(f"wikilink points to non-canonical target: {note_path} -> {resolved}")
+                errors.append(f"wikilink points to non-canonical target: {note_path} -> {normalize_title(link.replace('_', ' '))}")
 
     if errors:
         raise ValueError("Vault validation failed:\n" + "\n".join(f"- {item}" for item in errors))
@@ -620,8 +644,9 @@ def import_json_to_vault(*, source_json: Path, vault_root: Path) -> dict[str, An
                     continue
                 canonical = normalize_title(str(item.get("canonical") or item.get("surface") or ""))
                 facts = [str(fact).strip() for fact in (item.get("facts") or []) if str(fact).strip()]
-                if canonical in canonical_index:
-                    linked_primaries.append(canonical)
+                matched_canonical = _resolve_canonical_subject(canonical, canonical_index)
+                if matched_canonical:
+                    linked_primaries.append(matched_canonical)
                 label = _safe_primary_link(canonical, canonical_index) if canonical else normalize_title(str(item.get("surface") or ""))
                 line = f"- {label}" if label else "- Item"
                 if facts:
