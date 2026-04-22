@@ -16,6 +16,7 @@ from textifai.import_review.model_router import resolve_model_plan
 from textifai.import_review.provider_snapshot import ProviderModelSnapshot, ProviderSnapshot, build_provider_snapshot
 from textifai.import_review.model_registry import get_model_capabilities
 from textifai.obsidian.json_import import import_json_to_vault
+from textifai.obsidian.taxonomy import taxonomy_payload_for_entity, taxonomy_tags
 from textifai.import_review.structured_bootstrap_v1 import (
     NovelBootstrapV1Config,
     _estimate_global_batch_complexity_penalty,
@@ -324,6 +325,7 @@ class StructuredBootstrapV1Tests(unittest.TestCase):
                     {
                         "canonical_name": "Sera",
                         "entity_kind": "character",
+                        "entity_subkind": "protagonist",
                         "aliases": ["Serelyne"],
                         "summary": "Princesa",
                         "key_facts": ["Uno", "Dos", "Tres", "Cuatro", "Cinco"],
@@ -340,6 +342,7 @@ class StructuredBootstrapV1Tests(unittest.TestCase):
         self.assertEqual(len(canonical_map[0]["key_facts"]), 4)
         self.assertEqual(canonical_map[0]["canonical_candidate"], "Sera")
         self.assertEqual(canonical_map[0]["naming_quality"], "proper_name")
+        self.assertEqual(canonical_map[0]["entity_subkind"], "protagonist")
 
     def test_assemble_obsidian_import_enriches_chapter_refs(self):
         assembled = assemble_obsidian_import(
@@ -529,6 +532,29 @@ class StructuredBootstrapV1Tests(unittest.TestCase):
         self.assertEqual(cleanup_audit["discarded_count"], 1)
         self.assertEqual(cleanup_audit["descriptor_primary_rate"], 0.0)
         self.assertEqual(promotion_audit["decisions"][1]["decision"], "discard")
+
+    def test_taxonomy_maps_legacy_magic_to_concept_system(self):
+        payload = taxonomy_payload_for_entity(
+            {
+                "canonical_name": "Maná",
+                "entity_kind": "magic",
+                "entity_subkind": "",
+                "chapter_refs": ["ch_001", "ch_002"],
+            }
+        )
+        self.assertEqual(payload["entity_kind"], "concept")
+        self.assertEqual(payload["entity_subkind"], "system")
+        self.assertEqual(payload["semantic_class"], "concept:system")
+
+    def test_taxonomy_tags_include_role_and_kind_for_primary_entities(self):
+        self.assertEqual(
+            taxonomy_tags(note_role="primary", entity_kind="character", entity_subkind="protagonist"),
+            ["#primary", "#character", "#protagonist"],
+        )
+        self.assertEqual(
+            taxonomy_tags(note_role="review", entity_kind="concept", entity_subkind="ritual"),
+            ["#review", "#concept", "#ritual"],
+        )
 
     def test_language_detection_sampling_caps_large_text(self):
         text = ("Hola mundo. " * 5000) + ("This is English. " * 5000) + ("日本語です。" * 5000)
@@ -736,6 +762,7 @@ class StructuredBootstrapV1Tests(unittest.TestCase):
                             {
                                 "canonical_name": "Sera",
                                 "entity_kind": "character",
+                                "entity_subkind": "protagonist",
                                 "summary": "Protagonista.",
                                 "key_facts": ["Huye del castillo.", "Su magia es inestable."],
                                 "relationships": [],
@@ -757,6 +784,30 @@ class StructuredBootstrapV1Tests(unittest.TestCase):
                                 "confidence": 0.4,
                                 "review_state": "review",
                             },
+                            {
+                                "canonical_name": "Sistema de Maná",
+                                "entity_kind": "magic",
+                                "summary": "Sistema energético del mundo.",
+                                "key_facts": ["Ordena la canalización.", "Afecta a varios personajes."],
+                                "relationships": [{"target": "Sera", "type": "dependency", "facts": ["Condiciona su poder."]}],
+                                "aliases": ["Maná"],
+                                "chapter_refs": ["ch_001", "ch_002"],
+                                "source_mentions": ["sistema de maná"],
+                                "confidence": 0.93,
+                                "review_state": "canonical",
+                            },
+                            {
+                                "canonical_name": "Huida del Castillo",
+                                "entity_kind": "event",
+                                "summary": "Evento local de corto alcance.",
+                                "key_facts": ["Sera abandona el castillo.", "Ocurre en un solo capítulo."],
+                                "relationships": [],
+                                "aliases": [],
+                                "chapter_refs": ["ch_001"],
+                                "source_mentions": ["huida"],
+                                "confidence": 0.9,
+                                "review_state": "canonical",
+                            },
                         ],
                     },
                     ensure_ascii=False,
@@ -764,14 +815,24 @@ class StructuredBootstrapV1Tests(unittest.TestCase):
                 encoding="utf-8",
             )
             audit = import_json_to_vault(source_json=source_json, vault_root=vault_root)
-            self.assertEqual(audit["primary_count"], 1)
+            self.assertEqual(audit["primary_count"], 2)
             self.assertEqual(audit["review_primary_count"], 1)
-            self.assertEqual(audit["skipped_primary_count"], 1)
+            self.assertEqual(audit["skipped_primary_count"], 2)
             self.assertTrue((vault_root / "03_Characters/Profiles/sera.md").exists())
             self.assertTrue((vault_root / "90_Review/figura_dudosa.md").exists())
+            self.assertTrue((vault_root / "02_World/Concepts/sistema_de_mana.md").exists())
+            self.assertFalse((vault_root / "02_World/Events/huida_del_castillo.md").exists())
             self.assertFalse((vault_root / "03_Characters/Profiles/1.md").exists())
             manifest = (vault_root / "01_Project/import_manifest.md").read_text(encoding="utf-8")
             self.assertIn("#system", manifest)
+            primary_note = (vault_root / "03_Characters/Profiles/sera.md").read_text(encoding="utf-8")
+            self.assertIn('"#primary"', primary_note)
+            self.assertIn('"#character"', primary_note)
+            self.assertIn('"#protagonist"', primary_note)
+            concept_note = (vault_root / "02_World/Concepts/sistema_de_mana.md").read_text(encoding="utf-8")
+            self.assertIn('"#primary"', concept_note)
+            self.assertIn('"#concept"', concept_note)
+            self.assertIn('"#system"', concept_note)
             chapter_note = next((vault_root / "04_Story/Chapters").glob("*.md")).read_text(encoding="utf-8")
             self.assertIn("#chapter", chapter_note)
             self.assertIn("## Resumen", chapter_note)

@@ -22,6 +22,8 @@ VAULT_DIRS = {
     "project": "00_Project",
     "voice": "01_Voice",
     "world": "02_World",
+    "world_concepts": "02_World/Concepts",
+    "world_events": "02_World/Events",
     "world_lore": "02_World/Lore",
     "world_places": "02_World/Places",
     "world_magic": "02_World/Magic",

@@ -10,28 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from textifai.obsidian.parser import extract_obsidian_links, parse_obsidian_frontmatter
-
-
-PRIMARY_DIRS = {
-    "character": "03_Characters/Profiles",
-    "place": "02_World/Places",
-    "concept": "02_World/Lore",
-    "magic": "02_World/Magic",
-    "creature": "02_World/Creatures",
-    "faction": "02_World/Factions",
-    "object": "02_World/Objects",
-    "lore": "02_World/Lore",
-    "event": "02_World/History",
-    "history": "02_World/History",
-}
-
-ROLE_TAGS = {
-    "chapter": ["#chapter"],
-    "chapter_summary": ["#summary"],
-    "primary": ["#primary"],
-    "review": ["#review"],
-    "system": ["#system"],
-}
+from textifai.obsidian.taxonomy import PRIMARY_DIRS, normalize_taxonomy, taxonomy_payload_for_entity, taxonomy_tags
 
 _SECTION_LABELS = {
     "es": {
@@ -130,8 +109,18 @@ def dedupe(values: list[str]) -> list[str]:
 
 
 def _normalize_entity_kind(value: str | None) -> str:
-    normalized = str(value or "lore").strip().casefold()
-    return normalized if normalized in PRIMARY_DIRS else "lore"
+    normalized, _ = normalize_taxonomy(entity_kind=value)
+    return normalized
+
+
+def _normalize_entity_subkind(entity_kind: str | None, value: str | None, *, canonical_name: str = "", chapter_refs: list[str] | None = None) -> str | None:
+    _, subkind = normalize_taxonomy(
+        entity_kind=entity_kind,
+        entity_subkind=value,
+        canonical_name=canonical_name,
+        chapter_refs=chapter_refs or [],
+    )
+    return subkind
 
 
 def _title_key(value: str) -> str:
@@ -190,6 +179,7 @@ def should_promote_entity(entity: dict[str, Any]) -> bool:
     relationships = _normalize_relationships(entity.get("relationships") or [])
     chapter_refs = dedupe([str(ref).strip() for ref in (entity.get("chapter_refs") or []) if str(ref).strip()])
     summary = str(entity.get("summary") or "").strip()
+    entity_kind = _normalize_entity_kind(entity.get("entity_kind"))
     if not title or len(slugify(title)) < 3:
         return False
     if len(key_facts) < 2:
@@ -199,6 +189,8 @@ def should_promote_entity(entity: dict[str, Any]) -> bool:
     if len(chapter_refs) < 2 and not relationships:
         return False
     if not summary and not relationships:
+        return False
+    if entity_kind == "event" and len(chapter_refs) < 2 and len(relationships) < 2:
         return False
     return True
 
@@ -356,13 +348,6 @@ def _review_entity_index(entities: list[dict[str, Any]]) -> dict[str, dict[str, 
     return index
 
 
-def _role_tags(note_role: str) -> list[str]:
-    tags = ROLE_TAGS.get(note_role)
-    if not tags:
-        raise ValueError(f"Unsupported note_role for tags: {note_role}")
-    return list(tags)
-
-
 def write_note(path: Path, *, frontmatter: dict[str, Any], body_lines: list[str]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     lines = ["---"]
@@ -426,6 +411,13 @@ def _normalize_frontmatter_entity(entity: dict[str, Any], *, role: str) -> dict[
         promotion_status = "promoted_canonical"
         if review_state != "review":
             review_state = "canonical"
+    entity_kind = _normalize_entity_kind(entity.get("entity_kind"))
+    entity_subkind = _normalize_entity_subkind(
+        entity_kind,
+        entity.get("entity_subkind"),
+        canonical_name=normalized_title,
+        chapter_refs=entity.get("chapter_refs") or [],
+    )
     return {
         "canonical_subject": normalized_title,
         "display_title": normalized_title,
@@ -434,7 +426,9 @@ def _normalize_frontmatter_entity(entity: dict[str, Any], *, role: str) -> dict[
         "promotion_status": promotion_status,
         "graph_exclude": review_state == "review",
         "retrieval_exclude": review_state == "review",
-        "tags": _role_tags(note_role),
+        "entity_kind": entity_kind,
+        "entity_subkind": entity_subkind,
+        "tags": taxonomy_tags(note_role=note_role, entity_kind=entity_kind, entity_subkind=entity_subkind),
     }
 
 
@@ -487,7 +481,11 @@ def validate_vault(vault_root: Path) -> None:
             tag_index = tag_lines.index("tags:")
         except ValueError:
             tag_index = -1
-        expected_tags = _role_tags(note_role) if note_role in ROLE_TAGS else []
+        expected_tags = taxonomy_tags(
+            note_role=note_role,
+            entity_kind=str(frontmatter.get("entity_kind") or ""),
+            entity_subkind=str(frontmatter.get("entity_subkind") or ""),
+        )
         actual_tag_lines: list[str] = []
         if tag_index >= 0:
             for line in tag_lines[tag_index + 1 :]:
@@ -535,12 +533,11 @@ def import_json_to_vault(*, source_json: Path, vault_root: Path) -> dict[str, An
     for rel in [
         "01_Project",
         "02_World/Places",
-        "02_World/Lore",
-        "02_World/Magic",
+        "02_World/Concepts",
         "02_World/Creatures",
         "02_World/Factions",
         "02_World/Objects",
-        "02_World/History",
+        "02_World/Events",
         "03_Characters/Profiles",
         "04_Story/Chapters",
         "04_Story/Chapter_Summaries",
@@ -571,12 +568,16 @@ def import_json_to_vault(*, source_json: Path, vault_root: Path) -> dict[str, An
         review_state = str(entity.get("review_state") or "canonical").casefold()
         if title in canonical_index:
             canonical_entity = canonical_index[title]
-            entity_kind = _normalize_entity_kind(canonical_entity.get("entity_kind"))
-            target_dir = PRIMARY_DIRS.get(entity_kind, "02_World/Lore")
+            taxonomy = taxonomy_payload_for_entity(canonical_entity)
+            entity_kind = taxonomy["entity_kind"]
+            entity_subkind = taxonomy["entity_subkind"]
+            target_dir = PRIMARY_DIRS.get(entity_kind, "02_World/Concepts")
             state = _normalize_frontmatter_entity(canonical_entity, role="primary")
         elif title in review_index:
             canonical_entity = review_index[title]
-            entity_kind = _normalize_entity_kind(canonical_entity.get("entity_kind"))
+            taxonomy = taxonomy_payload_for_entity(canonical_entity)
+            entity_kind = taxonomy["entity_kind"]
+            entity_subkind = taxonomy["entity_subkind"]
             target_dir = "90_Review"
             state = _normalize_frontmatter_entity(canonical_entity, role="primary")
         else:
@@ -584,7 +585,7 @@ def import_json_to_vault(*, source_json: Path, vault_root: Path) -> dict[str, An
             skipped_primaries.append({"title": title, "reason": reason})
             continue
 
-        rel_dir = PRIMARY_DIRS.get(entity_kind, "02_World/Lore")
+        rel_dir = PRIMARY_DIRS.get(entity_kind, "02_World/Concepts")
         slug = str(canonical_entity.get("preferred_slug") or "").strip() or slugify(title)
         aliases = _normalize_aliases(canonical_entity.get("aliases"))
         chapter_titles = dedupe([
@@ -632,9 +633,10 @@ def import_json_to_vault(*, source_json: Path, vault_root: Path) -> dict[str, An
             "promotion_status": state["promotion_status"],
             "note_role": state["note_role"],
             "entity_kind": entity_kind,
+            "entity_subkind": entity_subkind,
             "canonical_subject": state["canonical_subject"],
             "aliases": aliases,
-            "semantic_class": entity_kind,
+            "semantic_class": taxonomy["semantic_class"],
             "evidence_sources": chapter_titles,
             "confidence": float(canonical_entity.get("confidence") or 0.0),
             "review_state": state["review_state"],
@@ -727,6 +729,7 @@ def import_json_to_vault(*, source_json: Path, vault_root: Path) -> dict[str, An
             "promotion_status": "promoted_canonical",
             "note_role": "chapter",
             "entity_kind": "chapter",
+            "entity_subkind": "",
             "canonical_subject": title,
             "source_title": title,
             "source_sequence_index": seq,
@@ -738,7 +741,7 @@ def import_json_to_vault(*, source_json: Path, vault_root: Path) -> dict[str, An
             "review_state": "canonical",
             "graph_exclude": True,
             "retrieval_exclude": True,
-            "tags": _role_tags("chapter"),
+            "tags": taxonomy_tags(note_role="chapter"),
         }
         chapter_path = vault_root / "04_Story/Chapters" / f"{slug}.md"
         write_note(chapter_path, frontmatter=chapter_frontmatter, body_lines=chapter_body)
@@ -753,9 +756,10 @@ def import_json_to_vault(*, source_json: Path, vault_root: Path) -> dict[str, An
                 "slug": f"{slug}_summary",
                 "note_role": "chapter_summary",
                 "entity_kind": "chapter_summary",
+                "entity_subkind": "",
                 "semantic_class": "chapter_summary",
                 "summary_for_chapter": chapter_path.name,
-                "tags": _role_tags("chapter_summary"),
+                "tags": taxonomy_tags(note_role="chapter_summary"),
             }
         )
         summary_body = [f"# {original_title} {labels['chapter_summary_suffix']}", "", summary or labels["no_summary"], ""]
@@ -797,6 +801,7 @@ def import_json_to_vault(*, source_json: Path, vault_root: Path) -> dict[str, An
             "promotion_status": "promoted_canonical",
             "note_role": "system",
             "entity_kind": "system",
+            "entity_subkind": "",
             "canonical_subject": labels["import_manifest"],
             "aliases": [],
             "semantic_class": "import_manifest",
@@ -805,7 +810,7 @@ def import_json_to_vault(*, source_json: Path, vault_root: Path) -> dict[str, An
             "review_state": "canonical",
             "graph_exclude": True,
             "retrieval_exclude": True,
-            "tags": _role_tags("system"),
+            "tags": taxonomy_tags(note_role="system"),
             "linked_primary_subjects": [],
         },
         body_lines=[

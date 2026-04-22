@@ -62,6 +62,7 @@ OUTPUT SCHEMA
 "canonical_name": "...",
 "canonical_candidate": "...",
 "entity_kind": "...",
+"entity_subkind": "...",
 "preferred_slug": "...",
 "aliases": ["..."],
 "summary": "...",
@@ -101,13 +102,18 @@ Allowed entity_kind values:
 
 * character
 * place
-* concept
-* magic
-* creature
 * faction
+* concept
 * object
-* lore
+* creature
 * event
+
+Do not use magic or lore as primary entity_kind values.
+If the source describes magic, mana systems, rituals, metaphysical rules, or similar systems,
+represent them as concept entities with an appropriate entity_subkind such as system, phenomenon, ritual, law, role, title, or doctrine.
+
+If the source describes historical background, named disasters, wars, or foundational changes,
+represent them as event entities when they deserve standalone notes.
 
 ==================================================
 RELATION TYPES
@@ -367,6 +373,7 @@ OUTPUT SCHEMA
 "surface": "...",
 "canonical": "...",
 "canonical_candidate": "...",
+"entity_subkind": "...",
 "naming_quality": "proper_name",
 "needs_review": false,
 "facts": ["..."],
@@ -378,6 +385,7 @@ OUTPUT SCHEMA
 "surface": "...",
 "canonical": "...",
 "canonical_candidate": "...",
+"entity_subkind": "...",
 "naming_quality": "proper_name",
 "needs_review": false,
 "facts": ["..."],
@@ -389,6 +397,7 @@ OUTPUT SCHEMA
 "surface": "...",
 "canonical": "...",
 "canonical_candidate": "...",
+"entity_subkind": "...",
 "naming_quality": "proper_name",
 "needs_review": false,
 "facts": ["..."],
@@ -400,6 +409,7 @@ OUTPUT SCHEMA
 "surface": "...",
 "canonical": "...",
 "canonical_candidate": "...",
+"entity_subkind": "...",
 "naming_quality": "proper_name",
 "needs_review": false,
 "facts": ["..."],
@@ -461,6 +471,7 @@ If TITLE_ENTITY_HINTS contains an explicit proper name and the chapter supports 
 preserve that named identity instead of coercing it into a different canonical entity.
 
 Each extracted item must set canonical_candidate to the strongest local candidate for later entity resolution.
+Each extracted item should set entity_subkind when a stable subtype is evident.
 
 Each extracted item must classify naming_quality as one of:
 
@@ -965,6 +976,7 @@ def build_canonical_entity_map(
                 "review_state": review_state,
                 "confidence": ent.get("confidence", 0.0),
                 "canonical_candidate": ent.get("canonical_candidate", ent.get("canonical_name", "")),
+                "entity_subkind": ent.get("entity_subkind", ""),
                 "naming_quality": ent.get("naming_quality", "unknown"),
                 "needs_review": ent.get("needs_review", review_state != "canonical"),
             }
@@ -2459,6 +2471,7 @@ def _normalize_global_payload(
                 **raw,
                 "canonical_name": canonical_name,
                 "canonical_candidate": str(raw.get("canonical_candidate") or canonical_name).strip() or canonical_name,
+                "entity_subkind": str(raw.get("entity_subkind") or "").strip(),
                 "naming_quality": str(raw.get("naming_quality") or "unknown").strip() or "unknown",
                 "is_stable_entity": bool(raw.get("is_stable_entity", False)),
                 "needs_review": bool(raw.get("needs_review", str(raw.get("review_state") or "").casefold() == "review")),
@@ -2509,6 +2522,7 @@ def _normalize_chapter_payload(
                     "surface": surface,
                     "canonical": canonical,
                     "canonical_candidate": str(item.get("canonical_candidate") or canonical or surface).strip() or canonical,
+                    "entity_subkind": str(item.get("entity_subkind") or "").strip(),
                     "naming_quality": str(item.get("naming_quality") or "unknown").strip() or "unknown",
                     "needs_review": bool(item.get("needs_review", False)),
                 }
