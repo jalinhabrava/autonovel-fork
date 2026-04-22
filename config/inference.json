@@ -148,6 +148,28 @@
       "timeout_seconds": 180,
       "retries": 1
     },
+    "bootstrap_global_normalization": {
+      "provider_env": "AUTONOVEL_BOOTSTRAP_PROVIDER",
+      "provider": "lmstudio",
+      "model_env": "AUTONOVEL_BOOTSTRAP_MODEL",
+      "model": "qwen/qwen3.5-9b",
+      "role": "judge",
+      "temperature": 0.0,
+      "max_tokens": 9000,
+      "timeout_seconds": 600,
+      "retries": 1
+    },
+    "bootstrap_chapter_extraction": {
+      "provider_env": "AUTONOVEL_BOOTSTRAP_PROVIDER",
+      "provider": "lmstudio",
+      "model_env": "AUTONOVEL_BOOTSTRAP_MODEL",
+      "model": "qwen/qwen3.5-9b",
+      "role": "judge",
+      "temperature": 0.0,
+      "max_tokens": 3000,
+      "timeout_seconds": 240,
+      "retries": 1
+    },
     "derived_source_understanding": {
       "provider_env": "AUTONOVEL_BOOTSTRAP_PROVIDER",
       "provider": "lmstudio",
