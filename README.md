@@ -127,6 +127,84 @@ The current workflow is:
 
 This is intentionally not a fully autonomous authoring loop. The human remains the authorial center.
 
+## Bootstrap Pipeline
+
+The vault bootstrap for an existing novel now follows a strict structured pipeline:
+
+1. source ingest
+2. markdown chapter split
+3. global normalization batches
+4. canonical entity map build
+5. chapter extraction guided by canon
+6. external assembly into `obsidian_import.json`
+7. vault compilation with invariant validation
+
+### 1. Source Ingest
+
+TextifAI reads the source documents and builds a deterministic inventory of importable files. The current preferred bootstrap rail is markdown-first, with chapter-aware processing for long-form narrative sources.
+
+### 2. Markdown Chapter Split
+
+The novel is segmented into stable chapter units with:
+
+- `chapter_id`
+- `sequence_index`
+- `chapter_title`
+- `chapter_text`
+
+Those chapter units become the semantic base for later batching and extraction.
+
+### 3. Global Normalization Batches
+
+TextifAI does not ask the model for one monolithic JSON for the whole novel. Instead it groups chapters into token-aware batches and asks for:
+
+- normalized entities
+- merge decisions
+- normalization notes
+
+This produces batch-level entity maps that are merged outside the model.
+
+### 4. Canonical Entity Map
+
+From the merged global normalization output, TextifAI builds a compact canonical entity map used as the guide rail for chapter extraction. This keeps chapter calls cheaper and more consistent than re-sending the full rich normalization output every time.
+
+### 5. Chapter Extraction Guided By Canon
+
+Each chapter is processed independently against the canonical entity map. The model returns structured chapter JSON with:
+
+- chapter summary
+- characters
+- places
+- concepts
+- events
+- relations
+- unresolved mentions
+
+If a chapter is too large for a safe single call, TextifAI plans subchunks and reduces them externally.
+
+### 6. External Assembly
+
+The JSON master artifact is assembled by the software, not by the model. TextifAI combines:
+
+- global normalization
+- canonical entity map
+- chapter outputs
+
+into a single `obsidian_import.json` ready for vault compilation.
+
+### 7. Vault Compilation And Validation
+
+The compiler turns `obsidian_import.json` into vault notes with strict invariants:
+
+- role-specific tags are always present
+- titles are normalized before frontmatter/linking
+- wikilinks only target canonical primaries
+- review notes stay separate from canonical notes
+- trivial entities are not promoted
+- duplicate entities are consolidated before writing
+
+The final validation step is build-breaking, not best-effort. If invariant violations are found, the vault build fails instead of writing an ambiguous graph.
+
 ## Repository Scope
 
 This repository contains the current open core of TextifAI. It is the working

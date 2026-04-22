@@ -130,6 +130,26 @@ def runtime_banner(locale: str = DEFAULT_LOCALE) -> str:
 
 def _load_env_values(env_path: Path, *, include_process_env: bool = True) -> dict[str, str]:
     values: dict[str, str] = {}
+    provider_keys = {
+        "AUTONOVEL_PROJECT_BACKEND",
+        "AUTONOVEL_VAULT_ROOT",
+        "AUTONOVEL_TEXT_PROVIDER",
+        "AUTONOVEL_WRITER_MODEL",
+        "AUTONOVEL_BOOTSTRAP_PROVIDER",
+        "AUTONOVEL_BOOTSTRAP_MODEL",
+        "ANTHROPIC_API_KEY",
+        "AUTONOVEL_API_BASE_URL",
+        "OPENAI_API_KEY",
+        "AUTONOVEL_OPENAI_API_BASE_URL",
+        "AUTONOVEL_ANTHROPIC_COMPATIBLE_API_KEY",
+        "AUTONOVEL_ANTHROPIC_COMPATIBLE_API_BASE_URL",
+        "AUTONOVEL_OPENAI_COMPATIBLE_API_KEY",
+        "AUTONOVEL_OPENAI_COMPATIBLE_API_BASE_URL",
+        "AUTONOVEL_LMSTUDIO_API_BASE_URL",
+        "AUTONOVEL_LMSTUDIO_API_KEY",
+        "AUTONOVEL_OLLAMA_API_BASE_URL",
+        "AUTONOVEL_OLLAMA_API_KEY",
+    }
     if env_path.exists():
         for line in env_path.read_text().splitlines():
             stripped = line.strip()
@@ -139,24 +159,7 @@ def _load_env_values(env_path: Path, *, include_process_env: bool = True) -> dic
             values[key.strip()] = value.strip()
     if include_process_env:
         for key in (
-            "AUTONOVEL_PROJECT_BACKEND",
-            "AUTONOVEL_VAULT_ROOT",
-            "AUTONOVEL_TEXT_PROVIDER",
-            "AUTONOVEL_WRITER_MODEL",
-            "AUTONOVEL_BOOTSTRAP_PROVIDER",
-            "AUTONOVEL_BOOTSTRAP_MODEL",
-            "ANTHROPIC_API_KEY",
-            "AUTONOVEL_API_BASE_URL",
-            "OPENAI_API_KEY",
-            "AUTONOVEL_OPENAI_API_BASE_URL",
-            "AUTONOVEL_ANTHROPIC_COMPATIBLE_API_KEY",
-            "AUTONOVEL_ANTHROPIC_COMPATIBLE_API_BASE_URL",
-            "AUTONOVEL_OPENAI_COMPATIBLE_API_KEY",
-            "AUTONOVEL_OPENAI_COMPATIBLE_API_BASE_URL",
-            "AUTONOVEL_LMSTUDIO_API_BASE_URL",
-            "AUTONOVEL_LMSTUDIO_API_KEY",
-            "AUTONOVEL_OLLAMA_API_BASE_URL",
-            "AUTONOVEL_OLLAMA_API_KEY",
+            *provider_keys,
             "TEXTIFAI_LOCALE",
             "TEXTIFAI_INTERFACE_LANGUAGE",
             "TEXTIFAI_USER_COMMAND_LANGUAGE",
@@ -165,6 +168,10 @@ def _load_env_values(env_path: Path, *, include_process_env: bool = True) -> dic
             "TEXTIFAI_MIXED_LANGUAGE_ALLOWED",
             "TEXTIFAI_ARTIFACT_LANGUAGES",
         ):
+            # Keep project-local provider/runtime settings deterministic once a repo .env exists.
+            # This prevents host-shell secrets or defaults from leaking into local vault tests/runs.
+            if env_path.exists() and key in provider_keys:
+                continue
             if key not in values and key in os.environ and os.environ[key]:
                 values[key] = os.environ[key]
     return values

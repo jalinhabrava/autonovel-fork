@@ -95,7 +95,7 @@ class TextifAIVaERLIndexTests(unittest.TestCase):
                     slug="episodio_1",
                     note_role="chapter",
                     retrieval_exclude=True,
-                    tags=["#chapter", "#chapters"],
+                    tags=["#chapter"],
                 )
                 + "\n\nResumen.\n",
                 encoding="utf-8",

@@ -9,6 +9,8 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
+from textifai.obsidian.parser import extract_obsidian_links, parse_obsidian_frontmatter
+
 
 PRIMARY_DIRS = {
     "character": "03_Characters/Profiles",
@@ -21,6 +23,14 @@ PRIMARY_DIRS = {
     "lore": "02_World/Lore",
     "event": "02_World/History",
     "history": "02_World/History",
+}
+
+ROLE_TAGS = {
+    "chapter": ["#chapter"],
+    "chapter_summary": ["#summary"],
+    "primary": ["#primary"],
+    "review": ["#review"],
+    "system": ["#system"],
 }
 
 _SECTION_LABELS = {
@@ -42,6 +52,18 @@ _SECTION_LABELS = {
         "unknown_language": "desconocido",
         "no_summary": "Sin resumen.",
     }
+}
+
+_GENERIC_TITLES = {
+    "castillo",
+    "claro",
+    "confrontacion",
+    "confrontación",
+    "ceremonia",
+    "explosion",
+    "explosión",
+    "campo",
+    "bosque",
 }
 
 
@@ -67,33 +89,36 @@ def _labels_for_language(language: str | None) -> dict[str, str]:
     })
 
 
+def normalize_title(value: str) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    text = re.sub(r"\[\[([^\]|#]+)(?:\|[^\]]+)?\]\]", r"\1", text)
+    text = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", text)
+    text = text.replace("[[", " ").replace("]]", " ")
+    text = text.replace("[", " ").replace("]", " ")
+    text = text.replace("*", " ").replace("·", " ")
+    text = re.sub(r"\s+", " ", text)
+    text = re.sub(r"^[\s\.,:;!?\-_/]+", "", text)
+    text = re.sub(r"[\s\.,:;!?\-_/]+$", "", text)
+    return text.strip()
+
+
 def slugify(text: str) -> str:
-    text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
-    text = text.strip().lower()
-    text = text.replace("·", " ").replace("’", "").replace("'", "")
-    text = re.sub(r"[^\w\s-]", "", text, flags=re.UNICODE)
-    text = re.sub(r"[-\s]+", "_", text).strip("_")
-    return text or "note"
-
-
-def _is_numeric_note_title(text: str) -> bool:
-    compact = re.sub(r"[\s._-]+", "", str(text).strip())
-    return bool(compact) and compact.isdigit()
-
-
-def _has_meaningful_primary_content(entity: dict[str, Any]) -> bool:
-    summary = str(entity.get("summary") or "").strip()
-    key_facts = [str(fact).strip() for fact in (entity.get("key_facts") or []) if str(fact).strip()]
-    relationships = [item for item in (entity.get("relationships") or []) if isinstance(item, dict)]
-    aliases = [str(alias).strip() for alias in (entity.get("aliases") or []) if str(alias).strip()]
-    return bool(summary or key_facts or relationships or aliases)
+    normalized = normalize_title(text)
+    normalized = unicodedata.normalize("NFKD", normalized).encode("ascii", "ignore").decode("ascii")
+    normalized = normalized.strip().lower()
+    normalized = normalized.replace("’", "").replace("'", "")
+    normalized = re.sub(r"[^\w\s-]", "", normalized, flags=re.UNICODE)
+    normalized = re.sub(r"[-\s]+", "_", normalized).strip("_")
+    return normalized or "note"
 
 
 def dedupe(values: list[str]) -> list[str]:
     result: list[str] = []
     seen: set[str] = set()
     for value in values:
-        text = str(value).strip()
+        text = normalize_title(value)
         if not text:
             continue
         key = text.casefold()
@@ -104,6 +129,203 @@ def dedupe(values: list[str]) -> list[str]:
     return result
 
 
+def _normalize_entity_kind(value: str | None) -> str:
+    normalized = str(value or "lore").strip().casefold()
+    return normalized if normalized in PRIMARY_DIRS else "lore"
+
+
+def _title_key(value: str) -> str:
+    return normalize_title(value).casefold()
+
+
+def _token_set(value: str) -> set[str]:
+    return {token for token in slugify(value).split("_") if token}
+
+
+def _normalize_aliases(values: list[str] | str | None) -> list[str]:
+    if values is None:
+        return []
+    if isinstance(values, list):
+        raw_values = values
+    else:
+        raw_values = str(values).split(",")
+    return dedupe([str(item).strip() for item in raw_values if str(item).strip()])
+
+
+def _normalize_relationships(relationships: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
+    bucket: dict[tuple[str, str], dict[str, Any]] = {}
+    for rel in relationships or []:
+        if not isinstance(rel, dict):
+            continue
+        target = normalize_title(str(rel.get("target") or ""))
+        rel_type = str(rel.get("type") or "").strip()
+        facts = dedupe([str(item).strip() for item in (rel.get("facts") or []) if str(item).strip()])
+        if not target or not rel_type:
+            continue
+        key = (target.casefold(), rel_type.casefold())
+        existing = bucket.get(key)
+        if existing is None:
+            bucket[key] = {"target": target, "type": rel_type, "facts": facts[:5]}
+        else:
+            existing["facts"] = dedupe(existing["facts"] + facts)[:5]
+    return list(bucket.values())
+
+
+def should_promote_entity(entity: dict[str, Any]) -> bool:
+    title = normalize_title(str(entity.get("canonical_name") or entity.get("canonical_subject") or ""))
+    key_facts = dedupe([str(fact).strip() for fact in (entity.get("key_facts") or []) if str(fact).strip()])
+    relationships = _normalize_relationships(entity.get("relationships") or [])
+    chapter_refs = dedupe([str(ref).strip() for ref in (entity.get("chapter_refs") or []) if str(ref).strip()])
+    summary = str(entity.get("summary") or "").strip()
+    if not title or len(slugify(title)) < 3:
+        return False
+    if len(key_facts) < 2:
+        return False
+    if title.casefold() in _GENERIC_TITLES:
+        return False
+    if len(chapter_refs) < 2 and not relationships:
+        return False
+    if not summary and not relationships:
+        return False
+    return True
+
+
+def _should_materialize_review_entity(entity: dict[str, Any]) -> bool:
+    title = normalize_title(str(entity.get("canonical_name") or entity.get("canonical_subject") or ""))
+    key_facts = dedupe([str(fact).strip() for fact in (entity.get("key_facts") or []) if str(fact).strip()])
+    relationships = _normalize_relationships(entity.get("relationships") or [])
+    aliases = _normalize_aliases(entity.get("aliases"))
+    summary = str(entity.get("summary") or "").strip()
+    if not title or len(slugify(title)) < 3:
+        return False
+    if title.casefold() in _GENERIC_TITLES:
+        return False
+    return bool(summary or key_facts or relationships or aliases)
+
+
+def _specificity_score(entity: dict[str, Any]) -> tuple[int, int, int, int]:
+    title = normalize_title(str(entity.get("canonical_name") or ""))
+    return (
+        len(_token_set(title)),
+        len(title),
+        len(dedupe(entity.get("key_facts") or [])),
+        len(dedupe(entity.get("chapter_refs") or [])),
+    )
+
+
+def _merge_entities(base: dict[str, Any], extra: dict[str, Any]) -> dict[str, Any]:
+    preferred = base if _specificity_score(base) >= _specificity_score(extra) else extra
+    secondary = extra if preferred is base else base
+    merged = dict(preferred)
+    merged["canonical_name"] = normalize_title(str(preferred.get("canonical_name") or secondary.get("canonical_name") or ""))
+    merged["preferred_slug"] = str(preferred.get("preferred_slug") or secondary.get("preferred_slug") or "").strip()
+    merged["entity_kind"] = _normalize_entity_kind(preferred.get("entity_kind") or secondary.get("entity_kind"))
+    merged["aliases"] = dedupe(
+        _normalize_aliases(preferred.get("aliases")) +
+        _normalize_aliases(secondary.get("aliases")) +
+        [str(secondary.get("canonical_name") or "").strip()]
+    )
+    merged["summary"] = str(preferred.get("summary") or secondary.get("summary") or "").strip()
+    merged["key_facts"] = dedupe((preferred.get("key_facts") or []) + (secondary.get("key_facts") or []))[:5]
+    merged["chapter_refs"] = dedupe((preferred.get("chapter_refs") or []) + (secondary.get("chapter_refs") or []))
+    merged["source_mentions"] = dedupe((preferred.get("source_mentions") or []) + (secondary.get("source_mentions") or []))
+    merged["relationships"] = _normalize_relationships((preferred.get("relationships") or []) + (secondary.get("relationships") or []))
+    merged["confidence"] = max(float(preferred.get("confidence") or 0.0), float(secondary.get("confidence") or 0.0))
+    merged["review_state"] = "canonical" if (
+        str(preferred.get("review_state") or "").casefold() == "canonical"
+        or str(secondary.get("review_state") or "").casefold() == "canonical"
+    ) else "review"
+    return merged
+
+
+def _dedupe_entities(entities: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    exact_bucket: dict[str, dict[str, Any]] = {}
+    ordered: list[dict[str, Any]] = []
+    for raw in entities:
+        if not isinstance(raw, dict):
+            continue
+        entity = dict(raw)
+        entity["canonical_name"] = normalize_title(str(entity.get("canonical_name") or ""))
+        entity["entity_kind"] = _normalize_entity_kind(entity.get("entity_kind"))
+        if not entity["canonical_name"]:
+            continue
+        key = f"{entity['entity_kind']}::{_title_key(entity['canonical_name'])}"
+        existing = exact_bucket.get(key)
+        exact_bucket[key] = _merge_entities(existing, entity) if existing else entity
+
+    ordered = list(exact_bucket.values())
+    consumed: set[int] = set()
+    merged_entities: list[dict[str, Any]] = []
+    for index, entity in enumerate(ordered):
+        if index in consumed:
+            continue
+        current = entity
+        for other_index in range(index + 1, len(ordered)):
+            if other_index in consumed:
+                continue
+            other = ordered[other_index]
+            if _normalize_entity_kind(current.get("entity_kind")) != _normalize_entity_kind(other.get("entity_kind")):
+                continue
+            current_aliases = {_title_key(item) for item in _normalize_aliases(current.get("aliases"))}
+            other_aliases = {_title_key(item) for item in _normalize_aliases(other.get("aliases"))}
+            current_title = _title_key(str(current.get("canonical_name") or ""))
+            other_title = _title_key(str(other.get("canonical_name") or ""))
+            current_tokens = _token_set(str(current.get("canonical_name") or ""))
+            other_tokens = _token_set(str(other.get("canonical_name") or ""))
+            chapter_overlap = bool(set(current.get("chapter_refs") or []) & set(other.get("chapter_refs") or []))
+            alias_overlap = bool(current_aliases & other_aliases) or current_title in other_aliases or other_title in current_aliases
+            token_subset = bool(current_tokens and other_tokens) and (current_tokens <= other_tokens or other_tokens <= current_tokens)
+            if alias_overlap or (token_subset and chapter_overlap):
+                current = _merge_entities(current, other)
+                consumed.add(other_index)
+        merged_entities.append(current)
+    merged_entities.sort(key=lambda item: (item.get("entity_kind", ""), str(item.get("canonical_name") or "").lower()))
+    return merged_entities
+
+
+def _canonical_primary_index(entities: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    index: dict[str, dict[str, Any]] = {}
+    for entity in entities:
+        normalized_title = normalize_title(str(entity.get("canonical_name") or ""))
+        if not normalized_title:
+            continue
+        if str(entity.get("review_state") or "canonical").casefold() != "canonical":
+            continue
+        if not should_promote_entity(entity):
+            continue
+        index[normalized_title] = {
+            **entity,
+            "canonical_name": normalized_title,
+            "entity_kind": _normalize_entity_kind(entity.get("entity_kind")),
+        }
+    return index
+
+
+def _review_entity_index(entities: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    index: dict[str, dict[str, Any]] = {}
+    for entity in entities:
+        normalized_title = normalize_title(str(entity.get("canonical_name") or ""))
+        if not normalized_title:
+            continue
+        if str(entity.get("review_state") or "canonical").casefold() != "review":
+            continue
+        if not _should_materialize_review_entity(entity):
+            continue
+        index[normalized_title] = {
+            **entity,
+            "canonical_name": normalized_title,
+            "entity_kind": _normalize_entity_kind(entity.get("entity_kind")),
+        }
+    return index
+
+
+def _role_tags(note_role: str) -> list[str]:
+    tags = ROLE_TAGS.get(note_role)
+    if not tags:
+        raise ValueError(f"Unsupported note_role for tags: {note_role}")
+    return list(tags)
+
+
 def write_note(path: Path, *, frontmatter: dict[str, Any], body_lines: list[str]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     lines = ["---"]
@@ -111,7 +333,7 @@ def write_note(path: Path, *, frontmatter: dict[str, Any], body_lines: list[str]
         if key == "tags":
             lines.append("tags:")
             for tag in value:
-                lines.append(f"  - {tag}")
+                lines.append(f"  - {json.dumps(str(tag), ensure_ascii=False)}")
             continue
         if isinstance(value, bool):
             lines.append(f"{key}: {str(value).lower()}")
@@ -121,28 +343,113 @@ def write_note(path: Path, *, frontmatter: dict[str, Any], body_lines: list[str]
     path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
 
 
-def build_wikifier(primary_titles: list[str]):
-    ordered = sorted({title.strip() for title in primary_titles if title.strip()}, key=len, reverse=True)
+def resolve_wikilinks(text: str, canonical_index: dict[str, dict[str, Any]]) -> str:
+    if not text:
+        return text
+    protected: dict[str, str] = {}
 
-    def wikify(text: str) -> str:
-        if not text:
-            return text
-        protected: dict[str, str] = {}
+    def protect(match: re.Match[str]) -> str:
+        raw = match.group(1)
+        target = normalize_title(raw.split("|", 1)[0].split("#", 1)[0])
+        token = f"__WIKILINK_{len(protected)}__"
+        if target in canonical_index:
+            protected[token] = f"[[{target}]]"
+        else:
+            protected[token] = normalize_title(raw.split("|", 1)[-1]) or normalize_title(raw)
+        return token
 
-        def protect(match: re.Match[str]) -> str:
-            token = f"__WIKILINK_{len(protected)}__"
-            protected[token] = match.group(0)
-            return token
+    working = re.sub(r"\[\[([^\]]+)\]\]", protect, text)
+    for title in sorted(canonical_index.keys(), key=len, reverse=True):
+        pattern = re.compile(rf"(?<!\[\[)(?<![\w]){re.escape(title)}(?![\w])(?!\]\])")
+        working = pattern.sub(f"[[{title}]]", working)
+    for token, original in protected.items():
+        working = working.replace(token, original)
+    return working
 
-        working = re.sub(r"\[\[[^\]]+\]\]", protect, text)
-        for title in ordered:
-            pattern = re.compile(rf"(?<!\[\[)(?<![\w]){re.escape(title)}(?![\w])(?!\]\])")
-            working = pattern.sub(f"[[{title}]]", working)
-        for token, original in protected.items():
-            working = working.replace(token, original)
-        return working
 
-    return wikify
+def _normalize_frontmatter_entity(entity: dict[str, Any], *, role: str) -> dict[str, Any]:
+    normalized_title = normalize_title(str(entity.get("canonical_name") or entity.get("canonical_subject") or ""))
+    review_state = "review" if str(entity.get("review_state") or "").strip().casefold() == "review" else "canonical"
+    note_role = "review" if review_state == "review" else role
+    promotion_status = "pending_review" if review_state == "review" else "promoted_canonical"
+    return {
+        "canonical_subject": normalized_title,
+        "display_title": normalized_title,
+        "review_state": review_state,
+        "note_role": note_role,
+        "promotion_status": promotion_status,
+        "graph_exclude": review_state == "review",
+        "retrieval_exclude": review_state == "review",
+        "tags": _role_tags(note_role),
+    }
+
+
+def _safe_primary_link(name: str, canonical_index: dict[str, dict[str, Any]]) -> str:
+    normalized = normalize_title(name)
+    return f"[[{normalized}]]" if normalized in canonical_index else normalized
+
+
+def validate_vault(vault_root: Path) -> None:
+    errors: list[str] = []
+    canonical_index: set[str] = set()
+    all_notes = sorted(vault_root.rglob("*.md"))
+
+    for note_path in all_notes:
+        text = note_path.read_text(encoding="utf-8")
+        frontmatter = parse_obsidian_frontmatter(text)
+        note_role = str(frontmatter.get("note_role") or "").strip()
+        promotion_status = str(frontmatter.get("promotion_status") or "").strip()
+        review_state = str(frontmatter.get("review_state") or "").strip()
+        canonical_subject = str(frontmatter.get("canonical_subject") or "").strip()
+        if review_state == "review" and promotion_status == "promoted_canonical":
+            errors.append(f"review promoted as canonical: {note_path}")
+        if review_state == "review" and note_role == "primary":
+            errors.append(f"review stored as primary: {note_path}")
+        if re.search(r"[\*\[\]·]", canonical_subject):
+            errors.append(f"canonical_subject contains forbidden chars: {note_path}")
+        if review_state == "review" and "/90_Review/" not in note_path.as_posix():
+            errors.append(f"review note outside review folder: {note_path}")
+        if review_state != "review" and "/90_Review/" in note_path.as_posix():
+            errors.append(f"canonical note inside review folder: {note_path}")
+        if note_role == "primary" and promotion_status == "promoted_canonical":
+            canonical_index.add(canonical_subject)
+
+        raw_frontmatter = text.split("---\n", 2)[1] if text.startswith("---\n") and text.count("---\n") >= 2 else ""
+        tag_lines = raw_frontmatter.splitlines()
+        try:
+            tag_index = tag_lines.index("tags:")
+        except ValueError:
+            tag_index = -1
+        expected_tags = _role_tags(note_role) if note_role in ROLE_TAGS else []
+        actual_tag_lines: list[str] = []
+        if tag_index >= 0:
+            for line in tag_lines[tag_index + 1 :]:
+                if not line.startswith("  - "):
+                    break
+                actual_tag_lines.append(line)
+        if not expected_tags or not actual_tag_lines:
+            errors.append(f"tags missing or empty: {note_path}")
+        else:
+            expected_lines = [f"  - {json.dumps(tag, ensure_ascii=False)}" for tag in expected_tags]
+            if actual_tag_lines != expected_lines:
+                errors.append(f"tags invalid for role {note_role}: {note_path}")
+
+    for note_path in all_notes:
+        text = note_path.read_text(encoding="utf-8")
+        frontmatter = parse_obsidian_frontmatter(text)
+        linked_primary_subjects = frontmatter.get("linked_primary_subjects") or []
+        if not isinstance(linked_primary_subjects, list):
+            linked_primary_subjects = [item.strip() for item in str(linked_primary_subjects).split(",") if item.strip()]
+        normalized_subjects = [normalize_title(item) for item in linked_primary_subjects if normalize_title(item)]
+        if any(item not in canonical_index for item in normalized_subjects):
+            errors.append(f"linked_primary_subjects contains non-canonical targets: {note_path}")
+        for link in extract_obsidian_links(text):
+            resolved = normalize_title(link.replace("_", " "))
+            if resolved not in canonical_index:
+                errors.append(f"wikilink points to non-canonical target: {note_path} -> {resolved}")
+
+    if errors:
+        raise ValueError("Vault validation failed:\n" + "\n".join(f"- {item}" for item in errors))
 
 
 def import_json_to_vault(*, source_json: Path, vault_root: Path) -> dict[str, Any]:
@@ -150,7 +457,7 @@ def import_json_to_vault(*, source_json: Path, vault_root: Path) -> dict[str, An
     work = payload.get("work") or {}
     labels = _labels_for_language(work.get("language"))
     chapters = payload.get("chapters") or []
-    entities = payload.get("entities") or []
+    raw_entities = payload.get("entities") or []
     preserved_system_dir: Path | None = None
 
     if vault_root.exists():
@@ -177,45 +484,53 @@ def import_json_to_vault(*, source_json: Path, vault_root: Path) -> dict[str, An
     ]:
         (vault_root / rel).mkdir(parents=True, exist_ok=True)
 
+    entities = _dedupe_entities(raw_entities)
+    canonical_index = _canonical_primary_index(entities)
+    review_index = _review_entity_index(entities)
+    wikify = lambda text: resolve_wikilinks(text, canonical_index)
     chapter_title_by_id = {
-        str(item.get("chapter_id") or "").strip(): str(item.get("chapter_title_original") or item.get("chapter_title_canonical") or "").strip()
+        str(item.get("chapter_id") or "").strip(): normalize_title(
+            str(item.get("chapter_title_original") or item.get("chapter_title_canonical") or "")
+        )
         for item in chapters
     }
-    primary_titles = [str(item.get("canonical_name") or "").strip() for item in entities]
-    wikify = build_wikifier(primary_titles)
 
     created_primary_paths: list[str] = []
     skipped_primaries: list[dict[str, str]] = []
     review_primary_paths: list[str] = []
     for entity in entities:
-        title = str(entity.get("canonical_name") or "").strip()
+        title = normalize_title(str(entity.get("canonical_name") or ""))
         if not title:
             skipped_primaries.append({"title": "", "reason": "missing_title"})
             continue
-        if _is_numeric_note_title(title):
-            skipped_primaries.append({"title": title, "reason": "numeric_title"})
+        review_state = str(entity.get("review_state") or "canonical").casefold()
+        if title in canonical_index:
+            canonical_entity = canonical_index[title]
+            entity_kind = _normalize_entity_kind(canonical_entity.get("entity_kind"))
+            target_dir = PRIMARY_DIRS.get(entity_kind, "02_World/Lore")
+            state = _normalize_frontmatter_entity(canonical_entity, role="primary")
+        elif title in review_index:
+            canonical_entity = review_index[title]
+            entity_kind = _normalize_entity_kind(canonical_entity.get("entity_kind"))
+            target_dir = "90_Review"
+            state = _normalize_frontmatter_entity(canonical_entity, role="primary")
+        else:
+            reason = "failed_should_promote" if review_state != "review" else "failed_review_materialization"
+            skipped_primaries.append({"title": title, "reason": reason})
             continue
-        if not _has_meaningful_primary_content(entity):
-            skipped_primaries.append({"title": title, "reason": "insufficient_content"})
-            continue
-        entity_kind = str(entity.get("entity_kind") or "lore").strip().casefold()
+
         rel_dir = PRIMARY_DIRS.get(entity_kind, "02_World/Lore")
-        slug = str(entity.get("preferred_slug") or "").strip() or slugify(title)
-        if _is_numeric_note_title(slug):
-            skipped_primaries.append({"title": title, "reason": "numeric_slug"})
-            continue
-        aliases = dedupe([str(alias).strip() for alias in (entity.get("aliases") or []) if str(alias).strip()])
-        chapter_titles = [
-            chapter_title_by_id.get(str(ref).strip(), str(ref).strip())
-            for ref in (entity.get("chapter_refs") or [])
+        slug = str(canonical_entity.get("preferred_slug") or "").strip() or slugify(title)
+        aliases = _normalize_aliases(canonical_entity.get("aliases"))
+        chapter_titles = dedupe([
+            chapter_title_by_id.get(str(ref).strip(), normalize_title(str(ref).strip()))
+            for ref in (canonical_entity.get("chapter_refs") or [])
             if str(ref).strip()
-        ]
-        chapter_titles = dedupe(chapter_titles)
-        relationships = entity.get("relationships") or []
-        key_facts = dedupe([str(fact).strip() for fact in (entity.get("key_facts") or []) if str(fact).strip()])
-        summary = wikify(str(entity.get("summary") or "").strip())
-        review_state = str(entity.get("review_state") or "canonical").strip().casefold() or "canonical"
-        is_review = review_state != "canonical"
+        ])
+        relationships = _normalize_relationships(canonical_entity.get("relationships") or [])
+        key_facts = dedupe([str(fact).strip() for fact in (canonical_entity.get("key_facts") or []) if str(fact).strip()])
+        summary = wikify(str(canonical_entity.get("summary") or "").strip())
+
         body_lines = [f"# {title}", ""]
         if summary:
             body_lines += [f"## {labels['overview']}", "", summary, ""]
@@ -226,12 +541,10 @@ def import_json_to_vault(*, source_json: Path, vault_root: Path) -> dict[str, An
         if relationships:
             body_lines += [f"## {labels['relationships']}", ""]
             for rel in relationships[:12]:
-                if not isinstance(rel, dict):
-                    continue
-                target = str(rel.get("target") or "").strip()
+                target = normalize_title(str(rel.get("target") or ""))
                 rel_type = str(rel.get("type") or "").strip()
                 facts = [str(fact).strip() for fact in (rel.get("facts") or []) if str(fact).strip()]
-                line = f"- [[{target}]]" if target else "- Related entity"
+                line = f"- {_safe_primary_link(target, canonical_index)}" if target else "- Related entity"
                 if rel_type:
                     line += f" ({rel_type})"
                 if facts:
@@ -240,42 +553,44 @@ def import_json_to_vault(*, source_json: Path, vault_root: Path) -> dict[str, An
             body_lines += [""]
         if chapter_titles:
             body_lines += [f"## {labels['source_chapters']}", ""]
-            body_lines += [f"- [[{title_ref}]]" for title_ref in chapter_titles[:20]]
+            body_lines += [f"- {title_ref}" for title_ref in chapter_titles[:20]]
             body_lines += [""]
 
         frontmatter = {
             "kind": "location" if entity_kind == "place" else entity_kind,
             "title": title,
+            "display_title": state["display_title"],
             "status": "pending_revision",
             "schema_version": "1.0",
             "slug": slug,
             "artifact_stage": "promoted_artifact",
-            "promotion_status": "promoted_canonical",
-            "note_role": "primary",
+            "promotion_status": state["promotion_status"],
+            "note_role": state["note_role"],
             "entity_kind": entity_kind,
-            "canonical_subject": title,
-            "aliases": ", ".join(aliases),
+            "canonical_subject": state["canonical_subject"],
+            "aliases": aliases,
             "semantic_class": entity_kind,
-            "evidence_sources": ", ".join(chapter_titles),
-            "confidence": float(entity.get("confidence") or 0.0),
-            "review_state": review_state,
-            "graph_exclude": is_review,
-            "retrieval_exclude": is_review,
-            "tags": ["#review"] if is_review else ["#primary"],
+            "evidence_sources": chapter_titles,
+            "confidence": float(canonical_entity.get("confidence") or 0.0),
+            "review_state": state["review_state"],
+            "graph_exclude": state["graph_exclude"],
+            "retrieval_exclude": state["retrieval_exclude"],
+            "tags": state["tags"],
+            "linked_primary_subjects": [],
         }
-        note_path = vault_root / ("90_Review" if is_review else rel_dir) / f"{slug}.md"
+        note_path = vault_root / (target_dir if title in review_index else rel_dir) / f"{slug}.md"
         write_note(note_path, frontmatter=frontmatter, body_lines=body_lines)
-        if is_review:
+        if title in review_index:
             review_primary_paths.append(str(note_path))
         else:
             created_primary_paths.append(str(note_path))
 
     chapter_paths: list[str] = []
     summary_paths: list[str] = []
-    chapter_refs_by_title: dict[str, list[str]] = defaultdict(list)
 
     for chapter in chapters:
-        title = str(chapter.get("chapter_title_original") or chapter.get("chapter_title_canonical") or "").strip()
+        original_title = str(chapter.get("chapter_title_original") or chapter.get("chapter_title_canonical") or "").strip()
+        title = normalize_title(original_title)
         if not title:
             continue
         slug = slugify(str(chapter.get("chapter_title_canonical") or title))
@@ -284,7 +599,7 @@ def import_json_to_vault(*, source_json: Path, vault_root: Path) -> dict[str, An
         text = wikify(str(chapter.get("chapter_text_markdown") or "").strip())
 
         linked_primaries: list[str] = []
-        chapter_body = [f"# {title}", ""]
+        chapter_body = [f"# {original_title}", ""]
         if summary:
             chapter_body += [f"## {labels['summary']}", "", summary, ""]
         if text:
@@ -303,11 +618,12 @@ def import_json_to_vault(*, source_json: Path, vault_root: Path) -> dict[str, An
             for item in items[:20]:
                 if not isinstance(item, dict):
                     continue
-                canonical = str(item.get("canonical") or item.get("surface") or "").strip()
-                if canonical:
-                    linked_primaries.append(canonical)
+                canonical = normalize_title(str(item.get("canonical") or item.get("surface") or ""))
                 facts = [str(fact).strip() for fact in (item.get("facts") or []) if str(fact).strip()]
-                line = f"- [[{canonical}]]" if canonical else f"- {str(item.get('surface') or '').strip()}"
+                if canonical in canonical_index:
+                    linked_primaries.append(canonical)
+                label = _safe_primary_link(canonical, canonical_index) if canonical else normalize_title(str(item.get("surface") or ""))
+                line = f"- {label}" if label else "- Item"
                 if facts:
                     line += f": {wikify(facts[0])}"
                 chapter_body.append(line)
@@ -319,11 +635,13 @@ def import_json_to_vault(*, source_json: Path, vault_root: Path) -> dict[str, An
             for rel in relations[:20]:
                 if not isinstance(rel, dict):
                     continue
-                source = str(rel.get("from_canonical") or rel.get("from_surface") or rel.get("from") or "").strip()
-                target = str(rel.get("to_canonical") or rel.get("to_surface") or rel.get("to") or "").strip()
+                source = normalize_title(str(rel.get("from_canonical") or rel.get("from_surface") or rel.get("from") or ""))
+                target = normalize_title(str(rel.get("to_canonical") or rel.get("to_surface") or rel.get("to") or ""))
                 rel_type = str(rel.get("relation_type") or rel.get("type") or "").strip()
                 facts = [str(fact).strip() for fact in (rel.get("facts") or []) if str(fact).strip()]
-                line = f"- [[{source}]] -> [[{target}]]" if source and target else "- Relation"
+                left = _safe_primary_link(source, canonical_index) if source else "Relation"
+                right = _safe_primary_link(target, canonical_index) if target else "Relation"
+                line = f"- {left} -> {right}"
                 if rel_type:
                     line += f" ({rel_type})"
                 if facts:
@@ -335,6 +653,7 @@ def import_json_to_vault(*, source_json: Path, vault_root: Path) -> dict[str, An
         chapter_frontmatter = {
             "kind": "chapter",
             "title": title,
+            "display_title": title,
             "status": "pending_revision",
             "schema_version": "1.0",
             "slug": slug,
@@ -347,13 +666,13 @@ def import_json_to_vault(*, source_json: Path, vault_root: Path) -> dict[str, An
             "source_sequence_index": seq,
             "semantic_class": "chapter_structured_json",
             "source_path": str(source_json),
-            "linked_primary_subjects": ", ".join(linked_primaries),
-            "evidence_sources": str(source_json),
+            "linked_primary_subjects": linked_primaries,
+            "evidence_sources": [str(source_json)],
             "confidence": 0.8,
             "review_state": "canonical",
             "graph_exclude": True,
             "retrieval_exclude": True,
-            "tags": ["#chapter", "#chapters"],
+            "tags": _role_tags("chapter"),
         }
         chapter_path = vault_root / "04_Story/Chapters" / f"{slug}.md"
         write_note(chapter_path, frontmatter=chapter_frontmatter, body_lines=chapter_body)
@@ -364,22 +683,23 @@ def import_json_to_vault(*, source_json: Path, vault_root: Path) -> dict[str, An
             {
                 "kind": "chapter_summary",
                 "title": f"{title} {labels['chapter_summary_suffix']}",
+                "display_title": f"{title} {labels['chapter_summary_suffix']}",
                 "slug": f"{slug}_summary",
                 "note_role": "chapter_summary",
                 "entity_kind": "chapter_summary",
                 "semantic_class": "chapter_summary",
                 "summary_for_chapter": chapter_path.name,
+                "tags": _role_tags("chapter_summary"),
             }
         )
-        summary_body = [f"# {title} {labels['chapter_summary_suffix']}", "", summary or labels["no_summary"], ""]
+        summary_body = [f"# {original_title} {labels['chapter_summary_suffix']}", "", summary or labels["no_summary"], ""]
         if linked_primaries:
             summary_body += [f"## {labels['linked_primaries']}", ""]
-            summary_body += [f"- [[{name}]]" for name in linked_primaries[:20]]
+            summary_body += [f"- {_safe_primary_link(name, canonical_index)}" for name in linked_primaries[:20]]
             summary_body += [""]
         summary_path = vault_root / "04_Story/Chapter_Summaries" / f"{slug}_summary.md"
         write_note(summary_path, frontmatter=summary_frontmatter, body_lines=summary_body)
         summary_paths.append(str(summary_path))
-        chapter_refs_by_title[title] = linked_primaries
 
     audit = {
         "source_json": str(source_json),
@@ -403,6 +723,7 @@ def import_json_to_vault(*, source_json: Path, vault_root: Path) -> dict[str, An
         frontmatter={
             "kind": "project_note",
             "title": labels["import_manifest"],
+            "display_title": labels["import_manifest"],
             "status": "pending_revision",
             "schema_version": "1.0",
             "slug": "import_manifest",
@@ -411,14 +732,15 @@ def import_json_to_vault(*, source_json: Path, vault_root: Path) -> dict[str, An
             "note_role": "system",
             "entity_kind": "system",
             "canonical_subject": labels["import_manifest"],
-            "aliases": "",
+            "aliases": [],
             "semantic_class": "import_manifest",
-            "evidence_sources": str(source_json),
+            "evidence_sources": [str(source_json)],
             "confidence": 1.0,
             "review_state": "canonical",
             "graph_exclude": True,
             "retrieval_exclude": True,
-            "tags": ["#system"],
+            "tags": _role_tags("system"),
+            "linked_primary_subjects": [],
         },
         body_lines=[
             f"# {labels['import_manifest']}",
@@ -440,4 +762,5 @@ def import_json_to_vault(*, source_json: Path, vault_root: Path) -> dict[str, An
             else:
                 shutil.copy2(item, target)
         shutil.rmtree(preserved_system_dir.parent, ignore_errors=True)
+    validate_vault(vault_root)
     return audit
