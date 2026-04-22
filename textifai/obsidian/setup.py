@@ -456,7 +456,7 @@ def _resolve_bootstrap_provider_and_model(repo_root: Path) -> tuple[str | None, 
 
     env = load_runtime_environment(repo_root)
     provider_name = os.environ.get("AUTONOVEL_BOOTSTRAP_PROVIDER", "").strip() or env.provider
-    model = os.environ.get("AUTONOVEL_BOOTSTRAP_MODEL", "").strip() or env.writer_model
+    model = os.environ.get("AUTONOVEL_BOOTSTRAP_MODEL", "").strip() or "auto"
     return provider_name or None, model or None
 
 

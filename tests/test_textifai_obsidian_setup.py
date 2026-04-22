@@ -4,12 +4,13 @@ import tempfile
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
+from unittest.mock import patch
 
 from textifai.conversation.contracts import ConversationRequest
 from textifai.conversation.executor import MinimalExecutionLayer
 from textifai.conversation.manager import ConversationManager
 from textifai.obsidian import evaluate_obsidian_operational_readiness
-from textifai.obsidian.setup import ObsidianProjectSetupConfig, prepare_obsidian_project
+from textifai.obsidian.setup import ObsidianProjectSetupConfig, _resolve_bootstrap_provider_and_model, prepare_obsidian_project
 from textifai.runtime_config import load_runtime_environment
 from textifai.session import create_session
 from vault.bootstrap import bootstrap_vault
@@ -17,6 +18,15 @@ from vault.schema import note_frontmatter
 
 
 class TextifAIObsidianSetupTests(unittest.TestCase):
+    def test_bootstrap_model_defaults_to_auto_when_not_explicitly_set(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            (base / ".env").write_text("AUTONOVEL_TEXT_PROVIDER=openai\nAUTONOVEL_WRITER_MODEL=gpt-5.4\n", encoding="utf-8")
+            with patch.dict("os.environ", {}, clear=True):
+                provider, model = _resolve_bootstrap_provider_and_model(base)
+            self.assertEqual(provider, "openai")
+            self.assertEqual(model, "auto")
+
     def test_readiness_blocks_context_when_vault_missing(self):
         with tempfile.TemporaryDirectory() as tmp:
             readiness = evaluate_obsidian_operational_readiness(Path(tmp) / "MissingVault")

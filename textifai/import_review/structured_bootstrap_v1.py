@@ -19,6 +19,7 @@ from textifai.import_review.batch_planner import PlannedBatch, pack_items_by_bud
 from textifai.import_review.chapterizer import detect_story_chapters
 from textifai.import_review.model_registry import get_model_capabilities
 from textifai.import_review.token_budget import TokenBudget, build_token_budget, fits_within_budget
+from textifai.runtime_config import synchronize_runtime_environment
 
 
 GLOBAL_NORMALIZATION_PROMPT = """You are a narrative entity normalization system.
@@ -670,6 +671,7 @@ def run_structured_bootstrap_v1(
     config: NovelBootstrapV1Config,
     progress_log_path: str | None = None,
 ) -> NovelBootstrapV1Result | None:
+    synchronize_runtime_environment(Path(__file__).resolve().parents[2])
     if get_text_provider_config_error(config.global_task_name, config.provider_name) is not None:
         return None
     if get_text_provider_config_error(config.chapter_task_name, config.provider_name) is not None:
@@ -1247,7 +1249,8 @@ def _build_global_normalization_batches(
     chapters: list[Any],
     config: NovelBootstrapV1Config,
 ) -> tuple[list[list[dict[str, Any]]], dict[str, Any]]:
-    capabilities = get_model_capabilities(config.model)
+    global_model = _resolve_structured_model(config, phase="global_normalization")
+    capabilities = get_model_capabilities(global_model)
     budget = _build_global_token_budget(config=config)
     chapter_rows: list[dict[str, Any]] = []
     chapter_items = [
@@ -1301,7 +1304,7 @@ def _build_global_normalization_batches(
             "work_title": work_title,
             "language": language,
             "provider_name": config.provider_name,
-            "model": config.model,
+            "model": global_model,
             "model_capabilities": {
                 "context_window": capabilities.context_window,
                 "max_output_tokens": capabilities.max_output_tokens,
@@ -1322,7 +1325,7 @@ def _build_global_normalization_batches(
 
 
 def _build_global_token_budget(*, config: NovelBootstrapV1Config) -> TokenBudget:
-    capabilities = get_model_capabilities(config.model)
+    capabilities = get_model_capabilities(_resolve_structured_model(config, phase="global_normalization"))
     override_budget = config.global_batch_input_token_budget
     budget = build_token_budget(
         capabilities=capabilities,
@@ -1339,7 +1342,7 @@ def _build_global_token_budget(*, config: NovelBootstrapV1Config) -> TokenBudget
 
 
 def _build_chapter_token_budget(*, config: NovelBootstrapV1Config) -> TokenBudget:
-    capabilities = get_model_capabilities(config.model)
+    capabilities = get_model_capabilities(_resolve_structured_model(config, phase="chapter_extraction"))
     return build_token_budget(
         capabilities=capabilities,
         requested_output_tokens=max(config.chapter_max_tokens, config.chapter_reduce_max_tokens),
@@ -1353,6 +1356,7 @@ def _count_global_batch_input_tokens(
     batch: list[dict[str, Any]],
     config: NovelBootstrapV1Config,
 ) -> tuple[int, str]:
+    global_model = _resolve_structured_model(config, phase="global_normalization")
     prompt = _build_global_normalization_prompt(
         work_title=work_title,
         language=language,
@@ -1361,7 +1365,7 @@ def _count_global_batch_input_tokens(
     )
     if config.provider_name == "openai":
         counted = _count_openai_input_tokens_for_prompt(
-            model=str(config.model or ""),
+            model=global_model,
             prompt=prompt,
             timeout_seconds=config.timeout_seconds,
         )
@@ -1495,6 +1499,7 @@ def _run_global_normalization(
     audit_path: Path | None = None,
     progress_log_path: str | None = None,
 ) -> dict[str, Any] | None:
+    global_model = _resolve_structured_model(config, phase="global_normalization")
     _ = source_text
     _ = source_path
     provider = get_text_provider(config.global_task_name, config.provider_name)
@@ -1537,6 +1542,7 @@ def _run_global_normalization(
                     "task": config.global_task_name,
                     "payload": {
                         "model": config.model,
+                        "resolved_model": global_model,
                         "messages": [{"role": "user", "content": prompt}],
                         "temperature": config.temperature,
                         "max_tokens": config.global_max_tokens,
@@ -1549,7 +1555,7 @@ def _run_global_normalization(
                 TextGenerationRequest(
                     task=config.global_task_name,
                     provider_name=config.provider_name,
-                    model=config.model,
+                    model=global_model,
                     system="Return only valid JSON for global novel normalization.",
                     messages=[TextMessage(role="user", content=prompt)],
                     max_tokens=config.global_max_tokens,
@@ -1609,7 +1615,7 @@ def _run_chapter_extraction(
     request_trace_path: Path | None = None,
 ) -> dict[str, Any] | None:
     provider = get_text_provider(config.chapter_task_name, config.provider_name)
-    prompt = _build_chapter_extraction_prompt(
+    draft_prompt = _build_chapter_extraction_prompt(
         work_title=work_title,
         language=language,
         chapter_id=chapter_id,
@@ -1618,11 +1624,17 @@ def _run_chapter_extraction(
         chapter_text=chapter_text,
         canonical_entity_map=canonical_entity_map,
     )
+    chapter_model = _resolve_structured_model(
+        config,
+        phase="chapter_extraction",
+        input_tokens=_estimate_token_count(draft_prompt),
+    )
+    prompt = draft_prompt
     chapter_budget = _build_chapter_token_budget(config=config)
     input_tokens, token_method = _count_prompt_input_tokens(
         prompt=prompt,
         provider_name=config.provider_name,
-        model=str(config.model or ""),
+        model=chapter_model,
         timeout_seconds=config.timeout_seconds,
     )
     if not fits_within_budget(input_tokens=input_tokens, budget=chapter_budget):
@@ -1648,7 +1660,7 @@ def _run_chapter_extraction(
                 "endpoint": _chapter_endpoint_for_provider(config.provider_name),
                 "headers": _redacted_openai_headers(),
                 "payload": {
-                    "model": config.model,
+                    "model": chapter_model,
                     "messages": [
                         {"role": "system", "content": "Return only valid JSON for one chapter extraction."},
                         {"role": "user", "content": prompt},
@@ -1666,7 +1678,7 @@ def _run_chapter_extraction(
             TextGenerationRequest(
                 task=config.chapter_task_name,
                 provider_name=config.provider_name,
-                model=config.model,
+                model=chapter_model,
                 system="Return only valid JSON for one chapter extraction.",
                 messages=[TextMessage(role="user", content=prompt)],
                 max_tokens=config.chapter_max_tokens,
@@ -1750,6 +1762,11 @@ def _run_chapter_extraction_chunked(
     title_entity_hints = _extract_title_entity_hints(chapter_title)
     partial_payloads: list[dict[str, Any]] = []
     for chunk_index, chunk_text in enumerate(subchunks, start=1):
+        partial_model = _resolve_structured_model(
+            config,
+            phase="chapter_partial_extraction",
+            input_tokens=_estimate_token_count(chunk_text),
+        )
         prompt = (
             f"{CHAPTER_PARTIAL_EXTRACTION_PROMPT}\n\n"
             f"WORK_TITLE: {work_title}\n"
@@ -1766,7 +1783,7 @@ def _run_chapter_extraction_chunked(
                 TextGenerationRequest(
                     task=config.chapter_task_name,
                     provider_name=config.provider_name,
-                    model=config.model,
+                    model=partial_model,
                     system="Return only valid JSON for one chapter subchunk extraction.",
                     messages=[TextMessage(role="user", content=prompt)],
                     max_tokens=config.chapter_max_tokens,
@@ -1794,6 +1811,11 @@ def _run_chapter_extraction_chunked(
         f"CANONICAL_ENTITY_MAP:\n{json.dumps(canonical_entity_map, ensure_ascii=False)}\n\n"
         f"PARTIAL_SIGNALS:\n{json.dumps(partial_payloads, ensure_ascii=False)}"
     )
+    reduction_model = _resolve_structured_model(
+        config,
+        phase="chapter_reduction",
+        input_tokens=_estimate_token_count(reduction_prompt),
+    )
     if request_trace_path is not None:
         _write_json_trace(
             request_trace_path,
@@ -1804,7 +1826,7 @@ def _run_chapter_extraction_chunked(
                 "headers": _redacted_openai_headers(),
                 "payload": {
                     "mode": "chapter_reduction",
-                    "model": config.model,
+                    "model": reduction_model,
                     "subchunk_count": len(subchunks),
                     "messages": [
                         {"role": "system", "content": "Return only valid JSON for chapter reduction."},
@@ -1821,7 +1843,7 @@ def _run_chapter_extraction_chunked(
             TextGenerationRequest(
                 task=config.chapter_task_name,
                 provider_name=config.provider_name,
-                model=config.model,
+                model=reduction_model,
                 system="Return only valid JSON for chapter reduction.",
                 messages=[TextMessage(role="user", content=reduction_prompt)],
                 max_tokens=config.chapter_reduce_max_tokens,
@@ -1888,6 +1910,28 @@ def _select_primary_novel_document(inventory: SourceDocumentInventory, source_te
         return None
     candidates.sort(key=lambda item: (item[0], item[1]), reverse=True)
     return candidates[0][2]
+
+
+def _resolve_structured_model(
+    config: NovelBootstrapV1Config,
+    *,
+    phase: str,
+    input_tokens: int | None = None,
+) -> str:
+    requested = str(config.model or "").strip()
+    provider = str(config.provider_name or "").strip().casefold()
+    if requested and requested.casefold() != "auto":
+        return requested
+    if provider == "openai":
+        token_count = max(int(input_tokens or 0), 0)
+        if phase == "global_normalization":
+            return "gpt-4.1-mini"
+        if phase in {"chapter_extraction", "chapter_partial_extraction", "chapter_reduction"}:
+            return "gpt-4o-mini" if token_count <= 90000 else "gpt-4.1-mini"
+        return "gpt-4.1-mini"
+    if provider == "lmstudio":
+        return "qwen/qwen3.5-9b"
+    return requested or "gpt-4.1-mini"
 
 
 def _normalize_global_payload(

@@ -10,6 +10,7 @@ from textifai.bootstrap.source_reader import build_source_document_inventory
 from textifai.obsidian.json_import import import_json_to_vault
 from textifai.import_review.structured_bootstrap_v1 import (
     NovelBootstrapV1Config,
+    _resolve_structured_model,
     _extract_title_entity_hints,
     _promote_recurring_chapter_entities,
     _promote_title_hint_entities,
@@ -302,6 +303,31 @@ class StructuredBootstrapV1Tests(unittest.TestCase):
         self.assertEqual(batches[0][0]["sequence_index"], 1)
         self.assertEqual(audit["batch_count"], len(batches))
 
+    def test_auto_model_selection_prefers_phase_appropriate_openai_models(self):
+        self.assertEqual(
+            _resolve_structured_model(
+                NovelBootstrapV1Config(provider_name="openai", model="auto"),
+                phase="global_normalization",
+            ),
+            "gpt-4.1-mini",
+        )
+        self.assertEqual(
+            _resolve_structured_model(
+                NovelBootstrapV1Config(provider_name="openai", model="auto"),
+                phase="chapter_extraction",
+                input_tokens=12000,
+            ),
+            "gpt-4o-mini",
+        )
+        self.assertEqual(
+            _resolve_structured_model(
+                NovelBootstrapV1Config(provider_name="openai", model="auto"),
+                phase="chapter_extraction",
+                input_tokens=180000,
+            ),
+            "gpt-4.1-mini",
+        )
+
     def test_json_import_filters_numeric_empty_primaries_and_marks_system_and_review(self):
         with tempfile.TemporaryDirectory() as tmp:
             source_json = Path(tmp) / "obsidian_import.json"
@@ -433,6 +459,8 @@ class StructuredBootstrapV1Tests(unittest.TestCase):
             inventory = build_source_document_inventory(source_root)
 
             with patch("textifai.import_review.structured_bootstrap_v1.get_text_provider_config_error", return_value=None), patch(
+                "textifai.import_review.structured_bootstrap_v1.synchronize_runtime_environment"
+            ) as sync_env, patch(
                 "textifai.import_review.structured_bootstrap_v1.get_text_provider",
                 return_value=_StructuredBootstrapFakeProvider(),
             ):
@@ -444,6 +472,7 @@ class StructuredBootstrapV1Tests(unittest.TestCase):
 
             self.assertIsNotNone(result)
             assert result is not None
+            sync_env.assert_called()
             self.assertEqual(result.chapter_count, 2)
             self.assertTrue(Path(result.global_normalization_path).exists())
             self.assertTrue(Path(result.global_batch_audit_path).exists())
