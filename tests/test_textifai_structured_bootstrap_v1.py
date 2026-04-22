@@ -184,7 +184,9 @@ class StructuredBootstrapV1Tests(unittest.TestCase):
             item.text = "x" * 4000
             chapters.append(item)
         batches = _build_global_normalization_batches(
-            chapters,
+            work_title="Test Novel",
+            language="es",
+            chapters=chapters,
             config=NovelBootstrapV1Config(
                 provider_name="lmstudio",
                 model="qwen/qwen3.5-9b",
@@ -192,8 +194,10 @@ class StructuredBootstrapV1Tests(unittest.TestCase):
                 global_batch_prompt_overhead_tokens=200,
             ),
         )
+        batches, audit = batches
         self.assertGreaterEqual(len(batches), 2)
         self.assertEqual(batches[0][0]["sequence_index"], 1)
+        self.assertEqual(audit["batch_count"], len(batches))
 
     def test_json_import_filters_numeric_empty_primaries_and_marks_system_and_review(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -274,6 +278,39 @@ class StructuredBootstrapV1Tests(unittest.TestCase):
             chapter_note = next((vault_root / "04_Story/Chapters").glob("*.md")).read_text(encoding="utf-8")
             self.assertIn("#chapter", chapter_note)
 
+    def test_json_import_preserves_existing_system_artifacts(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source_json = Path(tmp) / "obsidian_import.json"
+            vault_root = Path(tmp) / "vault"
+            (vault_root / "99_System").mkdir(parents=True, exist_ok=True)
+            (vault_root / "99_System" / "global_batch_plan_audit.json").write_text('{"ok": true}', encoding="utf-8")
+            source_json.write_text(
+                json.dumps(
+                    {
+                        "work": {"title": "Test", "language": "es"},
+                        "chapters": [],
+                        "entities": [
+                            {
+                                "canonical_name": "Sera",
+                                "entity_kind": "character",
+                                "summary": "Protagonista.",
+                                "key_facts": ["Huye del castillo."],
+                                "relationships": [],
+                                "aliases": [],
+                                "chapter_refs": [],
+                                "source_mentions": [],
+                                "confidence": 0.95,
+                                "review_state": "canonical",
+                            }
+                        ],
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+            import_json_to_vault(source_json=source_json, vault_root=vault_root)
+            self.assertTrue((vault_root / "99_System" / "global_batch_plan_audit.json").exists())
+
     def test_run_structured_bootstrap_v1_writes_json_artifacts(self):
         with tempfile.TemporaryDirectory() as tmp:
             source_root = Path(tmp) / "source"
@@ -305,6 +342,7 @@ class StructuredBootstrapV1Tests(unittest.TestCase):
             assert result is not None
             self.assertEqual(result.chapter_count, 2)
             self.assertTrue(Path(result.global_normalization_path).exists())
+            self.assertTrue(Path(result.global_batch_audit_path).exists())
             self.assertTrue(Path(result.canonical_entity_map_path).exists())
             self.assertTrue(Path(result.obsidian_import_path).exists())
             chapter_files = sorted(Path(result.chapter_outputs_dir).glob("*.json"))

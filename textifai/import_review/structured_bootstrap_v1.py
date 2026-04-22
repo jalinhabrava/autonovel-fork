@@ -518,6 +518,7 @@ class NovelBootstrapV1Result:
     source_document: str
     chapter_count: int
     global_normalization_path: str
+    global_batch_audit_path: str
     canonical_entity_map_path: str
     chapter_outputs_dir: str
     chapters_enriched_path: str
@@ -561,6 +562,7 @@ def run_structured_bootstrap_v1(
 
     warnings: list[str] = []
 
+    global_batch_audit_path = system_root / "global_batch_plan_audit.json"
     global_payload = _run_global_normalization(
         work_title=work_title,
         language=language,
@@ -569,6 +571,8 @@ def run_structured_bootstrap_v1(
         source_path=Path(source_doc.path),
         config=config,
         request_trace_dir=request_trace_dir,
+        audit_path=global_batch_audit_path,
+        progress_log_path=progress_log_path,
     )
     if global_payload is None:
         return None
@@ -652,6 +656,7 @@ def run_structured_bootstrap_v1(
         source_document=source_doc.path,
         chapter_count=len(chapters),
         global_normalization_path=str(global_normalization_path),
+        global_batch_audit_path=str(global_batch_audit_path),
         canonical_entity_map_path=str(canonical_entity_map_path),
         chapter_outputs_dir=str(chapter_outputs_dir),
         chapters_enriched_path=str(chapters_enriched_path),
@@ -827,31 +832,146 @@ def _estimate_token_count(text: str) -> int:
     return max(1, len(compact) // 4)
 
 
-def _build_global_normalization_batches(chapters: list[Any], *, config: NovelBootstrapV1Config) -> list[list[dict[str, Any]]]:
+def _build_global_normalization_batches(
+    *,
+    work_title: str,
+    language: str,
+    chapters: list[Any],
+    config: NovelBootstrapV1Config,
+) -> tuple[list[list[dict[str, Any]]], dict[str, Any]]:
     batches: list[list[dict[str, Any]]] = []
+    audit_batches: list[dict[str, Any]] = []
     current_batch: list[dict[str, Any]] = []
-    current_tokens = config.global_batch_prompt_overhead_tokens
     budget = max(config.global_batch_input_token_budget, config.global_batch_prompt_overhead_tokens + 1000)
+    budget_method = "openai_responses_input_tokens" if config.provider_name == "openai" else "estimated_chars_div_4"
+    chapter_rows: list[dict[str, Any]] = []
 
     for sequence_index, chapter in enumerate(chapters, start=1):
-        rendered = f"[ch_{sequence_index:03d}] {chapter.title}\n{chapter.text}"
-        chapter_tokens = _estimate_token_count(rendered)
         chapter_item = {
             "sequence_index": sequence_index,
             "title": chapter.title,
             "text": chapter.text,
-            "estimated_tokens": chapter_tokens,
         }
-        if current_batch and current_tokens + chapter_tokens > budget:
+        candidate_batch = current_batch + [chapter_item]
+        candidate_tokens, token_method = _count_global_batch_input_tokens(
+            work_title=work_title,
+            language=language,
+            batch=candidate_batch,
+            config=config,
+        )
+        chapter_rows.append(
+            {
+                "chapter_id": f"ch_{sequence_index:03d}",
+                "chapter_title": chapter.title,
+                "candidate_batch_size": len(candidate_batch),
+                "candidate_input_tokens": candidate_tokens,
+                "token_count_method": token_method,
+            }
+        )
+        if current_batch and candidate_tokens > budget:
+            batch_tokens, batch_method = _count_global_batch_input_tokens(
+                work_title=work_title,
+                language=language,
+                batch=current_batch,
+                config=config,
+            )
             batches.append(current_batch)
+            audit_batches.append(
+                {
+                    "batch_index": len(batches),
+                    "chapter_ids": [f"ch_{item['sequence_index']:03d}" for item in current_batch],
+                    "chapter_count": len(current_batch),
+                    "input_tokens": batch_tokens,
+                    "token_count_method": batch_method,
+                    "budget": budget,
+                }
+            )
             current_batch = []
-            current_tokens = config.global_batch_prompt_overhead_tokens
+            candidate_batch = [chapter_item]
         current_batch.append(chapter_item)
-        current_tokens += chapter_tokens
 
     if current_batch:
         batches.append(current_batch)
-    return batches
+        batch_tokens, batch_method = _count_global_batch_input_tokens(
+            work_title=work_title,
+            language=language,
+            batch=current_batch,
+            config=config,
+        )
+        audit_batches.append(
+            {
+                "batch_index": len(batches),
+                "chapter_ids": [f"ch_{item['sequence_index']:03d}" for item in current_batch],
+                "chapter_count": len(current_batch),
+                "input_tokens": batch_tokens,
+                "token_count_method": batch_method,
+                "budget": budget,
+            }
+        )
+    return (
+        batches,
+        {
+            "work_title": work_title,
+            "language": language,
+            "provider_name": config.provider_name,
+            "model": config.model,
+            "budget_tokens": budget,
+            "budget_method": budget_method,
+            "chapter_count": len(chapters),
+            "batch_count": len(batches),
+            "candidate_measurements": chapter_rows,
+            "batches": audit_batches,
+        },
+    )
+
+
+def _count_global_batch_input_tokens(
+    *,
+    work_title: str,
+    language: str,
+    batch: list[dict[str, Any]],
+    config: NovelBootstrapV1Config,
+) -> tuple[int, str]:
+    prompt = _build_global_normalization_prompt(
+        work_title=work_title,
+        language=language,
+        batch_index=1,
+        batch=batch,
+    )
+    if config.provider_name == "openai":
+        counted = _count_openai_input_tokens_for_prompt(
+            model=str(config.model or ""),
+            prompt=prompt,
+            timeout_seconds=config.timeout_seconds,
+        )
+        if counted is not None:
+            return counted, "openai_responses_input_tokens"
+    return _estimate_token_count(prompt), "estimated_chars_div_4"
+
+
+def _build_global_normalization_prompt(
+    *,
+    work_title: str,
+    language: str,
+    batch_index: int,
+    batch: list[dict[str, Any]],
+) -> str:
+    batch_text = "\n\n".join(
+        f"[ch_{item['sequence_index']:03d}] {item['title']}\n{item['text']}"
+        for item in batch
+    )
+    batch_chapter_ids = [f"ch_{item['sequence_index']:03d}" for item in batch]
+    return (
+        f"{GLOBAL_NORMALIZATION_PROMPT}\n\n"
+        f"WORK_TITLE: {work_title}\n"
+        f"LANGUAGE: {language}\n\n"
+        "BATCH_SCOPE:\n"
+        f"- Batch index: {batch_index}\n"
+        f"- Chapter IDs: {', '.join(batch_chapter_ids)}\n"
+        "Normalize persistent entities using only this batch as evidence. "
+        "Return entities worth keeping as long-term notes plus high-confidence merges supported by this batch.\n\n"
+        f"FULL_TEXT:\n{batch_text}"
+    )
 
 
 def _render_global_batch_text(batch: list[dict[str, Any]], *, max_chars: int) -> str:
@@ -951,11 +1071,21 @@ def _run_global_normalization(
     source_path: Path,
     config: NovelBootstrapV1Config,
     request_trace_dir: Path | None = None,
+    audit_path: Path | None = None,
+    progress_log_path: str | None = None,
 ) -> dict[str, Any] | None:
     _ = source_text
     _ = source_path
     provider = get_text_provider(config.global_task_name, config.provider_name)
-    chapter_batches = _build_global_normalization_batches(chapters, config=config)
+    chapter_batches, batch_audit = _build_global_normalization_batches(
+        work_title=work_title,
+        language=language,
+        chapters=chapters,
+        config=config,
+    )
+    if audit_path is not None:
+        audit_path.parent.mkdir(parents=True, exist_ok=True)
+        audit_path.write_text(json.dumps(batch_audit, ensure_ascii=False, indent=2), encoding="utf-8")
     batch_payloads: list[dict[str, Any]] = []
 
     for batch_index, batch in enumerate(chapter_batches, start=1):
@@ -963,16 +1093,20 @@ def _run_global_normalization(
         if not batch_text.strip():
             continue
         batch_chapter_ids = [f"ch_{item['sequence_index']:03d}" for item in batch]
-        prompt = (
-            f"{GLOBAL_NORMALIZATION_PROMPT}\n\n"
-            f"WORK_TITLE: {work_title}\n"
-            f"LANGUAGE: {language}\n\n"
-            "BATCH_SCOPE:\n"
-            f"- Batch index: {batch_index}\n"
-            f"- Chapter IDs: {', '.join(batch_chapter_ids)}\n"
-            "Normalize persistent entities using only this batch as evidence. "
-            "Return entities worth keeping as long-term notes plus high-confidence merges supported by this batch.\n\n"
-            f"FULL_TEXT:\n{batch_text}"
+        _append_progress(
+            progress_log_path,
+            phase="structured_bootstrap_v1",
+            event="global_normalization_batch_started",
+            batch_index=batch_index,
+            chapter_ids=batch_chapter_ids,
+            estimated_input_tokens=batch_audit.get("batches", [{}])[batch_index - 1].get("input_tokens"),
+            token_count_method=batch_audit.get("batches", [{}])[batch_index - 1].get("token_count_method"),
+        )
+        prompt = _build_global_normalization_prompt(
+            work_title=work_title,
+            language=language,
+            batch_index=batch_index,
+            batch=batch,
         )
         if request_trace_dir is not None and batch_index == 1:
             _write_json_trace(
@@ -1005,6 +1139,13 @@ def _run_global_normalization(
                 )
             )
         except TextProviderError:
+            _append_progress(
+                progress_log_path,
+                phase="structured_bootstrap_v1",
+                event="global_normalization_batch_failed",
+                batch_index=batch_index,
+                chapter_ids=batch_chapter_ids,
+            )
             continue
         payload = extract_json_payload(response.text)
         batch_payloads.append(
@@ -1020,6 +1161,14 @@ def _run_global_normalization(
                 request_trace_dir / "global_normalization_batch_001_response.json",
                 {"raw_text": response.text},
             )
+        _append_progress(
+            progress_log_path,
+            phase="structured_bootstrap_v1",
+            event="global_normalization_batch_completed",
+            batch_index=batch_index,
+            chapter_ids=batch_chapter_ids,
+            entity_count=len(batch_payloads[-1].get("entities") or []),
+        )
 
     if not batch_payloads:
         return None
@@ -1290,6 +1439,48 @@ def _run_global_normalization_openai_file_input(
     text = _extract_responses_text(raw)
     payload = extract_json_payload(text)
     return _normalize_global_payload(payload, work_title=work_title, language=language)
+
+
+def _count_openai_input_tokens_for_prompt(
+    *,
+    model: str,
+    prompt: str,
+    timeout_seconds: int,
+) -> int | None:
+    import httpx
+
+    api_key = os.environ.get("OPENAI_API_KEY", "").strip()
+    api_base = os.environ.get("AUTONOVEL_OPENAI_API_BASE_URL", "https://api.openai.com/v1").rstrip("/")
+    if not api_key or not model:
+        return None
+    payload = {
+        "model": model,
+        "instructions": "Return only valid JSON for global novel normalization.",
+        "input": [
+            {
+                "role": "user",
+                "content": [{"type": "input_text", "text": prompt}],
+            }
+        ],
+    }
+    try:
+        response = httpx.post(
+            f"{api_base}/responses/input_tokens",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            json=payload,
+            timeout=timeout_seconds,
+        )
+        response.raise_for_status()
+        raw = response.json()
+    except Exception:
+        return None
+    input_tokens = raw.get("input_tokens")
+    if isinstance(input_tokens, int) and input_tokens >= 0:
+        return input_tokens
+    return None
 
 
 def _extract_responses_text(raw: dict[str, Any]) -> str:

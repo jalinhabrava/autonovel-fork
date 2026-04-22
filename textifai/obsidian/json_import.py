@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import re
 import shutil
+import tempfile
 import unicodedata
 from collections import defaultdict
 from pathlib import Path
@@ -106,8 +107,13 @@ def import_json_to_vault(*, source_json: Path, vault_root: Path) -> dict[str, An
     work = payload.get("work") or {}
     chapters = payload.get("chapters") or []
     entities = payload.get("entities") or []
+    preserved_system_dir: Path | None = None
 
     if vault_root.exists():
+        existing_system_dir = vault_root / "99_System"
+        if existing_system_dir.exists():
+            preserved_system_dir = Path(tempfile.mkdtemp(prefix="textifai_preserve_system_")) / "99_System"
+            shutil.copytree(existing_system_dir, preserved_system_dir, dirs_exist_ok=True)
         shutil.rmtree(vault_root)
 
     for rel in [
@@ -377,4 +383,12 @@ def import_json_to_vault(*, source_json: Path, vault_root: Path) -> dict[str, An
         ],
     )
     (vault_root / "99_System" / "json_import_audit.json").write_text(json.dumps(audit, ensure_ascii=False, indent=2), encoding="utf-8")
+    if preserved_system_dir is not None and preserved_system_dir.exists():
+        for item in preserved_system_dir.iterdir():
+            target = vault_root / "99_System" / item.name
+            if item.is_dir():
+                shutil.copytree(item, target, dirs_exist_ok=True)
+            else:
+                shutil.copy2(item, target)
+        shutil.rmtree(preserved_system_dir.parent, ignore_errors=True)
     return audit
