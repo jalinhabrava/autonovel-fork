@@ -83,6 +83,28 @@ class TextifAIVaERLIndexTests(unittest.TestCase):
 
             self.assertNotIn("Sera", place_entry.aliases)
 
+    def test_vault_index_skips_chapter_tag_family(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            vault_root = Path(tmp) / "Vault"
+            bootstrap_vault(vault_root, title="Test Project")
+            (vault_root / "04_Story" / "Chapters").mkdir(parents=True, exist_ok=True)
+            (vault_root / "04_Story" / "Chapters" / "episodio_1.md").write_text(
+                note_frontmatter(
+                    "chapter",
+                    "Episodio 1",
+                    slug="episodio_1",
+                    note_role="chapter",
+                    retrieval_exclude=True,
+                    tags=["#chapter", "#chapters"],
+                )
+                + "\n\nResumen.\n",
+                encoding="utf-8",
+            )
+
+            entries = build_vault_index(vault_path=vault_root)
+            artifact_ids = {entry.artifact_id for entry in entries}
+            self.assertNotIn("episodio_1", artifact_ids)
+
 
 if __name__ == "__main__":
     unittest.main()

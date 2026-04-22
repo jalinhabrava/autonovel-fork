@@ -28,7 +28,7 @@ def build_vault_index(
             continue
         if note_role in {"review", "supporting"}:
             continue
-        if retrieval_exclude or tags & {"#review", "#system", "#chapters"}:
+        if retrieval_exclude or tags & {"#review", "#system", "#chapter", "#chapters"}:
             continue
         normalized_artifact_type = normalize_artifact_type(
             vault_relative_path=note.vault_relative_path,

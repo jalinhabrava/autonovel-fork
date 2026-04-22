@@ -7,9 +7,11 @@ from pathlib import Path
 from unittest.mock import patch
 
 from textifai.bootstrap.source_reader import build_source_document_inventory
+from textifai.obsidian.json_import import import_json_to_vault
 from textifai.import_review.structured_bootstrap_v1 import (
     NovelBootstrapV1Config,
     assemble_obsidian_import,
+    _build_global_normalization_batches,
     build_canonical_entity_map,
     run_structured_bootstrap_v1,
 )
@@ -173,6 +175,105 @@ class StructuredBootstrapV1Tests(unittest.TestCase):
         self.assertEqual(assembled["entities"][0]["chapter_refs"], ["ch_001"])
         self.assertEqual(assembled["entities"][0]["source_mentions"], ["Sera"])
 
+    def test_global_normalization_batches_split_chapters_by_budget(self):
+        chapter = type("_Chapter", (), {})
+        chapters = []
+        for idx in range(3):
+            item = chapter()
+            item.title = f"Chapter {idx + 1}"
+            item.text = "x" * 4000
+            chapters.append(item)
+        batches = _build_global_normalization_batches(
+            chapters,
+            config=NovelBootstrapV1Config(
+                provider_name="lmstudio",
+                model="qwen/qwen3.5-9b",
+                global_batch_input_token_budget=2500,
+                global_batch_prompt_overhead_tokens=200,
+            ),
+        )
+        self.assertGreaterEqual(len(batches), 2)
+        self.assertEqual(batches[0][0]["sequence_index"], 1)
+
+    def test_json_import_filters_numeric_empty_primaries_and_marks_system_and_review(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source_json = Path(tmp) / "obsidian_import.json"
+            vault_root = Path(tmp) / "vault"
+            source_json.write_text(
+                json.dumps(
+                    {
+                        "work": {"title": "Test", "language": "es"},
+                        "chapters": [
+                            {
+                                "chapter_id": "ch_001",
+                                "chapter_title_original": "Episodio 1: Inicio",
+                                "chapter_title_canonical": "Episodio 1: Inicio",
+                                "sequence_index": 1,
+                                "chapter_summary": "Resumen",
+                                "chapter_text_markdown": "Texto",
+                                "characters": [],
+                                "places": [],
+                                "concepts": [],
+                                "events": [],
+                                "relations": [],
+                                "unresolved_mentions": [],
+                            }
+                        ],
+                        "entities": [
+                            {
+                                "canonical_name": "1",
+                                "entity_kind": "character",
+                                "summary": "",
+                                "key_facts": [],
+                                "relationships": [],
+                                "aliases": [],
+                                "chapter_refs": [],
+                                "source_mentions": [],
+                                "confidence": 0.2,
+                                "review_state": "canonical",
+                            },
+                            {
+                                "canonical_name": "Sera",
+                                "entity_kind": "character",
+                                "summary": "Protagonista.",
+                                "key_facts": ["Huye del castillo."],
+                                "relationships": [],
+                                "aliases": ["Serelyne"],
+                                "chapter_refs": ["ch_001"],
+                                "source_mentions": ["Sera"],
+                                "confidence": 0.95,
+                                "review_state": "canonical",
+                            },
+                            {
+                                "canonical_name": "Figura Dudosa",
+                                "entity_kind": "character",
+                                "summary": "Mencion incierta.",
+                                "key_facts": [],
+                                "relationships": [],
+                                "aliases": [],
+                                "chapter_refs": [],
+                                "source_mentions": [],
+                                "confidence": 0.4,
+                                "review_state": "review",
+                            },
+                        ],
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+            audit = import_json_to_vault(source_json=source_json, vault_root=vault_root)
+            self.assertEqual(audit["primary_count"], 1)
+            self.assertEqual(audit["review_primary_count"], 1)
+            self.assertEqual(audit["skipped_primary_count"], 1)
+            self.assertTrue((vault_root / "03_Characters/Profiles/sera.md").exists())
+            self.assertTrue((vault_root / "90_Review/figura_dudosa.md").exists())
+            self.assertFalse((vault_root / "03_Characters/Profiles/1.md").exists())
+            manifest = (vault_root / "01_Project/import_manifest.md").read_text(encoding="utf-8")
+            self.assertIn("#system", manifest)
+            chapter_note = next((vault_root / "04_Story/Chapters").glob("*.md")).read_text(encoding="utf-8")
+            self.assertIn("#chapter", chapter_note)
+
     def test_run_structured_bootstrap_v1_writes_json_artifacts(self):
         with tempfile.TemporaryDirectory() as tmp:
             source_root = Path(tmp) / "source"
@@ -197,7 +298,7 @@ class StructuredBootstrapV1Tests(unittest.TestCase):
                 result = run_structured_bootstrap_v1(
                     vault_root,
                     inventory=inventory,
-                    config=NovelBootstrapV1Config(provider_name="openai", model="gpt-5.4"),
+                    config=NovelBootstrapV1Config(provider_name="lmstudio", model="qwen/qwen3.5-9b"),
                 )
 
             self.assertIsNotNone(result)

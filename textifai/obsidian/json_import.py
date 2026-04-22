@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import re
 import shutil
+import unicodedata
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
@@ -23,11 +24,25 @@ PRIMARY_DIRS = {
 
 
 def slugify(text: str) -> str:
+    text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
     text = text.strip().lower()
     text = text.replace("·", " ").replace("’", "").replace("'", "")
     text = re.sub(r"[^\w\s-]", "", text, flags=re.UNICODE)
     text = re.sub(r"[-\s]+", "_", text).strip("_")
     return text or "note"
+
+
+def _is_numeric_note_title(text: str) -> bool:
+    compact = re.sub(r"[\s._-]+", "", str(text).strip())
+    return bool(compact) and compact.isdigit()
+
+
+def _has_meaningful_primary_content(entity: dict[str, Any]) -> bool:
+    summary = str(entity.get("summary") or "").strip()
+    key_facts = [str(fact).strip() for fact in (entity.get("key_facts") or []) if str(fact).strip()]
+    relationships = [item for item in (entity.get("relationships") or []) if isinstance(item, dict)]
+    aliases = [str(alias).strip() for alias in (entity.get("aliases") or []) if str(alias).strip()]
+    return bool(summary or key_facts or relationships or aliases)
 
 
 def dedupe(values: list[str]) -> list[str]:
@@ -107,6 +122,7 @@ def import_json_to_vault(*, source_json: Path, vault_root: Path) -> dict[str, An
         "03_Characters/Profiles",
         "04_Story/Chapters",
         "04_Story/Chapter_Summaries",
+        "90_Review",
         "99_System",
     ]:
         (vault_root / rel).mkdir(parents=True, exist_ok=True)
@@ -119,13 +135,25 @@ def import_json_to_vault(*, source_json: Path, vault_root: Path) -> dict[str, An
     wikify = build_wikifier(primary_titles)
 
     created_primary_paths: list[str] = []
+    skipped_primaries: list[dict[str, str]] = []
+    review_primary_paths: list[str] = []
     for entity in entities:
         title = str(entity.get("canonical_name") or "").strip()
         if not title:
+            skipped_primaries.append({"title": "", "reason": "missing_title"})
+            continue
+        if _is_numeric_note_title(title):
+            skipped_primaries.append({"title": title, "reason": "numeric_title"})
+            continue
+        if not _has_meaningful_primary_content(entity):
+            skipped_primaries.append({"title": title, "reason": "insufficient_content"})
             continue
         entity_kind = str(entity.get("entity_kind") or "lore").strip().casefold()
         rel_dir = PRIMARY_DIRS.get(entity_kind, "02_World/Lore")
         slug = str(entity.get("preferred_slug") or "").strip() or slugify(title)
+        if _is_numeric_note_title(slug):
+            skipped_primaries.append({"title": title, "reason": "numeric_slug"})
+            continue
         aliases = dedupe([str(alias).strip() for alias in (entity.get("aliases") or []) if str(alias).strip()])
         chapter_titles = [
             chapter_title_by_id.get(str(ref).strip(), str(ref).strip())
@@ -136,6 +164,8 @@ def import_json_to_vault(*, source_json: Path, vault_root: Path) -> dict[str, An
         relationships = entity.get("relationships") or []
         key_facts = dedupe([str(fact).strip() for fact in (entity.get("key_facts") or []) if str(fact).strip()])
         summary = wikify(str(entity.get("summary") or "").strip())
+        review_state = str(entity.get("review_state") or "canonical").strip().casefold() or "canonical"
+        is_review = review_state != "canonical"
         body_lines = [f"# {title}", ""]
         if summary:
             body_lines += ["## Overview", "", summary, ""]
@@ -178,14 +208,17 @@ def import_json_to_vault(*, source_json: Path, vault_root: Path) -> dict[str, An
             "semantic_class": entity_kind,
             "evidence_sources": ", ".join(chapter_titles),
             "confidence": float(entity.get("confidence") or 0.0),
-            "review_state": str(entity.get("review_state") or "canonical"),
-            "graph_exclude": False,
-            "retrieval_exclude": False,
-            "tags": ["#primary"],
+            "review_state": review_state,
+            "graph_exclude": is_review,
+            "retrieval_exclude": is_review,
+            "tags": ["#review"] if is_review else ["#primary"],
         }
-        note_path = vault_root / rel_dir / f"{slug}.md"
+        note_path = vault_root / ("90_Review" if is_review else rel_dir) / f"{slug}.md"
         write_note(note_path, frontmatter=frontmatter, body_lines=body_lines)
-        created_primary_paths.append(str(note_path))
+        if is_review:
+            review_primary_paths.append(str(note_path))
+        else:
+            created_primary_paths.append(str(note_path))
 
     chapter_paths: list[str] = []
     summary_paths: list[str] = []
@@ -265,7 +298,7 @@ def import_json_to_vault(*, source_json: Path, vault_root: Path) -> dict[str, An
             "review_state": "canonical",
             "graph_exclude": True,
             "retrieval_exclude": True,
-            "tags": ["#chapters"],
+            "tags": ["#chapter", "#chapters"],
         }
         chapter_path = vault_root / "04_Story/Chapters" / f"{slug}.md"
         write_note(chapter_path, frontmatter=chapter_frontmatter, body_lines=chapter_body)
@@ -300,7 +333,11 @@ def import_json_to_vault(*, source_json: Path, vault_root: Path) -> dict[str, An
         "chapter_count": len(chapters),
         "summary_count": len(summary_paths),
         "primary_count": len(created_primary_paths),
+        "review_primary_count": len(review_primary_paths),
+        "skipped_primary_count": len(skipped_primaries),
         "primary_paths": created_primary_paths,
+        "review_primary_paths": review_primary_paths,
+        "skipped_primaries": skipped_primaries,
         "chapter_paths": chapter_paths,
         "summary_paths": summary_paths,
         "sample_primary_paths": created_primary_paths[:20],
@@ -316,17 +353,17 @@ def import_json_to_vault(*, source_json: Path, vault_root: Path) -> dict[str, An
             "slug": "import_manifest",
             "artifact_stage": "promoted_artifact",
             "promotion_status": "promoted_canonical",
-            "note_role": "primary",
-            "entity_kind": "history",
+            "note_role": "system",
+            "entity_kind": "system",
             "canonical_subject": "Import Manifest",
             "aliases": "",
             "semantic_class": "import_manifest",
             "evidence_sources": str(source_json),
             "confidence": 1.0,
             "review_state": "canonical",
-            "graph_exclude": False,
-            "retrieval_exclude": False,
-            "tags": ["#primary"],
+            "graph_exclude": True,
+            "retrieval_exclude": True,
+            "tags": ["#system"],
         },
         body_lines=[
             "# Import Manifest",

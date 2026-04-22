@@ -1,6 +1,11 @@
 from __future__ import annotations
 
 import json
+import base64
+import mimetypes
+import os
+import random
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -295,7 +300,6 @@ OUTPUT SCHEMA
 "chapter_title_canonical": "...",
 "sequence_index": 0,
 "chapter_summary": "...",
-"chapter_text_markdown": "...",
 "characters": [
 {
 "surface": "...",
@@ -499,11 +503,14 @@ class NovelBootstrapV1Config:
     chapter_task_name: str = "bootstrap_chapter_extraction"
     global_max_tokens: int = 9000
     chapter_max_tokens: int = 3000
+    global_batch_input_token_budget: int = 90000
+    global_batch_prompt_overhead_tokens: int = 5000
     temperature: float = 0.0
     timeout_seconds: int = 600
     retries: int = 1
     max_global_text_chars: int = 350000
     max_chapters: int | None = None
+    request_trace_sample_chapters: int = 3
 
 
 @dataclass(frozen=True)
@@ -549,6 +556,8 @@ def run_structured_bootstrap_v1(
     system_root.mkdir(parents=True, exist_ok=True)
     chapter_outputs_dir = system_root / "chapter_outputs"
     chapter_outputs_dir.mkdir(parents=True, exist_ok=True)
+    request_trace_dir = system_root / "api_call_traces"
+    request_trace_dir.mkdir(parents=True, exist_ok=True)
 
     warnings: list[str] = []
 
@@ -557,7 +566,9 @@ def run_structured_bootstrap_v1(
         language=language,
         chapters=chapters,
         source_text=source_text,
+        source_path=Path(source_doc.path),
         config=config,
+        request_trace_dir=request_trace_dir,
     )
     if global_payload is None:
         return None
@@ -588,6 +599,11 @@ def run_structured_bootstrap_v1(
             chapter_text=chapter.text,
             canonical_entity_map=canonical_entity_map,
             config=config,
+            request_trace_path=(
+                request_trace_dir / f"{chapter_id}_request.json"
+                if index <= max(0, config.request_trace_sample_chapters)
+                else None
+            ),
         )
         if chapter_payload is None:
             warnings.append(f"chapter_extraction_failed:{chapter.title}")
@@ -804,44 +820,210 @@ def normalize_text(text: str) -> str:
     return " ".join(str(text).strip().split()).lower()
 
 
+def _estimate_token_count(text: str) -> int:
+    compact = str(text or "").strip()
+    if not compact:
+        return 0
+    return max(1, len(compact) // 4)
+
+
+def _build_global_normalization_batches(chapters: list[Any], *, config: NovelBootstrapV1Config) -> list[list[dict[str, Any]]]:
+    batches: list[list[dict[str, Any]]] = []
+    current_batch: list[dict[str, Any]] = []
+    current_tokens = config.global_batch_prompt_overhead_tokens
+    budget = max(config.global_batch_input_token_budget, config.global_batch_prompt_overhead_tokens + 1000)
+
+    for sequence_index, chapter in enumerate(chapters, start=1):
+        rendered = f"[ch_{sequence_index:03d}] {chapter.title}\n{chapter.text}"
+        chapter_tokens = _estimate_token_count(rendered)
+        chapter_item = {
+            "sequence_index": sequence_index,
+            "title": chapter.title,
+            "text": chapter.text,
+            "estimated_tokens": chapter_tokens,
+        }
+        if current_batch and current_tokens + chapter_tokens > budget:
+            batches.append(current_batch)
+            current_batch = []
+            current_tokens = config.global_batch_prompt_overhead_tokens
+        current_batch.append(chapter_item)
+        current_tokens += chapter_tokens
+
+    if current_batch:
+        batches.append(current_batch)
+    return batches
+
+
+def _render_global_batch_text(batch: list[dict[str, Any]], *, max_chars: int) -> str:
+    rendered = "\n\n".join(
+        f"[ch_{item['sequence_index']:03d}] {item['title']}\n{item['text']}"
+        for item in batch
+    )
+    if len(rendered) > max_chars:
+        return rendered[:max_chars]
+    return rendered
+
+
+def _merge_global_normalization_batches(
+    batch_payloads: list[dict[str, Any]],
+    *,
+    work_title: str,
+    language: str,
+) -> dict[str, Any]:
+    entity_bucket: dict[str, dict[str, Any]] = {}
+    merge_plan_bucket: dict[tuple[str, tuple[str, ...]], dict[str, Any]] = {}
+    normalization_notes: list[str] = []
+
+    for payload in batch_payloads:
+        work = payload.get("work") or {}
+        normalization_notes.extend(
+            str(item).strip()
+            for item in (work.get("normalization_notes") or [])
+            if str(item).strip()
+        )
+        for entity in payload.get("entities") or []:
+            if not isinstance(entity, dict):
+                continue
+            canonical_name = str(entity.get("canonical_name") or "").strip()
+            if not canonical_name:
+                continue
+            existing = entity_bucket.get(canonical_name)
+            if existing is None:
+                entity_bucket[canonical_name] = {
+                    **entity,
+                    "aliases": unique_preserve_order([str(item).strip() for item in (entity.get("aliases") or []) if str(item).strip()]),
+                    "key_facts": unique_preserve_order([str(item).strip() for item in (entity.get("key_facts") or []) if str(item).strip()])[:5],
+                    "chapter_refs": unique_preserve_order([str(item).strip() for item in (entity.get("chapter_refs") or []) if str(item).strip()]),
+                    "source_mentions": unique_preserve_order([str(item).strip() for item in (entity.get("source_mentions") or []) if str(item).strip()]),
+                    "relationships": merge_relationship_lists([], entity.get("relationships") or []),
+                }
+                continue
+            merged_summary = str(existing.get("summary") or "").strip()
+            incoming_summary = str(entity.get("summary") or "").strip()
+            if len(incoming_summary) > len(merged_summary):
+                existing["summary"] = incoming_summary
+            existing["aliases"] = unique_preserve_order(existing.get("aliases", []) + (entity.get("aliases") or []))
+            existing["key_facts"] = unique_preserve_order(existing.get("key_facts", []) + (entity.get("key_facts") or []))[:5]
+            existing["chapter_refs"] = unique_preserve_order(existing.get("chapter_refs", []) + (entity.get("chapter_refs") or []))
+            existing["source_mentions"] = unique_preserve_order(existing.get("source_mentions", []) + (entity.get("source_mentions") or []))
+            existing["relationships"] = merge_relationship_lists(existing.get("relationships", []) or [], entity.get("relationships") or [])
+            existing["confidence"] = max(float(existing.get("confidence") or 0.0), float(entity.get("confidence") or 0.0))
+            if str(existing.get("review_state") or "review") != "canonical" and str(entity.get("review_state") or "review") == "canonical":
+                existing["review_state"] = "canonical"
+            if not str(existing.get("preferred_slug") or "").strip():
+                existing["preferred_slug"] = entity.get("preferred_slug")
+        for merge in payload.get("merge_plan") or []:
+            if not isinstance(merge, dict):
+                continue
+            canonical_name = str(merge.get("canonical_name") or "").strip()
+            surfaces = unique_preserve_order([str(item).strip() for item in (merge.get("merged_surfaces") or []) if str(item).strip()])
+            if not canonical_name or not surfaces:
+                continue
+            key = (canonical_name, tuple(surfaces))
+            existing_merge = merge_plan_bucket.get(key)
+            if existing_merge is None or float(merge.get("confidence") or 0.0) > float(existing_merge.get("confidence") or 0.0):
+                merge_plan_bucket[key] = {
+                    "canonical_name": canonical_name,
+                    "merged_surfaces": surfaces,
+                    "reason": str(merge.get("reason") or "").strip(),
+                    "confidence": float(merge.get("confidence") or 0.0),
+                }
+
+    entities = sorted(entity_bucket.values(), key=lambda item: (str(item.get("entity_kind") or ""), str(item.get("canonical_name") or "").lower()))
+    merge_plan = sorted(merge_plan_bucket.values(), key=lambda item: (item["canonical_name"].lower(), item["merged_surfaces"]))
+    return {
+        "work": {
+            "title": work_title,
+            "language": language,
+            "normalization_notes": unique_preserve_order(normalization_notes + [f"batched_global_normalization:{len(batch_payloads)}"]),
+        },
+        "entities": entities,
+        "merge_plan": merge_plan,
+    }
+
+
 def _run_global_normalization(
     *,
     work_title: str,
     language: str,
     chapters: list[Any],
     source_text: str,
+    source_path: Path,
     config: NovelBootstrapV1Config,
+    request_trace_dir: Path | None = None,
 ) -> dict[str, Any] | None:
+    _ = source_text
+    _ = source_path
     provider = get_text_provider(config.global_task_name, config.provider_name)
-    chapter_text = "\n\n".join(f"[ch_{index:03d}] {chapter.title}\n{chapter.text}" for index, chapter in enumerate(chapters, start=1))
-    full_text = chapter_text
-    if len(full_text) > config.max_global_text_chars:
-        full_text = full_text[: config.max_global_text_chars]
-    prompt = (
-        f"{GLOBAL_NORMALIZATION_PROMPT}\n\n"
-        f"WORK_TITLE: {work_title}\n"
-        f"LANGUAGE: {language}\n\n"
-        f"FULL_TEXT:\n{full_text}"
-    )
-    try:
-        response = provider.generate(
-            TextGenerationRequest(
-                task=config.global_task_name,
-                provider_name=config.provider_name,
-                model=config.model,
-                system="Return only valid JSON for global novel normalization.",
-                messages=[TextMessage(role="user", content=prompt)],
-                max_tokens=config.global_max_tokens,
-                temperature=config.temperature,
-                timeout_seconds=config.timeout_seconds,
-                retries=config.retries,
-                response_format={"type": "json_object"},
+    chapter_batches = _build_global_normalization_batches(chapters, config=config)
+    batch_payloads: list[dict[str, Any]] = []
+
+    for batch_index, batch in enumerate(chapter_batches, start=1):
+        batch_text = _render_global_batch_text(batch, max_chars=config.max_global_text_chars)
+        if not batch_text.strip():
+            continue
+        batch_chapter_ids = [f"ch_{item['sequence_index']:03d}" for item in batch]
+        prompt = (
+            f"{GLOBAL_NORMALIZATION_PROMPT}\n\n"
+            f"WORK_TITLE: {work_title}\n"
+            f"LANGUAGE: {language}\n\n"
+            "BATCH_SCOPE:\n"
+            f"- Batch index: {batch_index}\n"
+            f"- Chapter IDs: {', '.join(batch_chapter_ids)}\n"
+            "Normalize persistent entities using only this batch as evidence. "
+            "Return entities worth keeping as long-term notes plus high-confidence merges supported by this batch.\n\n"
+            f"FULL_TEXT:\n{batch_text}"
+        )
+        if request_trace_dir is not None and batch_index == 1:
+            _write_json_trace(
+                request_trace_dir / "global_normalization_batch_001_request.json",
+                {
+                    "provider": config.provider_name,
+                    "task": config.global_task_name,
+                    "payload": {
+                        "model": config.model,
+                        "messages": [{"role": "user", "content": prompt}],
+                        "temperature": config.temperature,
+                        "max_tokens": config.global_max_tokens,
+                        "response_format": {"type": "json_object"},
+                    },
+                },
+            )
+        try:
+            response = provider.generate(
+                TextGenerationRequest(
+                    task=config.global_task_name,
+                    provider_name=config.provider_name,
+                    model=config.model,
+                    system="Return only valid JSON for global novel normalization.",
+                    messages=[TextMessage(role="user", content=prompt)],
+                    max_tokens=config.global_max_tokens,
+                    temperature=config.temperature,
+                    timeout_seconds=config.timeout_seconds,
+                    retries=config.retries,
+                    response_format={"type": "json_object"},
+                )
+            )
+        except TextProviderError:
+            continue
+        payload = extract_json_payload(response.text)
+        batch_payloads.append(
+            _normalize_global_payload(
+                payload,
+                work_title=work_title,
+                language=language,
+                batch_note=f"batch_{batch_index}:{','.join(batch_chapter_ids)}",
             )
         )
-    except TextProviderError:
+        if request_trace_dir is not None and batch_index == 1:
+            _write_json_trace(
+                request_trace_dir / "global_normalization_batch_001_response.json",
+                {"raw_text": response.text},
+            )
+
+    if not batch_payloads:
         return None
-    payload = extract_json_payload(response.text)
-    return _normalize_global_payload(payload, work_title=work_title, language=language)
+    return _merge_global_normalization_batches(batch_payloads, work_title=work_title, language=language)
 
 
 def _run_chapter_extraction(
@@ -854,6 +1036,7 @@ def _run_chapter_extraction(
     chapter_text: str,
     canonical_entity_map: list[dict[str, Any]],
     config: NovelBootstrapV1Config,
+    request_trace_path: Path | None = None,
 ) -> dict[str, Any] | None:
     provider = get_text_provider(config.chapter_task_name, config.provider_name)
     prompt = (
@@ -866,6 +1049,26 @@ def _run_chapter_extraction(
         f"CANONICAL_ENTITY_MAP:\n{json.dumps(canonical_entity_map, ensure_ascii=False)}\n\n"
         f"CHAPTER_TEXT:\n{chapter_text}"
     )
+    if request_trace_path is not None:
+        _write_json_trace(
+            request_trace_path,
+            {
+                "provider": config.provider_name,
+                "task": config.chapter_task_name,
+                "endpoint": _chapter_endpoint_for_provider(config.provider_name),
+                "headers": _redacted_openai_headers(),
+                "payload": {
+                    "model": config.model,
+                    "messages": [
+                        {"role": "system", "content": "Return only valid JSON for one chapter extraction."},
+                        {"role": "user", "content": prompt},
+                    ],
+                    "temperature": config.temperature,
+                    "max_tokens": config.chapter_max_tokens,
+                    "response_format": {"type": "json_object"},
+                },
+            },
+        )
     try:
         response = provider.generate(
             TextGenerationRequest(
@@ -903,7 +1106,13 @@ def _select_primary_novel_document(inventory: SourceDocumentInventory, source_te
     return candidates[0][2]
 
 
-def _normalize_global_payload(payload: dict[str, Any] | None, *, work_title: str, language: str) -> dict[str, Any]:
+def _normalize_global_payload(
+    payload: dict[str, Any] | None,
+    *,
+    work_title: str,
+    language: str,
+    batch_note: str | None = None,
+) -> dict[str, Any]:
     if not isinstance(payload, dict):
         payload = {}
     work = payload.get("work")
@@ -911,15 +1120,18 @@ def _normalize_global_payload(payload: dict[str, Any] | None, *, work_title: str
         work = {}
     entities = payload.get("entities")
     merge_plan = payload.get("merge_plan")
+    normalization_notes = [
+        str(item).strip()
+        for item in (work.get("normalization_notes") or payload.get("normalization_notes") or [])
+        if str(item).strip()
+    ]
+    if batch_note:
+        normalization_notes.append(batch_note)
     normalized = {
         "work": {
             "title": str(work.get("title") or work_title).strip() or work_title,
             "language": str(work.get("language") or language).strip() or language,
-            "normalization_notes": [
-                str(item).strip()
-                for item in (work.get("normalization_notes") or payload.get("normalization_notes") or [])
-                if str(item).strip()
-            ],
+            "normalization_notes": unique_preserve_order(normalization_notes),
         },
         "entities": entities if isinstance(entities, list) else [],
         "merge_plan": merge_plan if isinstance(merge_plan, list) else [],
@@ -971,3 +1183,145 @@ def _append_progress(path: str | None, **payload: Any) -> None:
     target.parent.mkdir(parents=True, exist_ok=True)
     with target.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(payload, ensure_ascii=False) + "\n")
+
+
+def _run_global_normalization_openai_file_input(
+    *,
+    work_title: str,
+    language: str,
+    source_path: Path,
+    config: NovelBootstrapV1Config,
+    request_trace_dir: Path | None = None,
+) -> dict[str, Any] | None:
+    import httpx
+
+    api_key = os.environ.get("OPENAI_API_KEY", "").strip()
+    api_base = os.environ.get("AUTONOVEL_OPENAI_API_BASE_URL", "https://api.openai.com/v1").rstrip("/")
+    if not api_key:
+        return None
+
+    prompt = (
+        f"{GLOBAL_NORMALIZATION_PROMPT}\n\n"
+        f"WORK_TITLE: {work_title}\n"
+        f"LANGUAGE: {language}\n\n"
+        "FULL_TEXT:\n"
+        "Use the attached novel document as the full source of truth. "
+        "The chapter IDs to emit must be stable sequential IDs like ch_001, ch_002, etc."
+    )
+    if config.max_chapters:
+        prompt += (
+            f"\n\nVALIDATION FOCUS:\n"
+            f"This run will only extract and import chapters ch_001 to ch_{config.max_chapters:03d}. "
+            f"Use the full attached novel to normalize identities globally, but prioritize entities, facts, and merges "
+            f"that are materially relevant to chapters ch_001 to ch_{config.max_chapters:03d}. "
+            "You may omit later-only entities if they do not help these chapters."
+        )
+    response_headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    mime_type = mimetypes.guess_type(source_path.name)[0] or "text/markdown"
+    file_data = f"data:{mime_type};base64," + base64.b64encode(source_path.read_bytes()).decode("ascii")
+
+    payload = {
+        "model": config.model,
+        "input": [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "input_file",
+                        "filename": source_path.name,
+                        "file_data": file_data,
+                    },
+                    {"type": "input_text", "text": prompt},
+                ],
+            }
+        ],
+        "max_output_tokens": config.global_max_tokens,
+    }
+    if request_trace_dir is not None:
+        _write_json_trace(
+            request_trace_dir / "global_normalization_response_request.json",
+            {
+                "provider": "openai",
+                "endpoint": f"{api_base}/responses",
+                "headers": _redacted_openai_headers(),
+                "source_path": str(source_path),
+                "mime_type": mime_type,
+                "payload": payload,
+            },
+        )
+
+    raw: dict[str, Any] | None = None
+    response_meta: dict[str, Any] | None = None
+    for attempt in range(1, config.retries + 2):
+        try:
+            resp = httpx.post(
+                f"{api_base}/responses",
+                headers=response_headers,
+                json=payload,
+                timeout=config.timeout_seconds,
+            )
+            resp.raise_for_status()
+            raw = resp.json()
+            response_meta = {
+                "status_code": resp.status_code,
+                "request_id": resp.headers.get("x-request-id"),
+                "rate_limit_remaining_requests": resp.headers.get("x-ratelimit-remaining-requests"),
+                "rate_limit_remaining_tokens": resp.headers.get("x-ratelimit-remaining-tokens"),
+            }
+            break
+        except Exception as exc:  # pragma: no cover - network failure path
+            last_error = exc
+            if attempt >= config.retries + 1:
+                return None
+            time.sleep(min(2 ** (attempt - 1), 8) + random.uniform(0.0, 0.35))
+    if raw is None:
+        return None
+    if request_trace_dir is not None:
+        _write_json_trace(
+            request_trace_dir / "global_normalization_response_response.json",
+            {
+                "meta": response_meta,
+                "raw": raw,
+            },
+        )
+    text = _extract_responses_text(raw)
+    payload = extract_json_payload(text)
+    return _normalize_global_payload(payload, work_title=work_title, language=language)
+
+
+def _extract_responses_text(raw: dict[str, Any]) -> str:
+    output_text = raw.get("output_text")
+    if isinstance(output_text, str) and output_text.strip():
+        return output_text
+    parts: list[str] = []
+    for item in raw.get("output", []) or []:
+        if not isinstance(item, dict):
+            continue
+        for content in item.get("content", []) or []:
+            if not isinstance(content, dict):
+                continue
+            text = content.get("text")
+            if isinstance(text, str) and text:
+                parts.append(text)
+    return "\n".join(parts).strip()
+
+
+def _redacted_openai_headers() -> dict[str, str]:
+    return {
+        "Authorization": "Bearer ***REDACTED***",
+        "Content-Type": "application/json",
+    }
+
+
+def _chapter_endpoint_for_provider(provider_name: str | None) -> str:
+    if provider_name == "openai":
+        return f"{os.environ.get('AUTONOVEL_OPENAI_API_BASE_URL', 'https://api.openai.com/v1').rstrip('/')}/chat/completions"
+    return "provider_managed"
+
+
+def _write_json_trace(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
