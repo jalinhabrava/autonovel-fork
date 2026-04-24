@@ -20,6 +20,18 @@ body {
   font-family: ui-serif, Georgia, Cambria, "Times New Roman", serif;
 }
 
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(32, 33, 28, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(32, 33, 28, 0.028) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: radial-gradient(circle at 50% 25%, black, transparent 78%);
+}
+
 button, input, select {
   font: inherit;
 }
@@ -50,9 +62,11 @@ button, input, select {
   place-items: center;
   width: 42px;
   height: 42px;
-  border-radius: 14px;
-  color: white;
-  background: var(--accent);
+  border-radius: 50%;
+  color: #fff8e8;
+  background:
+    radial-gradient(circle at 50% 50%, var(--accent) 0 28%, transparent 30%),
+    conic-gradient(from 20deg, var(--accent-2), var(--accent), #8b7b52, var(--accent-2));
   font-weight: 800;
   box-shadow: var(--shadow);
 }
@@ -246,6 +260,32 @@ button:hover, button.active {
   gap: 8px;
   flex-wrap: wrap;
 }
+.graph-tag-filter {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+  max-width: 100%;
+}
+.tag-filter-label {
+  color: var(--muted);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.tag-chip {
+  padding: 4px 9px;
+  font-size: 12px;
+  background: rgba(255, 250, 240, 0.78);
+}
+.tag-chip.active {
+  background: var(--accent-2);
+  border-color: var(--accent-2);
+  color: white;
+}
+.tag-chip.clear {
+  border-style: dashed;
+}
 .graph-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(320px, 22vw);
@@ -274,6 +314,7 @@ button:hover, button.active {
 .graph-detail {
   max-height: 68vh;
   overflow: auto;
+  color: var(--ink);
 }
 .graph-detail hr {
   border: 0;
@@ -283,6 +324,18 @@ button:hover, button.active {
 .entity-detail {
   margin-top: 14px;
   line-height: 1.45;
+}
+.note-fallback {
+  margin-top: 8px;
+  color: var(--accent);
+  background: rgba(29, 111, 104, 0.08);
+  border: 1px solid rgba(29, 111, 104, 0.18);
+  border-radius: 14px;
+  padding: 10px;
+}
+.tag-badge {
+  background: rgba(29, 111, 104, 0.13);
+  color: var(--accent);
 }
 .entity-detail h4 {
   margin: 14px 0 6px;

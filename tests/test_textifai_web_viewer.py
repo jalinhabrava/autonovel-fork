@@ -66,6 +66,8 @@ class TextifAIWebViewerTests(unittest.TestCase):
         sera_node = next(node for node in graph["nodes"] if node["id"] == "entity:sera")
         self.assertEqual(sera_node["entity"]["summary"], "Protagonista de prueba.")
         self.assertEqual(sera_node["entity"]["aliases"], ["la princesa"])
+        self.assertIn("#primary", sera_node["tags"])
+        self.assertIn("#character", sera_node["tags"])
 
 
 if __name__ == "__main__":

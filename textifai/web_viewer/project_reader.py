@@ -207,12 +207,13 @@ def build_graph(project: ProjectRef) -> dict[str, Any]:
         slug = str(entity.get("preferred_slug") or entity.get("canonical_name") or "").strip()
         node_id = f"entity:{slug or entity.get('canonical_name')}"
         role = "primary" if _is_primary(entity) else "review"
+        tags = _graph_entity_tags(entity, role)
         nodes[node_id] = {
             "id": node_id,
             "label": entity.get("canonical_name") or slug,
             "kind": entity.get("entity_kind") or "entity",
             "role": role,
-            "tags": entity.get("tags") or [],
+            "tags": tags,
             "note_path": _guess_note_path(project.root, entity),
             "entity": _graph_entity_payload(entity),
         }
@@ -238,7 +239,7 @@ def build_graph(project: ProjectRef) -> dict[str, Any]:
                         "label": rel.get("target") or "unresolved",
                         "kind": "unresolved",
                         "role": "review",
-                        "tags": [],
+                        "tags": ["#review", "#unresolved"],
                         "note_path": None,
                     },
                 )
@@ -259,11 +260,38 @@ def build_graph(project: ProjectRef) -> dict[str, Any]:
             "label": chapter.get("chapter_title_original") or chapter_id,
             "kind": "chapter",
             "role": "chapter",
-            "tags": ["#chapter"],
+            "tags": _graph_chapter_tags(chapter),
             "note_path": _guess_chapter_note_path(project.root, chapter),
             "chapter": _graph_chapter_payload(chapter),
         }
     return {"nodes": list(nodes.values()), "edges": edges}
+
+
+def _graph_entity_tags(entity: dict[str, Any], role: str) -> list[str]:
+    tags = _normalize_graph_tags(entity.get("tags") or [])
+    tags.extend([f"#{role}", f"#{entity.get('entity_kind') or 'entity'}"])
+    if entity.get("entity_subkind"):
+        tags.append(f"#{entity['entity_subkind']}")
+    return sorted(set(_normalize_graph_tags(tags)))
+
+
+def _graph_chapter_tags(chapter: dict[str, Any]) -> list[str]:
+    tags = ["#chapter"]
+    if chapter.get("chapter_label_type"):
+        tags.append(f"#{chapter['chapter_label_type']}")
+    return sorted(set(_normalize_graph_tags(tags)))
+
+
+def _normalize_graph_tags(tags: list[Any]) -> list[str]:
+    normalized: list[str] = []
+    for tag in tags:
+        value = str(tag or "").strip()
+        if not value:
+            continue
+        if not value.startswith("#"):
+            value = f"#{value}"
+        normalized.append(value.replace(" ", "_").casefold())
+    return normalized
 
 
 def _graph_entity_payload(entity: dict[str, Any]) -> dict[str, Any]:

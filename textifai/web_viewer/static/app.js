@@ -8,6 +8,7 @@ const state = {
   graphViewBox: { x: 0, y: 0, width: 1200, height: 720 },
   graphPan: null,
   graphDidPan: false,
+  hiddenGraphTags: new Set(),
 };
 
 const $ = (id) => document.getElementById(id);
@@ -53,6 +54,7 @@ async function selectProject(projectId) {
   state.currentId = projectId;
   state.current = await api(`/api/projects/${encodeURIComponent(projectId)}`);
   state.selectedGraphNodeId = null;
+  state.hiddenGraphTags = new Set();
   resetGraphViewBox();
   $("graph-kind-filter").dataset.ready = "";
   renderProjects();
@@ -336,21 +338,52 @@ function renderGraph() {
   const hideChapters = $("hide-chapters").checked;
   const kindFilter = $("graph-kind-filter").value;
   const kinds = [...new Set(graph.nodes.map((node) => node.kind).filter(Boolean))].sort();
+  const tags = [...new Set(graph.nodes.flatMap((node) => node.tags || []))].sort();
   if (!$("graph-kind-filter").dataset.ready) {
     $("graph-kind-filter").innerHTML = `<option value="">all kinds</option>${kinds.map((kind) => `<option value="${escapeHtml(kind)}">${escapeHtml(kind)}</option>`).join("")}`;
     $("graph-kind-filter").dataset.ready = "1";
     $("graph-kind-filter").onchange = renderGraph;
   }
+  renderGraphTagFilter(tags);
   const visibleNodes = graph.nodes.filter((node) => {
     if (hideSystem && node.role === "system") return false;
     if (hideReview && node.role === "review") return false;
     if (hideChapters && node.role === "chapter") return false;
     if (kindFilter && node.kind !== kindFilter) return false;
+    if ((node.tags || []).some((tag) => state.hiddenGraphTags.has(tag))) return false;
     return true;
   });
   const visibleIds = new Set(visibleNodes.map((node) => node.id));
   const visibleEdges = graph.edges.filter((edge) => visibleIds.has(edge.source) && visibleIds.has(edge.target));
   drawForceGraph(visibleNodes, visibleEdges);
+}
+
+function renderGraphTagFilter(tags) {
+  const container = $("graph-tag-filter");
+  if (!container) return;
+  const activeCount = state.hiddenGraphTags.size;
+  container.innerHTML = `
+    <span class="tag-filter-label">Hide tags</span>
+    ${tags.map((tag) => `
+      <button type="button" class="tag-chip ${state.hiddenGraphTags.has(tag) ? "active" : ""}" data-graph-tag="${escapeHtml(tag)}">${escapeHtml(tag)}</button>
+    `).join("")}
+    ${activeCount ? `<button type="button" class="tag-chip clear" id="clear-graph-tags">clear ${activeCount}</button>` : ""}
+  `;
+  container.querySelectorAll("[data-graph-tag]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const tag = button.dataset.graphTag;
+      if (state.hiddenGraphTags.has(tag)) state.hiddenGraphTags.delete(tag);
+      else state.hiddenGraphTags.add(tag);
+      renderGraph();
+    });
+  });
+  const clear = $("clear-graph-tags");
+  if (clear) {
+    clear.addEventListener("click", () => {
+      state.hiddenGraphTags = new Set();
+      renderGraph();
+    });
+  }
 }
 
 function drawForceGraph(nodes, edges) {
@@ -506,11 +539,17 @@ async function openGraphNote(path, nodeId = null) {
 function graphNodeSummary(node) {
   const entity = node.entity || {};
   const chapter = node.chapter || {};
+  const hasVaerlDetail = Object.keys(entity).length || Object.keys(chapter).length;
   return `
     <h3>${escapeHtml(node.label || "Unresolved")}</h3>
     <p><span class="badge">${escapeHtml(node.kind || "unknown")}</span> <span class="badge">${escapeHtml(node.role || "unknown")}</span></p>
+    ${(node.tags || []).length ? `<p>${(node.tags || []).map((tag) => `<span class="badge tag-badge">${escapeHtml(tag)}</span>`).join("")}</p>` : ""}
     <p class="muted">${escapeHtml(node.id || "")}</p>
-    ${node.note_path ? `<p class="muted">${escapeHtml(node.note_path)}</p>` : `<p class="muted">No materialized note for this node.</p>`}
+    ${node.note_path
+      ? `<p class="muted">${escapeHtml(node.note_path)}</p>`
+      : hasVaerlDetail
+        ? `<p class="note-fallback">No Markdown note found. Showing VaERL data from <code>obsidian_import.json</code>.</p>`
+        : `<p class="muted">No materialized note or VaERL detail for this node.</p>`}
     ${Object.keys(entity).length ? entityDetail(entity) : ""}
     ${Object.keys(chapter).length ? chapterDetail(chapter) : ""}
   `;
