@@ -13,6 +13,8 @@ from textifai.conversation.contracts import ConversationRequest
 from textifai.conversation.executor import MinimalExecutionLayer
 from textifai.conversation.manager import ConversationManager
 from textifai.import_review import load_staging_import_bundle
+from textifai.import_review.auxiliary_ingestion import AuxiliaryDocumentInput
+from textifai.import_review.structured_bootstrap_v1 import run_semantic_ingestion_replay
 from textifai.obsidian import evaluate_obsidian_operational_readiness, open_obsidian_source, validate_obsidian_snapshot
 from textifai.obsidian.setup import ObsidianProjectSetupConfig, prepare_obsidian_project
 from textifai.platform_paths import normalize_user_path, suggest_default_vault_root
@@ -24,6 +26,7 @@ from textifai.provider_onboarding import (
 )
 from textifai.runtime_config import load_runtime_environment, synchronize_runtime_environment
 from textifai.session import create_session
+from textifai.vaerl.invariants import write_semantic_invariants_audit
 from textifai.vaerl.index import build_vault_index
 
 
@@ -53,6 +56,41 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optional snapshot path override. Defaults to the bridge snapshot candidates inside the vault.",
     )
 
+    invariants_parser = subparsers.add_parser(
+        "validate-vaerl",
+        help="Run Phase 1 semantic invariants against a 99_System directory and optional vault.",
+    )
+    invariants_parser.add_argument("--system-root", required=True, help="99_System directory containing obsidian_import.json.")
+    invariants_parser.add_argument("--vault-root", default=None, help="Optional materialized vault root for wikilink/placeholder checks.")
+    invariants_parser.add_argument("--required-primary", action="append", default=[], help="Required primary entity name or alias. Can be repeated.")
+    invariants_parser.add_argument("--language", default=None, help="Optional WORK_LANGUAGE override. Defaults to obsidian_import.work.language.")
+    invariants_parser.add_argument("--min-primary-count", type=int, default=None)
+    invariants_parser.add_argument("--max-primary-count", type=int, default=None)
+    invariants_parser.add_argument("--max-review-count", type=int, default=None)
+    invariants_parser.add_argument("--language-validator", default="heuristic")
+    invariants_parser.add_argument("--output", default=None, help="Where to write the audit. Defaults to <system-root>/semantic_invariants_audit.json.")
+
+    replay_parser = subparsers.add_parser(
+        "replay-semantic",
+        help="Replay entity resolution, cleanup, and import assembly from frozen semantic ingestion artifacts.",
+    )
+    replay_parser.add_argument("--input-system", required=True, help="Frozen 99_System directory with global_normalization and chapter_outputs.")
+    replay_parser.add_argument("--output-root", required=True, help="Output root for replay artifacts.")
+    replay_parser.add_argument("--language", default=None, help="Optional WORK_LANGUAGE override. Defaults to work.language.")
+    replay_parser.add_argument("--prose-language-validator", default="heuristic")
+    replay_parser.add_argument("--prose-language-validation-mode", choices=["strict", "warn"], default="strict")
+    _add_replay_auxiliary_args(replay_parser)
+    replay_downstream_parser = subparsers.add_parser(
+        "replay-downstream",
+        help="Alias for replay-semantic: replay downstream semantic compilation from frozen upstream artifacts.",
+    )
+    replay_downstream_parser.add_argument("--input-system", required=True, help="Frozen 99_System directory with global_normalization and chapter_outputs.")
+    replay_downstream_parser.add_argument("--output-root", required=True, help="Output root for replay artifacts.")
+    replay_downstream_parser.add_argument("--language", default=None, help="Optional WORK_LANGUAGE override. Defaults to work.language.")
+    replay_downstream_parser.add_argument("--prose-language-validator", default="heuristic")
+    replay_downstream_parser.add_argument("--prose-language-validation-mode", choices=["strict", "warn"], default="strict")
+    _add_replay_auxiliary_args(replay_downstream_parser)
+
     ask_parser = subparsers.add_parser(
         "ask",
         help="Run an author-facing interaction against the prepared vault.",
@@ -63,7 +101,7 @@ def build_parser() -> argparse.ArgumentParser:
     ask_parser.add_argument(
         "--trace-output",
         default=None,
-        help="Optional JSON file path for persisting the full E2E trace during validation/debugging.",
+        help="Optional JSON file path for persisting the full product interaction trace during validation/debugging.",
     )
 
     provider_parser = subparsers.add_parser(
@@ -92,7 +130,18 @@ def build_parser() -> argparse.ArgumentParser:
 
 def run_cli(*, argv: list[str] | None = None, repo_root: str | Path) -> int:
     raw_argv = list(sys.argv[1:] if argv is None else argv)
-    known_commands = {"start", "init", "status", "inspect", "ask", "provider", "configure-provider"}
+    known_commands = {
+        "start",
+        "init",
+        "status",
+        "inspect",
+        "validate-vaerl",
+        "replay-semantic",
+        "replay-downstream",
+        "ask",
+        "provider",
+        "configure-provider",
+    }
     if not raw_argv or raw_argv[0] not in known_commands:
         raw_argv = ["start", *raw_argv]
 
@@ -152,6 +201,37 @@ def run_cli(*, argv: list[str] | None = None, repo_root: str | Path) -> int:
             repo_root=repo_root,
         )
         print(json.dumps(payload, indent=2, ensure_ascii=False))
+        return 0
+
+    if command == "validate-vaerl":
+        system_root = normalize_user_path(args.system_root)
+        output_path = normalize_user_path(args.output) if args.output else system_root / "semantic_invariants_audit.json"
+        audit = write_semantic_invariants_audit(
+            output_path=output_path,
+            system_root=system_root,
+            vault_root=normalize_user_path(args.vault_root) if args.vault_root else None,
+            required_primaries=list(args.required_primary),
+            language=args.language,
+            min_primary_count=args.min_primary_count,
+            max_primary_count=args.max_primary_count,
+            max_review_count=args.max_review_count,
+            language_validator=args.language_validator,
+        )
+        print(json.dumps(audit, indent=2, ensure_ascii=False))
+        return 0 if audit.get("passed") else 1
+
+    if command in {"replay-semantic", "replay-downstream"}:
+        result = run_semantic_ingestion_replay(
+            input_system_root=normalize_user_path(args.input_system),
+            output_root=normalize_user_path(args.output_root),
+            language=args.language,
+            prose_language_validator=args.prose_language_validator,
+            prose_language_validation_mode=args.prose_language_validation_mode,
+            auxiliary_documents=_parse_auxiliary_documents(args),
+            auxiliary_provider_name=args.auxiliary_provider,
+            auxiliary_model=args.auxiliary_model,
+        )
+        print(json.dumps(asdict(result), indent=2, ensure_ascii=False))
         return 0
 
     if command == "ask":
@@ -220,6 +300,46 @@ def _add_init_like_args(parser: argparse.ArgumentParser) -> None:
         choices=["textifai_bootstrap_staging", "obsidian_importer_manual_if_markdown"],
         default="textifai_bootstrap_staging",
     )
+
+
+def _add_replay_auxiliary_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--auxiliary-document",
+        action="append",
+        default=[],
+        help="Auxiliary author document to ingest during downstream replay. Can be repeated.",
+    )
+    parser.add_argument(
+        "--auxiliary-hint",
+        action="append",
+        default=[],
+        help="Optional PATH=hint guidance for an auxiliary document. Missing hints fall back to the document title.",
+    )
+    parser.add_argument(
+        "--auxiliary-provider",
+        default=None,
+        help="Provider for auxiliary document extraction. Defaults to the configured bootstrap provider.",
+    )
+    parser.add_argument(
+        "--auxiliary-model",
+        default=None,
+        help="Fixed model for auxiliary document extraction.",
+    )
+
+
+def _parse_auxiliary_documents(args: argparse.Namespace) -> list[AuxiliaryDocumentInput]:
+    documents = [normalize_user_path(path) for path in (getattr(args, "auxiliary_document", None) or [])]
+    hints: dict[str, str] = {}
+    for raw_hint in getattr(args, "auxiliary_hint", None) or []:
+        if "=" not in raw_hint:
+            raise ValueError(f"Invalid --auxiliary-hint value, expected PATH=hint: {raw_hint}")
+        raw_path, hint = raw_hint.split("=", 1)
+        path = normalize_user_path(raw_path)
+        hints[str(path.resolve())] = hint.strip()
+    return [
+        AuxiliaryDocumentInput(path=str(path), author_hint=hints.get(str(path.resolve()), ""))
+        for path in documents
+    ]
 
 
 def _interactive_config_from_args(args: argparse.Namespace) -> ObsidianProjectSetupConfig:

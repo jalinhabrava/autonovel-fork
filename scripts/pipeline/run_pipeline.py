@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 """
-run_pipeline.py — Fully automated novel pipeline orchestrator.
+Legacy AutoNovel novel pipeline orchestrator.
+
+This script belongs to the classic AutoNovel writing pipeline
+(`foundation` -> `drafting` -> `revision` -> `export`).
+It is preserved in this repository because parts of that toolchain may
+still be useful later, but it is not the active TextifAI bootstrap rail.
 
 Runs the complete autonovel pipeline from seed concept to finished novel.
 Manages state, git commits, evaluation, and retry logic.

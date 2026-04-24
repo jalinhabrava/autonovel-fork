@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "active_product": "TextifAI",
+  "legacy_or_preserved_zones": [
+    {
+      "path": "run_pipeline.py",
+      "classification": "legacy_autonovel_entrypoint",
+      "status": "preserved_outside_active_textifai_rail"
+    },
+    {
+      "path": "scripts/pipeline/run_pipeline.py",
+      "classification": "legacy_autonovel_orchestrator",
+      "status": "preserved_outside_active_textifai_rail"
+    },
+    {
+      "path": "scripts/foundation",
+      "classification": "legacy_autonovel_phase_scripts",
+      "status": "preserved_outside_active_textifai_rail"
+    },
+    {
+      "path": "scripts/drafting",
+      "classification": "legacy_autonovel_phase_scripts",
+      "status": "preserved_outside_active_textifai_rail"
+    },
+    {
+      "path": "scripts/revision",
+      "classification": "legacy_autonovel_phase_scripts",
+      "status": "preserved_outside_active_textifai_rail"
+    },
+    {
+      "path": "archive/legacy_bootstrap",
+      "classification": "archived_textifai_legacy_bootstrap",
+      "status": "archived"
+    },
+    {
+      "path": "textifai/import_review/staging_loader.py",
+      "classification": "preserved_review_staging_flow",
+      "status": "conserved_but_not_primary_bootstrap_rail"
+    },
+    {
+      "path": "textifai/import_review/composer.py",
+      "classification": "preserved_review_staging_flow",
+      "status": "conserved_but_not_primary_bootstrap_rail"
+    },
+    {
+      "path": "textifai/import_review/reviewer.py",
+      "classification": "preserved_review_staging_flow",
+      "status": "conserved_but_not_primary_bootstrap_rail"
+    },
+    {
+      "path": "textifai/import_review/promotion_plan.py",
+      "classification": "preserved_review_staging_flow",
+      "status": "conserved_but_not_primary_bootstrap_rail"
+    },
+    {
+      "path": "textifai/import_review/stable_writer.py",
+      "classification": "preserved_review_staging_flow",
+      "status": "conserved_but_not_primary_bootstrap_rail"
+    },
+    {
+      "path": "scripts/audio",
+      "classification": "future_reusable_media_tooling",
+      "status": "preserved_outside_active_bootstrap_rail"
+    },
+    {
+      "path": "scripts/art",
+      "classification": "future_reusable_media_tooling",
+      "status": "preserved_outside_active_bootstrap_rail"
+    }
+  ]
+}

@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "product": "TextifAI",
+  "active_product_cli": {
+    "preferred_entrypoint": "scripts/textifai.py",
+    "compatibility_entrypoint": "scripts/textifai_obsidian.py",
+    "module": "textifai.obsidian.cli"
+  },
+  "active_bootstrap_orchestrator": {
+    "module": "textifai.obsidian.setup",
+    "function": "prepare_obsidian_project"
+  },
+  "active_narrative_ingestion_pipeline": {
+    "module": "textifai.import_review.structured_bootstrap_v1",
+    "function": "run_structured_bootstrap_v1"
+  },
+  "phase_map": [
+    {
+      "phase": "source_inventory",
+      "module": "textifai.bootstrap.source_reader",
+      "status": "active"
+    },
+    {
+      "phase": "chapter_detection",
+      "module": "textifai.import_review.chapterizer",
+      "status": "active"
+    },
+    {
+      "phase": "global_normalization",
+      "module": "textifai.import_review.structured_bootstrap_v1",
+      "status": "active"
+    },
+    {
+      "phase": "chapter_extraction",
+      "module": "textifai.import_review.structured_bootstrap_v1",
+      "status": "active"
+    },
+    {
+      "phase": "entity_cluster_resolution",
+      "module": "textifai.import_review.entity_cluster_resolution",
+      "status": "active"
+    },
+    {
+      "phase": "entity_cleanup",
+      "module": "textifai.import_review.entity_cleanup",
+      "status": "active"
+    },
+    {
+      "phase": "json_assembly",
+      "module": "textifai.import_review.structured_bootstrap_v1",
+      "function": "assemble_obsidian_import",
+      "status": "active"
+    },
+    {
+      "phase": "vault_import",
+      "module": "textifai.obsidian.json_import",
+      "function": "import_json_to_vault",
+      "status": "active"
+    }
+  ],
+  "llm_call_sites": [
+    {
+      "module": "textifai.import_review.structured_bootstrap_v1",
+      "provider_abstraction": "providers.text_provider"
+    }
+  ]
+}

@@ -8,6 +8,7 @@ __pycache__/
 .textifai/
 .codex
 node_modules/
+runs/semantic_ingestion_e2e/
 results.tsv
 state.json
 seed.txt

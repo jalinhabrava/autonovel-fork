@@ -1,5 +1,16 @@
 # AUTONOVEL: Reproducible Novel Pipeline
 
+Legacy note:
+
+This document describes the classic AutoNovel writing pipeline.
+It is preserved in this repository, but it is not the active TextifAI
+bootstrap / Obsidian ingestion rail. For the active TextifAI rail, use:
+
+- `scripts/textifai.py`
+- `scripts/textifai_obsidian.py`
+- `textifai.obsidian.setup.prepare_obsidian_project()`
+- `textifai.import_review.structured_bootstrap_v1`
+
 ## Overview
 
 This document captures the full automated pipeline for generating,

@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "scope": "semantic_ingestion_end_to_end_until_vaerl",
+  "not_scope": "full_product_e2e_chat_utility_evaluation",
+  "run_status": {
+    "semantic_integrity": "complete",
+    "chapter_extraction_complete": true,
+    "expected_chapter_count": 0,
+    "generated_chapter_count": 0,
+    "failed_chapter_count": 0
+  },
+  "playbook_boundaries": {
+    "global_normalization": {
+      "artifact": "global_normalization.json",
+      "expected_path": "<vault_root>/99_System/global_normalization.json",
+      "owner_if_first_failure": "prompt_extraction"
+    },
+    "chapter_extraction": {
+      "artifact": "chapter_outputs/*.json",
+      "expected_path": "<vault_root>/99_System/chapter_outputs/",
+      "companion_audit": "<vault_root>/99_System/chapter_extraction_audit.json",
+      "owner_if_first_failure": "prompt_extraction"
+    },
+    "entity_resolution": {
+      "artifact": "resolved_entities.json",
+      "expected_path": "<vault_root>/99_System/resolved_entities.json",
+      "owner_if_first_failure": "cluster_resolution"
+    },
+    "entity_cleanup": {
+      "artifact": "cleaned_entities.json",
+      "expected_path": "<vault_root>/99_System/cleaned_entities.json",
+      "owner_if_first_failure": "cleanup"
+    },
+    "obsidian_import": {
+      "artifact": "obsidian_import.json",
+      "expected_path": "<vault_root>/99_System/obsidian_import.json",
+      "owner_if_first_failure": "assembly_importer_vaerl"
+    }
+  },
+  "rerun_policy": {
+    "api_rerun_required_for": [
+      "global_normalization",
+      "chapter_extraction"
+    ],
+    "api_rerun_not_required_for": [
+      "entity_resolution",
+      "entity_cleanup",
+      "obsidian_import"
+    ]
+  },
+  "runtime_note": "The active pipeline also emits a per-run playbook_boundary_audit.json inside 99_System."
+}

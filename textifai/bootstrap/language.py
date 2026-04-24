@@ -77,6 +77,8 @@ _ES_STOPWORDS = {
     "una",
     "y",
 }
+_EN_EXCLUSIVE_STOPWORDS = _EN_STOPWORDS - _ES_STOPWORDS
+_ES_EXCLUSIVE_STOPWORDS = _ES_STOPWORDS - _EN_STOPWORDS
 _KNOWN_LANGUAGE_CODES = {"en", "es", "ja"}
 
 
@@ -92,16 +94,23 @@ def detect_language_profile(text: str) -> DetectedLanguageProfile:
     tokens = [token.casefold() for token in _WORD_RE.findall(text)]
     token_count = len(tokens) or 1
     scores = Counter[str]()
-    scores["en"] = sum(1 for token in tokens if token in _EN_STOPWORDS)
-    scores["es"] = sum(1 for token in tokens if token in _ES_STOPWORDS)
+    en_overlap = sum(1 for token in tokens if token in _EN_STOPWORDS)
+    es_overlap = sum(1 for token in tokens if token in _ES_STOPWORDS)
+    en_exclusive = sum(1 for token in tokens if token in _EN_EXCLUSIVE_STOPWORDS)
+    es_exclusive = sum(1 for token in tokens if token in _ES_EXCLUSIVE_STOPWORDS)
+    scores["en"] = en_exclusive + max(0.0, (en_overlap - es_overlap) * 0.25)
+    scores["es"] = es_exclusive + max(0.0, (es_overlap - en_overlap) * 0.25)
     scores["ja"] = 0
     if _JA_RE.search(text):
         scores["ja"] = max(1, len(_JA_RE.findall(text)) // 8)
 
     language_scores = _normalize_scores(scores, token_count)
     detected_languages = [language for language, score in language_scores if score > 0.02]
-    dominant_language = detected_languages[0] if detected_languages else None
-    has_mixed_language = len(detected_languages) > 1
+    dominant_language = language_scores[0][0] if language_scores else None
+    has_mixed_language = False
+    if len(language_scores) >= 2 and language_scores[0][1] > 0:
+        secondary_ratio = language_scores[1][1] / language_scores[0][1]
+        has_mixed_language = secondary_ratio >= 0.65
     if has_mixed_language and dominant_language is not None:
         dominant_language = "mixed"
     register_signals = _infer_register_signals(text)

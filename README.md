@@ -1,335 +1,174 @@
 # TextifAI
 
-TextifAI is the core product/runtime of this repository. It was born from an AutoNovel fork, but it is no longer best described as "just a fork". The codebase now centers on a vault-aware narrative system with a terminal runtime, structured conversational interpretation, editorial structuring, and context preparation for later narration and review.
+TextifAI is a Semantic Story Engine for authors.
 
-The project still preserves the original AutoNovel lineage and pipeline ideas, but the current product direction is broader and more explicit:
+It turns manuscripts, lore notes, character sheets, future plans, and editorial corrections into a durable semantic model that can support writing, continuity, review, querying, and later author-facing chat.
 
-- a human-led writing workflow
-- persistent narrative memory
-- vault-backed source of truth
-- conservative resolution against real project artifacts
-- structured editorial outputs instead of raw prompt juggling
-- a runtime that can support future conversational and review loops without becoming magical
+TextifAI began as work inside an AutoNovel fork. The project now has its own product direction and identity. The original AutoNovel lineage remains credited because it provided useful historical pipeline ideas, but the active product is TextifAI.
 
-## What TextifAI Is Today
+## Why TextifAI Exists
 
-TextifAI is the layer that sits above the vault and gives the author a usable workflow:
+Long fiction projects are hard to keep coherent.
 
-- it interprets author input
-- it resolves mentions against the vault
-- it selects and prepares context
-- it structures editorial output
-- it prepares context for narration later
-- it keeps the system conservative when it cannot resolve something safely
+Authors accumulate:
 
-Obsidian and the vault provide the durable project memory. TextifAI does the interpretation, anchoring, selection, and workflow control on top of that memory.
+- chapters
+- rewrites
+- character sheets
+- lore documents
+- future plans
+- contradictions
+- unresolved notes
+- memories that live only in the author's head
 
-## Vault And TextifAI
+Most AI writing tools treat that material as either a long prompt, a flat document search index, or a static Codex. TextifAI takes a different route: it builds and maintains a semantic layer that the author can inspect, correct, replay, and use.
 
-The vault is the single source of truth for project knowledge:
+## What TextifAI Is Not
 
-- notes
-- titles
-- slugs
-- aliases
-- links and backlinks
-- metadata
-- document structure
-- canonical artifacts
+TextifAI is not just:
 
-TextifAI does not replace that source of truth. It adds a working layer on top of it:
+- another AI editor
+- a Codex generator
+- a Story Bible generator
+- a chat over Markdown
+- an Obsidian importer
+- a prompt wrapper around a whole novel
+- a fully autonomous writing agent
 
-- conversational context extraction
-- vault-aware entity resolution
-- editorial structuring
-- narration preparation
-- deterministic context assembly
-- controlled persistence and review flows
+Those can all be views or workflows on top of TextifAI, but they are not the core.
 
-Obsidian/vault stores the facts and relationships. TextifAI interprets them and chooses what to do next.
+## The Core Idea
 
-## Core Layers
+TextifAI is built around VaERL: the Vault-aware Entity Resolution Layer.
 
-### CCE
+VaERL is the semantic source of truth. It stores and exposes:
 
-Conversational Context Extraction (CCE) is the part that reads the author input and identifies what kind of request it is.
-
-CCE looks for:
-
-- intent
-- follow-up behavior
-- narrative signals
-- editorial signals
-- hints about the expected target or artifact type
-
-CCE does not try to be the whole system. It interprets the input. VaERL and the editorial layers then act on that interpretation.
-
-### VaERL
-
-The Vault-aware Entity Resolution Layer (VaERL) resolves or suggests anchors against the vault.
-
-It separates:
-
-- detected mentions
-- candidate entities
-- final resolution
+- chapters and summaries
+- canonical entities
+- aliases and source mentions
+- relationships
+- facts and relationship facts
+- review states
 - confidence
-- related artifact suggestions
+- tags and entity kinds
+- unresolved or ambiguous material
+- audit and replay metadata
 
-VaERL is conservative by design. If it cannot resolve safely, it prefers candidates or no resolution over false certainty.
+Everything else should be a projection over VaERL:
 
-### Editorial Structuring
+- Codex View
+- Story Bible View
+- Review Queue
+- Editor View
+- Query Layer
+- future free author chat
 
-Editorial structuring turns author input into usable intermediate structures such as:
+The LLM can synthesize, explain, summarize, and suggest. It does not silently own canon.
 
-- `StoryFacts`
-- `BeatOutline`
-- `RevisionIntent`
-- `EditorialStructuringResult`
+## ECC And VaERL
 
-This layer is the bridge between raw language and a workflow the author can validate.
+TextifAI uses two high-level ideas:
 
-### Narration Prep
+- ECC: editorial/context understanding of what the author is asking or importing.
+- VaERL: grounded semantic resolution against the project vault and semantic artifacts.
 
-Narration prep prepares context for later narration. It does not narrate yet.
+ECC helps understand the task. VaERL anchors the task to the story's known entities, chapters, facts, review state, and evidence.
 
-It can be built from:
+Together they let TextifAI answer questions such as:
 
-- `BeatOutline`
-- `StoryFacts`
-- `RevisionIntent`
-- previous editorial output
+- "What does Sera know before this event?"
+- "Where have I already hinted at the Báculo?"
+- "Does this chapter contradict the current canon?"
+- "Which unresolved entities need author review?"
+- "Can this lore document enrich the current story graph?"
 
-Its job is to gather the right context, voice, canon, continuity, and language constraints before any stronger narration step happens.
+## Current Product Shape
 
-### Context Engine
+The active TextifAI rail can:
 
-The Context Engine assembles structured context packs from the vault.
+- ingest a novel from Markdown
+- split chapters
+- build deterministic structural indexes
+- run semantic extraction and normalization
+- resolve entities into canonical primaries and review candidates
+- import the result into an Obsidian-style vault
+- replay downstream semantic compilation from frozen artifacts
+- ingest auxiliary author documents as a separate enrichment rail
+- run Phase 1 semantic invariants over VaERL/vault outputs
 
-It is different from VaERL:
+This is currently local-first and developer-facing. The product direction is broader: TextifAI should become a semantic workbench for long-form fiction, not merely an import script.
 
-- VaERL resolves and anchors
-- Context Engine packages context
+## Why It Is Different
 
-That separation matters. We do not want duplicate retrieval logic in multiple places.
+TextifAI is designed around these principles:
 
-## How The Flow Works
+- VaERL is source of truth.
+- Views are projections over VaERL.
+- LLMs synthesize; they do not own canon.
+- Review state and uncertainty stay visible.
+- Author corrections should feed back into VaERL.
+- Markdown is a first-class output.
+- Replayability matters.
+- Grounding beats giant prompts.
 
-The current workflow is:
+This makes TextifAI closer to a semantic story operating system than to a single editor pane.
 
-1. the author writes something in natural language
-2. CCE classifies the request
-3. VaERL resolves mentions against the vault when possible
-4. editorial structuring turns the input into a usable shape
-5. context preparation selects the useful project artifacts
-6. the system returns a structured result the author can validate
-7. later stages can use that structure for narration or review
+## Documentation Map
 
-This is intentionally not a fully autonomous authoring loop. The human remains the authorial center.
-
-## Bootstrap Pipeline
-
-The vault bootstrap for an existing novel now follows a strict structured pipeline:
-
-1. source ingest
-2. markdown chapter split
-3. global normalization batches
-4. canonical entity map build
-5. chapter extraction guided by canon
-6. external assembly into `obsidian_import.json`
-7. vault compilation with invariant validation
-
-### 1. Source Ingest
-
-TextifAI reads the source documents and builds a deterministic inventory of importable files. The current preferred bootstrap rail is markdown-first, with chapter-aware processing for long-form narrative sources.
-
-### 2. Markdown Chapter Split
-
-The novel is segmented into stable chapter units with:
-
-- `chapter_id`
-- `sequence_index`
-- `chapter_title`
-- `chapter_text`
-
-Those chapter units become the semantic base for later batching and extraction.
-
-### 3. Global Normalization Batches
-
-TextifAI does not ask the model for one monolithic JSON for the whole novel. Instead it groups chapters into token-aware batches and asks for:
-
-- normalized entities
-- merge decisions
-- normalization notes
-
-This produces batch-level entity maps that are merged outside the model.
-
-### 4. Canonical Entity Map
-
-From the merged global normalization output, TextifAI builds a compact canonical entity map used as the guide rail for chapter extraction. This keeps chapter calls cheaper and more consistent than re-sending the full rich normalization output every time.
-
-### 5. Chapter Extraction Guided By Canon
-
-Each chapter is processed independently against the canonical entity map. The model returns structured chapter JSON with:
-
-- chapter summary
-- characters
-- places
-- concepts
-- events
-- relations
-- unresolved mentions
-
-If a chapter is too large for a safe single call, TextifAI plans subchunks and reduces them externally.
-
-### 6. External Assembly
-
-The JSON master artifact is assembled by the software, not by the model. TextifAI combines:
-
-- global normalization
-- canonical entity map
-- chapter outputs
-
-into a single `obsidian_import.json` ready for vault compilation.
-
-### 7. Vault Compilation And Validation
-
-The compiler turns `obsidian_import.json` into vault notes with strict invariants:
-
-- role-specific tags are always present
-- titles are normalized before frontmatter/linking
-- wikilinks only target canonical primaries
-- review notes stay separate from canonical notes
-- trivial entities are not promoted
-- duplicate entities are consolidated before writing
-
-The final validation step is build-breaking, not best-effort. If invariant violations are found, the vault build fails instead of writing an ambiguous graph.
-
-## Repository Scope
-
-This repository contains the current open core of TextifAI. It is the working
-codebase for the product as it exists today, and it is intentionally local-first
-and vault-aware.
-
-The scope here includes:
-
-- terminal runtime
-- conversational interpretation
-- vault-aware entity resolution
-- editorial structuring
-- narration preparation
-- Context Engine
-- persistence and validation primitives
-- core pipeline orchestration
-
-Some later layers may live outside this repository or in adjacent private
-workflows, depending on how the product evolves. Those future layers may cover
-things like:
-
-- richer collaborative UX
-- advanced hosted workflows
-- more opinionated editorial automation
-- private deployment-specific enhancements
-
-That future work is not part of the present core. The current repository should
-be read on its own terms, as the product layer that already exists and runs
-today.
-
-## Current Architecture At A Glance
-
-- `textifai/`
-  - product/runtime layer
-  - conversation
-  - editorial intent
-  - editorial structuring
-  - narration prep
-  - VaERL
-  - terminal entrypoints
-- `context_engine/`
-  - deterministic context assembly
-- `vault/`
-  - vault schema, bootstrap, read/write, ingest
-- `interactive/`
-  - internal context and persistence commands
-- `providers/`
-  - inference backend abstraction
-- `stores/`
-  - project storage abstraction
-- `scripts/`
-  - operational entrypoints grouped by task family
-
-## What Is Already Implemented
-
-The repo already includes:
-
-- a provider abstraction for hosted and local models
-- a project storage abstraction
-- a vault backend and schema
-- a terminal TextifAI runtime
-- interactive context and persistence commands
-- a deterministic Context Engine
-- runtime language policy support
-- conversational intent and task scaffolding
-- CCE and editorial intent classification
-- VaERL
-- editorial structuring contracts and builders
-- narration prep contracts and builders
-
-## What Is Still Future Work
-
-Not yet implemented, or still intentionally limited:
-
-- GUI
-- LibreChat
-- MCP
-- embeddings / semantic retrieval
-- advanced autonomous editing loops
-- automatic narration as a mature end-state
-- premium/private layers
+- [Semantic Story Engine Roadmap](docs/TEXTIFAI_SEMANTIC_STORY_ENGINE_ROADMAP.md): technical-product vision and phase roadmap.
+- [Architecture](docs/ARCHITECTURE.md): current low-level system architecture, entrypoints, pipeline, modules, and artifacts.
+- [Bootstrap V1 Flow](docs/BOOTSTRAP_V1_FLOW.md): detailed active bootstrap/import flow.
+- [Vault Schema](docs/VAULT_SCHEMA.md): vault layout, metadata, and artifact layout.
+- [E2E Semantic Diagnosis Rules](docs/e2e_semantic_diagnosis_rules.md): diagnostic playbook for semantic ingestion runs.
+- [Novel Index And Selective Normalization](docs/NOVEL_INDEX_AND_SELECTIVE_NORMALIZATION.md): metadata-first normalization design notes.
 
 ## Quick Start
 
 ```bash
-git clone <repo-url>
-cd autonovel-fork
 cp .env.example .env
 uv sync
 ```
 
-For the terminal runtime:
+Start the active TextifAI CLI:
 
 ```bash
-textifai
+uv run python scripts/textifai.py start
 ```
 
-For the pipeline:
+Bootstrap a vault from existing source material:
 
 ```bash
-uv run python run_pipeline.py --from-scratch
+uv run python scripts/textifai.py init \
+  --vault-root <vault-root> \
+  --source-root <source-root>
 ```
 
-For setup and diagnostics:
+Replay downstream semantic compilation from frozen artifacts:
 
 ```bash
-textifai setup
-textifai doctor
+uv run python scripts/textifai.py replay-downstream \
+  --input-system <run>/99_System \
+  --output-root <new-replay-run> \
+  --language es
 ```
 
-## Useful Docs
+Validate Phase 1 VaERL invariants:
 
-- [docs/BOOTSTRAP_V1_FLOW.md](/home/david/projects/autonovel-fork/docs/BOOTSTRAP_V1_FLOW.md)
-- [docs/VAULT_SCHEMA.md](/home/david/projects/autonovel-fork/docs/VAULT_SCHEMA.md)
-- [WORKFLOW.md](/home/david/projects/autonovel-fork/WORKFLOW.md)
-- [PIPELINE.md](/home/david/projects/autonovel-fork/PIPELINE.md)
+```bash
+uv run python scripts/textifai.py validate-vaerl \
+  --system-root <run>/99_System \
+  --vault-root <materialized-vault> \
+  --required-primary Ren \
+  --required-primary Sera
+```
 
-## Honest Boundary
+## Current Boundary
 
-TextifAI is not a magical narrator and not a generic chat wrapper. The project is designed to be:
+TextifAI is usable today as a local semantic ingestion and vault compilation system. The next product layers are Codex View, Review Queue actions, Story Bible synthesis, Query Layer, free author chat, and eventually a Markdown editor.
 
-- vault-aware
-- conservative
-- structured
-- explainable
-- usable from the terminal first
+See the roadmap for the current phase gates.
 
-The core is intentionally domain-agnostic. Example fixtures from a fantasy vault are useful for validation, but they are not the logic of the system.
+## Historical Credit
+
+TextifAI grew out of experimentation in an AutoNovel fork and still preserves some legacy AutoNovel scripts and documents for reference. The active product rail is now TextifAI.
+

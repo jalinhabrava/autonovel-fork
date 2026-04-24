@@ -2,7 +2,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from textifai.import_review.entity_cluster_resolution import normalize_entity_key, normalize_entity_text
+from textifai.import_review.entity_cluster_resolution import (
+    _normalize_review_reason_code,
+    _normalize_review_reason_params,
+    _render_review_reason,
+    normalize_entity_key,
+    normalize_entity_text,
+)
 
 
 def _extract_title_entity_hints(chapter_title: str) -> list[str]:
@@ -102,6 +108,8 @@ def _entity_score(entity: dict[str, Any], chapter_outputs: list[dict[str, Any]])
         score += 1
     if bool(entity.get("is_stable_entity")):
         score += 2
+    if bool(entity.get("strong_primary_candidate")):
+        score += 3
 
     metrics = {
         "chapter_ref_count": len(chapter_refs),
@@ -112,6 +120,10 @@ def _entity_score(entity: dict[str, Any], chapter_outputs: list[dict[str, Any]])
         "title_hit_count": title_hit_count,
         "naming_quality": naming_quality,
         "descriptor_alias_count": _count_descriptor_aliases(aliases, canonical_name),
+        "strong_primary_candidate": bool(entity.get("strong_primary_candidate")),
+        "gender_presentation_signal": str(entity.get("gender_presentation_signal") or "unknown"),
+        "gender_signal_confidence": float(entity.get("gender_signal_confidence") or 0.0),
+        "gender_signal_conflict": bool(entity.get("gender_signal_conflict", False)),
     }
     return score, metrics
 
@@ -120,7 +132,9 @@ def cleanup_resolved_entities(
     *,
     entities: list[dict[str, Any]],
     chapter_outputs: list[dict[str, Any]],
+    language: str = "unknown",
 ) -> tuple[list[dict[str, Any]], dict[str, Any], dict[str, Any]]:
+    entities = _remove_cross_named_alias_contamination(entities, language=language)
     cleaned: list[dict[str, Any]] = []
     promotion_decisions: list[dict[str, Any]] = []
     discarded_count = 0
@@ -147,7 +161,15 @@ def cleanup_resolved_entities(
         ):
             decision = "primary"
             decision_reason = "stable_named_entity_with_cross_chapter_evidence"
-        elif score >= 2 and canonical_name:
+        if (
+            bool(entity.get("strong_primary_candidate"))
+            and naming_quality == "proper_name"
+            and len(chapter_refs) >= 3
+            and len(key_facts) >= 2
+        ):
+            decision = "primary"
+            decision_reason = "strong_primary_candidate_retained"
+        if decision == "discard" and score >= 2 and canonical_name:
             decision = "review"
             decision_reason = "retained_for_manual_review"
 
@@ -167,7 +189,7 @@ def cleanup_resolved_entities(
                 decision = "discard"
                 decision_reason = "discarded_due_to_weak_naming_quality"
 
-        if bool(entity.get("needs_review")) and decision == "primary":
+        if bool(entity.get("needs_review")) and decision == "primary" and not bool(entity.get("strong_primary_candidate")):
             decision = "review"
             decision_reason = "demoted_due_to_needs_review"
 
@@ -233,3 +255,59 @@ def cleanup_resolved_entities(
         "decisions": promotion_decisions,
     }
     return cleaned, cleanup_audit, promotion_audit
+
+
+def _remove_cross_named_alias_contamination(entities: list[dict[str, Any]], *, language: str) -> list[dict[str, Any]]:
+    named_canonicals = {
+        normalize_entity_key(entity.get("canonical_name") or "")
+        for entity in entities
+        if str(entity.get("naming_quality") or "").strip().casefold() in {"proper_name", "title_plus_name"}
+        and normalize_entity_text(entity.get("canonical_name") or "")
+    }
+    adjusted: list[dict[str, Any]] = []
+    for entity in entities:
+        canonical_key = normalize_entity_key(entity.get("canonical_name") or "")
+        aliases = [normalize_entity_text(item) for item in (entity.get("aliases") or []) if normalize_entity_text(item)]
+        kept_aliases: list[str] = []
+        rejected_aliases = [normalize_entity_text(item) for item in (entity.get("rejected_aliases") or []) if normalize_entity_text(item)]
+        removed: list[str] = []
+        for alias in aliases:
+            alias_key = normalize_entity_key(alias)
+            if alias_key in named_canonicals and alias_key != canonical_key:
+                removed.append(alias)
+                if alias not in rejected_aliases:
+                    rejected_aliases.append(alias)
+                continue
+            kept_aliases.append(alias)
+        if removed:
+            reasons = [str(entity.get("review_reason") or "").strip()]
+            reason_code = "alias_contamination_rejected_named_aliases"
+            reason_params = {"rejected_aliases": ", ".join(removed)}
+            reasons.append(
+                _render_review_reason(
+                    code=reason_code,
+                    params=reason_params,
+                    language=language,
+                )
+            )
+            adjusted.append(
+                {
+                    **entity,
+                    "aliases": kept_aliases,
+                    "rejected_aliases": rejected_aliases,
+                    "needs_review": True,
+                    "review_state": "review",
+                    "review_reason_code": _normalize_review_reason_code(entity.get("review_reason_code")) or reason_code,
+                    "review_reason_params": {
+                        **reason_params,
+                        **_normalize_review_reason_params(entity.get("review_reason_params")),
+                    },
+                    "anti_contamination_guardrail": {
+                        "rejected_named_aliases": removed,
+                    },
+                    "review_reason": " ".join(reason for reason in reasons if reason),
+                }
+            )
+            continue
+        adjusted.append(entity)
+    return adjusted

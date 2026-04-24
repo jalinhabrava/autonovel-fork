@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "entrypoints": [
+    {
+      "path": "scripts/textifai.py",
+      "role": "primary_product_cli",
+      "rail": "active_textifai"
+    },
+    {
+      "path": "scripts/textifai_obsidian.py",
+      "role": "compatibility_cli_wrapper",
+      "rail": "active_textifai"
+    },
+    {
+      "path": "scripts/prepare_obsidian_project.py",
+      "role": "non-interactive_bootstrap_wrapper",
+      "rail": "active_textifai"
+    },
+    {
+      "path": "scripts/import_obsidian_json.py",
+      "role": "manual_json_import_wrapper",
+      "rail": "active_textifai"
+    },
+    {
+      "path": "run_pipeline.py",
+      "role": "legacy_autonovel_wrapper",
+      "rail": "legacy_autonovel"
+    },
+    {
+      "path": "scripts/pipeline/run_pipeline.py",
+      "role": "legacy_autonovel_orchestrator",
+      "rail": "legacy_autonovel"
+    },
+    {
+      "path": "main.py",
+      "role": "interactive_shell_wrapper",
+      "rail": "conserved_shell_path"
+    }
+  ]
+}

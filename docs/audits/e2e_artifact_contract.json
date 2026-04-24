@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "scope": "semantic_ingestion_end_to_end_until_vaerl",
+  "not_scope": "full_product_e2e_chat_utility_evaluation",
+  "run_status": {
+    "semantic_integrity": "complete",
+    "chapter_extraction_complete": true,
+    "expected_chapter_count": 0,
+    "generated_chapter_count": 0,
+    "failed_chapter_count": 0
+  },
+  "artifact_root": "<vault_root>/99_System",
+  "required_full_run_artifacts": [
+    "source_extraction_audit.json",
+    "provider_snapshot.json",
+    "model_plan_audit.json",
+    "global_batch_plan_audit.json",
+    "global_normalization.json",
+    "canonical_entity_map.json",
+    "chapter_extraction_audit.json",
+    "chapter_outputs/",
+    "chapters_enriched.json",
+    "resolved_entities.json",
+    "entity_clusters_audit.json",
+    "entity_resolution_audit.json",
+    "cleaned_entities.json",
+    "entity_cleanup_audit.json",
+    "promotion_decisions_audit.json",
+    "obsidian_import.json",
+    "playbook_boundary_audit.json",
+    "json_import_audit.json",
+    "bootstrap_progress.jsonl"
+  ],
+  "notes": [
+    "resolved_entities.json and cleaned_entities.json are first-class persisted artifacts in the active pipeline.",
+    "Audit JSONs do not replace the playbook boundary artifacts; they complement them.",
+    "api_call_traces/ is optional but expected when trace sampling is enabled."
+  ]
+}

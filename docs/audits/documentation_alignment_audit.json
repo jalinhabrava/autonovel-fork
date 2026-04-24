@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "updated_documents": [
+    {
+      "path": "README.md",
+      "alignment": "clarifies active TextifAI CLI vs legacy AutoNovel pipeline"
+    },
+    {
+      "path": "AGENTS.md",
+      "alignment": "stops presenting run_pipeline.py as the main orchestrator for TextifAI bootstrap"
+    },
+    {
+      "path": "docs/BOOTSTRAP_V1_FLOW.md",
+      "alignment": "documents active rail and current 99_System artifact set"
+    },
+    {
+      "path": "docs/VAULT_SCHEMA.md",
+      "alignment": "adds active bootstrap artifact layout and reframes 99_Import_Staging"
+    },
+    {
+      "path": "docs/e2e_semantic_diagnosis_rules.md",
+      "alignment": "ties playbook boundaries to persisted active-run artifacts"
+    },
+    {
+      "path": "PIPELINE.md",
+      "alignment": "marks AutoNovel pipeline as legacy relative to active TextifAI bootstrap"
+    }
+  ]
+}

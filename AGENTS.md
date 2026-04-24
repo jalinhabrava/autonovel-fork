@@ -1,18 +1,32 @@
 # AGENTS
 
-This file contains essential instructions for working effectively with the autonovel repository.
+This file contains essential instructions for working effectively with the TextifAI repository.
 
 ---
 
 ## Setup
 
-- Always start by copying `.env.example` to `.env` and filling in required API keys.
-  - `ANTHROPIC_API_KEY` is mandatory.
+- Copy `.env.example` to `.env` and fill in the provider keys required for the task.
+  - `ANTHROPIC_API_KEY` is used by legacy/default Anthropic flows.
+  - `OPENAI_API_KEY` is used by the current OpenAI-backed semantic ingestion runs when `AUTONOVEL_BOOTSTRAP_PROVIDER=openai`.
   - `FAL_KEY` and `ELEVENLABS_API_KEY` are optional for art and audiobook features.
 - Use `uv run python <script.py>` to execute Python scripts (not plain `python`).
-- The main orchestrator is `run_pipeline.py`.
+- This repository contains two rails:
+  - Active TextifAI rail: `scripts/textifai.py` or `scripts/textifai_obsidian.py`, which delegate to `textifai.obsidian.cli` and `textifai.obsidian.setup.prepare_obsidian_project`.
+  - Legacy AutoNovel rail: `run_pipeline.py` and `scripts/pipeline/run_pipeline.py` for the old foundation/drafting/revision/export flow.
+- For narrative bootstrap / vault ingestion today, do not treat `run_pipeline.py` as the main orchestrator.
 
 ## Main Commands
+
+### Active TextifAI bootstrap / ingestion
+
+  ```
+  uv run python scripts/textifai.py start
+  uv run python scripts/textifai.py init --vault-root <vault> --source-root <source>
+  uv run python scripts/textifai_obsidian.py inspect --vault-root <vault>
+  ```
+
+### Legacy AutoNovel pipeline
 
 - Full pipeline (from scratch):
   ```
@@ -54,6 +68,14 @@ This file contains essential instructions for working effectively with the auton
 
 ## Architecture Notes
 
+- Active TextifAI bootstrap pipeline:
+  - source inventory / extraction: `textifai/bootstrap/source_reader.py`
+  - chapter detection: `textifai/import_review/chapterizer.py`
+  - structured bootstrap orchestration: `textifai/import_review/structured_bootstrap_v1.py`
+  - vault setup / import: `textifai/obsidian/setup.py`, `textifai/obsidian/json_import.py`
+- Legacy AutoNovel pipeline:
+  - `scripts/pipeline/run_pipeline.py`
+  - `scripts/foundation/`, `scripts/drafting/`, `scripts/revision/`
 - The repo separates reusable framework files (master branch) and per-novel templates (feature branches).
 - The novel exists as layered files:
   - `voice.md` for writing style
@@ -66,11 +88,12 @@ This file contains essential instructions for working effectively with the auton
 
 ## Important
 
-- Ask for permission before running bash commands or editing files.
 - Watcher ignores typical generated files and environment or editor files.
-- There are no CI workflows or tests in this repo.
-- Use `WORKFLOW.md` and `PIPELINE.md` for detailed human and technical pipeline guidance.
+- Use `README.md` as the product entrypoint.
+- Use `docs/TEXTIFAI_SEMANTIC_STORY_ENGINE_ROADMAP.md` for the technical-product roadmap.
+- Use `docs/ARCHITECTURE.md`, `docs/BOOTSTRAP_V1_FLOW.md`, `docs/VAULT_SCHEMA.md`, and `docs/e2e_semantic_diagnosis_rules.md` for the active TextifAI bootstrap rail.
+- Use `WORKFLOW.md` and `PIPELINE.md` for the legacy AutoNovel writing pipeline.
 
 ---
 
-This document aims to prevent mistakes by explicitly stating commands, API key needs, repo layout, and operational quirks unique to autonovel.
+This document aims to prevent mistakes by explicitly stating commands, API key needs, repo layout, and operational quirks unique to TextifAI.
