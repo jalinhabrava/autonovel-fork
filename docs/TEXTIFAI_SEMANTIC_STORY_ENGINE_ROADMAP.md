@@ -674,6 +674,48 @@ This matters because the same semantic model should support:
 
 ## 11. Roadmap By Phase
 
+### Tactical Pause — Internal Run/Vault Viewer
+
+Status: `in progress`
+
+TextifAI is temporarily pausing the strict phase order to build an internal local web viewer for runs and vaults.
+
+This does not replace the roadmap. It accelerates Phase 1 by reducing the cost of inspecting bootstrap, VaERL, review queue, graph, Markdown notes, and E2E artifacts across many runs.
+
+Why now:
+
+- reviewing results through folders, JSON files, multiple vaults, and Obsidian instances is slowing core engine iteration
+- VaERL quality decisions need faster visual inspection
+- run-to-run regressions need a shared observation surface
+- the same components can later become part of the product web interface
+
+Scope:
+
+- list local runs/vaults as inspectable projects
+- browse Markdown notes and frontmatter
+- inspect primaries, review entities, chapters, summaries, review queue, and artifacts
+- render a graph with filters for system/review/chapter content
+- stay local, unauthenticated, and dev-internal for now
+
+Out of scope:
+
+- final manuscript editor
+- free author chat
+- multi-user collaboration
+- complex auth/deployment
+- write-back review actions
+
+Mature enough when:
+
+- a developer can open a local server and inspect real runs faster than by manually browsing folders
+- core VaERL regressions can be spotted from the viewer
+- the viewer exposes enough structure to inform future Codex View and Review Queue UI work
+
+Return to main roadmap order when:
+
+- the viewer can list projects, open notes, show graph, inspect artifacts, and expose review queue items reliably for current E2E/replay runs
+- remaining viewer work is mostly polish or productization rather than blocking core engine iteration
+
 ### Phase 1 — Stabilize VaERL Core
 
 Status: `in progress`
@@ -704,6 +746,7 @@ Outputs:
 - replayable entity resolution and cleanup
 - configurable Phase 1 quality gates for unlinked primary mentions, orphan primaries, unresolved relationship targets, and weak canonical naming
 - author-actionable review queue (`review_queue.json`) for unresolved targets, pending review entities, collisions, and weak canonicals
+- internal run/vault viewer for faster QA and regression inspection
 
 Risks:
 
@@ -736,6 +779,7 @@ Signals mature enough to move on:
 - authors can inspect the vault and understand the graph
 - `semantic_invariants_audit.json` passes with the agreed Phase 1 thresholds for the current validation corpus
 - pending reviews are classified as useful work items rather than undifferentiated noise
+- developers can inspect runs/vaults through the internal viewer instead of manual folder/JSON browsing
 
 ### Phase 2 — Codex View
 
@@ -1051,6 +1095,7 @@ Signals mature enough to move on:
 
 | Phase | Status | Current Focus | Move-Next Signal |
 | --- | --- | --- | --- |
+| Tactical Pause — Internal Run/Vault Viewer | `in progress` | local project/run inspection | viewer makes run review faster than manual folders/Obsidian |
 | Phase 1 — Stabilize VaERL Core | `in progress` | replay, invariants, auxiliary docs, primary quality | stable larger runs and useful review queue |
 | Phase 2 — Codex View | `in progress` | readable primary notes and inspectable vault | author can correct obvious entity issues |
 | Phase 3 — Story Bible View | `not started` | not active | Codex and synthesis layer stable |
@@ -1063,6 +1108,7 @@ Signals mature enough to move on:
 
 ### 13.1 Immediate TODO
 
+- Build internal local run/vault viewer for faster VaERL/bootstrap QA.
 - Validate the expanded semantic invariant suite against frozen good upstream.
 - Tune explicit Phase 1 quality thresholds without overfitting to one novel.
 - Keep improving stable canonical naming.

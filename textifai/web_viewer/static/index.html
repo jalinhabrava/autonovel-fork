@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TextifAI Run Viewer</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <span class="brand-mark">T</span>
+          <div>
+            <h1>TextifAI Viewer</h1>
+            <p>Internal run/vault inspection</p>
+          </div>
+        </div>
+        <div class="toolbar">
+          <button id="refresh-projects">Refresh</button>
+        </div>
+        <div id="project-list" class="project-list"></div>
+      </aside>
+
+      <main class="main">
+        <header class="project-header">
+          <div>
+            <p class="eyebrow">Current Project</p>
+            <h2 id="project-title">Select a run or vault</h2>
+            <p id="project-meta" class="muted">Runs from configured roots will appear on the left.</p>
+          </div>
+          <nav class="tabs">
+            <button data-view="overview" class="active">Overview</button>
+            <button data-view="notes">Notes</button>
+            <button data-view="canon">Canon</button>
+            <button data-view="review">Review Queue</button>
+            <button data-view="graph">Graph</button>
+            <button data-view="artifacts">Artifacts</button>
+          </nav>
+        </header>
+
+        <section id="view-overview" class="view active"></section>
+        <section id="view-notes" class="view split-view">
+          <div class="panel">
+            <h3>Vault / Files</h3>
+            <input id="note-filter" class="search" placeholder="Filter notes..." />
+            <div id="note-list" class="list"></div>
+          </div>
+          <div class="panel detail">
+            <div id="note-detail" class="note-detail muted">Select a Markdown note.</div>
+          </div>
+        </section>
+        <section id="view-canon" class="view"></section>
+        <section id="view-review" class="view"></section>
+        <section id="view-graph" class="view">
+          <div class="graph-toolbar">
+            <label><input type="checkbox" id="hide-system" checked /> hide system</label>
+            <label><input type="checkbox" id="hide-review" /> hide review</label>
+            <label><input type="checkbox" id="hide-chapters" checked /> hide chapters</label>
+            <select id="graph-kind-filter">
+              <option value="">all kinds</option>
+            </select>
+          </div>
+          <div class="graph-layout">
+            <svg id="graph-svg" viewBox="0 0 1200 720"></svg>
+            <div id="graph-detail" class="panel graph-detail muted">Click a node to inspect it.</div>
+          </div>
+        </section>
+        <section id="view-artifacts" class="view split-view">
+          <div class="panel">
+            <h3>System Artifacts</h3>
+            <div id="artifact-list" class="list"></div>
+          </div>
+          <div class="panel detail">
+            <pre id="artifact-detail" class="artifact-detail muted">Select an artifact.</pre>
+          </div>
+        </section>
+      </main>
+    </div>
+    <script src="/app.js"></script>
+  </body>
+</html>

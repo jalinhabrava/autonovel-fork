@@ -29,6 +29,7 @@ from textifai.runtime_config import load_runtime_environment, synchronize_runtim
 from textifai.session import create_session
 from textifai.vaerl.invariants import write_semantic_invariants_audit
 from textifai.vaerl.index import build_vault_index
+from textifai.web_viewer.server import run_viewer_server
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -82,6 +83,15 @@ def build_parser() -> argparse.ArgumentParser:
     review_queue_parser.add_argument("--severity", default=None, help="Filter by severity: high, medium, or low.")
     review_queue_parser.add_argument("--limit", type=int, default=20, help="Maximum number of items to print in text mode.")
     review_queue_parser.add_argument("--json", action="store_true", help="Emit filtered review queue JSON.")
+
+    viewer_parser = subparsers.add_parser(
+        "viewer",
+        help="Run the local TextifAI internal web viewer for runs/vaults.",
+    )
+    viewer_parser.add_argument("--root", action="append", default=[], help="Runs/vaults root to inspect. Can be repeated.")
+    viewer_parser.add_argument("--host", default="127.0.0.1")
+    viewer_parser.add_argument("--port", type=int, default=8765)
+    viewer_parser.add_argument("--open", action="store_true", help="Open the browser after startup.")
 
     replay_parser = subparsers.add_parser(
         "replay-semantic",
@@ -150,6 +160,7 @@ def run_cli(*, argv: list[str] | None = None, repo_root: str | Path) -> int:
         "inspect",
         "validate-vaerl",
         "review-queue",
+        "viewer",
         "replay-semantic",
         "replay-downstream",
         "ask",
@@ -244,6 +255,15 @@ def run_cli(*, argv: list[str] | None = None, repo_root: str | Path) -> int:
             print(json.dumps(filtered, indent=2, ensure_ascii=False))
         else:
             _print_review_queue_summary(filtered, limit=args.limit)
+        return 0
+
+    if command == "viewer":
+        run_viewer_server(
+            roots=args.root or ["runs", "outputs", "vaults"],
+            host=args.host,
+            port=args.port,
+            open_browser=args.open,
+        )
         return 0
 
     if command in {"replay-semantic", "replay-downstream"}:

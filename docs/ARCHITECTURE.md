@@ -19,6 +19,7 @@ uv run python scripts/textifai.py start
 uv run python scripts/textifai.py init --vault-root <vault> --source-root <source>
 uv run python scripts/textifai.py replay-downstream --input-system <run>/99_System --output-root <new-run>
 uv run python scripts/textifai.py validate-vaerl --system-root <run>/99_System
+uv run python scripts/textifai.py viewer --root runs/semantic_ingestion_e2e
 ```
 
 Compatibility entrypoint:
@@ -415,3 +416,34 @@ Use replay when iterating on VaERL quality without paying for novel extraction a
 ## 15. Historical Notes
 
 The repository still includes legacy AutoNovel files. They should be treated as historical or reusable material, not as the active TextifAI orchestration path.
+
+## 16. Internal Run/Vault Viewer
+
+The internal viewer is a local QA/development tool, not the final product web app.
+
+Entry point:
+
+```bash
+uv run python scripts/textifai.py viewer --root runs/semantic_ingestion_e2e
+```
+
+Implementation:
+
+- backend: `textifai/web_viewer/server.py`
+- project/run reader: `textifai/web_viewer/project_reader.py`
+- frontend: `textifai/web_viewer/static/`
+
+Current capabilities:
+
+- list local runs/vaults that contain `99_System/obsidian_import.json` or `review_queue.json`
+- inspect Markdown notes and frontmatter
+- inspect primaries, review entities, chapters, summaries, and review queue
+- inspect key `99_System` JSON artifacts
+- render a lightweight graph from VaERL entities, relationships, unresolved targets, and chapters
+- filter graph visibility for review/chapter/system-style content
+
+Design intent:
+
+- keep the tool useful for internal QA immediately
+- keep the components aligned with future Codex View, Review Queue, and product web surfaces
+- avoid auth, chat, collaborative editing, or manuscript editing for now
