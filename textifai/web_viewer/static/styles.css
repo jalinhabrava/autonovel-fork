@@ -186,6 +186,16 @@ button:hover, button.active {
 .markdown code, pre {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
+.wikilink {
+  color: var(--accent);
+  font-weight: 700;
+  text-decoration: none;
+  border-bottom: 1px dotted var(--accent);
+}
+.wikilink:hover {
+  color: var(--accent-2);
+  border-bottom-color: var(--accent-2);
+}
 .markdown pre, .artifact-detail {
   white-space: pre-wrap;
   background: #211f1a;
@@ -241,6 +251,20 @@ button:hover, button.active {
 .node { cursor: pointer; }
 .node circle { stroke: white; stroke-width: 2; }
 .node text { font-size: 12px; paint-order: stroke; stroke: #fffaf0; stroke-width: 4px; fill: var(--ink); }
+.node.selected circle {
+  stroke: #211f1a;
+  stroke-width: 4;
+  filter: drop-shadow(0 0 8px rgba(29, 111, 104, 0.42));
+}
+.graph-detail {
+  max-height: 68vh;
+  overflow: auto;
+}
+.graph-detail hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 14px 0;
+}
 
 @media (max-width: 900px) {
   .app-shell, .split-view.active, .graph-layout {

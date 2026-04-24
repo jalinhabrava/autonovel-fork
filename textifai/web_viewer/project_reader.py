@@ -337,12 +337,15 @@ def _note_role(path: Path, frontmatter: dict[str, Any]) -> str:
 
 
 def _guess_note_path(root: Path, entity: dict[str, Any]) -> str | None:
-    slug = str(entity.get("preferred_slug") or "").strip()
-    if not slug:
-        return None
-    matches = list(root.rglob(f"{slug}.md"))
-    if matches:
-        return matches[0].relative_to(root).as_posix()
+    candidates = [
+        str(entity.get("preferred_slug") or "").strip(),
+        slugify(str(entity.get("canonical_name") or "")),
+    ]
+    candidates.extend(slugify(str(alias or "")) for alias in entity.get("aliases") or [])
+    for slug in [item for item in candidates if item]:
+        matches = list(root.rglob(f"{slug}.md"))
+        if matches:
+            return matches[0].relative_to(root).as_posix()
     return None
 
 

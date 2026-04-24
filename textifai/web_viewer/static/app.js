@@ -3,6 +3,8 @@ const state = {
   current: null,
   currentId: null,
   activeView: "overview",
+  selectedGraphNodeId: null,
+  graphAnimation: null,
 };
 
 const $ = (id) => document.getElementById(id);
@@ -14,11 +16,11 @@ async function api(path) {
 }
 
 function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
+  return String(value === null || value === undefined ? "" : value)
+    .split("&").join("&amp;")
+    .split("<").join("&lt;")
+    .split(">").join("&gt;")
+    .split('"').join("&quot;");
 }
 
 function fmtCount(value) {
@@ -47,6 +49,8 @@ function renderProjects() {
 async function selectProject(projectId) {
   state.currentId = projectId;
   state.current = await api(`/api/projects/${encodeURIComponent(projectId)}`);
+  state.selectedGraphNodeId = null;
+  $("graph-kind-filter").dataset.ready = "";
   renderProjects();
   renderCurrentProject();
 }
@@ -120,6 +124,9 @@ async function openNote(path) {
     <details open><summary>Frontmatter</summary><pre class="frontmatter">${escapeHtml(JSON.stringify(data.frontmatter || {}, null, 2))}</pre></details>
     <article class="markdown">${renderMarkdown(data.markdown || "")}</article>
   `;
+  attachWikiLinkHandlers($("note-detail"));
+  selectGraphNodeByNotePath(path, { render: false });
+  highlightNote(path);
 }
 
 function renderMarkdown(markdown) {
@@ -146,7 +153,94 @@ function renderMarkdown(markdown) {
 }
 
 function linkify(text) {
-  return text.replace(/\[\[([^\]]+)\]\]/g, "<strong>[[$1]]</strong>");
+  return text.replace(/\[\[([^\]]+)\]\]/g, (_match, target) => {
+    const safeTarget = escapeHtml(target);
+    return `<a href="#" class="wikilink" data-wikilink="${safeTarget}">[[${safeTarget}]]</a>`;
+  });
+}
+
+function attachWikiLinkHandlers(root) {
+  root.querySelectorAll("[data-wikilink]").forEach((node) => {
+    node.addEventListener("click", (event) => {
+      event.preventDefault();
+      navigateWikiLink(node.dataset.wikilink || "");
+    });
+  });
+}
+
+function navigateWikiLink(target) {
+  const resolved = resolveWikiLink(target);
+  if (!resolved) return;
+  if (resolved.nodeId) {
+    state.selectedGraphNodeId = resolved.nodeId;
+  }
+  if (resolved.notePath) {
+    if (state.activeView === "graph") {
+      openGraphNote(resolved.notePath, resolved.nodeId);
+    } else {
+      openNote(resolved.notePath);
+    }
+  } else if (resolved.nodeId) {
+    setView("graph");
+    renderGraph();
+  }
+}
+
+function resolveWikiLink(rawTarget) {
+  const target = rawTarget.split("|")[0].split("#")[0].trim();
+  const key = normalizeKey(target);
+  const graph = state.current && state.current.graph ? state.current.graph : { nodes: [] };
+  const notes = state.current && state.current.notes ? state.current.notes : [];
+  const node = graph.nodes.find((item) =>
+    normalizeKey(item.label) === key ||
+    normalizeKey(item.id.split(":").slice(1).join(":")) === key ||
+    normalizeKey(item.note_path || "") === key ||
+    normalizeKey(lastPathPartWithoutMd(item.note_path || "")) === key
+  );
+  const note = notes.find((item) =>
+    normalizeKey(item.name) === key ||
+    normalizeKey(item.path) === key ||
+    normalizeKey(lastPathPartWithoutMd(item.path)) === key
+  );
+  if (!node && !note) return null;
+  return {
+    nodeId: (node && node.id) || findNodeIdByNotePath(note && note.path),
+    notePath: (node && node.note_path) || (note && note.path) || null,
+  };
+}
+
+function normalizeKey(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\.md$/, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+function findNodeIdByNotePath(path) {
+  if (!path) return null;
+  const key = normalizeKey(path);
+  const graph = state.current && state.current.graph ? state.current.graph : { nodes: [] };
+  const node = (graph.nodes || []).find((item) => normalizeKey(item.note_path || "") === key);
+  return node ? node.id : null;
+}
+
+function lastPathPartWithoutMd(value) {
+  const last = String(value || "").split("/").pop() || "";
+  return last.replace(/\.md$/, "");
+}
+
+function selectGraphNodeByNotePath(path, { render = true } = {}) {
+  const nodeId = findNodeIdByNotePath(path);
+  if (!nodeId) return;
+  state.selectedGraphNodeId = nodeId;
+  if (render && state.activeView === "graph") renderGraph();
+}
+
+function highlightNote(path) {
+  document.querySelectorAll("[data-note]").forEach((node) => node.classList.toggle("active", node.dataset.note === path));
 }
 
 function renderCanon() {
@@ -228,6 +322,10 @@ async function openArtifact(path) {
 
 function renderGraph() {
   if (!state.current) return;
+  if (state.graphAnimation) {
+    cancelAnimationFrame(state.graphAnimation);
+    state.graphAnimation = null;
+  }
   const graph = state.current.graph || { nodes: [], edges: [] };
   const hideSystem = $("hide-system").checked;
   const hideReview = $("hide-review").checked;
@@ -248,49 +346,159 @@ function renderGraph() {
   });
   const visibleIds = new Set(visibleNodes.map((node) => node.id));
   const visibleEdges = graph.edges.filter((edge) => visibleIds.has(edge.source) && visibleIds.has(edge.target));
-  drawGraph(visibleNodes, visibleEdges);
+  drawForceGraph(visibleNodes, visibleEdges);
 }
 
-function drawGraph(nodes, edges) {
+function drawForceGraph(nodes, edges) {
   const svg = $("graph-svg");
   const width = 1200;
   const height = 720;
-  const byId = Object.fromEntries(nodes.map((node, index) => {
-    const angle = (index / Math.max(nodes.length, 1)) * Math.PI * 2;
-    const radius = 230 + (index % 5) * 24;
-    return [node.id, { ...node, x: width / 2 + Math.cos(angle) * radius, y: height / 2 + Math.sin(angle) * radius }];
-  }));
+  const byId = seedGraphPositions(nodes, width, height);
   svg.innerHTML = `
-    ${edges.map((edge) => {
-      const a = byId[edge.source], b = byId[edge.target];
-      if (!a || !b) return "";
-      return `<line class="edge" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"><title>${escapeHtml(edge.type)}</title></line>`;
-    }).join("")}
+    <g class="edges"></g>
+    <g class="nodes">
     ${Object.values(byId).map((node) => `
-      <g class="node" data-node="${escapeHtml(node.id)}" transform="translate(${node.x}, ${node.y})">
+      <g class="node ${node.id === state.selectedGraphNodeId ? "selected" : ""}" data-node="${escapeHtml(node.id)}" transform="translate(${node.x}, ${node.y})">
         <circle r="${node.role === "primary" ? 11 : 8}" fill="${nodeColor(node)}"></circle>
         <text x="14" y="4">${escapeHtml(node.label)}</text>
       </g>
     `).join("")}
+    </g>
   `;
+  const edgeLayer = svg.querySelector(".edges");
+  edgeLayer.innerHTML = edges.map((edge, index) => `<line class="edge" data-edge="${index}"><title>${escapeHtml(edge.type)}</title></line>`).join("");
+
   svg.querySelectorAll("[data-node]").forEach((nodeEl) => {
     nodeEl.addEventListener("click", () => {
       const node = byId[nodeEl.dataset.node];
-      $("graph-detail").innerHTML = `
-        <h3>${escapeHtml(node.label)}</h3>
-        <p><span class="badge">${escapeHtml(node.kind)}</span> <span class="badge">${escapeHtml(node.role)}</span></p>
-        <p class="muted">${escapeHtml(node.id)}</p>
-        ${node.note_path ? `<button id="open-node-note">Open note</button>` : ""}
-      `;
-      const button = $("open-node-note");
-      if (button) {
-        button.onclick = () => {
-          setView("notes");
-          openNote(node.note_path);
-        };
-      }
+      selectGraphNode(node.id);
     });
   });
+
+  let tick = 0;
+  const step = () => {
+    runForceTick(byId, edges, width, height, tick);
+    updateGraphDom(svg, byId, edges);
+    tick += 1;
+    if (tick < 180) state.graphAnimation = requestAnimationFrame(step);
+  };
+  step();
+  if (state.selectedGraphNodeId && byId[state.selectedGraphNodeId]) {
+    renderGraphNodeDetail(byId[state.selectedGraphNodeId]);
+  }
+}
+
+function seedGraphPositions(nodes, width, height) {
+  return Object.fromEntries(nodes.map((node, index) => {
+    const previous = node._position || {};
+    const angle = (index / Math.max(nodes.length, 1)) * Math.PI * 2;
+    const radius = 180 + (index % 7) * 28;
+    return [node.id, {
+      ...node,
+      x: previous.x === undefined ? width / 2 + Math.cos(angle) * radius : previous.x,
+      y: previous.y === undefined ? height / 2 + Math.sin(angle) * radius : previous.y,
+      vx: previous.vx === undefined ? 0 : previous.vx,
+      vy: previous.vy === undefined ? 0 : previous.vy,
+    }];
+  }));
+}
+
+function runForceTick(byId, edges, width, height, tick) {
+  const nodes = Object.values(byId);
+  const cooling = Math.max(0.12, 1 - tick / 190);
+  for (let i = 0; i < nodes.length; i += 1) {
+    for (let j = i + 1; j < nodes.length; j += 1) {
+      const a = nodes[i], b = nodes[j];
+      const dx = a.x - b.x || 0.01;
+      const dy = a.y - b.y || 0.01;
+      const dist2 = dx * dx + dy * dy;
+      const force = Math.min(4500 / dist2, 2.4) * cooling;
+      a.vx += dx * force * 0.012;
+      a.vy += dy * force * 0.012;
+      b.vx -= dx * force * 0.012;
+      b.vy -= dy * force * 0.012;
+    }
+  }
+  for (const edge of edges) {
+    const a = byId[edge.source], b = byId[edge.target];
+    if (!a || !b) continue;
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+    const desired = 120;
+    const force = (dist - desired) * 0.006 * cooling;
+    const fx = (dx / dist) * force;
+    const fy = (dy / dist) * force;
+    a.vx += fx;
+    a.vy += fy;
+    b.vx -= fx;
+    b.vy -= fy;
+  }
+  for (const node of nodes) {
+    node.vx += (width / 2 - node.x) * 0.0008 * cooling;
+    node.vy += (height / 2 - node.y) * 0.0008 * cooling;
+    node.vx *= 0.86;
+    node.vy *= 0.86;
+    node.x = Math.max(30, Math.min(width - 180, node.x + node.vx));
+    node.y = Math.max(30, Math.min(height - 30, node.y + node.vy));
+  }
+}
+
+function updateGraphDom(svg, byId, edges) {
+  svg.querySelectorAll("[data-edge]").forEach((line) => {
+    const edge = edges[Number(line.dataset.edge)];
+    const a = byId[edge.source], b = byId[edge.target];
+    if (!a || !b) return;
+    line.setAttribute("x1", a.x);
+    line.setAttribute("y1", a.y);
+    line.setAttribute("x2", b.x);
+    line.setAttribute("y2", b.y);
+  });
+  svg.querySelectorAll("[data-node]").forEach((nodeEl) => {
+    const node = byId[nodeEl.dataset.node];
+    if (!node) return;
+    nodeEl.setAttribute("transform", `translate(${node.x}, ${node.y})`);
+    nodeEl.classList.toggle("selected", node.id === state.selectedGraphNodeId);
+  });
+}
+
+function selectGraphNode(nodeId) {
+  state.selectedGraphNodeId = nodeId;
+  const graph = state.current && state.current.graph ? state.current.graph : { nodes: [] };
+  const node = (graph.nodes || []).find((item) => item.id === nodeId);
+  if (!node) return;
+  renderGraphNodeDetail(node);
+  document.querySelectorAll("[data-node]").forEach((nodeEl) => nodeEl.classList.toggle("selected", nodeEl.dataset.node === nodeId));
+}
+
+async function renderGraphNodeDetail(node) {
+  if (node.note_path) {
+    await openGraphNote(node.note_path, node.id);
+    return;
+  }
+  $("graph-detail").innerHTML = graphNodeSummary(node);
+}
+
+async function openGraphNote(path, nodeId = null) {
+  if (nodeId) state.selectedGraphNodeId = nodeId;
+  const data = await api(`/api/projects/${encodeURIComponent(state.currentId)}/note?path=${encodeURIComponent(path)}`);
+  $("graph-detail").innerHTML = `
+    ${graphNodeSummary((state.current.graph.nodes || []).find((item) => item.id === state.selectedGraphNodeId) || {})}
+    <hr />
+    <h3>${escapeHtml(data.path)}</h3>
+    <details><summary>Frontmatter</summary><pre class="frontmatter">${escapeHtml(JSON.stringify(data.frontmatter || {}, null, 2))}</pre></details>
+    <article class="markdown">${renderMarkdown(data.markdown || "")}</article>
+  `;
+  attachWikiLinkHandlers($("graph-detail"));
+}
+
+function graphNodeSummary(node) {
+  return `
+    <h3>${escapeHtml(node.label || "Unresolved")}</h3>
+    <p><span class="badge">${escapeHtml(node.kind || "unknown")}</span> <span class="badge">${escapeHtml(node.role || "unknown")}</span></p>
+    <p class="muted">${escapeHtml(node.id || "")}</p>
+    ${node.note_path ? `<p class="muted">${escapeHtml(node.note_path)}</p>` : `<p class="muted">No materialized note for this node.</p>`}
+  `;
 }
 
 function nodeColor(node) {
