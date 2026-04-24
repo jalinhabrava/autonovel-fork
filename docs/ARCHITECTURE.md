@@ -229,6 +229,7 @@ Artifacts:
 - `promotion_decisions_audit.json`
 - `pre_vaerl_reconciliation_audit.json`
 - `primary_note_synthesis_audit.json`
+- `obsidian_relationship_reconciliation_audit.json`
 - `gender_signal_audit.json`
 - `semantic_context_probe_audit.json`
 - `semantic_context_probe_trace.jsonl`
@@ -332,6 +333,7 @@ Current checks:
 - primary summaries/facts that mention another primary without a graph relationship are surfaced as `unlinked_primary_mentions`
 - primary entities with no facts, refs, or relationships are surfaced as `suspicious_orphan_primaries`
 - descriptor/pronoun canonicals are surfaced when a stronger specific alias is available
+- `obsidian_relationship_reconciliation_audit.json` records late links added after chapter-derived relationship enrichment
 - semantic prose respects work language
 - required Phase 1 artifacts exist
 - auxiliary extraction has no errors

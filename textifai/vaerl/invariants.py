@@ -435,6 +435,7 @@ def _required_artifact_check(system: Path) -> dict[str, Any]:
         "chapter_extraction_audit.json",
         "run_comparability_manifest.json",
         "run_limits_audit.json",
+        "obsidian_relationship_reconciliation_audit.json",
     ]
     missing = [name for name in required if not (system / name).exists()]
     return _check("required_phase1_artifacts_exist", "pass" if not missing else "fail", {"missing": missing})

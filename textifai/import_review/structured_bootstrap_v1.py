@@ -28,7 +28,7 @@ from textifai.import_review.entity_cluster_resolution import (
     normalize_entity_text,
     resolve_entity_clusters,
 )
-from textifai.import_review.entity_reconciliation import reconcile_entities_for_vaerl
+from textifai.import_review.entity_reconciliation import reconcile_entities_for_vaerl, reconcile_primary_relationship_mentions
 from textifai.import_review.auxiliary_ingestion import AuxiliaryDocumentInput, ingest_auxiliary_documents
 from textifai.import_review.empirical_ranker import EmpiricalPolicy, append_empirical_record, make_empirical_record
 from textifai.import_review.model_advisor import maybe_advise_model_plan
@@ -1395,6 +1395,14 @@ def run_structured_bootstrap_v1(
         global_data={**global_payload, "entities": cleaned_entities},
         chapter_outputs=[item["chapters"][0] for item in chapter_outputs if item.get("chapters")],
     )
+    obsidian_import["entities"], obsidian_relationship_reconciliation_audit = reconcile_primary_relationship_mentions(
+        entities=obsidian_import.get("entities", []) or []
+    )
+    obsidian_relationship_reconciliation_audit_path = system_root / "obsidian_relationship_reconciliation_audit.json"
+    obsidian_relationship_reconciliation_audit_path.write_text(
+        json.dumps(_with_run_status(obsidian_relationship_reconciliation_audit, run_status), ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
     obsidian_language_errors, obsidian_language_warnings = _validate_downstream_entity_explanations_language(
         entities=obsidian_import.get("entities", []) or [],
         language=language,
@@ -1673,6 +1681,14 @@ def run_semantic_ingestion_replay(
     obsidian_import = assemble_obsidian_import(
         global_data={**global_payload, "entities": cleaned_entities},
         chapter_outputs=chapter_outputs,
+    )
+    obsidian_import["entities"], obsidian_relationship_reconciliation_audit = reconcile_primary_relationship_mentions(
+        entities=obsidian_import.get("entities", []) or []
+    )
+    obsidian_relationship_reconciliation_audit_path = system_root / "obsidian_relationship_reconciliation_audit.json"
+    obsidian_relationship_reconciliation_audit_path.write_text(
+        json.dumps(_with_run_status(obsidian_relationship_reconciliation_audit, run_status), ensure_ascii=False, indent=2),
+        encoding="utf-8",
     )
     obsidian_language_errors, obsidian_language_warnings = _validate_downstream_entity_explanations_language(
         entities=obsidian_import.get("entities", []) or [],

@@ -112,6 +112,46 @@ def reconcile_entities_for_vaerl(
     return reconciled, audit
 
 
+def reconcile_primary_relationship_mentions(
+    *,
+    entities: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Add missing primary links after late relationship enrichment.
+
+    Assembly can add chapter-derived relationship facts after the main cleanup
+    pass. This deterministic post-pass does not merge entities; it only
+    canonicalizes relationship targets and adds conservative `related_to`
+    links when a fact explicitly mentions another materialized primary.
+    """
+
+    reconciled = [_clone_entity(entity) for entity in entities]
+    primaries = [entity for entity in reconciled if _is_primary(entity)]
+    profiles = {id(primary): _identity_profile(primary) for primary in primaries}
+    relationship_rewrites: list[dict[str, Any]] = []
+    fact_relationships_added: list[dict[str, Any]] = []
+    for entity in reconciled:
+        relationship_rewrites.extend(_canonicalize_relationship_targets(entity, primaries, profiles))
+        fact_relationships_added.extend(_add_fact_based_primary_relationships(entity, primaries, profiles))
+    return reconciled, {
+        "schema_version": "textifai.primary_relationship_reconciliation.v1",
+        "input_entity_count": len(entities),
+        "output_entity_count": len(reconciled),
+        "primary_count": len(primaries),
+        "relationship_rewrite_count": len(relationship_rewrites),
+        "fact_relationship_added_count": len(fact_relationships_added),
+        "relationship_rewrites": relationship_rewrites,
+        "fact_relationships_added": fact_relationships_added,
+        "policy": {
+            "entity_merges_allowed": False,
+            "relationship_types_added": ["related_to"],
+            "notes": [
+                "This pass runs after chapter-derived relationship enrichment.",
+                "It only adds links when facts explicitly mention existing primaries.",
+            ],
+        },
+    }
+
+
 def _clone_entity(entity: dict[str, Any]) -> dict[str, Any]:
     return {
         **entity,
@@ -331,56 +371,84 @@ def _add_fact_based_primary_relationships(
     source_key = normalize_entity_key(entity.get("canonical_name") or "")
     added: list[dict[str, Any]] = []
     relationships = list(entity.get("relationships") or [])
-    for fact in entity.get("key_facts") or []:
-        fact_text = normalize_entity_text(fact)
-        target = _resolve_unique_primary_mention_in_text(
-            fact_text,
-            primaries=primaries,
-            primary_profiles=primary_profiles,
-            source_key=source_key,
-        )
+
+    def add_target(*, target: str, fact_text: str, reason: str) -> None:
         target_key = normalize_entity_key(target)
         if not target or target_key in existing_targets:
-            continue
+            return
         relationships.append({"target": target, "type": "related_to", "facts": [fact_text]})
         existing_targets.add(target_key)
         added.append(
             {
                 "source_entity": entity.get("canonical_name") or "",
                 "target": target,
-                "reason": "key_fact_mentions_unique_primary_alias_or_source_mention",
+                "reason": reason,
                 "fact": fact_text,
             }
         )
+
+    for fact in entity.get("key_facts") or []:
+        fact_text = normalize_entity_text(fact)
+        for target in _resolve_primary_mentions_in_text(
+            fact_text,
+            primaries=primaries,
+            primary_profiles=primary_profiles,
+            ignored_keys={source_key},
+        ):
+            add_target(
+                target=target,
+                fact_text=fact_text,
+                reason="key_fact_mentions_primary_alias_or_source_mention",
+            )
+
+    for rel in entity.get("relationships") or []:
+        if not isinstance(rel, dict):
+            continue
+        current_target = normalize_entity_text(rel.get("target") or "")
+        current_target_key = normalize_entity_key(
+            _resolve_primary_target(current_target, primaries, primary_profiles) or current_target
+        )
+        ignored = {source_key, current_target_key}
+        for fact in rel.get("facts") or []:
+            fact_text = normalize_entity_text(fact)
+            for target in _resolve_primary_mentions_in_text(
+                fact_text,
+                primaries=primaries,
+                primary_profiles=primary_profiles,
+                ignored_keys=ignored,
+            ):
+                add_target(
+                    target=target,
+                    fact_text=fact_text,
+                    reason="relationship_fact_mentions_additional_primary_alias_or_source_mention",
+                )
     if added:
         entity["relationships"] = _merge_relationships(relationships)
     return added
 
 
-def _resolve_unique_primary_mention_in_text(
+def _resolve_primary_mentions_in_text(
     text: str,
     *,
     primaries: list[dict[str, Any]],
     primary_profiles: dict[int, dict[str, Any]],
-    source_key: str,
-) -> str:
+    ignored_keys: set[str],
+) -> list[str]:
     text_tokens = {token.strip(".,;:!?()[]{}\"'") for token in normalize_entity_key(text).split()}
     text_tokens = {token for token in text_tokens if token}
     if not text_tokens:
-        return ""
+        return []
     matches: dict[str, str] = {}
     for primary in primaries:
         primary_name = str(primary.get("canonical_name") or "")
         primary_key = normalize_entity_key(primary_name)
-        if not primary_key or primary_key == source_key:
+        if not primary_key or primary_key in ignored_keys:
             continue
         for tokens in primary_profiles[id(primary)]["token_sets"]:
             if tokens and tokens.issubset(text_tokens):
                 matches[primary_key] = primary_name
                 break
-    if len(matches) == 1:
-        return next(iter(matches.values()))
-    return ""
+    return sorted(matches.values(), key=str.casefold)
 
 
 def _merge_review_into_primary(primary: dict[str, Any], review: dict[str, Any], *, evidence: list[dict[str, Any]]) -> None:

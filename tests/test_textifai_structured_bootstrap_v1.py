@@ -19,7 +19,7 @@ from textifai.import_review.auxiliary_ingestion import (
     ingest_auxiliary_documents,
 )
 from textifai.import_review.entity_cluster_resolution import _coalesce_same_kind_entities, resolve_entity_clusters
-from textifai.import_review.entity_reconciliation import reconcile_entities_for_vaerl
+from textifai.import_review.entity_reconciliation import reconcile_entities_for_vaerl, reconcile_primary_relationship_mentions
 from textifai.import_review.primary_note_synthesis import synthesize_primary_note_summaries
 from textifai.import_review.empirical_ranker import EmpiricalPolicy
 from textifai.import_review.model_router import resolve_model_plan
@@ -2333,6 +2333,106 @@ class StructuredBootstrapV1Tests(unittest.TestCase):
         self.assertEqual(place["relationships"][0]["type"], "related_to")
         self.assertEqual(audit["fact_relationship_added_count"], 1)
 
+    def test_pre_vaerl_reconciliation_adds_relationship_from_relationship_fact_secondary_mention(self):
+        entities = [
+            {
+                "canonical_name": "Sera",
+                "entity_kind": "character",
+                "aliases": [],
+                "key_facts": ["Protagonista."],
+                "relationships": [
+                    {
+                        "target": "Beld-san",
+                        "type": "student",
+                        "facts": ["Beld-san explica a Sera el linaje y la importancia del Báculo."],
+                    }
+                ],
+                "chapter_refs": ["ch_001"],
+                "source_mentions": ["Sera"],
+                "review_state": "canonical",
+                "note_role": "primary",
+                "naming_quality": "proper_name",
+            },
+            {
+                "canonical_name": "Beld-san",
+                "entity_kind": "character",
+                "aliases": ["el abuelo"],
+                "key_facts": ["Mentor."],
+                "relationships": [],
+                "chapter_refs": ["ch_001"],
+                "source_mentions": ["Beld-san"],
+                "review_state": "canonical",
+                "note_role": "primary",
+                "naming_quality": "title_plus_name",
+            },
+            {
+                "canonical_name": "Báculo",
+                "entity_kind": "concept",
+                "aliases": [],
+                "key_facts": ["Posición heredada."],
+                "relationships": [],
+                "chapter_refs": ["ch_001"],
+                "source_mentions": ["Báculo"],
+                "review_state": "canonical",
+                "note_role": "primary",
+                "naming_quality": "proper_name",
+            },
+        ]
+
+        reconciled, audit = reconcile_entities_for_vaerl(entities=entities, language="es")
+        sera = next(entity for entity in reconciled if entity["canonical_name"] == "Sera")
+
+        targets = {relationship["target"] for relationship in sera["relationships"]}
+        self.assertIn("Beld-san", targets)
+        self.assertIn("Báculo", targets)
+        self.assertEqual(audit["fact_relationship_added_count"], 1)
+        self.assertEqual(audit["fact_relationships_added"][0]["reason"], "relationship_fact_mentions_additional_primary_alias_or_source_mention")
+
+    def test_post_assembly_relationship_reconciliation_adds_late_chapter_relation_mentions(self):
+        entities = [
+            {
+                "canonical_name": "Sera",
+                "entity_kind": "character",
+                "aliases": [],
+                "key_facts": ["Protagonista."],
+                "relationships": [
+                    {
+                        "target": "Beld-san",
+                        "type": "authority",
+                        "facts": ["Beld-san explica a Sera el linaje y la importancia del Báculo."],
+                    }
+                ],
+                "review_state": "canonical",
+                "note_role": "primary",
+            },
+            {
+                "canonical_name": "Beld-san",
+                "entity_kind": "character",
+                "aliases": ["el abuelo"],
+                "key_facts": ["Mentor."],
+                "relationships": [],
+                "review_state": "canonical",
+                "note_role": "primary",
+            },
+            {
+                "canonical_name": "Báculo",
+                "entity_kind": "concept",
+                "aliases": [],
+                "key_facts": ["Posición heredada."],
+                "relationships": [],
+                "review_state": "canonical",
+                "note_role": "primary",
+            },
+        ]
+
+        reconciled, audit = reconcile_primary_relationship_mentions(entities=entities)
+        sera = next(entity for entity in reconciled if entity["canonical_name"] == "Sera")
+
+        self.assertEqual(audit["schema_version"], "textifai.primary_relationship_reconciliation.v1")
+        self.assertFalse(audit["policy"]["entity_merges_allowed"])
+        self.assertIn("Báculo", {relationship["target"] for relationship in sera["relationships"]})
+        self.assertEqual(audit["fact_relationship_added_count"], 1)
+
     def test_primary_note_synthesis_mentions_protagonist_role_and_reconciled_facts(self):
         synthesized, audit = synthesize_primary_note_summaries(
             entities=[
@@ -2539,6 +2639,7 @@ class StructuredBootstrapV1Tests(unittest.TestCase):
                 "chapter_extraction_audit.json",
                 "run_comparability_manifest.json",
                 "run_limits_audit.json",
+                "obsidian_relationship_reconciliation_audit.json",
             ]:
                 (system_root / name).write_text("{}", encoding="utf-8")
             (system_root / "obsidian_import.json").write_text(json.dumps(payload), encoding="utf-8")
@@ -2630,6 +2731,7 @@ class StructuredBootstrapV1Tests(unittest.TestCase):
                 "chapter_extraction_audit.json",
                 "run_comparability_manifest.json",
                 "run_limits_audit.json",
+                "obsidian_relationship_reconciliation_audit.json",
             ]:
                 (system_root / name).write_text("{}", encoding="utf-8")
             (system_root / "chapter_outputs").mkdir()
