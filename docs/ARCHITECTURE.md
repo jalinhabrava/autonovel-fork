@@ -310,7 +310,8 @@ uv run python scripts/textifai.py validate-vaerl \
   --system-root <run>/99_System \
   --vault-root <materialized-vault> \
   --required-primary Ren \
-  --required-primary Sera
+  --required-primary Sera \
+  --max-unlinked-primary-mentions 0
 ```
 
 Artifact:
@@ -327,6 +328,10 @@ Current checks:
 - cross-kind same-name collisions are surfaced as `ontological_name_collisions`
 - exact duplicate canonicals are rejected
 - near-duplicates are warnings
+- relationship targets should resolve to a primary through canonical name, slug, alias, or source mention
+- primary summaries/facts that mention another primary without a graph relationship are surfaced as `unlinked_primary_mentions`
+- primary entities with no facts, refs, or relationships are surfaced as `suspicious_orphan_primaries`
+- descriptor/pronoun canonicals are surfaced when a stronger specific alias is available
 - semantic prose respects work language
 - required Phase 1 artifacts exist
 - auxiliary extraction has no errors
@@ -397,4 +402,3 @@ Use replay when iterating on VaERL quality without paying for novel extraction a
 ## 15. Historical Notes
 
 The repository still includes legacy AutoNovel files. They should be treated as historical or reusable material, not as the active TextifAI orchestration path.
-

@@ -67,6 +67,8 @@ def build_parser() -> argparse.ArgumentParser:
     invariants_parser.add_argument("--min-primary-count", type=int, default=None)
     invariants_parser.add_argument("--max-primary-count", type=int, default=None)
     invariants_parser.add_argument("--max-review-count", type=int, default=None)
+    invariants_parser.add_argument("--max-unlinked-primary-mentions", type=int, default=None)
+    invariants_parser.add_argument("--max-suspicious-orphan-primaries", type=int, default=None)
     invariants_parser.add_argument("--language-validator", default="heuristic")
     invariants_parser.add_argument("--output", default=None, help="Where to write the audit. Defaults to <system-root>/semantic_invariants_audit.json.")
 
@@ -215,6 +217,8 @@ def run_cli(*, argv: list[str] | None = None, repo_root: str | Path) -> int:
             min_primary_count=args.min_primary_count,
             max_primary_count=args.max_primary_count,
             max_review_count=args.max_review_count,
+            max_unlinked_primary_mentions=args.max_unlinked_primary_mentions,
+            max_suspicious_orphan_primaries=args.max_suspicious_orphan_primaries,
             language_validator=args.language_validator,
         )
         print(json.dumps(audit, indent=2, ensure_ascii=False))

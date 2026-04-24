@@ -702,6 +702,7 @@ Outputs:
 - run comparability manifest
 - semantic invariant suite (`semantic_invariants_audit.json`)
 - replayable entity resolution and cleanup
+- configurable Phase 1 quality gates for unlinked primary mentions, orphan primaries, unresolved relationship targets, and weak canonical naming
 
 Risks:
 
@@ -713,7 +714,7 @@ Risks:
 
 Blockers:
 
-- semantic invariant suite exists, but current gates still expose unresolved VaERL issues
+- semantic invariant suite exists, but current gates still need repeated replay validation on frozen upstream and larger runs
 - lack of evidence spans
 - incomplete author correction loop
 
@@ -732,6 +733,7 @@ Signals mature enough to move on:
 - comparable replay runs show stable primary counts and identities
 - major merge/review decisions are auditable
 - authors can inspect the vault and understand the graph
+- `semantic_invariants_audit.json` passes with the agreed Phase 1 thresholds for the current validation corpus
 
 ### Phase 2 — Codex View
 
@@ -1059,8 +1061,8 @@ Signals mature enough to move on:
 
 ### 13.1 Immediate TODO
 
-- Expand semantic invariant suite from current Phase 1 gates.
-- Validate downstream replay against frozen good upstream.
+- Validate the expanded semantic invariant suite against frozen good upstream.
+- Tune explicit Phase 1 quality thresholds without overfitting to one novel.
 - Keep improving stable canonical naming.
 - Continue primary note synthesis quality work.
 - Clean up Review Queue noise.

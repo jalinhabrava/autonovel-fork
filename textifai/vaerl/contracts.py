@@ -16,6 +16,7 @@ ENTITY_KIND_CATALOG = (
     "faction",
     "object",
     "creature",
+    "lore",
     "note",
 )
 

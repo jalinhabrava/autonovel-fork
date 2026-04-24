@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any
@@ -20,6 +21,8 @@ def evaluate_semantic_invariants(
     min_primary_count: int | None = None,
     max_primary_count: int | None = None,
     max_review_count: int | None = None,
+    max_unlinked_primary_mentions: int | None = None,
+    max_suspicious_orphan_primaries: int | None = None,
     language_validator: str | None = "heuristic",
 ) -> dict[str, Any]:
     system = Path(system_root) if system_root is not None else None
@@ -46,6 +49,10 @@ def evaluate_semantic_invariants(
     checks.append(_ontological_collision_check(entities=entities))
     checks.append(_duplicate_canonical_check(entities=entities))
     checks.append(_near_duplicate_primary_check(primary_entities))
+    checks.append(_relationship_target_resolution_check(primary_entities))
+    checks.append(_unlinked_primary_mention_check(primary_entities, maximum=max_unlinked_primary_mentions))
+    checks.append(_suspicious_orphan_primary_check(primary_entities, maximum=max_suspicious_orphan_primaries))
+    checks.append(_canonical_name_strength_check(primary_entities))
     checks.append(_language_check(entities=entities, language=work_language, validator_name=language_validator))
     if system is not None:
         checks.append(_required_artifact_check(system))
@@ -68,6 +75,8 @@ def write_semantic_invariants_audit(
     min_primary_count: int | None = None,
     max_primary_count: int | None = None,
     max_review_count: int | None = None,
+    max_unlinked_primary_mentions: int | None = None,
+    max_suspicious_orphan_primaries: int | None = None,
     language_validator: str | None = "heuristic",
 ) -> dict[str, Any]:
     audit = evaluate_semantic_invariants(
@@ -79,6 +88,8 @@ def write_semantic_invariants_audit(
         min_primary_count=min_primary_count,
         max_primary_count=max_primary_count,
         max_review_count=max_review_count,
+        max_unlinked_primary_mentions=max_unlinked_primary_mentions,
+        max_suspicious_orphan_primaries=max_suspicious_orphan_primaries,
         language_validator=language_validator,
     )
     path = Path(output_path)
@@ -256,6 +267,139 @@ def _near_duplicate_primary_check(entities: list[dict[str, Any]]) -> dict[str, A
     return _check("near_duplicate_primary_names", "pass" if not suspicious else "warn", {"suspicious": suspicious[:25]})
 
 
+def _relationship_target_resolution_check(entities: list[dict[str, Any]]) -> dict[str, Any]:
+    index = _primary_reference_index(entities)
+    unresolved: list[dict[str, str]] = []
+    for entity in entities:
+        for rel in entity.get("relationships") or []:
+            if not isinstance(rel, dict):
+                continue
+            target = str(rel.get("target") or "").strip()
+            if not target:
+                continue
+            if _resolve_primary_key(target, index=index):
+                continue
+            unresolved.append(
+                {
+                    "source": str(entity.get("canonical_name") or ""),
+                    "target": target,
+                    "relationship_type": str(rel.get("type") or ""),
+                }
+            )
+    return _check(
+        "relationship_targets_resolve_to_primary",
+        "pass" if not unresolved else "warn",
+        {
+            "unresolved": unresolved[:50],
+            "unresolved_count": len(unresolved),
+            "policy": "relationship targets should resolve through canonical_name, preferred_slug, aliases, or source_mentions of a primary entity",
+        },
+    )
+
+
+def _unlinked_primary_mention_check(entities: list[dict[str, Any]], *, maximum: int | None) -> dict[str, Any]:
+    index = _primary_reference_index(entities)
+    findings: list[dict[str, Any]] = []
+    for entity in entities:
+        source_key = _primary_entity_key(entity)
+        related_keys = _related_primary_keys(entity, index=index)
+        texts = _entity_semantic_texts(entity)
+        for text_item in texts:
+            mentioned = _mentioned_primary_keys(text_item["text"], index=index)
+            for target_key in sorted(mentioned - {source_key} - related_keys):
+                target = index["entities_by_key"].get(target_key, {})
+                findings.append(
+                    {
+                        "source": str(entity.get("canonical_name") or ""),
+                        "mentioned_primary": str(target.get("canonical_name") or target_key),
+                        "field": text_item["field"],
+                        "text": text_item["text"][:240],
+                    }
+                )
+    status = "pass"
+    if findings and maximum is None:
+        status = "warn"
+    elif maximum is not None and len(findings) > maximum:
+        status = "fail"
+    return _check(
+        "unlinked_primary_mentions",
+        status,
+        {
+            "maximum": maximum,
+            "finding_count": len(findings),
+            "findings": findings[:50],
+            "policy": "if a primary fact/summary names another primary, the graph should usually expose a relationship or leave an explicit review signal",
+        },
+    )
+
+
+def _suspicious_orphan_primary_check(entities: list[dict[str, Any]], *, maximum: int | None) -> dict[str, Any]:
+    suspicious: list[dict[str, Any]] = []
+    for entity in entities:
+        relationships = [rel for rel in entity.get("relationships") or [] if isinstance(rel, dict)]
+        facts = _strings(entity.get("key_facts") or [])
+        source_refs = entity.get("source_refs") or []
+        chapter_refs = entity.get("chapter_refs") or []
+        if relationships or facts or source_refs or chapter_refs:
+            continue
+        suspicious.append(
+            {
+                "canonical_name": str(entity.get("canonical_name") or ""),
+                "entity_kind": str(entity.get("entity_kind") or ""),
+                "preferred_slug": str(entity.get("preferred_slug") or ""),
+                "reason": "primary_without_relationships_refs_or_enough_facts",
+            }
+        )
+    status = "pass"
+    if suspicious and maximum is None:
+        status = "warn"
+    elif maximum is not None and len(suspicious) > maximum:
+        status = "fail"
+    return _check(
+        "suspicious_orphan_primaries",
+        status,
+        {
+            "maximum": maximum,
+            "suspicious_count": len(suspicious),
+            "suspicious": suspicious[:50],
+            "policy": "auxiliary-only primaries are allowed, but materialized primaries should carry enough facts, refs, or relationships to be useful",
+        },
+    )
+
+
+def _canonical_name_strength_check(entities: list[dict[str, Any]]) -> dict[str, Any]:
+    findings: list[dict[str, Any]] = []
+    weak_qualities = {"descriptor", "pronoun_like", "unknown"}
+    for entity in entities:
+        naming_quality = str(entity.get("naming_quality") or "").strip().casefold()
+        if naming_quality not in weak_qualities:
+            continue
+        candidates = [
+            str(value).strip()
+            for value in [*(entity.get("aliases") or []), *(entity.get("source_mentions") or [])]
+            if str(value or "").strip()
+        ]
+        stronger = [value for value in candidates if _looks_like_specific_name(value)]
+        if not stronger:
+            continue
+        findings.append(
+            {
+                "canonical_name": str(entity.get("canonical_name") or ""),
+                "entity_kind": str(entity.get("entity_kind") or ""),
+                "naming_quality": naming_quality,
+                "stronger_name_candidates": sorted(set(stronger))[:10],
+            }
+        )
+    return _check(
+        "canonical_name_not_weaker_than_available_alias",
+        "pass" if not findings else "warn",
+        {
+            "findings": findings[:50],
+            "policy": "if a cluster has an explicit specific name, a descriptor/pronoun canonical is suspicious and should be reviewed",
+        },
+    )
+
+
 def _language_check(*, entities: list[dict[str, Any]], language: str, validator_name: str | None) -> dict[str, Any]:
     if not language:
         return _check("semantic_prose_language", "skip", {"reason": "language_missing"})
@@ -372,3 +516,92 @@ def _strings(values: Any) -> list[str]:
 
 def _entity_key(value: Any) -> str:
     return slugify(str(value or "")).replace("_", "")
+
+
+def _primary_entity_key(entity: dict[str, Any]) -> str:
+    return _entity_key(entity.get("preferred_slug") or entity.get("canonical_name") or "")
+
+
+def _primary_reference_index(entities: list[dict[str, Any]]) -> dict[str, Any]:
+    entities_by_key: dict[str, dict[str, Any]] = {}
+    term_to_key: dict[str, str] = {}
+    terms: list[tuple[str, str, str]] = []
+    for entity in entities:
+        primary_key = _primary_entity_key(entity)
+        if not primary_key:
+            continue
+        entities_by_key[primary_key] = entity
+        raw_terms = [
+            entity.get("canonical_name") or "",
+            entity.get("preferred_slug") or "",
+            *(entity.get("aliases") or []),
+            *(entity.get("source_mentions") or []),
+        ]
+        for raw in raw_terms:
+            label = str(raw or "").strip()
+            key = _entity_key(label)
+            if len(key) < 4:
+                continue
+            term_to_key.setdefault(key, primary_key)
+            terms.append((key, primary_key, label))
+    terms.sort(key=lambda item: len(item[0]), reverse=True)
+    return {"entities_by_key": entities_by_key, "term_to_key": term_to_key, "terms": terms}
+
+
+def _resolve_primary_key(value: Any, *, index: dict[str, Any]) -> str:
+    key = _entity_key(value)
+    if not key:
+        return ""
+    entities_by_key: dict[str, dict[str, Any]] = index["entities_by_key"]
+    term_to_key: dict[str, str] = index["term_to_key"]
+    return key if key in entities_by_key else term_to_key.get(key, "")
+
+
+def _related_primary_keys(entity: dict[str, Any], *, index: dict[str, Any]) -> set[str]:
+    related: set[str] = set()
+    for rel in entity.get("relationships") or []:
+        if not isinstance(rel, dict):
+            continue
+        key = _resolve_primary_key(rel.get("target"), index=index)
+        if key:
+            related.add(key)
+    return related
+
+
+def _entity_semantic_texts(entity: dict[str, Any]) -> list[dict[str, str]]:
+    texts: list[dict[str, str]] = []
+    for field in ("summary", "review_reason"):
+        value = str(entity.get(field) or "").strip()
+        if value:
+            texts.append({"field": field, "text": value})
+    for idx, fact in enumerate(_strings(entity.get("key_facts") or [])):
+        texts.append({"field": f"key_facts[{idx}]", "text": fact})
+    for rel_idx, rel in enumerate(entity.get("relationships") or []):
+        if not isinstance(rel, dict):
+            continue
+        for fact_idx, fact in enumerate(_strings(rel.get("facts") or [])):
+            texts.append({"field": f"relationships[{rel_idx}].facts[{fact_idx}]", "text": fact})
+    return texts
+
+
+def _mentioned_primary_keys(text: str, *, index: dict[str, Any]) -> set[str]:
+    normalized_text = _entity_key(text)
+    mentioned: set[str] = set()
+    for term_key, primary_key, _label in index["terms"]:
+        if len(term_key) < 4:
+            continue
+        if term_key in normalized_text:
+            mentioned.add(primary_key)
+    return mentioned
+
+
+def _looks_like_specific_name(value: str) -> bool:
+    cleaned = value.strip()
+    if not cleaned or len(_entity_key(cleaned)) < 4:
+        return False
+    if "_" in cleaned:
+        return False
+    tokens = [token for token in re.split(r"\s+", cleaned) if token]
+    if not tokens or len(tokens) > 5:
+        return False
+    return any(token[:1].isupper() and any(char.islower() for char in token[1:]) for token in tokens)

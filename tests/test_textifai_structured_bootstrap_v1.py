@@ -2680,6 +2680,108 @@ class StructuredBootstrapV1Tests(unittest.TestCase):
         self.assertIn("vault_wikilinks_resolve", failed)
         self.assertIn("vault_no_empty_placeholders", failed)
 
+    def test_semantic_invariants_warn_on_unlinked_primary_mentions_and_unresolved_targets(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            system_root = Path(tmp) / "99_System"
+            system_root.mkdir()
+            payload = {
+                "work": {"title": "Test", "language": "es"},
+                "run_status": {
+                    "semantic_integrity": "complete",
+                    "expected_chapter_count": 0,
+                    "generated_chapter_count": 0,
+                    "failed_chapter_count": 0,
+                },
+                "chapters": [],
+                "entities": [
+                    {
+                        "canonical_name": "Ren",
+                        "preferred_slug": "ren",
+                        "entity_kind": "character",
+                        "review_state": "canonical",
+                        "summary": "Ren habla con Sera y observa el Báculo.",
+                        "key_facts": ["Ren protege a Sera."],
+                        "relationships": [{"target": "Entidad Inexistente", "type": "related_to", "facts": ["Ren recuerda a Sera."]}],
+                    },
+                    {
+                        "canonical_name": "Sera",
+                        "preferred_slug": "sera",
+                        "entity_kind": "character",
+                        "review_state": "canonical",
+                        "aliases": ["la princesa"],
+                        "summary": "Sera es protagonista.",
+                        "key_facts": ["Sera huye del castillo."],
+                        "relationships": [],
+                    },
+                    {
+                        "canonical_name": "Báculo",
+                        "preferred_slug": "baculo",
+                        "entity_kind": "concept",
+                        "review_state": "canonical",
+                        "summary": "El Báculo es una posición heredada.",
+                        "key_facts": ["El Báculo puede confundirse con una persona o un objeto."],
+                        "relationships": [],
+                    },
+                ],
+            }
+            (system_root / "obsidian_import.json").write_text(json.dumps(payload), encoding="utf-8")
+
+            audit = evaluate_semantic_invariants(
+                system_root=system_root,
+                max_unlinked_primary_mentions=0,
+            )
+
+        checks = {check["name"]: check for check in audit["checks"]}
+        self.assertEqual(checks["relationship_targets_resolve_to_primary"]["status"], "warn")
+        self.assertEqual(checks["unlinked_primary_mentions"]["status"], "fail")
+        self.assertGreaterEqual(checks["unlinked_primary_mentions"]["details"]["finding_count"], 1)
+
+    def test_semantic_invariants_warn_on_orphan_primary_and_weak_canonical_over_alias(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            system_root = Path(tmp) / "99_System"
+            system_root.mkdir()
+            payload = {
+                "work": {"title": "Test", "language": "es"},
+                "run_status": {
+                    "semantic_integrity": "complete",
+                    "expected_chapter_count": 0,
+                    "generated_chapter_count": 0,
+                    "failed_chapter_count": 0,
+                },
+                "chapters": [],
+                "entities": [
+                    {
+                        "canonical_name": "la princesa",
+                        "preferred_slug": "la_princesa",
+                        "entity_kind": "character",
+                        "review_state": "canonical",
+                        "naming_quality": "descriptor",
+                        "aliases": ["Sera"],
+                        "summary": "Sera es protagonista.",
+                        "key_facts": ["Sera huye del castillo."],
+                        "relationships": [],
+                    },
+                    {
+                        "canonical_name": "Figura sin soporte",
+                        "preferred_slug": "figura_sin_soporte",
+                        "entity_kind": "character",
+                        "review_state": "canonical",
+                        "relationships": [],
+                    },
+                ],
+            }
+            (system_root / "obsidian_import.json").write_text(json.dumps(payload), encoding="utf-8")
+
+            audit = evaluate_semantic_invariants(
+                system_root=system_root,
+                max_suspicious_orphan_primaries=0,
+            )
+
+        checks = {check["name"]: check for check in audit["checks"]}
+        self.assertEqual(checks["canonical_name_not_weaker_than_available_alias"]["status"], "warn")
+        self.assertEqual(checks["suspicious_orphan_primaries"]["status"], "fail")
+        self.assertEqual(checks["suspicious_orphan_primaries"]["details"]["suspicious_count"], 1)
+
     def test_taxonomy_maps_legacy_magic_to_concept_system(self):
         payload = taxonomy_payload_for_entity(
             {
