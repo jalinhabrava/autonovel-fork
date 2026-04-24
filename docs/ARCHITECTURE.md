@@ -316,9 +316,18 @@ uv run python scripts/textifai.py validate-vaerl \
   --max-unlinked-primary-mentions 0
 ```
 
+Review queue inspection:
+
+```bash
+uv run python scripts/textifai.py review-queue \
+  --system-root <run>/99_System \
+  --type unresolved_relationship_target
+```
+
 Artifact:
 
 - `semantic_invariants_audit.json`
+- `review_queue.json`
 
 Current checks:
 

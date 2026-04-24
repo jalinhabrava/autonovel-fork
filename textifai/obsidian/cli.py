@@ -6,6 +6,7 @@ import sys
 from datetime import datetime, timezone
 from dataclasses import asdict
 from pathlib import Path
+from typing import Any
 
 from textifai.conversation.runtime_bridge import _load_known_characters, render_execution_result
 from textifai.author_understanding.prompt_builder import build_author_understanding_prompt
@@ -71,6 +72,16 @@ def build_parser() -> argparse.ArgumentParser:
     invariants_parser.add_argument("--max-suspicious-orphan-primaries", type=int, default=None)
     invariants_parser.add_argument("--language-validator", default="heuristic")
     invariants_parser.add_argument("--output", default=None, help="Where to write the audit. Defaults to <system-root>/semantic_invariants_audit.json.")
+
+    review_queue_parser = subparsers.add_parser(
+        "review-queue",
+        help="Inspect author-actionable VaERL review work items from review_queue.json.",
+    )
+    review_queue_parser.add_argument("--system-root", required=True, help="99_System directory containing review_queue.json.")
+    review_queue_parser.add_argument("--type", dest="review_type", default=None, help="Filter by review_type.")
+    review_queue_parser.add_argument("--severity", default=None, help="Filter by severity: high, medium, or low.")
+    review_queue_parser.add_argument("--limit", type=int, default=20, help="Maximum number of items to print in text mode.")
+    review_queue_parser.add_argument("--json", action="store_true", help="Emit filtered review queue JSON.")
 
     replay_parser = subparsers.add_parser(
         "replay-semantic",
@@ -138,6 +149,7 @@ def run_cli(*, argv: list[str] | None = None, repo_root: str | Path) -> int:
         "status",
         "inspect",
         "validate-vaerl",
+        "review-queue",
         "replay-semantic",
         "replay-downstream",
         "ask",
@@ -223,6 +235,16 @@ def run_cli(*, argv: list[str] | None = None, repo_root: str | Path) -> int:
         )
         print(json.dumps(audit, indent=2, ensure_ascii=False))
         return 0 if audit.get("passed") else 1
+
+    if command == "review-queue":
+        system_root = normalize_user_path(args.system_root)
+        queue = _load_review_queue(system_root / "review_queue.json")
+        filtered = _filter_review_queue(queue, review_type=args.review_type, severity=args.severity)
+        if args.json:
+            print(json.dumps(filtered, indent=2, ensure_ascii=False))
+        else:
+            _print_review_queue_summary(filtered, limit=args.limit)
+        return 0
 
     if command in {"replay-semantic", "replay-downstream"}:
         result = run_semantic_ingestion_replay(
@@ -344,6 +366,74 @@ def _parse_auxiliary_documents(args: argparse.Namespace) -> list[AuxiliaryDocume
         AuxiliaryDocumentInput(path=str(path), author_hint=hints.get(str(path.resolve()), ""))
         for path in documents
     ]
+
+
+def _load_review_queue(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        raise FileNotFoundError(f"Missing review_queue.json: {path}")
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _filter_review_queue(queue: dict[str, Any], *, review_type: str | None, severity: str | None) -> dict[str, Any]:
+    items = [item for item in queue.get("items") or [] if isinstance(item, dict)]
+    if review_type:
+        items = [item for item in items if str(item.get("review_type") or "") == review_type]
+    if severity:
+        items = [item for item in items if str(item.get("severity") or "").casefold() == severity.casefold()]
+    counts_by_type: dict[str, int] = {}
+    counts_by_severity: dict[str, int] = {}
+    for item in items:
+        item_type = str(item.get("review_type") or "unknown")
+        item_severity = str(item.get("severity") or "unknown")
+        counts_by_type[item_type] = counts_by_type.get(item_type, 0) + 1
+        counts_by_severity[item_severity] = counts_by_severity.get(item_severity, 0) + 1
+    return {
+        **queue,
+        "item_count": len(items),
+        "counts_by_type": counts_by_type,
+        "counts_by_severity": counts_by_severity,
+        "items": items,
+        "filters": {"review_type": review_type, "severity": severity},
+    }
+
+
+def _print_review_queue_summary(queue: dict[str, Any], *, limit: int) -> None:
+    print(f"Review queue: {queue.get('status', 'unknown')} ({queue.get('item_count', 0)} items)")
+    print(f"By type: {json.dumps(queue.get('counts_by_type') or {}, ensure_ascii=False, sort_keys=True)}")
+    print(f"By severity: {json.dumps(queue.get('counts_by_severity') or {}, ensure_ascii=False, sort_keys=True)}")
+    items = [item for item in queue.get("items") or [] if isinstance(item, dict)]
+    if not items:
+        return
+    print("")
+    for item in items[: max(limit, 0)]:
+        candidates = item.get("candidate_entities") or []
+        candidate_names = [
+            _format_review_candidate(candidate)
+            for candidate in candidates
+            if isinstance(candidate, dict) and str(candidate.get("canonical_name") or "").strip()
+        ]
+        evidence = item.get("evidence") or []
+        first_evidence = ""
+        if evidence and isinstance(evidence[0], dict):
+            first_evidence = str(evidence[0].get("text") or "").strip()
+        print(
+            f"- {item.get('review_item_id')} "
+            f"[{item.get('severity')}] {item.get('review_type')}: "
+            f"{item.get('source_entity') or '∅'} -> {item.get('target_text') or '∅'}"
+        )
+        print(f"  action: {item.get('suggested_action')}")
+        if candidate_names:
+            print(f"  candidates: {', '.join(candidate_names[:5])}")
+        if first_evidence:
+            print(f"  evidence: {first_evidence[:220]}")
+    if len(items) > limit:
+        print(f"\n... {len(items) - limit} more items. Use --limit or --json for details.")
+
+
+def _format_review_candidate(candidate: dict[str, Any]) -> str:
+    name = str(candidate.get("canonical_name") or "").strip()
+    kind = str(candidate.get("entity_kind") or "").strip()
+    return f"{name} ({kind})" if kind else name
 
 
 def _interactive_config_from_args(args: argparse.Namespace) -> ObsidianProjectSetupConfig:

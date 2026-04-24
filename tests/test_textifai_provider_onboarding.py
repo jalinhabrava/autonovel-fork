@@ -14,6 +14,101 @@ from textifai.provider_onboarding import (
 
 
 class TextifAIProviderOnboardingTests(unittest.TestCase):
+    def test_review_queue_cli_filters_json_payload(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base_dir = Path(tmp)
+            system_root = base_dir / "99_System"
+            system_root.mkdir()
+            (system_root / "review_queue.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": "textifai.review_queue.v1",
+                        "status": "ready_for_author_review",
+                        "item_count": 2,
+                        "counts_by_type": {"review_entity": 1, "unresolved_relationship_target": 1},
+                        "counts_by_severity": {"medium": 1, "low": 1},
+                        "items": [
+                            {
+                                "review_item_id": "rq_review",
+                                "review_type": "review_entity",
+                                "severity": "low",
+                                "suggested_action": "merge_into_primary_or_keep_review",
+                                "source_entity": "Consejo",
+                                "target_text": "Consejo",
+                                "candidate_entities": [],
+                                "evidence": [],
+                            },
+                            {
+                                "review_item_id": "rq_target",
+                                "review_type": "unresolved_relationship_target",
+                                "severity": "medium",
+                                "suggested_action": "resolve_target_or_keep_unmaterialized",
+                                "source_entity": "Sera",
+                                "target_text": "Consejo",
+                                "candidate_entities": [{"canonical_name": "Consejo", "entity_kind": "faction"}],
+                                "evidence": [{"kind": "relationship_fact", "text": "El Consejo vigila a Sera."}],
+                            },
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            with patch("builtins.print") as print_mock:
+                code = run_cli(
+                    argv=[
+                        "review-queue",
+                        "--system-root",
+                        str(system_root),
+                        "--type",
+                        "unresolved_relationship_target",
+                        "--json",
+                    ],
+                    repo_root=base_dir,
+                )
+
+            self.assertEqual(code, 0)
+            payload = json.loads(print_mock.call_args[0][0])
+            self.assertEqual(payload["item_count"], 1)
+            self.assertEqual(payload["items"][0]["review_item_id"], "rq_target")
+            self.assertEqual(payload["counts_by_type"], {"unresolved_relationship_target": 1})
+
+    def test_review_queue_cli_prints_human_summary(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base_dir = Path(tmp)
+            system_root = base_dir / "99_System"
+            system_root.mkdir()
+            (system_root / "review_queue.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": "textifai.review_queue.v1",
+                        "status": "ready_for_author_review",
+                        "items": [
+                            {
+                                "review_item_id": "rq_target",
+                                "review_type": "unresolved_relationship_target",
+                                "severity": "medium",
+                                "suggested_action": "resolve_target_or_keep_unmaterialized",
+                                "source_entity": "Sera",
+                                "target_text": "Consejo",
+                                "candidate_entities": [{"canonical_name": "Consejo", "entity_kind": "faction"}],
+                                "evidence": [{"kind": "relationship_fact", "text": "El Consejo vigila a Sera."}],
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            with patch("builtins.print") as print_mock:
+                code = run_cli(argv=["review-queue", "--system-root", str(system_root)], repo_root=base_dir)
+
+            self.assertEqual(code, 0)
+            output = "\n".join(str(call.args[0]) for call in print_mock.call_args_list)
+            self.assertIn("Review queue: ready_for_author_review (1 items)", output)
+            self.assertIn("rq_target", output)
+            self.assertIn("candidates: Consejo (faction)", output)
+
     def test_configure_provider_skip_disables_author_flows(self):
         with tempfile.TemporaryDirectory() as tmp:
             base_dir = Path(tmp)
