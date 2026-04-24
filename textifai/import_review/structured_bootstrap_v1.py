@@ -40,6 +40,7 @@ from textifai.import_review.provider_snapshot import build_provider_snapshot
 from textifai.import_review.token_budget import TokenBudget, build_token_budget, fits_within_budget
 from textifai.runtime_config import synchronize_runtime_environment
 from textifai.vaerl.invariants import write_semantic_invariants_audit
+from textifai.vaerl.review_queue import write_review_queue
 
 
 CHAPTER_LABEL_TYPES = {"episode", "prologue", "epilogue", "interlude", "other"}
@@ -951,6 +952,7 @@ class NovelBootstrapV1Result:
     run_limits_audit_path: str
     run_comparability_manifest_path: str
     semantic_invariants_audit_path: str
+    review_queue_path: str
     warnings: list[str] = field(default_factory=list)
 
 
@@ -980,6 +982,7 @@ class SemanticReplayResult:
     run_limits_audit_path: str
     run_comparability_manifest_path: str
     semantic_invariants_audit_path: str
+    review_queue_path: str
     warnings: list[str] = field(default_factory=list)
 
 
@@ -1463,11 +1466,17 @@ def run_structured_bootstrap_v1(
         encoding="utf-8",
     )
     semantic_invariants_audit_path = system_root / "semantic_invariants_audit.json"
-    write_semantic_invariants_audit(
+    semantic_invariants_audit = write_semantic_invariants_audit(
         output_path=semantic_invariants_audit_path,
         system_root=system_root,
         obsidian_import_path=obsidian_import_path,
         language=language,
+    )
+    review_queue_path = system_root / "review_queue.json"
+    write_review_queue(
+        output_path=review_queue_path,
+        obsidian_import=obsidian_import,
+        semantic_invariants_audit=semantic_invariants_audit,
     )
 
     return NovelBootstrapV1Result(
@@ -1503,6 +1512,7 @@ def run_structured_bootstrap_v1(
         run_limits_audit_path=str(run_limits_audit_path),
         run_comparability_manifest_path=str(run_comparability_manifest_path),
         semantic_invariants_audit_path=str(semantic_invariants_audit_path),
+        review_queue_path=str(review_queue_path),
         warnings=warnings,
     )
 
@@ -1751,11 +1761,17 @@ def run_semantic_ingestion_replay(
         encoding="utf-8",
     )
     semantic_invariants_audit_path = system_root / "semantic_invariants_audit.json"
-    write_semantic_invariants_audit(
+    semantic_invariants_audit = write_semantic_invariants_audit(
         output_path=semantic_invariants_audit_path,
         system_root=system_root,
         obsidian_import_path=obsidian_import_path,
         language=detected_language,
+    )
+    review_queue_path = system_root / "review_queue.json"
+    write_review_queue(
+        output_path=review_queue_path,
+        obsidian_import=obsidian_import,
+        semantic_invariants_audit=semantic_invariants_audit,
     )
 
     return SemanticReplayResult(
@@ -1783,6 +1799,7 @@ def run_semantic_ingestion_replay(
         run_limits_audit_path=str(run_limits_audit_path),
         run_comparability_manifest_path=str(run_comparability_manifest_path),
         semantic_invariants_audit_path=str(semantic_invariants_audit_path),
+        review_queue_path=str(review_queue_path),
         warnings=[*resolution_language_warnings, *cleanup_language_warnings, *obsidian_language_warnings],
     )
 

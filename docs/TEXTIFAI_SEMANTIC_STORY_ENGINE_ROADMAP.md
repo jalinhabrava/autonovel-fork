@@ -703,6 +703,7 @@ Outputs:
 - semantic invariant suite (`semantic_invariants_audit.json`)
 - replayable entity resolution and cleanup
 - configurable Phase 1 quality gates for unlinked primary mentions, orphan primaries, unresolved relationship targets, and weak canonical naming
+- author-actionable review queue (`review_queue.json`) for unresolved targets, pending review entities, collisions, and weak canonicals
 
 Risks:
 
@@ -734,6 +735,7 @@ Signals mature enough to move on:
 - major merge/review decisions are auditable
 - authors can inspect the vault and understand the graph
 - `semantic_invariants_audit.json` passes with the agreed Phase 1 thresholds for the current validation corpus
+- pending reviews are classified as useful work items rather than undifferentiated noise
 
 ### Phase 2 — Codex View
 
@@ -1065,7 +1067,7 @@ Signals mature enough to move on:
 - Tune explicit Phase 1 quality thresholds without overfitting to one novel.
 - Keep improving stable canonical naming.
 - Continue primary note synthesis quality work.
-- Clean up Review Queue noise.
+- Clean up Review Queue noise and prepare author-assisted merge actions.
 - Define evidence span plan.
 - Validate auxiliary docs with hints as recommended product path.
 - Decide minimum acceptable VaERL quality gate for moving into Query Layer v1.

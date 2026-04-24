@@ -230,6 +230,7 @@ Artifacts:
 - `pre_vaerl_reconciliation_audit.json`
 - `primary_note_synthesis_audit.json`
 - `obsidian_relationship_reconciliation_audit.json`
+- `review_queue.json`
 - `gender_signal_audit.json`
 - `semantic_context_probe_audit.json`
 - `semantic_context_probe_trace.jsonl`
@@ -334,6 +335,7 @@ Current checks:
 - primary entities with no facts, refs, or relationships are surfaced as `suspicious_orphan_primaries`
 - descriptor/pronoun canonicals are surfaced when a stronger specific alias is available
 - `obsidian_relationship_reconciliation_audit.json` records late links added after chapter-derived relationship enrichment
+- `review_queue.json` converts unresolved or uncertain semantic state into author-actionable work items
 - semantic prose respects work language
 - required Phase 1 artifacts exist
 - auxiliary extraction has no errors

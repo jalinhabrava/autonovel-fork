@@ -28,6 +28,7 @@ from textifai.import_review.model_registry import get_model_capabilities
 from textifai.obsidian.json_import import import_json_to_vault
 from textifai.obsidian.taxonomy import taxonomy_payload_for_entity, taxonomy_tags
 from textifai.vaerl.invariants import evaluate_semantic_invariants, write_semantic_invariants_audit
+from textifai.vaerl.review_queue import build_review_queue
 from textifai.import_review.structured_bootstrap_v1 import (
     NovelBootstrapV1Config,
     _estimate_global_batch_complexity_penalty,
@@ -2883,6 +2884,62 @@ class StructuredBootstrapV1Tests(unittest.TestCase):
         self.assertEqual(checks["canonical_name_not_weaker_than_available_alias"]["status"], "warn")
         self.assertEqual(checks["suspicious_orphan_primaries"]["status"], "fail")
         self.assertEqual(checks["suspicious_orphan_primaries"]["details"]["suspicious_count"], 1)
+
+    def test_review_queue_builds_actionable_items_for_pending_reviews_and_relationship_targets(self):
+        payload = {
+            "work": {"title": "Test", "language": "es"},
+            "entities": [
+                {
+                    "canonical_name": "Sera",
+                    "preferred_slug": "sera",
+                    "entity_kind": "character",
+                    "review_state": "canonical",
+                    "aliases": ["la princesa"],
+                    "key_facts": ["Sera huye."],
+                    "relationships": [{"target": "Consejo", "type": "authority", "facts": ["El Consejo vigila a Sera."]}],
+                },
+                {
+                    "canonical_name": "Consejo",
+                    "preferred_slug": "consejo",
+                    "entity_kind": "faction",
+                    "review_state": "review",
+                    "confidence": 0.7,
+                    "key_facts": ["El Consejo supervisa el castillo."],
+                    "source_mentions": ["Consejo"],
+                    "relationships": [],
+                },
+                {
+                    "canonical_name": "Báculo",
+                    "preferred_slug": "baculo",
+                    "entity_kind": "character",
+                    "review_state": "canonical",
+                    "key_facts": ["Figura heredada."],
+                    "relationships": [],
+                },
+                {
+                    "canonical_name": "Báculo",
+                    "preferred_slug": "baculo",
+                    "entity_kind": "object",
+                    "review_state": "canonical",
+                    "key_facts": ["Objeto interpretado por algunos personajes."],
+                    "relationships": [],
+                },
+            ],
+        }
+
+        queue = build_review_queue(obsidian_import=payload)
+
+        self.assertEqual(queue["schema_version"], "textifai.review_queue.v1")
+        self.assertTrue(queue["policy"]["pending_reviews_are_expected"])
+        review_types = {item["review_type"] for item in queue["items"]}
+        self.assertIn("review_entity", review_types)
+        self.assertIn("unresolved_relationship_target", review_types)
+        self.assertIn("ontological_collision", review_types)
+        unresolved = next(item for item in queue["items"] if item["review_type"] == "unresolved_relationship_target")
+        self.assertEqual(unresolved["target_text"], "Consejo")
+        self.assertEqual(unresolved["candidate_entities"][0]["canonical_name"], "Consejo")
+        self.assertFalse(unresolved["can_auto_apply"])
+        self.assertTrue(unresolved["review_item_id"].startswith("rq_"))
 
     def test_taxonomy_maps_legacy_magic_to_concept_system(self):
         payload = taxonomy_payload_for_entity(
