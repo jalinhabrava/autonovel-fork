@@ -214,6 +214,7 @@ def build_graph(project: ProjectRef) -> dict[str, Any]:
             "role": role,
             "tags": entity.get("tags") or [],
             "note_path": _guess_note_path(project.root, entity),
+            "entity": _graph_entity_payload(entity),
         }
         for value in [slug, entity.get("canonical_name"), *(entity.get("aliases") or []), *(entity.get("source_mentions") or [])]:
             key = _key(value)
@@ -260,8 +261,43 @@ def build_graph(project: ProjectRef) -> dict[str, Any]:
             "role": "chapter",
             "tags": ["#chapter"],
             "note_path": _guess_chapter_note_path(project.root, chapter),
+            "chapter": _graph_chapter_payload(chapter),
         }
     return {"nodes": list(nodes.values()), "edges": edges}
+
+
+def _graph_entity_payload(entity: dict[str, Any]) -> dict[str, Any]:
+    fields = [
+        "canonical_name",
+        "preferred_slug",
+        "entity_kind",
+        "entity_subkind",
+        "review_state",
+        "note_role",
+        "summary",
+        "aliases",
+        "key_facts",
+        "relationships",
+        "source_mentions",
+        "tags",
+        "confidence",
+    ]
+    return {field: entity.get(field) for field in fields if field in entity}
+
+
+def _graph_chapter_payload(chapter: dict[str, Any]) -> dict[str, Any]:
+    fields = [
+        "chapter_id",
+        "sequence_index",
+        "chapter_title_original",
+        "chapter_title_canonical",
+        "chapter_label_type",
+        "chapter_number_in_label",
+        "chapter_summary",
+        "summary",
+        "title_parse_signals",
+    ]
+    return {field: chapter.get(field) for field in fields if field in chapter}
 
 
 def _project_from_candidate(path: Path) -> ProjectRef | None:

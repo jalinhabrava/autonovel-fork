@@ -26,7 +26,7 @@ button, input, select {
 
 .app-shell {
   display: grid;
-  grid-template-columns: 330px minmax(0, 1fr);
+  grid-template-columns: minmax(320px, clamp(340px, 27vw, 520px)) minmax(0, 1fr);
   min-height: 100vh;
 }
 
@@ -61,6 +61,7 @@ h1, h2, h3 { margin: 0; line-height: 1.05; }
 h1 { font-size: 22px; }
 h2 { font-size: clamp(28px, 4vw, 48px); }
 h3 { margin-bottom: 12px; }
+h2, h3 { overflow-wrap: anywhere; }
 p { margin: 0; }
 .muted { color: var(--muted); }
 .eyebrow {
@@ -106,14 +107,20 @@ button:hover, button.active {
 }
 .project-card strong, .list-item strong {
   display: block;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 .project-card small, .list-item small {
+  display: block;
   color: var(--muted);
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .main {
   padding: 28px;
   overflow: hidden;
+  min-width: 0;
 }
 .project-header {
   display: grid;
@@ -234,9 +241,14 @@ button:hover, button.active {
   margin-bottom: 12px;
   flex-wrap: wrap;
 }
+.graph-zoom-controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 .graph-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 22vw);
   gap: 16px;
 }
 #graph-svg {
@@ -246,7 +258,10 @@ button:hover, button.active {
   border: 1px solid var(--line);
   border-radius: 22px;
   box-shadow: var(--shadow);
+  cursor: grab;
+  touch-action: none;
 }
+#graph-svg:active { cursor: grabbing; }
 .edge { stroke: rgba(32, 33, 28, 0.22); stroke-width: 1.2; }
 .node { cursor: pointer; }
 .node circle { stroke: white; stroke-width: 2; }
@@ -264,6 +279,33 @@ button:hover, button.active {
   border: 0;
   border-top: 1px solid var(--line);
   margin: 14px 0;
+}
+.entity-detail {
+  margin-top: 14px;
+  line-height: 1.45;
+}
+.entity-detail h4 {
+  margin: 14px 0 6px;
+}
+.entity-detail ul {
+  padding-left: 20px;
+}
+.meta-list {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0;
+}
+.meta-list div {
+  display: grid;
+  grid-template-columns: 86px minmax(0, 1fr);
+  gap: 8px;
+}
+.meta-list dt {
+  color: var(--muted);
+}
+.meta-list dd {
+  margin: 0;
+  overflow-wrap: anywhere;
 }
 
 @media (max-width: 900px) {

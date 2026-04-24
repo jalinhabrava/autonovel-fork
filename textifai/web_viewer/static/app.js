@@ -5,6 +5,9 @@ const state = {
   activeView: "overview",
   selectedGraphNodeId: null,
   graphAnimation: null,
+  graphViewBox: { x: 0, y: 0, width: 1200, height: 720 },
+  graphPan: null,
+  graphDidPan: false,
 };
 
 const $ = (id) => document.getElementById(id);
@@ -50,6 +53,7 @@ async function selectProject(projectId) {
   state.currentId = projectId;
   state.current = await api(`/api/projects/${encodeURIComponent(projectId)}`);
   state.selectedGraphNodeId = null;
+  resetGraphViewBox();
   $("graph-kind-filter").dataset.ready = "";
   renderProjects();
   renderCurrentProject();
@@ -367,9 +371,16 @@ function drawForceGraph(nodes, edges) {
   `;
   const edgeLayer = svg.querySelector(".edges");
   edgeLayer.innerHTML = edges.map((edge, index) => `<line class="edge" data-edge="${index}"><title>${escapeHtml(edge.type)}</title></line>`).join("");
+  applyGraphViewBox();
+  bindGraphViewportHandlers(svg);
 
   svg.querySelectorAll("[data-node]").forEach((nodeEl) => {
-    nodeEl.addEventListener("click", () => {
+    nodeEl.addEventListener("click", (event) => {
+      event.stopPropagation();
+      if (state.graphDidPan) {
+        state.graphDidPan = false;
+        return;
+      }
       const node = byId[nodeEl.dataset.node];
       selectGraphNode(node.id);
     });
@@ -493,12 +504,130 @@ async function openGraphNote(path, nodeId = null) {
 }
 
 function graphNodeSummary(node) {
+  const entity = node.entity || {};
+  const chapter = node.chapter || {};
   return `
     <h3>${escapeHtml(node.label || "Unresolved")}</h3>
     <p><span class="badge">${escapeHtml(node.kind || "unknown")}</span> <span class="badge">${escapeHtml(node.role || "unknown")}</span></p>
     <p class="muted">${escapeHtml(node.id || "")}</p>
     ${node.note_path ? `<p class="muted">${escapeHtml(node.note_path)}</p>` : `<p class="muted">No materialized note for this node.</p>`}
+    ${Object.keys(entity).length ? entityDetail(entity) : ""}
+    ${Object.keys(chapter).length ? chapterDetail(chapter) : ""}
   `;
+}
+
+function entityDetail(entity) {
+  const aliases = entity.aliases || [];
+  const facts = entity.key_facts || [];
+  const relationships = entity.relationships || [];
+  const mentions = entity.source_mentions || [];
+  return `
+    <div class="entity-detail">
+      <dl class="meta-list">
+        <div><dt>Slug</dt><dd>${escapeHtml(entity.preferred_slug || "")}</dd></div>
+        <div><dt>State</dt><dd>${escapeHtml(entity.review_state || entity.note_role || "")}</dd></div>
+        <div><dt>Subkind</dt><dd>${escapeHtml(entity.entity_subkind || "")}</dd></div>
+      </dl>
+      ${entity.summary ? `<h4>Summary</h4><p>${escapeHtml(entity.summary)}</p>` : ""}
+      ${aliases.length ? `<h4>Aliases</h4><p>${aliases.slice(0, 24).map((alias) => `<span class="badge">${escapeHtml(alias)}</span>`).join("")}</p>` : ""}
+      ${facts.length ? `<h4>Key facts</h4><ul>${facts.slice(0, 12).map((fact) => `<li>${escapeHtml(fact)}</li>`).join("")}</ul>` : ""}
+      ${relationships.length ? `<h4>Relationships</h4><ul>${relationships.slice(0, 12).map((rel) => `<li><strong>${escapeHtml(rel.target || "")}</strong>${rel.type || rel.relation_type ? ` (${escapeHtml(rel.type || rel.relation_type)})` : ""}${(rel.facts || []).length ? `: ${escapeHtml((rel.facts || [])[0])}` : ""}</li>`).join("")}</ul>` : ""}
+      ${mentions.length ? `<h4>Source mentions</h4><p>${mentions.slice(0, 20).map((mention) => `<span class="badge">${escapeHtml(mention)}</span>`).join("")}</p>` : ""}
+    </div>
+  `;
+}
+
+function chapterDetail(chapter) {
+  const summary = chapter.chapter_summary || chapter.summary || "";
+  return `
+    <div class="entity-detail">
+      <dl class="meta-list">
+        <div><dt>Sequence</dt><dd>${escapeHtml(chapter.sequence_index || "")}</dd></div>
+        <div><dt>Label</dt><dd>${escapeHtml(chapter.chapter_label_type || "")}</dd></div>
+        <div><dt>Label number</dt><dd>${escapeHtml(chapter.chapter_number_in_label === null ? "null" : chapter.chapter_number_in_label || "")}</dd></div>
+      </dl>
+      ${summary ? `<h4>Summary</h4><p>${escapeHtml(summary)}</p>` : ""}
+      ${chapter.title_parse_signals ? `<details><summary>Title parse signals</summary><pre class="frontmatter">${escapeHtml(JSON.stringify(chapter.title_parse_signals, null, 2))}</pre></details>` : ""}
+    </div>
+  `;
+}
+
+function resetGraphViewBox() {
+  state.graphViewBox = { x: 0, y: 0, width: 1200, height: 720 };
+  applyGraphViewBox();
+}
+
+function applyGraphViewBox() {
+  const svg = $("graph-svg");
+  if (!svg) return;
+  const box = state.graphViewBox;
+  svg.setAttribute("viewBox", `${box.x} ${box.y} ${box.width} ${box.height}`);
+}
+
+function zoomGraph(factor, anchor = null) {
+  const svg = $("graph-svg");
+  const box = state.graphViewBox;
+  const point = anchor || { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  const nextWidth = Math.max(180, Math.min(2600, box.width * factor));
+  const nextHeight = Math.max(108, Math.min(1560, box.height * factor));
+  const relX = (point.x - box.x) / box.width;
+  const relY = (point.y - box.y) / box.height;
+  state.graphViewBox = {
+    x: point.x - nextWidth * relX,
+    y: point.y - nextHeight * relY,
+    width: nextWidth,
+    height: nextHeight,
+  };
+  applyGraphViewBox(svg);
+}
+
+function bindGraphViewportHandlers(svg) {
+  svg.onwheel = (event) => {
+    event.preventDefault();
+    zoomGraph(event.deltaY < 0 ? 0.86 : 1.16, clientToGraphPoint(svg, event.clientX, event.clientY));
+  };
+  svg.onpointerdown = (event) => {
+    if (event.target.closest(".node")) return;
+    svg.setPointerCapture(event.pointerId);
+    state.graphPan = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
+    state.graphDidPan = false;
+  };
+  svg.onpointermove = (event) => {
+    if (!state.graphPan || state.graphPan.pointerId !== event.pointerId) return;
+    const dx = event.clientX - state.graphPan.x;
+    const dy = event.clientY - state.graphPan.y;
+    if (Math.abs(dx) + Math.abs(dy) > 2) state.graphDidPan = true;
+    const rect = svg.getBoundingClientRect();
+    const box = state.graphViewBox;
+    state.graphViewBox = {
+      ...box,
+      x: box.x - dx * (box.width / Math.max(rect.width, 1)),
+      y: box.y - dy * (box.height / Math.max(rect.height, 1)),
+    };
+    state.graphPan = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
+    applyGraphViewBox();
+  };
+  svg.onpointerup = (event) => finishGraphPan(svg, event.pointerId);
+  svg.onpointercancel = (event) => finishGraphPan(svg, event.pointerId);
+}
+
+function finishGraphPan(svg, pointerId) {
+  if (!state.graphPan || state.graphPan.pointerId !== pointerId) return;
+  try {
+    svg.releasePointerCapture(pointerId);
+  } catch (_error) {
+    // Browsers may release capture automatically.
+  }
+  state.graphPan = null;
+}
+
+function clientToGraphPoint(svg, clientX, clientY) {
+  const rect = svg.getBoundingClientRect();
+  const box = state.graphViewBox;
+  return {
+    x: box.x + ((clientX - rect.left) / Math.max(rect.width, 1)) * box.width,
+    y: box.y + ((clientY - rect.top) / Math.max(rect.height, 1)) * box.height,
+  };
 }
 
 function nodeColor(node) {
@@ -514,6 +643,9 @@ $("refresh-projects").addEventListener("click", loadProjects);
 $("hide-system").addEventListener("change", renderGraph);
 $("hide-review").addEventListener("change", renderGraph);
 $("hide-chapters").addEventListener("change", renderGraph);
+$("graph-zoom-in").addEventListener("click", () => zoomGraph(0.82));
+$("graph-zoom-out").addEventListener("click", () => zoomGraph(1.22));
+$("graph-zoom-reset").addEventListener("click", resetGraphViewBox);
 
 loadProjects().catch((error) => {
   $("project-list").innerHTML = `<div class="panel">Failed to load projects: ${escapeHtml(error.message)}</div>`;

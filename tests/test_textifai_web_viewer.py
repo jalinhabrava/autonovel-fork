@@ -28,6 +28,8 @@ class TextifAIWebViewerTests(unittest.TestCase):
                         "preferred_slug": "sera",
                         "entity_kind": "character",
                         "review_state": "canonical",
+                        "summary": "Protagonista de prueba.",
+                        "aliases": ["la princesa"],
                         "relationships": [{"target": "Ren", "type": "alliance", "facts": ["Sera conoce a Ren."]}],
                     },
                     {
@@ -61,8 +63,10 @@ class TextifAIWebViewerTests(unittest.TestCase):
         self.assertEqual(artifact["json"]["work"]["title"], "Sample")
         self.assertEqual(len(graph["nodes"]), 3)
         self.assertEqual(len(graph["edges"]), 1)
+        sera_node = next(node for node in graph["nodes"] if node["id"] == "entity:sera")
+        self.assertEqual(sera_node["entity"]["summary"], "Protagonista de prueba.")
+        self.assertEqual(sera_node["entity"]["aliases"], ["la princesa"])
 
 
 if __name__ == "__main__":
     unittest.main()
-
