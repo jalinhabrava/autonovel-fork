@@ -239,6 +239,142 @@ button:hover, button.active {
   text-align: left;
   vertical-align: top;
 }
+
+.semantic-health {
+  margin-bottom: 18px;
+}
+
+.health-header {
+  display: flex;
+  gap: 16px;
+  align-items: start;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.health-status,
+.health-warning {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.health-status.healthy {
+  background: rgba(29, 111, 104, 0.12);
+  color: var(--accent);
+}
+
+.health-status.warning,
+.health-warning.warning {
+  background: rgba(180, 91, 53, 0.14);
+  color: var(--accent-2);
+}
+
+.health-status.critical,
+.health-warning.critical {
+  background: rgba(162, 59, 85, 0.14);
+  color: #8c2240;
+}
+
+.health-status.unknown,
+.health-warning.info {
+  background: rgba(108, 106, 95, 0.14);
+  color: var(--muted);
+}
+
+.health-warnings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.health-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.health-card {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(240, 230, 210, 0.42);
+  padding: 14px;
+}
+
+.health-card h4 {
+  margin: 0 0 10px 0;
+}
+
+.health-metrics {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.health-metrics div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px dashed rgba(108, 106, 95, 0.22);
+  padding-bottom: 6px;
+}
+
+.health-metrics dt {
+  color: var(--muted);
+}
+
+.health-metrics dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+.health-sections {
+  display: grid;
+  gap: 12px;
+}
+
+.health-section {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.35);
+  padding: 12px 14px;
+}
+
+.health-section summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.health-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin: 10px 0 14px;
+}
+
+.artifact-link {
+  background: #fff;
+}
+
+.warning-badge {
+  background: rgba(180, 91, 53, 0.12);
+  color: var(--accent-2);
+}
+
+.compact-table th,
+.compact-table td {
+  padding: 8px;
+  font-size: 14px;
+}
+
 .badge {
   display: inline-block;
   border-radius: 999px;

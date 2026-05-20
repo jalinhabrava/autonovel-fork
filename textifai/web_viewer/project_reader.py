@@ -26,6 +26,17 @@ VISIBLE_ARTIFACTS = [
     "obsidian_relationship_reconciliation_audit.json",
 ]
 
+HEALTH_EXPECTED_ARTIFACTS = [
+    "obsidian_import.json",
+    "review_queue.json",
+    "semantic_invariants_audit.json",
+    "canonical_entity_map.json",
+    "resolved_entities.json",
+    "cleaned_entities.json",
+    "run_comparability_manifest.json",
+    "chapter_outputs",
+]
+
 
 @dataclass(frozen=True)
 class ProjectRef:
@@ -89,6 +100,9 @@ class ProjectCatalog:
 
 
 def read_project(project: ProjectRef) -> dict[str, Any]:
+    canon = read_canon(project)
+    artifacts = list_artifacts(project)
+    graph = build_graph(project, canon=canon)
     return {
         "project": {
             "project_id": project.project_id,
@@ -98,9 +112,10 @@ def read_project(project: ProjectRef) -> dict[str, Any]:
             "system_root": str(project.system_root) if project.system_root else None,
         },
         "notes": list_notes(project.root),
-        "canon": read_canon(project),
-        "artifacts": list_artifacts(project),
-        "graph": build_graph(project),
+        "canon": canon,
+        "artifacts": artifacts,
+        "graph": graph,
+        "health": build_semantic_health(project, canon=canon, artifacts=artifacts, graph=graph),
     }
 
 
@@ -198,8 +213,8 @@ def read_artifact(project: ProjectRef, artifact_path: str) -> dict[str, Any]:
     }
 
 
-def build_graph(project: ProjectRef) -> dict[str, Any]:
-    canon = read_canon(project)
+def build_graph(project: ProjectRef, canon: dict[str, Any] | None = None) -> dict[str, Any]:
+    canon = canon or read_canon(project)
     nodes: dict[str, dict[str, Any]] = {}
     edges: list[dict[str, Any]] = []
     slug_to_id: dict[str, str] = {}
@@ -265,6 +280,102 @@ def build_graph(project: ProjectRef) -> dict[str, Any]:
             "chapter": _graph_chapter_payload(chapter),
         }
     return {"nodes": list(nodes.values()), "edges": edges}
+
+
+def build_semantic_health(
+    project: ProjectRef,
+    *,
+    canon: dict[str, Any] | None = None,
+    artifacts: list[dict[str, Any]] | None = None,
+    graph: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    canon = canon or read_canon(project)
+    artifacts = artifacts or list_artifacts(project)
+    graph = graph or build_graph(project, canon=canon)
+    invariants = _read_json(project.system_root / "semantic_invariants_audit.json") if project.system_root else {}
+    invariant_checks = invariants.get("checks") if isinstance(invariants, dict) else []
+    artifact_paths = {item.get("path") for item in artifacts if isinstance(item, dict)}
+    unresolved_nodes = [node for node in graph.get("nodes", []) if node.get("kind") == "unresolved"]
+    unresolved_edges = [edge for edge in graph.get("edges", []) if str(edge.get("target") or "").startswith("unresolved:")]
+    primary_nodes = [node for node in graph.get("nodes", []) if node.get("role") == "primary"]
+    review_nodes = [
+        node
+        for node in graph.get("nodes", [])
+        if node.get("role") == "review" and node.get("kind") != "unresolved"
+    ]
+    chapter_nodes = [node for node in graph.get("nodes", []) if node.get("role") == "chapter"]
+    review_queue = canon.get("review_queue") if isinstance(canon, dict) else {}
+    review_items = review_queue.get("items") if isinstance(review_queue, dict) else []
+    missing_expected_artifacts = [name for name in HEALTH_EXPECTED_ARTIFACTS if name not in artifact_paths]
+    collision_count = _count_check_items(invariant_checks, "ontological_name_collisions", "collisions")
+    duplicate_name_count = _count_check_items(invariant_checks, "duplicate_exact_canonical_names", "duplicates")
+    near_duplicate_count = _count_check_items(invariant_checks, "near_duplicate_primary_names", "suspicious")
+    unresolved_from_invariants = _check_detail_int(invariant_checks, "unresolved_relationship_targets", "count")
+    failing_checks = [_health_check_summary(check) for check in invariant_checks if _check_status(check) in {"fail", "warn"}]
+    high_severity_items = _review_severity_count(review_queue, review_items, "high")
+    medium_severity_items = _review_severity_count(review_queue, review_items, "medium")
+    canonical_ambiguity_items = sum(1 for item in review_items or [] if _looks_like_canonical_ambiguity(item))
+
+    canon_stability = {
+        "canonical_primary_count": len(canon.get("primaries", [])),
+        "review_entity_count": len(canon.get("review_entities", [])),
+        "canonical_collision_count": collision_count,
+        "duplicate_exact_canonical_name_count": duplicate_name_count,
+        "near_duplicate_primary_name_count": near_duplicate_count,
+        "canonical_ambiguity_items": canonical_ambiguity_items,
+    }
+    relationship_integrity = {
+        "relationship_edge_count": len(
+            [edge for edge in graph.get("edges", []) if not str(edge.get("source") or "").startswith("chapter:")]
+        ),
+        "unresolved_relationship_targets": max(len(unresolved_nodes), unresolved_from_invariants or 0),
+        "dangling_relationship_edges": len(unresolved_edges),
+        "sample_unresolved_targets": [node.get("label") for node in unresolved_nodes[:8]],
+    }
+    review_pressure = {
+        "review_queue_size": review_queue.get("item_count") if isinstance(review_queue, dict) else len(review_items or []),
+        "high_severity_items": high_severity_items,
+        "medium_severity_items": medium_severity_items,
+        "review_type_count": len((review_queue.get("counts_by_type") or {})) if isinstance(review_queue, dict) else 0,
+        "canonical_ambiguity_items": canonical_ambiguity_items,
+    }
+    materialization_integrity = {
+        "missing_expected_artifacts": missing_expected_artifacts,
+        "missing_expected_artifacts_count": len(missing_expected_artifacts),
+        "missing_primary_notes": sum(1 for node in primary_nodes if not node.get("note_path")),
+        "missing_review_notes": sum(1 for node in review_nodes if not node.get("note_path")),
+        "missing_chapter_notes": sum(1 for node in chapter_nodes if not node.get("note_path")),
+        "broken_wikilinks": None,
+    }
+    semantic_invariants = {
+        "status": invariants.get("status") if isinstance(invariants, dict) else "not_available",
+        "passed": invariants.get("passed") if isinstance(invariants, dict) else None,
+        "failure_count": invariants.get("failure_count") if isinstance(invariants, dict) else None,
+        "warning_count": invariants.get("warning_count") if isinstance(invariants, dict) else None,
+        "failing_checks": failing_checks,
+        "raw_artifact_path": "semantic_invariants_audit.json" if "semantic_invariants_audit.json" in artifact_paths else None,
+    }
+    highlights = _health_highlights(
+        canon_stability=canon_stability,
+        relationship_integrity=relationship_integrity,
+        review_pressure=review_pressure,
+        materialization_integrity=materialization_integrity,
+        semantic_invariants=semantic_invariants,
+    )
+    return {
+        "overall_status": _overall_health_status(
+            semantic_invariants=semantic_invariants,
+            review_pressure=review_pressure,
+            relationship_integrity=relationship_integrity,
+            materialization_integrity=materialization_integrity,
+        ),
+        "canon_stability": canon_stability,
+        "relationship_integrity": relationship_integrity,
+        "review_pressure": review_pressure,
+        "materialization_integrity": materialization_integrity,
+        "semantic_invariants": semantic_invariants,
+        "highlights": highlights,
+    }
 
 
 def _graph_entity_tags(entity: dict[str, Any], role: str) -> list[str]:
@@ -425,3 +536,114 @@ def _guess_chapter_note_path(root: Path, chapter: dict[str, Any]) -> str | None:
 
 def _key(value: Any) -> str:
     return slugify(str(value or "")).strip("_")
+
+
+def _check_status(check: Any) -> str:
+    return str((check or {}).get("status") or "").casefold()
+
+
+def _count_check_items(checks: Any, name: str, detail_key: str) -> int:
+    for check in checks or []:
+        if str(check.get("name") or "") != name:
+            continue
+        values = (check.get("details") or {}).get(detail_key) or []
+        return len(values) if isinstance(values, list) else 0
+    return 0
+
+
+def _review_severity_count(review_queue: Any, items: Any, severity: str) -> int:
+    if isinstance(review_queue, dict):
+        counts = review_queue.get("counts_by_severity") or {}
+        if severity in counts:
+            return int(counts.get(severity) or 0)
+    return sum(1 for item in items or [] if str(item.get("severity") or "").casefold() == severity)
+
+
+def _check_detail_int(checks: Any, name: str, detail_key: str) -> int | None:
+    for check in checks or []:
+        if str(check.get("name") or "") != name:
+            continue
+        value = (check.get("details") or {}).get(detail_key)
+        if isinstance(value, int):
+            return value
+    return None
+
+
+def _looks_like_canonical_ambiguity(item: Any) -> bool:
+    review_type = str((item or {}).get("review_type") or "").casefold()
+    return any(token in review_type for token in ("merge", "canonical", "alias", "identity", "duplicate"))
+
+
+def _health_check_summary(check: dict[str, Any]) -> dict[str, Any]:
+    details = check.get("details") or {}
+    summary_parts: list[str] = []
+    for key in ("missing", "duplicates", "collisions", "suspicious", "errors", "warnings"):
+        values = details.get(key)
+        if isinstance(values, list) and values:
+            summary_parts.append(f"{key}: {len(values)}")
+    for key in ("count", "failed", "actual_chapter_count", "generated", "expected"):
+        if key in details and isinstance(details.get(key), int):
+            summary_parts.append(f"{key}: {details[key]}")
+    return {
+        "name": check.get("name"),
+        "status": check.get("status"),
+        "summary": ", ".join(summary_parts) if summary_parts else "details available",
+    }
+
+
+def _overall_health_status(
+    *,
+    semantic_invariants: dict[str, Any],
+    review_pressure: dict[str, Any],
+    relationship_integrity: dict[str, Any],
+    materialization_integrity: dict[str, Any],
+) -> str:
+    if semantic_invariants.get("passed") is False or (semantic_invariants.get("failure_count") or 0) > 0:
+        return "critical"
+    if (
+        (semantic_invariants.get("warning_count") or 0) > 0
+        or (review_pressure.get("high_severity_items") or 0) > 0
+        or (relationship_integrity.get("unresolved_relationship_targets") or 0) > 0
+        or (materialization_integrity.get("missing_expected_artifacts_count") or 0) > 0
+    ):
+        return "warning"
+    return "healthy"
+
+
+def _health_highlights(
+    *,
+    canon_stability: dict[str, Any],
+    relationship_integrity: dict[str, Any],
+    review_pressure: dict[str, Any],
+    materialization_integrity: dict[str, Any],
+    semantic_invariants: dict[str, Any],
+) -> list[dict[str, Any]]:
+    highlights: list[dict[str, Any]] = []
+    if (semantic_invariants.get("failure_count") or 0) > 0:
+        highlights.append({"level": "critical", "message": f"{semantic_invariants['failure_count']} invariant failures"})
+    elif (semantic_invariants.get("warning_count") or 0) > 0:
+        highlights.append({"level": "warning", "message": f"{semantic_invariants['warning_count']} invariant warnings"})
+    if (review_pressure.get("high_severity_items") or 0) > 0:
+        highlights.append({"level": "warning", "message": f"{review_pressure['high_severity_items']} high-severity review items"})
+    if (relationship_integrity.get("unresolved_relationship_targets") or 0) > 0:
+        highlights.append(
+            {
+                "level": "warning",
+                "message": f"{relationship_integrity['unresolved_relationship_targets']} unresolved relationship targets",
+            }
+        )
+    if (materialization_integrity.get("missing_expected_artifacts_count") or 0) > 0:
+        highlights.append(
+            {
+                "level": "warning",
+                "message": f"{materialization_integrity['missing_expected_artifacts_count']} expected artifacts missing",
+            }
+        )
+    if (canon_stability.get("canonical_collision_count") or 0) > 0:
+        highlights.append(
+            {
+                "level": "warning",
+                "message": f"{canon_stability['canonical_collision_count']} canonical collision signals",
+            }
+        )
+    return highlights[:6]

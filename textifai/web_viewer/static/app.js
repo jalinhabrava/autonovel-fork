@@ -92,12 +92,137 @@ function renderOverview() {
       <div class="stat-card"><span>Review Entities</span><strong>${canon.review_entities.length}</strong></div>
       <div class="stat-card"><span>Review Items</span><strong>${fmtCount(queue.item_count)}</strong></div>
     </div>
+    ${renderSemanticHealth(state.current.health || {})}
     <div class="panel">
       <h3>${escapeHtml((canon.work || {}).title || "Untitled work")}</h3>
       <p class="muted">Language: ${escapeHtml((canon.work || {}).language || "unknown")}</p>
       <p class="muted">System root: ${escapeHtml(state.current.project.system_root || "not found")}</p>
     </div>
   `;
+  attachHealthArtifactLinks();
+}
+
+function renderSemanticHealth(health) {
+  const canon = health.canon_stability || {};
+  const relationships = health.relationship_integrity || {};
+  const review = health.review_pressure || {};
+  const materialization = health.materialization_integrity || {};
+  const invariants = health.semantic_invariants || {};
+  const highlights = health.highlights || [];
+  return `
+    <section class="semantic-health panel">
+      <div class="health-header">
+        <div>
+          <p class="eyebrow">Semantic Health</p>
+          <h3>Run observability</h3>
+        </div>
+        ${healthStatusBadge(health.overall_status || "unknown")}
+      </div>
+      ${highlights.length ? `<div class="health-warnings">${highlights.map((item) => `
+        <span class="health-warning ${escapeHtml(item.level || "info")}">${escapeHtml(item.message)}</span>
+      `).join("")}</div>` : `<p class="muted">No diagnostic warnings derived from available artifacts.</p>`}
+      <div class="health-grid">
+        ${healthMetricCard("Canon Stability", [
+          ["Primaries", canon.canonical_primary_count],
+          ["Review entities", canon.review_entity_count],
+          ["Collisions", canon.canonical_collision_count],
+          ["Ambiguity items", canon.canonical_ambiguity_items],
+        ])}
+        ${healthMetricCard("Relationship Integrity", [
+          ["Edges", relationships.relationship_edge_count],
+          ["Unresolved targets", relationships.unresolved_relationship_targets],
+          ["Dangling edges", relationships.dangling_relationship_edges],
+        ])}
+        ${healthMetricCard("Review Pressure", [
+          ["Queue size", review.review_queue_size],
+          ["High severity", review.high_severity_items],
+          ["Medium severity", review.medium_severity_items],
+          ["Types", review.review_type_count],
+        ])}
+        ${healthMetricCard("Materialization Integrity", [
+          ["Missing artifacts", materialization.missing_expected_artifacts_count],
+          ["Missing primary notes", materialization.missing_primary_notes],
+          ["Missing review notes", materialization.missing_review_notes],
+          ["Broken wikilinks", materialization.broken_wikilinks === null ? "not available" : materialization.broken_wikilinks],
+        ])}
+      </div>
+      <div class="health-sections">
+        ${healthSection("Semantic Invariants", renderInvariantSummary(invariants))}
+        ${healthSection("Unresolved Targets", renderUnresolvedSummary(relationships))}
+        ${healthSection("Missing Artifacts", renderMissingArtifacts(materialization))}
+      </div>
+    </section>
+  `;
+}
+
+function healthStatusBadge(status) {
+  const normalized = String(status || "unknown").toLowerCase();
+  return `<span class="health-status ${escapeHtml(normalized)}">${escapeHtml(status || "unknown")}</span>`;
+}
+
+function healthMetricCard(title, rows) {
+  return `
+    <div class="health-card">
+      <h4>${escapeHtml(title)}</h4>
+      <dl class="health-metrics">
+        ${rows.map(([label, value]) => `
+          <div><dt>${escapeHtml(label)}</dt><dd>${fmtCount(value)}</dd></div>
+        `).join("")}
+      </dl>
+    </div>
+  `;
+}
+
+function healthSection(title, body) {
+  return `
+    <details class="health-section" open>
+      <summary>${escapeHtml(title)}</summary>
+      ${body}
+    </details>
+  `;
+}
+
+function renderInvariantSummary(invariants) {
+  const checks = invariants.failing_checks || [];
+  return `
+    <div class="health-inline">
+      ${healthStatusBadge(invariants.status || "not_available")}
+      <span>Failures: <strong>${fmtCount(invariants.failure_count)}</strong></span>
+      <span>Warnings: <strong>${fmtCount(invariants.warning_count)}</strong></span>
+      ${invariants.raw_artifact_path ? `<button class="artifact-link" data-health-artifact="${escapeHtml(invariants.raw_artifact_path)}">Open raw artifact</button>` : ""}
+    </div>
+    ${checks.length ? `<table class="table compact-table"><thead><tr><th>Check</th><th>Status</th><th>Summary</th></tr></thead><tbody>
+      ${checks.slice(0, 8).map((check) => `<tr>
+        <td>${escapeHtml(check.name)}</td>
+        <td>${escapeHtml(check.status)}</td>
+        <td>${escapeHtml(check.summary)}</td>
+      </tr>`).join("")}
+    </tbody></table>` : `<p class="muted">No failing or warning invariant checks available.</p>`}
+  `;
+}
+
+function renderUnresolvedSummary(relationships) {
+  const targets = relationships.sample_unresolved_targets || [];
+  return `
+    <p><strong>${fmtCount(relationships.unresolved_relationship_targets)}</strong> unresolved relationship targets derived from graph payload.</p>
+    ${targets.length ? `<p>${targets.map((target) => `<span class="badge">${escapeHtml(target)}</span>`).join("")}</p>` : `<p class="muted">No unresolved target samples available.</p>`}
+  `;
+}
+
+function renderMissingArtifacts(materialization) {
+  const missing = materialization.missing_expected_artifacts || [];
+  return missing.length
+    ? `<p>${missing.map((name) => `<span class="badge warning-badge">${escapeHtml(name)}</span>`).join("")}</p>`
+    : `<p class="muted">Expected viewer artifacts are present.</p>`;
+}
+
+function attachHealthArtifactLinks() {
+  document.querySelectorAll("[data-health-artifact]").forEach((node) => {
+    node.addEventListener("click", () => {
+      setView("artifacts");
+      openArtifact(node.dataset.healthArtifact);
+    });
+  });
 }
 
 function renderNotes() {

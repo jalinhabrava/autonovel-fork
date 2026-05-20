@@ -1,1174 +1,582 @@
-# TextifAI Semantic Story Engine Roadmap
+# TextifAI Narrative Semantic Engine Roadmap
 
 Status: living roadmap
 
-Last updated: 2026-04-24
+Last updated: 2026-05-20
 
 ## How To Use This Document
 
-This document is a technical-product roadmap for TextifAI. It is not a closed implementation spec, a marketing page, or a checklist to build everything immediately.
+This document is a technical and operational roadmap for TextifAI.
 
 Use it to:
 
-- align future work around a shared architecture
-- decide the next correct iteration
-- mark phases as `not started`, `in progress`, `blocked`, or `done`
-- define when one layer is mature enough to build the next one
-- keep product direction separate from low-level pipeline docs
+- align architecture decisions with product identity
+- define safe implementation phases
+- separate semantic contracts from generation behavior
+- decide validation depth by semantic risk
+- track maturity gates before enabling higher-level workflows
 
-Related low-level docs:
+This is not a marketing page. This is not a closed implementation spec.
+
+Related operational docs:
 
 - `docs/ARCHITECTURE.md`
 - `docs/BOOTSTRAP_V1_FLOW.md`
 - `docs/VAULT_SCHEMA.md`
 - `docs/e2e_semantic_diagnosis_rules.md`
-- `docs/NOVEL_INDEX_AND_SELECTIVE_NORMALIZATION.md`
+- `docs/operations/semantic-contracts.md`
+- `docs/operations/validation-surface-inventory.md`
+- `docs/operations/safe-fixtures-and-baselines.md`
 
-## 0. Product Thesis
+---
 
-TextifAI is a Semantic Story Engine.
+## 1) Product Identity
 
-It helps authors turn manuscripts, lore notes, character sheets, future plans, and editorial corrections into a durable semantic model that can support writing, querying, continuity checking, review, and editorial synthesis.
+TextifAI is:
 
-TextifAI is not only:
+- a **Narrative Semantic Engine**
+- and a **Narrative Harness**
 
-- a novel importer
-- an Obsidian note generator
-- a Codex
-- a Story Bible
-- a chat with AI
-- a manuscript editor
-- a prompt wrapper around long context
+TextifAI is not:
 
-Those are views, workflows, or product surfaces built on top of one shared semantic layer.
+- just RAG
+- just entity extraction
+- just a Story Bible generator
+- just an AI editor
+- just a Codex for fiction
+- just prompt engineering
 
-The core product bet is:
+TextifAI transforms long-form narrative material into:
 
-> VaERL is the semantic source of truth. Every user-facing view should be derived from VaERL or explicitly write back to VaERL through auditable author actions.
+- durable semantic memory
+- structured narrative state
+- grounded retrieval context
+- continuity-aware writing context
+- inspectable canon memory
+- reusable editorial infrastructure
 
-This is what should differentiate TextifAI from "another AI editor" or "another Codex":
+**Core statement**
 
-- It does not rely on the LLM remembering the novel inside a prompt.
-- It does not hide canon decisions inside generated prose.
-- It separates facts, inference, uncertainty, review state, and author corrections.
-- It can replay semantic compilation from frozen artifacts.
-- It can support multiple products from one semantic model.
+> TextifAI does the semantic and contextual heavy lifting required for long-form narrative continuity.
 
-## 1. System Layers
+---
 
-TextifAI must keep these layers distinct.
+## 2) System Framing
 
-### 1.1 Semantic Model
+TextifAI is a layered system where canon memory, retrieval, and generation are deliberately separated.
 
-VaERL is the source semantic model. It represents what TextifAI knows, how strongly it knows it, where it came from, and whether it is canonical, in review, inferred, or unresolved.
+### 2.1 Narrative Semantic Engine
 
-VaERL is not a Markdown folder and not a transient prompt output.
+Responsible for:
 
-### 1.2 Pipeline Artifacts
+- ingestion and normalization
+- semantic extraction and reconciliation
+- canonical memory stabilization
+- invariant enforcement
+- review-state visibility
+- replayable semantic compilation
 
-Pipeline artifacts are generated JSON files, audits, traces, and intermediate outputs used to build or debug VaERL.
+### 2.2 Narrative Harness
 
-Examples:
+Responsible for:
 
-- `novel_index.json`
-- `global_normalization.json`
-- `chapter_outputs/*.json`
-- `resolved_entities.json`
-- `cleaned_entities.json`
-- `auxiliary_source_index.json`
-- `auxiliary_extractions/*.json`
-- `obsidian_import.json`
-- `*_audit.json`
-- `run_comparability_manifest.json`
+- author-intent interpretation
+- retrieval planning
+- narrative-state retrieval
+- evidence assembly
+- continuity-safe context packaging
+- generation-time constraint delivery
 
-These artifacts are observable boundaries. They are not the product UI.
+### 2.3 Generation Layer
 
-### 1.3 Persisted Storage
+Responsible for:
 
-Persisted storage is the durable representation used by humans, tools, and future sessions.
+- synthesis, continuation, rewriting, brainstorming, editorial drafting
+- only over harness-provided context
+- no silent canon mutation
 
-Examples:
+### 2.4 Observability + Editorial Layer
 
-- Obsidian vault Markdown
-- VaERL snapshots
-- bridge snapshots
-- JSON import/export payloads
-- future database/index representations
+Responsible for:
 
-Markdown remains a first-class output because authors can inspect, edit, and version it.
+- semantic debugging
+- continuity inspection
+- review queue execution
+- author corrections and explicit write-back
 
-### 1.4 Views / User-Facing Projections
+---
 
-Views are projections over VaERL.
+## 3) Narrative Harness
 
-Examples:
+The Narrative Harness is the control plane between author intent and LLM generation.
 
-- Codex View
-- Story Bible View
-- Review Queue
-- Editor / Manuscript View
-- Query Layer
-- fixed command workflows
-- free author chat
+It must:
 
-Views should not become independent sources of canon unless they write back through explicit, auditable actions.
+- transform author intent into grounded narrative context packages
+- assemble continuity-safe context before generation reaches the LLM
+- retrieve semantic state instead of dumping raw manuscript chunks
+- separate canon from generation
+- prevent silent canon drift
 
-## 2. VaERL Core
+Harness context package should include:
 
-Status: `in progress`
-
-VaERL is the structural base of TextifAI.
-
-It should contain or be able to contain:
-
-- works
-- source documents
-- chapters
-- chapter summaries
-- chapter labels
-- entities
-- canonical names
-- preferred slugs
-- aliases
-- source mentions
-- relationships
-- relationship facts
-- evidence spans
-- review states
-- confidence
-- tags
-- entity kinds
-- entity subkinds
-- relevant events
-- unresolved mentions
-- audit data
-- run comparability metadata
-- semantic invariants
-- links between chapters and entities
-- auxiliary-document facts
-- author corrections
-
-VaERL must be:
-
-- auditable
-- versionable
-- replayable
-- consultable
-- usable by humans
-- usable by LLMs
-- stable enough for product views
-- flexible enough for review and correction
-
-### 2.1 Semantic Invariants
-
-Initial invariants:
-
-- VaERL is source of truth.
-- No hidden canon changes.
-- Every view must be derivable from VaERL.
-- Canonical entities need stable naming and slugs.
-- `preferred_slug` is the internal link target.
-- `canonical_name` is presentation/canon naming, not a linking mechanism.
-- Review state must remain visible.
-- Facts, inference, uncertainty, and author corrections must be distinguishable.
-- Author corrections must be traceable.
-- Replayability matters.
-- Pipeline runs must expose comparability metadata.
-- LLM-generated prose must not silently become canon.
-- Merge decisions must be auditable.
-- Missing evidence should be visible, not papered over.
-
-### 2.2 VaERL Maturity Signals
-
-VaERL is mature enough to support richer product views when:
-
-- primary protagonist and major supporting entities remain stable across comparable runs
-- slug/link policy is stable
-- language consistency is enforced in semantic artifacts
-- review entities are useful instead of noisy dumping grounds
-- common merge cases are handled or surfaced cleanly
-- downstream replay can validate changes without rerunning extraction
-- semantic invariants can be run as tests or audits
-- author-facing Markdown is readable enough to inspect manually
-
-## 3. Codex View
-
-Status: `in progress`
-
-The Codex View is an entity-oriented projection over VaERL.
-
-It is not a separate database and not a parallel canon source.
-
-### 3.1 Characters
-
-Character notes should expose:
-
-- canonical name
-- preferred slug
-- aliases
-- summary
-- key facts
-- relationships
-- relationship facts
-- chapters where the character appears
-- review/canonical state
-- evidence
-- tags
-- confidence
-- source mentions
-- unresolved or suspicious aliases
-
-### 3.2 Places
-
-Places include:
-
-- physical places
-- countries
-- kingdoms
-- cities
-- regions
-- minor settings
-- politically relevant territories
-- relationship to characters and events
-
-### 3.3 Factions
-
-Factions include:
-
-- organizations
-- kingdoms when they act as political agents
-- noble houses
-- councils
-- armies
-- institutions
-- religious or magical orders
-
-### 3.4 Objects
-
-Objects include:
-
-- narratively relevant objects
-- magical artifacts
-- weapons
-- symbols
-- relics
-- personal items with relationship or continuity weight
-
-### 3.5 Concepts
-
-Concepts include:
-
-- magic systems
-- world rules
-- cultural concepts
-- phenomena
-- proprietary terms
-- metaphysical or political mechanisms
-
-### 3.6 Events
-
-Not every event should become a primary entity.
-
-Event levels:
-
-- Minor chapter event: usually a fact, relationship fact, or chapter summary item.
-- Structural story event: may deserve a primary event entity.
-- Historical/worldbuilding event: may deserve a primary event entity.
-
-Example:
-
-- "Sera escaped the castle" can live as a fact or relationship if it does not need a note.
-- "The war between two countries" can be a primary event if it structures history, politics, or future continuity.
-
-## 4. Story Bible View
-
-Status: `not started`
-
-The Story Bible View is a human editorial layer generated from VaERL.
-
-It should be more readable and less mechanical than the Codex View.
-
-Possible sections:
-
-- work overview
-- main cast
-- secondary cast
-- world overview
-- political structure
-- magic / power systems
-- timeline
-- factions
-- locations
-- important objects
-- open questions
-- continuity risks
-- relationship map
-- unresolved mysteries
-- plot threads
-- themes and motifs
-
-The Story Bible must not be a JSON dump. It should be produced from VaERL and then passed through editorial synthesis.
-
-## 5. Editorial Synthesis Layer
-
-Status: `not started`
-
-Objective:
-
-> Convert structured VaERL into useful human editorial output.
-
-Some views should be generated in two steps.
-
-### 5.1 Step 1 — Retrieval From VaERL
-
-Retrieve:
-
-- relevant entities
-- relationships
-- facts
-- chapters
-- evidence
-- review states
-- conflicts
-- uncertainties
-- source references
-
-### 5.2 Step 2 — Editorial Writing With LLM
-
-The LLM does not invent canon. The LLM writes human-useful prose from VaERL.
-
-It may produce:
-
-- editorial character sheet
-- character arc summary
-- world sheet
-- faction summary
-- readable timeline
-- inconsistency report
-- Story Bible section
-- notes for author/editor
-
-Critical rule:
-
-> The LLM is not the source of truth here. VaERL is.
-
-The LLM may:
-
-- synthesize
-- order
-- explain
-- rewrite for readability
-- flag uncertainty
-- propose review actions
-
-The LLM must not:
-
-- invent facts
-- resolve conflicts silently
-- promote entities
-- modify canon without explicit action
-- hide review state
-
-## 6. Review Queue
-
-Status: `in progress`
-
-The Review Queue is a working view over uncertainty.
-
-TextifAI should not pretend to have perfect certainty. A good Review Queue is a product strength, not a failure.
-
-It should support review of:
-
-- entities in review
-- doubtful aliases
-- suggested merges
-- duplicate entities
-- unresolved mentions
-- weak relationships
-- type conflicts
-- low-confidence entities
-- language inconsistencies
-- linking issues
-- canon conflicts
-- possible over-merge
-- possible missing merge
-
-Future actions:
-
-- accept primary
-- merge into primary
-- reject alias
-- promote entity
-- demote entity
-- edit canonical name
-- mark as duplicate
-- mark as false positive
-- regenerate editorial synthesis
-- lock canonical decision
-- attach evidence
-- split contaminated entity
-
-### 6.1 Canonical Write-Back
-
-Some user actions change VaERL. Some only change presentation.
-
-Canonical write-back actions:
-
-- merge review entity into primary
-- merge primary into primary
-- reject alias
-- accept alias
-- rename canonical entity
-- change preferred slug
-- change entity kind or subkind
-- promote entity
-- demote entity
-- mark fact as false
-- add confirmed fact
-- lock canonical decision
-
-Presentation/editorial-only actions:
-
-- rewrite summary
-- reorder facts
-- change section layout
-- regenerate Story Bible prose
-- hide/show tags in a view
-
-Rules:
-
-- Canon changes must be explicit.
-- Canon changes must be auditable.
-- Human corrections should feed back into VaERL.
-- The system must not silently rewrite canon because a generated note sounds better.
-- Review history should make it possible to understand why a decision was made.
-
-## 7. Editor / Manuscript View
-
-Status: `not started`
-
-The editor is a Markdown manuscript interface backed by VaERL.
-
-It should include:
-
-- online Markdown editor
-- chapter navigation
-- side panel of detected entities
-- links to Codex View
-- mention highlights
-- inconsistency warnings
-- continuity suggestions
-- quick review actions
-- chapter ↔ entity relationships
-- paragraph ↔ evidence spans in the future
-
-Core rule:
-
-> The editor does not replace VaERL. The editor consumes and updates VaERL.
-
-Possible future features:
-
-- inline entity mentions
-- quick merge
-- regenerate chapter summary
-- detect new entity
-- compare chapter against canon
-- continuity warnings
-- contradiction detection
-- rewrite assistance grounded in VaERL
-- style-aware but canon-safe rewrite suggestions
-
-## 8. Query Layer
-
-Status: `not started`
-
-The Query Layer is critical.
-
-TextifAI should not answer author questions through flat RAG over Markdown.
-
-Target flow:
-
-```text
-author query -> query understanding -> retrieval plan -> VaERL retrieval -> evidence assembly -> LLM answer
-```
-
-The LLM should not answer directly against raw novel text. It should answer using enriched context assembled from VaERL.
-
-### 8.1 Query Understanding
-
-Query Understanding converts the author's question into structure.
-
-Example:
-
-```json
-{
-  "intent": "character_knowledge_before_event",
-  "entities": ["Sera", "Nerys"],
-  "event_constraint": "huida del castillo",
-  "time_scope": "before",
-  "needs_evidence": true
-}
-```
-
-It should detect:
-
-- mentioned entities
-- intent type
-- temporal scope
-- chapter scope
-- need for textual evidence
-- whether the question is about canon, style, continuity, editing, or brainstorming
-- whether review-state data should be included
-
-### 8.2 Retrieval Planning
-
-Retrieval Planning decides what to retrieve:
-
-- only entity
-- entity + relationships
-- chapters
-- chapter summaries
-- evidence spans
-- timeline
-- review notes
-- unresolved mentions
-- relationship subgraph
-- source excerpts
-
-It should not put the whole novel into context.
-
-### 8.3 Graph Retrieval
-
-Graph Retrieval should retrieve:
-
-- primary entities
-- review entities when relevant
-- aliases
-- relationships
-- chapter refs
-- confidence
-- review state
-- tags
-- subkinds
-- source mentions
-
-### 8.4 Evidence Retrieval
-
-Evidence Retrieval should retrieve textual or semi-structured support:
-
-- chapter summaries
-- fragments
-- evidence spans
-- nearby mentions
-- source excerpts
-- scene-level context if available
-
-If evidence spans do not exist yet, this roadmap treats them as a future required artifact.
-
-### 8.5 Context Assembly
-
-Context Assembly builds an answer package separating:
-
-- confirmed facts
-- inference
-- relationships
+- canon facts
+- narrative state
+- character knowledge boundaries
+- relationship state
+- unresolved tensions
+- stylistic constraints
+- POV constraints
+- timeline constraints
 - evidence
 - uncertainty
-- review data
-- missing data
-- contradictory or conflicting data
+- review state
 
-### 8.6 Answer Generation
+**Responsibility statement**
 
-The final answer should:
+> The LLM should not be responsible for remembering the novel.
+> TextifAI should be responsible for constructing the correct narrative context.
 
-- use VaERL as source
-- cite or reference chapters when useful
-- distinguish fact from inference
-- warn when something is in review
-- avoid invented canon
-- answer in the author's working language
-- expose uncertainty instead of hiding it
+---
 
-## 9. Query Layer Modes
+## 4) Narrative State
 
-Status: `not started`
+Long-form continuity needs state transitions, not only entity recall.
 
-### 9.1 Fixed Commands / Guided Workflows
+TextifAI should model:
 
-Examples:
+- entities
+- relationships
+- facts
 
-- `/review`
-- `/proofread`
-- `/brainstorm`
-- `/continuity-check`
-- `/summarize-character`
-- `/find-contradictions`
-- `/expand-scene`
-- `/compare-with-canon`
-- `/extract-new-entities`
-- `/merge-suggestions`
-- `/what-does-character-know`
+and also:
 
-Each command should define:
+- what changed
+- who learned what
+- emotional evolution
+- promises
+- secrets
+- authority shifts
+- symbolic recurrences
+- unresolved tensions
+- narrative role transitions
+- continuity-sensitive states
 
-- expected input
-- retrieval strategy
-- VaERL context needed
-- output format
-- whether it can modify VaERL or only suggest changes
-- audit behavior
+Narrative-state tracking must be explicit enough to audit why a generated segment was allowed, constrained, or flagged.
 
-### 9.2 Free Author Chat
+---
 
-In free chat, the author can talk naturally.
-
-Even in free chat:
-
-> Every answer must be VaERL-enriched before reaching the LLM.
-
-Flow:
-
-```text
-free user message -> query understanding -> VaERL retrieval -> context assembly -> LLM answer
-```
-
-Example questions:
-
-- "Que sabe Sera sobre Nerys antes de huir?"
-- "Donde he insinuado ya lo del Baculo?"
-- "Ren esta contradiciendose aqui?"
-- "Que personajes tienen relacion con Veredyn?"
-- "Dame ideas para continuar esta escena sin romper el canon."
-- "Revisa este capitulo contra el VaERL."
-
-## 10. Difference From Codex / Story Bible Products
+## 5) VaERL Reframe
 
 Status: `in progress`
 
-TextifAI is not "a Codex with chat".
+VaERL is:
 
-Layer separation:
+- semantic memory
+- canonical narrative memory
+- auditable semantic state
+- retrieval substrate
+- grounding layer
 
-- VaERL is the semantic source of truth.
-- Codex View is an entity view.
-- Story Bible View is an editorial view.
-- Review Queue is a correction workflow.
-- Query Layer is the reasoning and retrieval interface.
-- Editor View is the writing interface.
+VaERL is not:
 
-Product framing:
+- a Markdown folder
+- a prompt dump
+- a vector DB replacement
+- a transient generation cache
 
-> TextifAI is a semantic story engine with multiple views.
+VaERL remains central for:
 
-This matters because the same semantic model should support:
+- semantic invariants
+- replayability
+- auditability
+- visible review state
+- explicit canon write-back
 
-- author browsing
-- continuity checks
-- future chat
-- manuscript editing
-- review actions
-- Story Bible exports
-- Obsidian vaults
-- future web views
+### 5.1 VaERL Invariants (preserved)
 
-## 11. Roadmap By Phase
+Core invariants:
 
-### Tactical Pause — Internal Run/Vault Viewer
+- VaERL is source of truth for canon memory.
+- No hidden canon changes.
+- Views are projections over VaERL, not independent canon stores.
+- Canonical naming and slug policy remain stable and explicit.
+- Facts, uncertainty, inference, and author corrections stay distinguishable.
+- Merge and resolution decisions remain auditable.
+- Replayability and comparability remain first-class.
 
-Status: `in progress`
+### 5.2 VaERL Maturity Signals (refined)
 
-TextifAI is temporarily pausing the strict phase order to build an internal local web viewer for runs and vaults.
+Maturity indicators:
 
-This does not replace the roadmap. It accelerates Phase 1 by reducing the cost of inspecting bootstrap, VaERL, review queue, graph, Markdown notes, and E2E artifacts across many runs.
+- stable primary entities across comparable runs
+- stable slug and naming policies
+- useful review queue (signal > noise)
+- strong invariant pass rates on fixture and approved corpora
+- reproducible downstream replay behavior
+- inspectable evidence linking between state and outputs
 
-Why now:
+---
 
-- reviewing results through folders, JSON files, multiple vaults, and Obsidian instances is slowing core engine iteration
-- VaERL quality decisions need faster visual inspection
-- run-to-run regressions need a shared observation surface
-- the same components can later become part of the product web interface
+## 6) Query + Retrieval Reframe
 
-Scope:
+Status: `not started` as full layer, `partially active` in tactical flows.
 
-- list local runs/vaults as inspectable projects
-- browse Markdown notes and frontmatter
-- inspect primaries, review entities, chapters, summaries, review queue, and artifacts
-- render a graph with filters for system/review/chapter content
-- stay local, unauthenticated, and dev-internal for now
+The query path is reframed as:
 
-Out of scope:
+**author intent**
+→ **query understanding**
+→ **retrieval planning**
+→ **narrative state retrieval**
+→ **evidence retrieval**
+→ **context assembly**
+→ **grounded generation**
 
-- final manuscript editor
-- free author chat
-- multi-user collaboration
-- complex auth/deployment
-- write-back review actions
+Priority shifts away from “chatting with the novel” toward controlled retrieval and synthesis.
 
-Mature enough when:
+### 6.1 Query Understanding
 
-- a developer can open a local server and inspect real runs faster than by manually browsing folders
-- core VaERL regressions can be spotted from the viewer
-- the viewer exposes enough structure to inform future Codex View and Review Queue UI work
+Should classify:
 
-Return to main roadmap order when:
+- continuity check
+- rewrite request
+- what-if exploration
+- canon lookup
+- relation/timeline clarification
+- unresolved review follow-up
 
-- the viewer can list projects, open notes, show graph, inspect artifacts, and expose review queue items reliably for current E2E/replay runs
-- remaining viewer work is mostly polish or productization rather than blocking core engine iteration
+### 6.2 Retrieval Planning
 
-### Phase 1 — Stabilize VaERL Core
+Should choose retrieval mix:
 
-Status: `in progress`
-
-Objective:
-
-Stabilize the semantic base: entity identity, replay, canonical naming, slugs, review states, language consistency, and reliable import artifacts.
-
-Why it matters:
-
-Every later product surface depends on VaERL quality. If VaERL is unstable, chat and editor features will amplify errors.
-
-Prerequisites:
-
-- frozen upstream artifacts
-- downstream replay
-- current `obsidian_import.json`
-- vault materialization
-- semantic diagnosis playbook
-
-Outputs:
-
-- stable VaERL artifacts
-- clean primary/review split
-- reliable Markdown vault
-- run comparability manifest
-- semantic invariant suite (`semantic_invariants_audit.json`)
-- replayable entity resolution and cleanup
-- configurable Phase 1 quality gates for unlinked primary mentions, orphan primaries, unresolved relationship targets, and weak canonical naming
-- author-actionable review queue (`review_queue.json`) for unresolved targets, pending review entities, collisions, and weak canonicals
-- internal run/vault viewer for faster QA and regression inspection
-
-Risks:
-
-- overfitting to one novel
-- hidden LLM variance
-- noisy auxiliary enrichment
-- review queue becoming too large
-- protagonist identity instability
-
-Blockers:
-
-- semantic invariant suite exists, but current gates still need repeated replay validation on frozen upstream and larger runs
-- lack of evidence spans
-- incomplete author correction loop
-
-Done criteria:
-
-- 20/20 and larger runs keep stable protagonist primaries
-- no broken wikilinks/placeholders
-- no language contamination in semantic prose
-- review queue is useful and explainable
-- downstream replay can validate changes cheaply
-- auxiliary docs can enrich without destabilizing core primaries
-
-Signals mature enough to move on:
-
-- manual vault review finds mostly editorial issues, not structural bugs
-- comparable replay runs show stable primary counts and identities
-- major merge/review decisions are auditable
-- authors can inspect the vault and understand the graph
-- `semantic_invariants_audit.json` passes with the agreed Phase 1 thresholds for the current validation corpus
-- pending reviews are classified as useful work items rather than undifferentiated noise
-- developers can inspect runs/vaults through the internal viewer instead of manual folder/JSON browsing
-
-### Phase 2 — Codex View
-
-Status: `in progress`
-
-Objective:
-
-Turn VaERL entities into a polished, browsable Codex surface.
-
-Why it matters:
-
-Authors need a reliable way to inspect what TextifAI thinks the story contains.
-
-Prerequisites:
-
-- stable primaries
-- stable slugs
-- useful tags
-- review state preserved
-- readable primary note summaries
-
-Outputs:
-
-- polished primary notes
-- entity browser
-- filters by kind/tag/review state
-- merge/review actions
-- relation display
-- source/evidence display when available
-
-Risks:
-
-- Codex becoming a parallel source of truth
-- over-polished prose hiding uncertainty
-- UI encouraging unsafe merges
-
-Blockers:
-
-- no interactive review write-back yet
-- evidence spans not available
-
-Done criteria:
-
-- author can browse major entities comfortably
-- review entities are discoverable but not overwhelming
-- actions clearly distinguish presentation edits from canon changes
-
-Signals mature enough to move on:
-
-- Codex is useful without opening raw JSON
-- author can correct obvious entity issues
-- canonical write-back rules are clear
-
-### Phase 3 — Story Bible View
-
-Status: `not started`
-
-Objective:
-
-Generate human-readable editorial story bible sections from VaERL.
-
-Why it matters:
-
-Authors need a coherent editorial overview, not just entity cards.
-
-Prerequisites:
-
-- Codex View quality
-- editorial synthesis layer
-- source/evidence availability
-- review-state-aware output
-
-Outputs:
-
-- generated story bible sections
-- main cast overview
-- world overview
-- magic/political systems
-- timeline draft
-- open questions
-- continuity risks
-- exportable Story Bible
-
-Risks:
-
-- LLM smoothing over canon uncertainty
-- generated prose inventing connective tissue
-- stale Story Bible after VaERL corrections
-
-Blockers:
-
-- no synthesis audit yet
-- no regeneration strategy after corrections
-
-Done criteria:
-
-- Story Bible sections cite or trace back to VaERL
-- uncertain material remains visible
-- generated sections are useful to an author without being treated as hidden canon
-
-Signals mature enough to move on:
-
-- Story Bible helps manual review
-- author can regenerate sections safely
-- no major canon drift from synthesis
-
-### Phase 4 — Query Layer v1
-
-Status: `not started`
-
-Objective:
-
-Build structured querying over VaERL with fixed commands and controlled retrieval.
-
-Why it matters:
-
-This is the bridge from static vault to interactive assistant.
-
-Prerequisites:
-
-- stable VaERL
-- usable Codex View
-- basic evidence retrieval or chapter summary fallback
-- query understanding schema
-
-Outputs:
-
-- query understanding
-- retrieval planner
-- graph retrieval
-- context assembly
-- fixed command layer
-- grounded answer generation
-
-Risks:
-
-- flat RAG temptation
-- LLM answering beyond VaERL
-- weak temporal reasoning
-- poor handling of review-state data
-
-Blockers:
-
-- evidence spans not implemented
-- timeline model not mature
-
-Done criteria:
-
-- fixed commands answer with VaERL-grounded context
-- missing evidence is reported clearly
-- answers distinguish fact, inference, and review state
-
-Signals mature enough to move on:
-
-- authors can ask common bounded questions reliably
-- answers are useful without loading whole manuscript
-- hallucinated canon is rare and detectable
-
-### Phase 5 — Free Author Chat
-
-Status: `not started`
-
-Objective:
-
-Support natural author conversation grounded in VaERL.
-
-Why it matters:
-
-This is where TextifAI becomes a practical writing partner instead of only a compiler/browser.
-
-Prerequisites:
-
-- Query Layer v1
-- robust intent detection
-- review-state-aware answer policy
-- context assembly quality
-
-Outputs:
-
-- VaERL-enriched free chat
-- uncertainty-aware answers
-- chapter-aware responses
-- evidence-grounded replies
-- brainstorming mode that respects canon
-
-Risks:
-
-- chat bypassing VaERL
-- user mistaking suggestions for canon
-- poor separation between brainstorming and confirmed story facts
-
-Blockers:
-
-- no author correction loop
-- no durable conversation-to-canon policy
-
-Done criteria:
-
-- chat answers are consistently grounded
-- brainstorming suggestions do not silently modify canon
-- author can request evidence or review state
-
-Signals mature enough to move on:
-
-- free chat improves writing decisions without corrupting VaERL
-- common author questions work better than generic AI chat
-
-### Phase 6 — Online Markdown Editor
-
-Status: `not started`
-
-Objective:
-
-Provide a manuscript writing interface integrated with VaERL.
-
-Why it matters:
-
-The author should be able to write where TextifAI can detect mentions, continuity risks, and review opportunities.
-
-Prerequisites:
-
-- Codex View
-- Query Layer
-- canonical write-back
-- stable Markdown/vault sync policy
-
-Outputs:
-
-- online Markdown editor
-- chapter panel
-- entity side panel
-- inline highlights
-- quick review actions
-- continuity warnings
-- rewrite assistance grounded in VaERL
-
-Risks:
-
-- editor complexity overwhelming semantic core
-- sync conflicts with Obsidian or filesystem
-- suggestions becoming too intrusive
-
-Blockers:
-
-- no final storage/sync strategy
-- no evidence span anchoring
-
-Done criteria:
-
-- author can write/edit chapters
-- detected mentions link to VaERL
-- warnings are useful and not noisy
-- quick corrections feed back into VaERL
-
-Signals mature enough to move on:
-
-- editor increases author productivity without becoming a separate canon surface
-
-### Phase 7 — Advanced Semantic Engine
-
-Status: `not started`
-
-Objective:
-
-Add deeper semantic reasoning once the core product loop is stable.
-
-Why it matters:
-
-This is where TextifAI can surpass simple Codex/story-bible tools.
-
-Prerequisites:
-
-- stable VaERL
+- semantic graph lookup
+- narrative state snapshot
 - evidence spans
-- reliable query layer
-- author correction loop
-- timeline/event representation
+- review-state signals
+- policy constraints (POV, timeline, style)
 
-Outputs:
+### 6.3 Context Assembly
 
-- evidence spans
-- timeline graph
-- contradiction detection
-- character knowledge modeling
-- point-of-view consistency
-- rewrite assistant grounded in VaERL
-- scene-level semantic checks
-- advanced relationship evolution
+Should build deterministic context envelopes with:
 
-Risks:
+- cited canon assertions
+- uncertainty markers
+- open review items
+- reasoned inclusion/exclusion boundaries
 
-- over-modeling before core workflows are useful
-- false positives in contradiction detection
-- treating uncertain inferred timelines as canon
+---
 
-Blockers:
+## 7) Generation Philosophy
 
-- no mature evidence model
-- no timeline confidence model
-- insufficient author feedback data
+LLMs may:
 
-Done criteria:
+- synthesize
+- continue
+- rewrite
+- brainstorm
+- editorialize
 
-- advanced checks catch real issues with low noise
-- character-knowledge queries become reliable
-- rewrite assistance preserves canon and voice constraints
+LLMs must not:
 
-Signals mature enough to move on:
+- silently mutate canon
+- become source of truth
+- invent hidden continuity changes
+- overwrite semantic memory implicitly
 
-- advanced features improve real author workflow beyond what manual Codex browsing can do
+Generation outputs must remain:
 
-## 12. Phase Status Tracker
+- grounded
+- inspectable
+- evidence-aware
+- continuity-aware
+- reviewable
+
+Canon updates must happen via explicit write-back workflows, never by implicit side effect.
+
+---
+
+## 8) Viewer + Editor Reframe
+
+### 8.1 Viewer
+
+Status: `in progress`
+
+Viewer is:
+
+- semantic debugger
+- narrative observability layer
+- continuity inspection surface
+
+Viewer is not merely:
+
+- a graph viewer
+- a markdown browser
+
+Minimum viewer value:
+
+- inspect run artifacts quickly
+- inspect VaERL/review queue state
+- inspect evidence chains and unresolved items
+- compare runs and replay effects safely
+
+### 8.2 Future Editor
+
+Status: `not started`
+
+Future editor should be framed as:
+
+- narrative IDE
+- continuity-aware manuscript workspace
+
+Editor should consume harness outputs and write corrections back through explicit semantic workflows.
+
+---
+
+## 9) Product Surfaces (Preserved, Reframed)
+
+### 9.1 Codex View
+
+Status: `in progress`
+
+Entity-first projection over VaERL with evidence, relations, review state, and chapter/state links.
+
+### 9.2 Story Bible Layer
+
+Status: `not started`
+
+Synthesis layer over VaERL, not independent canon memory.
+
+### 9.3 Review Queue
+
+Status: `in progress`
+
+Operational surface for unresolved entities, ambiguous merges, weak evidence, relation gaps, and policy violations.
+
+### 9.4 Fixed Workflows
+
+Status: `partially active`
+
+Guided commands for continuity checks, summaries, rewrites, and review resolution under explicit retrieval plans.
+
+### 9.5 Free-Form Author Interaction
+
+Status: `not started`
+
+Allowed only after harness reliability and continuity safety are proven.
+
+---
+
+## 10) Operational Contracts
+
+### 10.1 Semantic Contracts
+
+Any change affecting output shape, canonical naming, slugs, review-state semantics, replay contracts, or note layout is a semantic contract change.
+
+These changes require:
+
+- explicit approval
+- explicit validation plan
+- fixture/baseline diff strategy
+- handoff impact statement
+
+### 10.2 Replayability + Comparability
+
+Replay remains mandatory for:
+
+- validating semantic stability
+- checking regressions
+- auditing changes across iterations
+
+### 10.3 Canonical Write-Back
+
+Canon change path must remain explicit:
+
+- issue detected
+- review decision made
+- write-back performed
+- evidence and provenance preserved
+
+---
+
+## 11) Roadmap By Phase
+
+### Tactical Pause — Ingestion Observability
+
+Status: `in progress`
+
+Focus:
+
+- local run/vault inspection surfaces
+- faster artifact diagnosis
+- operational debugging ergonomics
+
+Move-next signal:
+
+- diagnosing ingestion and replay issues is faster than manual folder forensics.
+
+### Phase 1 — Semantic Stabilization
+
+Status: `in progress`
+
+Focus:
+
+- VaERL core stability
+- invariants + thresholds
+- review-queue signal quality
+- replay reliability
+- auxiliary ingestion consistency
+
+Move-next signal:
+
+- stable primaries/relations on approved corpus and fixture baselines.
+
+### Phase 2 — Narrative Inspection Surfaces
+
+Status: `in progress`
+
+Focus:
+
+- Codex View usefulness
+- reviewer clarity
+- evidence inspectability
+- author correction readiness
+
+Move-next signal:
+
+- author/reviewer can resolve obvious semantic issues without raw JSON spelunking.
+
+### Phase 3 — Grounded Retrieval Layer
+
+Status: `not started`
+
+Focus:
+
+- intent understanding
+- retrieval planning
+- narrative-state retrieval
+- evidence package assembly
+
+Move-next signal:
+
+- fixed query workflows produce stable, inspectable context packages.
+
+### Phase 4 — Narrative Harness v1
+
+Status: `not started`
+
+Focus:
+
+- continuity-safe context assembly before generation
+- policy constraints (POV/timeline/style)
+- controlled context package contracts
+
+Move-next signal:
+
+- harness contexts reliably reduce continuity drift in controlled evaluations.
+
+### Phase 5 — Continuity-Aware Generation
+
+Status: `not started`
+
+Focus:
+
+- grounded generation workflows
+- evidence-aware drafting
+- explicit uncertainty/review feedback loops
+
+Move-next signal:
+
+- generated outputs remain canon-safe under audited harness traces.
+
+### Phase 6 — Narrative IDE Workflows
+
+Status: `not started`
+
+Focus:
+
+- editor workflows for manuscript iteration
+- inline continuity diagnostics
+- explicit write-back ergonomics
+
+Move-next signal:
+
+- editor actions can update canon safely with traceability.
+
+### Phase 7 — Advanced Narrative State Engine
+
+Status: `not started`
+
+Focus:
+
+- deeper state transitions (knowledge, emotion, authority, promises, secrets)
+- richer temporal/event constraints
+- symbolic recurrence tracking
+
+Move-next signal:
+
+- state-aware retrieval materially improves continuity over entity-only retrieval.
+
+---
+
+## 12) Phase Status Tracker
 
 | Phase | Status | Current Focus | Move-Next Signal |
 | --- | --- | --- | --- |
-| Tactical Pause — Internal Run/Vault Viewer | `in progress` | local project/run inspection | viewer makes run review faster than manual folders/Obsidian |
-| Phase 1 — Stabilize VaERL Core | `in progress` | replay, invariants, auxiliary docs, primary quality | stable larger runs and useful review queue |
-| Phase 2 — Codex View | `in progress` | readable primary notes and inspectable vault | author can correct obvious entity issues |
-| Phase 3 — Story Bible View | `not started` | not active | Codex and synthesis layer stable |
-| Phase 4 — Query Layer v1 | `not started` | not active | fixed retrieval packages from VaERL |
-| Phase 5 — Free Author Chat | `not started` | not active | fixed commands work reliably |
-| Phase 6 — Online Markdown Editor | `not started` | not active | query/review write-back stable |
-| Phase 7 — Advanced Semantic Engine | `not started` | not active | evidence spans and timeline model exist |
+| Tactical Pause — Ingestion Observability | `in progress` | run/vault inspection speed | debug loops faster than manual forensics |
+| Phase 1 — Semantic Stabilization | `in progress` | invariants, replay, review quality | stable semantic outputs on approved baselines |
+| Phase 2 — Narrative Inspection Surfaces | `in progress` | codex/review clarity | author can correct canon issues safely |
+| Phase 3 — Grounded Retrieval Layer | `not started` | intent + retrieval planning | stable context package generation |
+| Phase 4 — Narrative Harness v1 | `not started` | continuity-safe assembly | measurable drift reduction |
+| Phase 5 — Continuity-Aware Generation | `not started` | grounded drafting | canon-safe generated workflows |
+| Phase 6 — Narrative IDE Workflows | `not started` | editor interactions | safe write-back in author workspace |
+| Phase 7 — Advanced Narrative State Engine | `not started` | deep transition modeling | state-aware continuity gains validated |
 
-## 13. TODO List
+---
+
+## 13) TODO Structure
 
 ### 13.1 Immediate TODO
 
-- Build internal local run/vault viewer for faster VaERL/bootstrap QA.
-- Validate the expanded semantic invariant suite against frozen good upstream.
-- Tune explicit Phase 1 quality thresholds without overfitting to one novel.
-- Keep improving stable canonical naming.
-- Continue primary note synthesis quality work.
-- Clean up Review Queue noise and prepare author-assisted merge actions.
-- Define evidence span plan.
-- Validate auxiliary docs with hints as recommended product path.
-- Decide minimum acceptable VaERL quality gate for moving into Query Layer v1.
+- Finalize fixture-driven semantic validation baseline (`Phase 0.5` operational track).
+- Tighten invariant thresholds without overfitting one novel.
+- Standardize handoff reporting for semantic-risk iterations.
+- Keep review queue severity and evidence fields actionable.
 
 ### 13.2 Medium-Term TODO
 
-- Codex View MVP.
-- Review action MVP: merge review into primary, reject alias, promote/demote.
-- Story Bible generator.
-- Editorial synthesis layer.
-- Query planner MVP.
-- Fixed command layer.
-- Context assembly format.
-- Evidence retrieval fallback using chapter summaries.
+- Implement first deterministic context-package contracts for fixed workflows.
+- Add narrative-state fields beyond entity/relationship memory.
+- Add structured artifact diff tooling for harness outputs.
+- Define explicit failure taxonomy for continuity drift.
 
 ### 13.3 Long-Term TODO
 
-- Free author chat.
-- Online Markdown editor.
-- Timeline reasoning.
-- Contradiction detection.
-- Character knowledge modeling.
-- Advanced VaERL graph.
-- Scene-level evidence spans.
-- Rewrite assistant grounded in VaERL.
+- Expand temporal/state transition modeling.
+- Add stronger author correction feedback loops.
+- Mature narrative IDE flows with explicit semantic write-back controls.
 
-## 14. Important Design Principles
+---
 
-- VaERL is source of truth.
-- Views are projections over VaERL.
-- LLMs synthesize; they do not own canon.
-- Every generated answer should be grounded.
-- Review state matters.
-- Uncertainty must be visible.
-- Replayability matters.
-- Markdown is a first-class output.
-- Author corrections should feed back into VaERL.
-- No hidden canon changes.
-- Hints from the author should be encouraged when ingesting auxiliary documents.
-- Missing hints should not make clear auxiliary facts unusable.
-- Frozen artifacts should be used whenever possible to reduce cost and variance.
+## 14) Design Principles
 
-## 15. Out Of Scope For This Document
+- Memory is explicit, not implicit in model context.
+- Retrieval is planned, not ad hoc chunk dumping.
+- Generation is grounded, not canon-authoritative.
+- State transitions matter as much as entity recall.
+- Reviewability and auditability are non-negotiable.
+- Replayability is mandatory for semantic trust.
+- Operational observability is part of product, not auxiliary tooling.
+
+---
+
+## 15) Out Of Scope For This Document
 
 This roadmap does not define:
 
-- detailed prompts
-- final UI wireframes
-- pricing
-- deployment architecture
-- final choice of web-only vs Obsidian-only vs hybrid surfaces
-- exact database schema
-- low-level pipeline contracts
-- provider/model selection policy
-- full test plans
-- all command syntaxes
+- low-level function-by-function implementation
+- one-off prompt text details
+- private novel content
+- deployment/commercial packaging strategy
+- UI visual design specifications
 
-Those belong in implementation docs, product specs, or task-specific design notes.
+Those live in implementation plans, tactical handoffs, and module-level docs.
