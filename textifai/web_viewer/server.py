@@ -9,7 +9,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
 
-from textifai.web_viewer.ingestion_jobs import IngestionJobRegistry, job_to_json, jobs_list_json, log_json
+from textifai.web_viewer.ingestion_jobs import IngestionJobRegistry, job_to_json, jobs_list_json
 from textifai.web_viewer.project_reader import ProjectCatalog, read_artifact, read_note, read_project
 
 
@@ -132,7 +132,14 @@ def _make_handler(catalog: ProjectCatalog, registry: IngestionJobRegistry):
                 if len(parts) < 5:
                     raise KeyError(path)
                 job_id = unquote(parts[4])
-                self._json(log_json(registry.get_job(job_id)))
+                max_chars = 64_000
+                raw = query.get("max_chars", [""])[0]
+                if raw:
+                    try:
+                        max_chars = max(1024, min(int(raw), 512_000))
+                    except ValueError:
+                        raise ValueError("max_chars must be an integer") from None
+                self._json(registry.get_job_log(job_id, max_chars=max_chars))
                 return
             if path.startswith("/api/ingestion/jobs/"):
                 parts = path.split("/")

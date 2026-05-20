@@ -310,10 +310,11 @@ function sanitizePreviewSlug(value) {
 
 function renderWizardJobStatus(job) {
   if (!job) return `<p class="muted">No job submitted yet.</p>`;
+  const restoredBadge = job.restored_from_disk ? `<span class="badge restored-badge">restored</span>` : "";
   return `
     <div class="wizard-job-card">
       <p><strong>job_id:</strong> <code>${escapeHtml(job.job_id || "not available")}</code></p>
-      <p><strong>status:</strong> <span class="badge ${escapeHtml(`status-${job.status || "unknown"}`)}">${escapeHtml(job.status || "unknown")}</span></p>
+      <p><strong>status:</strong> <span class="badge ${escapeHtml(`status-${job.status || "unknown"}`)}">${escapeHtml(job.status || "unknown")}</span> ${restoredBadge}</p>
       <p><strong>output_root:</strong> <code>${escapeHtml(job.output_root || "not available")}</code></p>
       <p><strong>safe_output_root:</strong> <code>${escapeHtml(job.safe_output_root || "not available")}</code></p>
       <p><strong>created:</strong> ${escapeHtml(job.created_at || "not available")}</p>
@@ -327,8 +328,11 @@ function renderWizardJobStatus(job) {
       <p><strong>review_queue_available:</strong> ${escapeHtml(job.review_queue_available ? "yes" : "no")}</p>
       <p><strong>log_size_bytes:</strong> ${escapeHtml(job.log_size_bytes === null || job.log_size_bytes === undefined ? "not available" : job.log_size_bytes)}</p>
       <p><strong>log_truncated:</strong> ${escapeHtml(job.log_truncated ? "yes" : "no")}</p>
+      <p><strong>log_source:</strong> ${escapeHtml(job.log_source || "memory")}</p>
       ${job.project_id ? `<p><strong>project_id:</strong> <code>${escapeHtml(job.project_id)}</code></p>` : ""}
+      ${!job.project_id ? `<p class="muted"><strong>open result:</strong> not available yet. Inspect output root or refresh projects.</p>` : ""}
       ${(job.result_warnings || []).length ? `<div class="nav-notice warning">${job.result_warnings.map((item) => escapeHtml(item)).join("<br />")}</div>` : ""}
+      ${job.log_warning ? `<div class="nav-notice warning">${escapeHtml(job.log_warning)}</div>` : ""}
       ${job.error ? `<p class="nav-notice warning">${escapeHtml(job.error)}</p>` : ""}
       <details>
         <summary>Command preview</summary>
@@ -340,6 +344,7 @@ function renderWizardJobStatus(job) {
       </details>
       <div class="wizard-job-actions">
         <button type="button" id="wizard-refresh-projects">Refresh projects</button>
+        <button type="button" id="wizard-view-log">View log</button>
         ${job.project_id ? `<button type="button" id="wizard-open-result">Open result</button>` : ""}
       </div>
     </div>
@@ -348,14 +353,15 @@ function renderWizardJobStatus(job) {
 
 function renderRecentJobs(jobs) {
   const items = jobs || [];
-  if (!items.length) return `<p class="muted">No recent jobs in current server session.</p>`;
+  if (!items.length) return `<p class="muted">No recent jobs in memory or restored history.</p>`;
   return `
     <div class="wizard-recent-jobs">
       ${items.slice(0, 8).map((job) => `
         <div class="wizard-job-row ${job.job_id === state.ingestionWizard.currentJobId ? "active" : ""}">
           <div>
-            <p><strong>${escapeHtml(job.project_title || "untitled")}</strong> · <code>${escapeHtml(job.run_name || "n/a")}</code></p>
+            <p><strong>${escapeHtml(job.project_title || "untitled")}</strong> · <code>${escapeHtml(job.run_name || "n/a")}</code> ${job.restored_from_disk ? `<span class="badge restored-badge">restored</span>` : ""}</p>
             <p class="muted"><code>${escapeHtml(job.job_id)}</code> · ${escapeHtml(job.status || "unknown")} · ${escapeHtml(job.output_root || "not available")}</p>
+            ${(job.result_warnings || []).length ? `<p class="muted">${escapeHtml(job.result_warnings[0])}</p>` : ""}
           </div>
           <button type="button" data-wizard-select-job="${escapeHtml(job.job_id)}">Inspect</button>
         </div>
@@ -401,6 +407,22 @@ function bindWizardJobActions() {
   $("wizard-refresh-projects")?.addEventListener("click", async () => {
     await loadProjects();
     renderOverview();
+  });
+  $("wizard-view-log")?.addEventListener("click", async () => {
+    const job = state.ingestionWizard.currentJob;
+    if (!job?.job_id) return;
+    const payload = await api(`/api/ingestion/jobs/${encodeURIComponent(job.job_id)}/log`);
+    state.ingestionWizard.currentJob = {
+      ...job,
+      log_tail: payload.log || "",
+      last_log_lines: payload.last_log_lines || [],
+      log_size_bytes: payload.log_size_bytes,
+      log_truncated: payload.log_truncated,
+      log_source: payload.log_source,
+      log_warning: payload.warning || "",
+    };
+    renderOverview();
+    bindWizardJobActions();
   });
   $("wizard-open-result")?.addEventListener("click", async () => {
     const job = state.ingestionWizard.currentJob;

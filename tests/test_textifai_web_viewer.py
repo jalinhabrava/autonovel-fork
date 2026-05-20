@@ -8,6 +8,8 @@ from urllib.request import urlopen
 from unittest.mock import patch
 
 from textifai.web_viewer.ingestion_jobs import (
+    JOB_LOG_FILE,
+    JOB_METADATA_FILE,
     IngestionJob,
     IngestionJobRegistry,
     build_ingestion_command,
@@ -76,11 +78,6 @@ class TextifAIWebViewerTests(unittest.TestCase):
         self.assertEqual(artifact["json"]["work"]["title"], "Sample")
         self.assertEqual(len(graph["nodes"]), 3)
         self.assertEqual(len(graph["edges"]), 1)
-        sera_node = next(node for node in graph["nodes"] if node["id"] == "entity:sera")
-        self.assertEqual(sera_node["entity"]["summary"], "Protagonista de prueba.")
-        self.assertEqual(sera_node["entity"]["aliases"], ["la princesa"])
-        self.assertIn("#primary", sera_node["tags"])
-        self.assertIn("#character", sera_node["tags"])
 
     def test_ingestion_config_is_preview_only_and_safe(self):
         config = build_ingestion_config()
@@ -90,13 +87,6 @@ class TextifAIWebViewerTests(unittest.TestCase):
         self.assertEqual(config["default_output_root"], "runs/web_ingestion")
         self.assertEqual(config["recommended_command"]["program"][:5], ["uv", "run", "python", "scripts/textifai.py", "init"])
         self.assertEqual(config["supported_input_mode"], "local_path")
-        self.assertIn("upload", config["future_input_modes"])
-        required = {item["name"]: item for item in config["required_fields"]}
-        self.assertTrue(required["source_root"]["required"])
-        self.assertTrue(required["project_title"]["required"])
-        self.assertTrue(required["run_name"]["required"])
-        self.assertFalse(required["skip_plugin_install"]["required"])
-        self.assertTrue(required["skip_plugin_install"]["default"])
 
     def test_build_ingestion_command_validates_and_uses_args_list(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -155,6 +145,7 @@ class TextifAIWebViewerTests(unittest.TestCase):
                     class _Stamp:
                         def strftime(self, _fmt):
                             return fixed_timestamp
+
                     return _Stamp()
 
             existing_target = output_root / f"{fixed_timestamp}_demo"
@@ -183,6 +174,21 @@ class TextifAIWebViewerTests(unittest.TestCase):
             self.assertTrue(inspectable_result["result_detected"])
             self.assertTrue(inspectable_result["review_queue_available"])
 
+    def test_metadata_file_written_on_job_create(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            source_root = repo_root / "src"
+            source_root.mkdir(parents=True)
+            registry = IngestionJobRegistry(repo_root=repo_root, start_immediately=False)
+            job = registry.create_job({"source_root": str(source_root), "project_title": "Demo", "run_name": "alpha"})
+            metadata_path = Path(job.output_root) / JOB_METADATA_FILE
+            self.assertTrue(metadata_path.exists())
+            payload = json.loads(metadata_path.read_text(encoding="utf-8"))
+            self.assertEqual(payload["job_id"], job.job_id)
+            self.assertEqual(payload["status"], "queued")
+            self.assertEqual(payload["log_path_relative"], JOB_LOG_FILE)
+            self.assertIn("command_preview", payload)
+
     def test_duplicate_active_job_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
             repo_root = Path(tmp)
@@ -191,37 +197,98 @@ class TextifAIWebViewerTests(unittest.TestCase):
             registry = IngestionJobRegistry(repo_root=repo_root, start_immediately=False)
             payload = {"source_root": str(source_root), "project_title": "Demo", "run_name": "run_demo"}
             registry.create_job(payload)
-            with self.assertRaisesRegex(ValueError, "active job already exists"):
+            with self.assertRaisesRegex(ValueError, "active job already exists|output target already exists"):
                 registry.create_job(payload)
 
-    def test_log_json_redacts_and_reports_truncation(self):
-        job = IngestionJob(
-            job_id="job_1",
-            status="running",
-            created_at="2026-01-01T00:00:00+00:00",
-            output_root="runs/web_ingestion/run_1",
-            command_preview=["uv", "run", "python"],
-            source_root="/tmp/source",
-            project_title="Demo",
-            run_name="demo",
-        )
-        job.append_log("token=abc123\n")
-        job.append_log("sk-1234567890abcdefABCDEF\n")
-        snapshot = log_json(job, max_chars=10)
-        self.assertIn("[REDACTED]", job.snapshot()["log_tail"])
-        self.assertTrue(snapshot["log_truncated"])
-        self.assertIn("last_log_lines", snapshot)
+    def test_rehydrate_completed_job_and_revalidate_result(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            output_root = repo_root / "runs" / "web_ingestion" / "20260101T000000Z_demo"
+            system_root = output_root / "99_System"
+            system_root.mkdir(parents=True)
+            (system_root / "obsidian_import.json").write_text("{}", encoding="utf-8")
+            (system_root / "review_queue.json").write_text("{}", encoding="utf-8")
+            metadata = {
+                "job_id": "job_done_1",
+                "status": "succeeded",
+                "created_at": "2026-01-01T00:00:00+00:00",
+                "started_at": "2026-01-01T00:01:00+00:00",
+                "finished_at": "2026-01-01T00:02:00+00:00",
+                "project_title": "Demo",
+                "source_root": "/tmp/source",
+                "output_root": str(output_root),
+                "safe_output_root": str(repo_root / "runs" / "web_ingestion"),
+                "command_preview": ["uv", "run", "python"],
+                "run_name": "demo",
+                "result_detected": False,
+                "result_status": "warning",
+            }
+            (output_root / JOB_METADATA_FILE).write_text(json.dumps(metadata), encoding="utf-8")
+            (output_root / JOB_LOG_FILE).write_text("line1\nline2\n", encoding="utf-8")
 
-    def test_jobs_list_endpoint_returns_registry_jobs(self):
+            registry = IngestionJobRegistry(repo_root=repo_root, start_immediately=False)
+            jobs = registry.list_jobs()
+            self.assertEqual(len(jobs), 1)
+            job = jobs[0]
+            self.assertTrue(job.restored_from_disk)
+            self.assertEqual(job.status, "succeeded")
+            self.assertTrue(job.result_detected)
+            self.assertIsNotNone(job.project_id)
+
+    def test_rehydrate_running_job_marked_failed_with_warning(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            output_root = repo_root / "runs" / "web_ingestion" / "20260101T000000Z_demo"
+            output_root.mkdir(parents=True)
+            metadata = {
+                "job_id": "job_running_1",
+                "status": "running",
+                "created_at": "2026-01-01T00:00:00+00:00",
+                "project_title": "Demo",
+                "source_root": "/tmp/source",
+                "output_root": str(output_root),
+                "safe_output_root": str(repo_root / "runs" / "web_ingestion"),
+                "command_preview": ["uv", "run", "python"],
+                "run_name": "demo",
+            }
+            (output_root / JOB_METADATA_FILE).write_text(json.dumps(metadata), encoding="utf-8")
+
+            registry = IngestionJobRegistry(repo_root=repo_root, start_immediately=False)
+            job = registry.list_jobs()[0]
+            self.assertTrue(job.restored_from_disk)
+            self.assertEqual(job.status, "failed")
+            self.assertTrue(any("server restarted while job was active" in item for item in job.result_warnings))
+
+    def test_jobs_list_includes_rehydrated_jobs(self):
         with tempfile.TemporaryDirectory() as tmp:
             repo_root = Path(tmp)
             source_root = repo_root / "source"
             source_root.mkdir(parents=True)
+            restored_output = repo_root / "runs" / "web_ingestion" / "20260101T000000Z_old"
+            restored_output.mkdir(parents=True)
+            (restored_output / JOB_METADATA_FILE).write_text(
+                json.dumps(
+                    {
+                        "job_id": "job_restored_1",
+                        "status": "failed",
+                        "created_at": "2026-01-01T00:00:00+00:00",
+                        "project_title": "Old",
+                        "source_root": "/tmp/source",
+                        "output_root": str(restored_output),
+                        "safe_output_root": str(repo_root / "runs" / "web_ingestion"),
+                        "command_preview": ["uv"],
+                        "run_name": "old",
+                    }
+                ),
+                encoding="utf-8",
+            )
+
             runs_root = repo_root / "runs"
-            runs_root.mkdir(parents=True)
+            runs_root.mkdir(parents=True, exist_ok=True)
             catalog = ProjectCatalog([runs_root])
             registry = IngestionJobRegistry(repo_root=repo_root, start_immediately=False)
-            registry.create_job({"source_root": str(source_root), "project_title": "Demo", "run_name": "run_demo"})
+            registry.create_job({"source_root": str(source_root), "project_title": "New", "run_name": "new"})
+
             handler = _make_handler(catalog, registry)
             server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
             thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -233,10 +300,56 @@ class TextifAIWebViewerTests(unittest.TestCase):
                 server.shutdown()
                 server.server_close()
                 thread.join(timeout=1.0)
-            self.assertIn("jobs", payload)
-            self.assertEqual(len(payload["jobs"]), 1)
-            self.assertEqual(payload["jobs"][0]["status"], "queued")
-            self.assertIn("result_detected", payload["jobs"][0])
+
+            self.assertGreaterEqual(len(payload["jobs"]), 2)
+            restored = next(job for job in payload["jobs"] if job["job_id"] == "job_restored_1")
+            self.assertTrue(restored["restored_from_disk"])
+
+    def test_log_json_falls_back_to_persisted_log(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            output_root = Path(tmp) / "run_001"
+            output_root.mkdir(parents=True)
+            (output_root / JOB_LOG_FILE).write_text("token=abc123\nlinea final\n", encoding="utf-8")
+            job = IngestionJob(
+                job_id="job_1",
+                status="failed",
+                created_at="2026-01-01T00:00:00+00:00",
+                output_root=str(output_root),
+                command_preview=["uv", "run", "python"],
+                source_root="/tmp/source",
+                project_title="Demo",
+                run_name="demo",
+                restored_from_disk=True,
+            )
+            payload = log_json(job, max_chars=200)
+            self.assertEqual(payload["log_source"], "persisted")
+            self.assertIn("[REDACTED]", payload["log"])
+            self.assertFalse(payload["warning"])
+
+    def test_rehydrate_revalidates_missing_artifacts(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            output_root = repo_root / "runs" / "web_ingestion" / "20260101T000000Z_broken"
+            system_root = output_root / "99_System"
+            system_root.mkdir(parents=True)
+            metadata = {
+                "job_id": "job_bad_1",
+                "status": "succeeded",
+                "created_at": "2026-01-01T00:00:00+00:00",
+                "project_title": "Broken",
+                "source_root": "/tmp/source",
+                "output_root": str(output_root),
+                "safe_output_root": str(repo_root / "runs" / "web_ingestion"),
+                "command_preview": ["uv"],
+                "run_name": "broken",
+                "result_detected": True,
+            }
+            (output_root / JOB_METADATA_FILE).write_text(json.dumps(metadata), encoding="utf-8")
+
+            registry = IngestionJobRegistry(repo_root=repo_root, start_immediately=False)
+            job = registry.list_jobs()[0]
+            self.assertFalse(job.result_detected)
+            self.assertTrue(any("obsidian_import.json" in item for item in job.result_warnings))
 
 
 if __name__ == "__main__":

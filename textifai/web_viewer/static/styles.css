@@ -1113,6 +1113,12 @@ button:hover, button.active {
   color: var(--accent-2);
 }
 
+.badge.restored-badge {
+  background: rgba(108, 106, 95, 0.2);
+  color: var(--ink);
+  margin-left: 6px;
+}
+
 @media (max-width: 900px) {
   .app-shell, .split-view.active, .graph-layout {
     grid-template-columns: 1fr;
