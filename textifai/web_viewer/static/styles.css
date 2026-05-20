@@ -752,6 +752,25 @@ button:hover, button.active {
   overflow-wrap: anywhere;
 }
 
+.wizard-job-status {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255,255,255,0.36);
+  padding: 12px 14px;
+  margin-top: 12px;
+}
+
+.wizard-job-card code {
+  overflow-wrap: anywhere;
+}
+
+.wizard-job-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
 .artifact-link {
   background: #fff;
 }

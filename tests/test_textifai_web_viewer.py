@@ -2,7 +2,9 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
+from textifai.web_viewer.ingestion_jobs import build_ingestion_command, sanitize_run_slug
 from textifai.web_viewer.project_reader import ProjectCatalog, build_graph, read_artifact, read_note, read_project
 from textifai.web_viewer.server import build_ingestion_config
 
@@ -73,7 +75,7 @@ class TextifAIWebViewerTests(unittest.TestCase):
     def test_ingestion_config_is_preview_only_and_safe(self):
         config = build_ingestion_config()
         self.assertEqual(config["mode"], "local_path_preview_only")
-        self.assertFalse(config["can_execute"])
+        self.assertTrue(config["can_execute"])
         self.assertFalse(config["can_upload"])
         self.assertEqual(config["default_output_root"], "runs/web_ingestion")
         self.assertEqual(config["recommended_command"]["program"][:5], ["uv", "run", "python", "scripts/textifai.py", "init"])
@@ -85,6 +87,75 @@ class TextifAIWebViewerTests(unittest.TestCase):
         self.assertTrue(required["run_name"]["required"])
         self.assertFalse(required["skip_plugin_install"]["required"])
         self.assertTrue(required["skip_plugin_install"]["default"])
+
+    def test_build_ingestion_command_validates_and_uses_args_list(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            source_root = repo_root / "source"
+            output_root = repo_root / "runs" / "web_ingestion"
+            source_root.mkdir(parents=True)
+            spec = build_ingestion_command(
+                {
+                    "source_root": str(source_root),
+                    "project_title": "Proyecto Demo",
+                    "run_name": "Mi Run Demo",
+                    "primary_language": "es",
+                    "working_languages": ["es", "en"],
+                    "skip_plugin_install": True,
+                },
+                repo_root=repo_root,
+                output_root=output_root,
+            )
+        self.assertEqual(spec["args"][:5], ["uv", "run", "python", "scripts/textifai.py", "init"])
+        self.assertIn("--vault-root", spec["args"])
+        self.assertIn("--source-root", spec["args"])
+        self.assertIn("--project-title", spec["args"])
+        self.assertIn("--skip-plugin-install", spec["args"])
+        self.assertNotIn("shell=True", " ".join(spec["args"]))
+
+    def test_build_ingestion_command_rejects_bad_source_root(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            output_root = repo_root / "runs" / "web_ingestion"
+            with self.assertRaisesRegex(ValueError, "source_root is required"):
+                build_ingestion_command(
+                    {"source_root": "", "project_title": "Demo", "run_name": "demo"},
+                    repo_root=repo_root,
+                    output_root=output_root,
+                )
+            with self.assertRaisesRegex(ValueError, "source_root does not exist"):
+                build_ingestion_command(
+                    {"source_root": str(repo_root / "missing"), "project_title": "Demo", "run_name": "demo"},
+                    repo_root=repo_root,
+                    output_root=output_root,
+                )
+
+    def test_sanitize_run_slug_and_no_overwrite_target(self):
+        self.assertEqual(sanitize_run_slug("Mi Run Demo!!"), "mi_run_demo")
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            source_root = repo_root / "source"
+            output_root = repo_root / "runs" / "web_ingestion"
+            source_root.mkdir(parents=True)
+            fixed_timestamp = "20270101T010101Z"
+
+            class FixedDateTime:
+                @staticmethod
+                def now(_tz=None):
+                    class _Stamp:
+                        def strftime(self, _fmt):
+                            return fixed_timestamp
+                    return _Stamp()
+
+            existing_target = output_root / f"{fixed_timestamp}_demo"
+            existing_target.mkdir(parents=True)
+            with patch("textifai.web_viewer.ingestion_jobs.datetime", FixedDateTime):
+                with self.assertRaisesRegex(ValueError, "output target already exists"):
+                    build_ingestion_command(
+                        {"source_root": str(source_root), "project_title": "Demo", "run_name": "demo"},
+                        repo_root=repo_root,
+                        output_root=output_root,
+                    )
 
 
 if __name__ == "__main__":

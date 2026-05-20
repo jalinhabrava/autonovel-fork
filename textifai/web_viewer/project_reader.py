@@ -53,9 +53,11 @@ class ProjectCatalog:
         self._projects = self._discover()
 
     def list_projects(self) -> list[dict[str, Any]]:
+        self._projects = self._discover()
         return [self._project_summary(project) for project in self._projects]
 
     def get_project(self, project_id: str) -> ProjectRef:
+        self._projects = self._discover()
         for project in self._projects:
             if project.project_id == project_id:
                 return project

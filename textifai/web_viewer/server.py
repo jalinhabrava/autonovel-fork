@@ -9,30 +9,33 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
 
+from textifai.web_viewer.ingestion_jobs import IngestionJobRegistry, job_to_json, log_json
 from textifai.web_viewer.project_reader import ProjectCatalog, read_artifact, read_note, read_project
 
 
 STATIC_ROOT = Path(__file__).with_name("static")
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def build_ingestion_config() -> dict[str, object]:
     return {
         "mode": "local_path_preview_only",
-        "can_execute": False,
+        "can_execute": True,
         "can_upload": False,
+        "execution_mode": "local_path_job",
         "default_output_root": "runs/web_ingestion",
         "recommended_command": {
             "program": ["uv", "run", "python", "scripts/textifai.py", "init"],
             "style": "args_list_preview",
         },
-        "local_only_warning": "Local-only preview. No ingestion execution, upload, or filesystem writes happen in this safepoint.",
+        "local_only_warning": "Local-only tool. Execution is restricted to controlled local-path jobs under runs/web_ingestion.",
         "safety_notes": [
-            "Preview only: no subprocess execution.",
-            "No files will be written.",
-            "Future execution should write only inside a dedicated output root.",
-            "No overwrite policy must be enforced before execution is enabled.",
+            "Execution uses subprocess args list only; no shell interpolation.",
+            "Writes are limited to dedicated runs/web_ingestion/<timestamp>_<slug>/ targets.",
+            "No overwrite is allowed for target output roots.",
             "Uploads are not enabled in this MVP shell.",
             "Skip plugin install is recommended for the MVP path flow.",
+            "No real vault/ directory writes are allowed from the wizard.",
         ],
         "supported_input_mode": "local_path",
         "future_input_modes": ["upload"],
@@ -55,7 +58,8 @@ def run_viewer_server(
     open_browser: bool = False,
 ) -> None:
     catalog = ProjectCatalog([Path(root) for root in roots])
-    handler = _make_handler(catalog)
+    registry = IngestionJobRegistry(repo_root=REPO_ROOT)
+    handler = _make_handler(catalog, registry)
     server = ThreadingHTTPServer((host, port), handler)
     url = f"http://{host}:{port}"
     print(f"TextifAI viewer running at {url}")
@@ -84,11 +88,23 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
-def _make_handler(catalog: ProjectCatalog):
+def _make_handler(catalog: ProjectCatalog, registry: IngestionJobRegistry):
     class ViewerHandler(BaseHTTPRequestHandler):
         def do_GET(self) -> None:  # noqa: N802
             try:
                 self._handle_get()
+            except KeyError:
+                self._json({"error": "not_found"}, status=404)
+            except FileNotFoundError as exc:
+                self._json({"error": "not_found", "message": str(exc)}, status=404)
+            except ValueError as exc:
+                self._json({"error": "bad_request", "message": str(exc)}, status=400)
+            except Exception as exc:  # pragma: no cover - defensive server boundary
+                self._json({"error": "internal_error", "message": str(exc)}, status=500)
+
+        def do_POST(self) -> None:  # noqa: N802
+            try:
+                self._handle_post()
             except KeyError:
                 self._json({"error": "not_found"}, status=404)
             except FileNotFoundError as exc:
@@ -107,6 +123,20 @@ def _make_handler(catalog: ProjectCatalog):
             query = parse_qs(parsed.query)
             if path == "/api/ingestion/config":
                 self._json(build_ingestion_config())
+                return
+            if path.startswith("/api/ingestion/jobs/") and path.endswith("/log"):
+                parts = path.split("/")
+                if len(parts) < 5:
+                    raise KeyError(path)
+                job_id = unquote(parts[4])
+                self._json(log_json(registry.get_job(job_id)))
+                return
+            if path.startswith("/api/ingestion/jobs/"):
+                parts = path.split("/")
+                if len(parts) < 5:
+                    raise KeyError(path)
+                job_id = unquote(parts[4])
+                self._json(job_to_json(registry.get_job(job_id)))
                 return
             if path == "/api/projects":
                 self._json({"projects": catalog.list_projects()})
@@ -137,6 +167,14 @@ def _make_handler(catalog: ProjectCatalog):
                     return
             self._static(path)
 
+        def _handle_post(self) -> None:
+            parsed = urlparse(self.path)
+            if parsed.path != "/api/ingestion/jobs":
+                raise KeyError(parsed.path)
+            payload = self._json_body()
+            job = registry.create_job(payload)
+            self._json(job_to_json(job), status=202)
+
         def _static(self, path: str) -> None:
             if path in {"", "/"}:
                 path = "/index.html"
@@ -164,6 +202,20 @@ def _make_handler(catalog: ProjectCatalog):
             self.send_header("Cache-Control", "no-store, max-age=0")
             self.end_headers()
             self.wfile.write(data)
+
+        def _json_body(self) -> dict[str, object]:
+            raw_length = self.headers.get("Content-Length", "0").strip()
+            try:
+                length = int(raw_length)
+            except ValueError as exc:
+                raise ValueError("invalid Content-Length") from exc
+            payload = self.rfile.read(max(length, 0))
+            if not payload:
+                return {}
+            decoded = json.loads(payload.decode("utf-8"))
+            if not isinstance(decoded, dict):
+                raise ValueError("JSON payload must be an object")
+            return decoded
 
     return ViewerHandler
 

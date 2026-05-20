@@ -21,6 +21,10 @@ const state = {
     primaryLanguage: "",
     workingLanguages: "",
     skipPluginInstall: true,
+    submitting: false,
+    submitError: "",
+    currentJobId: "",
+    currentJob: null,
   },
   compareView: { baseId: "", candidateId: "", loading: false, result: null, error: "" },
   reviewView: { severity: "", reviewType: "", query: "", sortBy: "severity_desc" },
@@ -28,8 +32,8 @@ const state = {
 
 const $ = (id) => document.getElementById(id);
 
-async function api(path) {
-  const response = await fetch(path);
+async function api(path, options = {}) {
+  const response = await fetch(path, options);
   if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
   return response.json();
 }
@@ -152,13 +156,14 @@ function renderIngestionWizard() {
   const config = state.ingestionConfig || {};
   const wizard = state.ingestionWizard || {};
   const preview = buildIngestionCommandPreview(config, wizard);
+  const canSubmit = config.can_execute && preview.canSubmit && !wizard.submitting;
   return `
     <section class="ingestion-wizard panel">
       <div class="wizard-header">
         <div>
           <p class="eyebrow">Ingestion Wizard</p>
-          <h3>Local path preview shell</h3>
-          <p class="muted">Preview only. No ingestion will run and no files will be written.</p>
+          <h3>Local path ingestion job</h3>
+          <p class="muted">Controlled local execution only. Output limited to dedicated runs/web_ingestion targets.</p>
         </div>
         <span class="badge">${escapeHtml(config.mode || "config unavailable")}</span>
       </div>
@@ -205,7 +210,12 @@ function renderIngestionWizard() {
             "Execution will be enabled in a future safepoint.",
           ]).map((note) => `<li>${escapeHtml(note)}</li>`).join("")}
         </ul>
-        <button type="button" disabled>Execution will be enabled in a future safepoint.</button>
+        <button type="button" id="wizard-submit-job" ${canSubmit ? "" : "disabled"}>${wizard.submitting ? "Submitting..." : "Submit ingestion job"}</button>
+        ${wizard.submitError ? `<div class="nav-notice warning">${escapeHtml(wizard.submitError)}</div>` : ""}
+      </div>
+      <div class="wizard-job-status">
+        <h4>Job status</h4>
+        ${renderWizardJobStatus(wizard.currentJob)}
       </div>
     </section>
   `;
@@ -227,6 +237,7 @@ function bindIngestionWizardInteractions() {
     state.ingestionWizard.skipPluginInstall = event.target.checked;
     renderOverview();
   });
+  $("wizard-submit-job")?.addEventListener("click", submitIngestionJob);
 }
 
 function buildIngestionCommandPreview(config, wizard) {
@@ -248,8 +259,9 @@ function buildIngestionCommandPreview(config, wizard) {
   if (!wizard.sourceRoot) warnings.push("source_root is required before execution can be enabled.");
   if (!wizard.projectTitle) warnings.push("project_title is required before execution can be enabled.");
   if (!wizard.runName) warnings.push("run_name/output_slug is required before execution can be enabled.");
-  warnings.push("Preview only: this args list is not executed in this safepoint.");
-  return { args, outputRoot, warnings };
+  if (!config.can_execute) warnings.push("Execution disabled by server config.");
+  warnings.push("Command is executed server-side with args list only. No shell interpolation.");
+  return { args, outputRoot, warnings, canSubmit: Boolean(config.can_execute) && !(!wizard.sourceRoot || !wizard.projectTitle || !wizard.runName) };
 }
 
 function splitWorkingLanguages(value) {
@@ -267,6 +279,97 @@ function sanitizePreviewSlug(value) {
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "")
     .slice(0, 80);
+}
+
+function renderWizardJobStatus(job) {
+  if (!job) return `<p class="muted">No job submitted yet.</p>`;
+  return `
+    <div class="wizard-job-card">
+      <p><strong>job_id:</strong> <code>${escapeHtml(job.job_id || "not available")}</code></p>
+      <p><strong>status:</strong> <span class="badge">${escapeHtml(job.status || "unknown")}</span></p>
+      <p><strong>output_root:</strong> <code>${escapeHtml(job.output_root || "not available")}</code></p>
+      <p><strong>created:</strong> ${escapeHtml(job.created_at || "not available")}</p>
+      <p><strong>started:</strong> ${escapeHtml(job.started_at || "not available")}</p>
+      <p><strong>finished:</strong> ${escapeHtml(job.finished_at || "not available")}</p>
+      <p><strong>exit_code:</strong> ${escapeHtml(job.exit_code === null || job.exit_code === undefined ? "not available" : job.exit_code)}</p>
+      ${job.project_id ? `<p><strong>project_id:</strong> <code>${escapeHtml(job.project_id)}</code></p>` : ""}
+      ${job.error ? `<p class="nav-notice warning">${escapeHtml(job.error)}</p>` : ""}
+      <details>
+        <summary>Log tail</summary>
+        <pre class="frontmatter">${escapeHtml(job.log_tail || "not available")}</pre>
+      </details>
+      <div class="wizard-job-actions">
+        <button type="button" id="wizard-refresh-projects">Refresh projects</button>
+        ${job.project_id ? `<button type="button" id="wizard-open-result">Open result</button>` : ""}
+      </div>
+    </div>
+  `;
+}
+
+async function submitIngestionJob() {
+  const wizard = state.ingestionWizard;
+  wizard.submitError = "";
+  wizard.submitting = true;
+  renderOverview();
+  try {
+    const payload = {
+      source_root: wizard.sourceRoot,
+      project_title: wizard.projectTitle,
+      run_name: wizard.runName,
+      primary_language: wizard.primaryLanguage || null,
+      working_languages: splitWorkingLanguages(wizard.workingLanguages),
+      skip_plugin_install: wizard.skipPluginInstall !== false,
+    };
+    const job = await api("/api/ingestion/jobs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    wizard.currentJobId = job.job_id || "";
+    wizard.currentJob = job;
+    wizard.submitting = false;
+    renderOverview();
+    bindWizardJobActions();
+    scheduleJobPolling();
+  } catch (error) {
+    wizard.submitError = error.message || String(error);
+    wizard.submitting = false;
+    renderOverview();
+  }
+}
+
+function bindWizardJobActions() {
+  $("wizard-refresh-projects")?.addEventListener("click", async () => {
+    await loadProjects();
+    renderOverview();
+  });
+  $("wizard-open-result")?.addEventListener("click", async () => {
+    const job = state.ingestionWizard.currentJob;
+    if (job?.project_id) await selectProject(job.project_id);
+  });
+}
+
+function scheduleJobPolling() {
+  const jobId = state.ingestionWizard.currentJobId;
+  if (!jobId) return;
+  const tick = async () => {
+    try {
+      const job = await api(`/api/ingestion/jobs/${encodeURIComponent(jobId)}`);
+      state.ingestionWizard.currentJob = job;
+      renderOverview();
+      bindWizardJobActions();
+      if (job.status === "queued" || job.status === "running") {
+        setTimeout(tick, 3000);
+      } else {
+        await loadProjects();
+        renderOverview();
+        bindWizardJobActions();
+      }
+    } catch (_error) {
+      setTimeout(tick, 4000);
+    }
+  };
+  setTimeout(tick, 1500);
 }
 
 function renderCompareRunsPanel() {
