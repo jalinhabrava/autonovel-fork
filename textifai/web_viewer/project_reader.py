@@ -116,6 +116,7 @@ def read_project(project: ProjectRef) -> dict[str, Any]:
         "artifacts": artifacts,
         "graph": graph,
         "health": build_semantic_health(project, canon=canon, artifacts=artifacts, graph=graph),
+        "canonicalization": build_canonicalization_payload(project, canon=canon, artifacts=artifacts),
     }
 
 
@@ -382,6 +383,152 @@ def build_semantic_health(
     }
 
 
+def build_canonicalization_payload(
+    project: ProjectRef,
+    *,
+    canon: dict[str, Any] | None = None,
+    artifacts: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    canon = canon or read_canon(project)
+    artifacts = artifacts or list_artifacts(project)
+    system = project.system_root
+    artifact_names = {item.get("path") for item in artifacts if isinstance(item, dict)}
+    if system is None:
+        return {"by_entity": {}, "available_artifacts": []}
+
+    payloads = {
+        "canonical_entity_map.json": _read_json(system / "canonical_entity_map.json"),
+        "resolved_entities.json": _read_json(system / "resolved_entities.json"),
+        "cleaned_entities.json": _read_json(system / "cleaned_entities.json"),
+        "entity_clusters_audit.json": _read_json(system / "entity_clusters_audit.json"),
+        "entity_resolution_audit.json": _read_json(system / "entity_resolution_audit.json"),
+        "entity_cleanup_audit.json": _read_json(system / "entity_cleanup_audit.json"),
+        "promotion_decisions_audit.json": _read_json(system / "promotion_decisions_audit.json"),
+        "pre_vaerl_reconciliation_audit.json": _read_json(system / "pre_vaerl_reconciliation_audit.json"),
+        "obsidian_relationship_reconciliation_audit.json": _read_json(system / "obsidian_relationship_reconciliation_audit.json"),
+        "review_queue.json": _read_json(system / "review_queue.json"),
+        "semantic_invariants_audit.json": _read_json(system / "semantic_invariants_audit.json"),
+    }
+
+    by_entity: dict[str, dict[str, Any]] = {}
+    review_items = (canon.get("review_queue") or {}).get("items") or []
+    invariant_checks = (payloads["semantic_invariants_audit.json"] or {}).get("checks") or []
+    unresolved_targets = []
+    for check in invariant_checks:
+        if str(check.get("name") or "") != "relationship_targets_resolve_to_primary":
+            continue
+        unresolved_targets = (check.get("details") or {}).get("unresolved") or []
+        break
+
+    for entity in [*(canon.get("primaries") or []), *(canon.get("review_entities") or [])]:
+        key = _key(entity.get("preferred_slug") or entity.get("canonical_name"))
+        if not key:
+            continue
+        terms = _entity_terms(entity)
+        resolved_match = _find_matching_object(payloads["resolved_entities.json"], terms, ("canonical_name", "preferred_slug", "aliases", "source_mentions"))
+        cleaned_match = _find_matching_object(payloads["cleaned_entities.json"], terms, ("canonical_name", "preferred_slug", "aliases", "source_mentions"))
+        resolution_match = _find_matching_object(
+            (payloads["entity_resolution_audit.json"] or {}).get("resolutions") or [],
+            terms,
+            ("final_canonical_name", "accepted_aliases", "rejected_aliases"),
+        )
+        cluster_match = _find_cluster_match((payloads["entity_clusters_audit.json"] or {}).get("clusters") or [], terms)
+        promotion_match = _find_matching_object(
+            (payloads["promotion_decisions_audit.json"] or {}).get("decisions") or [],
+            terms,
+            ("canonical_name",),
+        )
+        related_reviews = _find_related_review_items(review_items, terms)
+        nearby_reviews = _find_nearby_review_entities(canon.get("review_entities") or [], entity, terms)
+        pre_vaerl = _extract_pre_vaerl_matches(payloads["pre_vaerl_reconciliation_audit.json"] or {}, terms)
+        relationship_reconciliation = _extract_relationship_reconciliation_matches(
+            payloads["obsidian_relationship_reconciliation_audit.json"] or {},
+            terms,
+        )
+        unresolved_matches = [
+            item for item in unresolved_targets
+            if _term_matches_terms(item.get("source"), terms) or _term_matches_terms(item.get("target"), terms)
+        ][:8]
+
+        confidence = (
+            resolved_match.get("confidence") if isinstance(resolved_match, dict) and resolved_match.get("confidence") is not None
+            else cleaned_match.get("confidence") if isinstance(cleaned_match, dict) and cleaned_match.get("confidence") is not None
+            else entity.get("confidence")
+        )
+        alias_count = len(entity.get("aliases") or [])
+        mention_count = len(entity.get("source_mentions") or [])
+        relationship_count = len([rel for rel in entity.get("relationships") or [] if isinstance(rel, dict)])
+        fact_count = len(entity.get("key_facts") or [])
+        chapter_refs = entity.get("chapter_refs") or []
+        confidence_value = float(confidence) if isinstance(confidence, (int, float)) else None
+
+        risk_signals = []
+        if alias_count >= 6:
+            risk_signals.append({"level": "warning", "label": "many aliases", "value": alias_count})
+        if mention_count >= 8:
+            risk_signals.append({"level": "warning", "label": "many source mentions", "value": mention_count})
+        if confidence_value is not None and confidence_value < 0.75:
+            risk_signals.append({"level": "warning", "label": "low confidence", "value": round(confidence_value, 3)})
+        if str(entity.get("review_state") or "").casefold() != "canonical":
+            risk_signals.append({"level": "warning", "label": "review_state not canonical", "value": entity.get("review_state") or "review"})
+        if nearby_reviews:
+            risk_signals.append({"level": "warning", "label": "nearby review entities", "value": len(nearby_reviews)})
+        if related_reviews:
+            risk_signals.append({"level": "warning", "label": "review pressure", "value": len(related_reviews)})
+        if unresolved_matches:
+            risk_signals.append({"level": "warning", "label": "unresolved relationship hints", "value": len(unresolved_matches)})
+
+        artifact_refs = [
+            name for name in (
+                "canonical_entity_map.json",
+                "resolved_entities.json",
+                "cleaned_entities.json",
+                "entity_clusters_audit.json",
+                "entity_resolution_audit.json",
+                "entity_cleanup_audit.json",
+                "promotion_decisions_audit.json",
+                "pre_vaerl_reconciliation_audit.json",
+                "obsidian_relationship_reconciliation_audit.json",
+                "review_queue.json",
+            )
+            if name in artifact_names
+        ]
+
+        by_entity[key] = {
+            "canonical_name": entity.get("canonical_name"),
+            "preferred_slug": entity.get("preferred_slug"),
+            "entity_kind": entity.get("entity_kind"),
+            "entity_subkind": entity.get("entity_subkind"),
+            "review_state": entity.get("review_state") or entity.get("note_role"),
+            "confidence": confidence,
+            "aliases": entity.get("aliases") or [],
+            "source_mentions": entity.get("source_mentions") or [],
+            "chapter_refs": chapter_refs,
+            "relationship_count": relationship_count,
+            "key_fact_count": fact_count,
+            "review_pressure_count": len(related_reviews),
+            "nearby_review_entity_count": len(nearby_reviews),
+            "resolved_entity": _limit_mapping(resolved_match, 12),
+            "cleaned_entity": _limit_mapping(cleaned_match, 12),
+            "cluster_match": _limit_mapping(cluster_match, 10),
+            "resolution_match": _limit_mapping(resolution_match, 12),
+            "promotion_match": _limit_mapping(promotion_match, 12),
+            "cleanup_summary": _cleanup_summary(payloads["entity_cleanup_audit.json"] or {}),
+            "related_review_items": related_reviews[:8],
+            "nearby_review_entities": nearby_reviews[:8],
+            "pre_vaerl_matches": pre_vaerl,
+            "relationship_reconciliation": relationship_reconciliation,
+            "unresolved_relationship_hints": unresolved_matches,
+            "risk_signals": risk_signals,
+            "artifact_refs": artifact_refs,
+        }
+
+    return {
+        "by_entity": by_entity,
+        "available_artifacts": sorted(name for name in artifact_names if isinstance(name, str)),
+    }
+
+
 def _graph_entity_tags(entity: dict[str, Any], role: str) -> list[str]:
     tags = _normalize_graph_tags(entity.get("tags") or [])
     tags.extend([f"#{role}", f"#{entity.get('entity_kind') or 'entity'}"])
@@ -576,6 +723,210 @@ def _check_detail_int(checks: Any, name: str, detail_key: str) -> int | None:
 def _looks_like_canonical_ambiguity(item: Any) -> bool:
     review_type = str((item or {}).get("review_type") or "").casefold()
     return any(token in review_type for token in ("merge", "canonical", "alias", "identity", "duplicate"))
+
+
+def _entity_terms(entity: dict[str, Any]) -> set[str]:
+    values = [
+        entity.get("canonical_name") or "",
+        entity.get("preferred_slug") or "",
+        *(entity.get("aliases") or []),
+        *(entity.get("source_mentions") or []),
+    ]
+    terms: set[str] = set()
+    for value in values:
+        key = _key(value)
+        if key:
+            terms.add(key)
+    return terms
+
+
+def _term_matches_terms(value: Any, terms: set[str]) -> bool:
+    return _key(value) in terms if terms else False
+
+
+def _extract_term_values(item: Any, field: str) -> list[str]:
+    if not isinstance(item, dict):
+        return []
+    value = item.get(field)
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [str(entry or "") for entry in value]
+    return [str(value)]
+
+
+def _find_matching_object(rows: Any, terms: set[str], fields: tuple[str, ...]) -> dict[str, Any]:
+    if not isinstance(rows, list):
+        return {}
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        for field in fields:
+            for value in _extract_term_values(row, field):
+                if _term_matches_terms(value, terms):
+                    return row
+    return {}
+
+
+def _find_cluster_match(clusters: Any, terms: set[str]) -> dict[str, Any]:
+    if not isinstance(clusters, list):
+        return {}
+    for cluster in clusters:
+        if not isinstance(cluster, dict):
+            continue
+        variants = cluster.get("variants") or []
+        for variant in variants if isinstance(variants, list) else []:
+            if _term_matches_terms((variant or {}).get("name"), terms):
+                return cluster
+    return {}
+
+
+def _find_related_review_items(review_items: list[dict[str, Any]], terms: set[str]) -> list[dict[str, Any]]:
+    related: list[dict[str, Any]] = []
+    for item in review_items or []:
+        if not isinstance(item, dict):
+            continue
+        candidates = item.get("candidate_entities") or []
+        candidate_hit = any(
+            _term_matches_terms((candidate or {}).get("canonical_name"), terms)
+            or _term_matches_terms((candidate or {}).get("preferred_slug"), terms)
+            for candidate in candidates
+            if isinstance(candidate, dict)
+        )
+        source_hit = _term_matches_terms(item.get("source_entity"), terms)
+        target_hit = _term_matches_terms(item.get("target_text"), terms)
+        if not (candidate_hit or source_hit or target_hit):
+            continue
+        related.append(
+            {
+                "review_item_id": item.get("review_item_id"),
+                "review_type": item.get("review_type"),
+                "severity": item.get("severity"),
+                "source_entity": item.get("source_entity"),
+                "target_text": item.get("target_text"),
+                "candidate_count": len(candidates if isinstance(candidates, list) else []),
+                "evidence_count": len((item.get("evidence") or []) if isinstance(item.get("evidence"), list) else []),
+            }
+        )
+    return related
+
+
+def _find_nearby_review_entities(review_entities: list[dict[str, Any]], entity: dict[str, Any], terms: set[str]) -> list[dict[str, Any]]:
+    nearby: list[dict[str, Any]] = []
+    entity_key = _key(entity.get("preferred_slug") or entity.get("canonical_name"))
+    for review in review_entities or []:
+        if not isinstance(review, dict):
+            continue
+        review_key = _key(review.get("preferred_slug") or review.get("canonical_name"))
+        if not review_key or review_key == entity_key:
+            continue
+        review_terms = _entity_terms(review)
+        if terms.isdisjoint(review_terms):
+            continue
+        nearby.append(
+            {
+                "canonical_name": review.get("canonical_name"),
+                "preferred_slug": review.get("preferred_slug"),
+                "entity_kind": review.get("entity_kind"),
+                "review_state": review.get("review_state"),
+                "confidence": review.get("confidence"),
+                "shared_terms": sorted(list(terms.intersection(review_terms)))[:6],
+            }
+        )
+    return nearby
+
+
+def _extract_pre_vaerl_matches(payload: dict[str, Any], terms: set[str]) -> dict[str, Any]:
+    if not isinstance(payload, dict):
+        return {"counts": {}, "samples": {}}
+
+    def filter_rows(rows: Any, fields: tuple[str, ...]) -> list[dict[str, Any]]:
+        selected: list[dict[str, Any]] = []
+        if not isinstance(rows, list):
+            return selected
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            if any(_term_matches_terms(row.get(field), terms) for field in fields):
+                selected.append(_limit_mapping(row, 10))
+        return selected[:8]
+
+    auto_merged = filter_rows(payload.get("auto_merged_entities"), ("source_entity", "target_entity"))
+    candidates = filter_rows(payload.get("candidate_reviews"), ("source_entity", "candidate_target"))
+    rejected = filter_rows(payload.get("rejected_candidates"), ("source_entity", "candidate_target"))
+    return {
+        "counts": {
+            "auto_merged_count": payload.get("auto_merged_count"),
+            "candidate_review_count": payload.get("candidate_review_count"),
+        },
+        "samples": {
+            "auto_merged_entities": auto_merged,
+            "candidate_reviews": candidates,
+            "rejected_candidates": rejected,
+        },
+    }
+
+
+def _extract_relationship_reconciliation_matches(payload: dict[str, Any], terms: set[str]) -> dict[str, Any]:
+    if not isinstance(payload, dict):
+        return {"counts": {}, "samples": {}}
+
+    def filter_rows(rows: Any, fields: tuple[str, ...]) -> list[dict[str, Any]]:
+        selected: list[dict[str, Any]] = []
+        if not isinstance(rows, list):
+            return selected
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            if any(_term_matches_terms(row.get(field), terms) for field in fields):
+                selected.append(_limit_mapping(row, 10))
+        return selected[:8]
+
+    rewrites = filter_rows(payload.get("relationship_rewrites"), ("source_entity", "from_target", "to_target"))
+    fact_adds = filter_rows(payload.get("fact_relationships_added"), ("source_entity", "target"))
+    return {
+        "counts": {
+            "relationship_rewrite_count": payload.get("relationship_rewrite_count"),
+            "fact_relationship_added_count": payload.get("fact_relationship_added_count"),
+        },
+        "samples": {
+            "relationship_rewrites": rewrites,
+            "fact_relationships_added": fact_adds,
+        },
+    }
+
+
+def _cleanup_summary(payload: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(payload, dict):
+        return {}
+    keys = (
+        "input_entity_count",
+        "output_entity_count",
+        "primary_count",
+        "review_count",
+        "discarded_count",
+        "alias_noise_rate",
+        "descriptor_primary_rate",
+        "named_primary_rate",
+        "single_chapter_primary_rate",
+        "review_to_primary_ratio",
+    )
+    return {key: payload.get(key) for key in keys if key in payload}
+
+
+def _limit_mapping(value: Any, max_keys: int) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {}
+    limited: dict[str, Any] = {}
+    for key in sorted(value.keys())[:max_keys]:
+        item = value.get(key)
+        if isinstance(item, list):
+            limited[key] = item[:6]
+        elif isinstance(item, dict):
+            limited[key] = {nested_key: item[nested_key] for nested_key in sorted(item.keys())[:6]}
+        else:
+            limited[key] = item
+    return limited
 
 
 def _health_check_summary(check: dict[str, Any]) -> dict[str, Any]:

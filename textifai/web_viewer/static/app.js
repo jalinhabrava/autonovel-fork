@@ -659,8 +659,11 @@ function highlightNote(path) {
 
 function renderCanon() {
   const canon = state.current.canon;
+  const focusEntity = selectedCanonEntity();
   $("view-canon").innerHTML = `
     ${renderNavNotice()}
+    <h3>Canonicalization Visibility</h3>
+    ${focusEntity ? renderCanonicalizationVisibility(focusEntity, { source: "canon" }) : `<p class="muted">Select entity in Canon or Graph to inspect merge/canonicalization visibility.</p>`}
     <h3>Primaries</h3>
     ${entityTable(canon.primaries)}
     <h3 style="margin-top:24px">Chapters</h3>
@@ -669,6 +672,7 @@ function renderCanon() {
     ${entityTable(canon.review_entities.slice(0, 80))}
   `;
   bindCanonNavigation();
+  bindCanonicalizationInteractions();
 }
 
 function entityTable(entities) {
@@ -681,6 +685,7 @@ function entityTable(entities) {
       <td>${escapeHtml(entity.preferred_slug || "")}</td>
       <td>${escapeHtml(entity.summary || "").slice(0, 260)}</td>
       <td>
+        <button type="button" class="inline-action" data-canon-inspect="${escapeHtml(key)}">Inspect</button>
         <button type="button" class="inline-action" data-canon-graph="${escapeHtml(key)}">View in graph</button>
       </td>
     </tr>`;
@@ -948,6 +953,15 @@ function bindReviewQueueInteractions() {
 }
 
 function bindCanonNavigation() {
+  document.querySelectorAll("[data-canon-inspect]").forEach((node) => {
+    node.addEventListener("click", () => {
+      const key = node.dataset.canonInspect || "";
+      if (!key) return;
+      state.selectedCanonEntityKey = normalizeKey(key);
+      setNavNotice(`Canon: inspecting "${key}".`, "info");
+      renderCanon();
+    });
+  });
   document.querySelectorAll("[data-canon-graph]").forEach((node) => {
     node.addEventListener("click", () => {
       const key = node.dataset.canonGraph || "";
@@ -1176,6 +1190,7 @@ async function renderGraphNodeDetail(node) {
   }
   $("graph-detail").innerHTML = graphNodeSummary(node);
   bindGraphDetailNavigation();
+  bindCanonicalizationInteractions();
 }
 
 async function openGraphNote(path, nodeId = null) {
@@ -1190,6 +1205,7 @@ async function openGraphNote(path, nodeId = null) {
   `;
   attachWikiLinkHandlers($("graph-detail"));
   bindGraphDetailNavigation();
+  bindCanonicalizationInteractions();
 }
 
 function graphNodeSummary(node) {
@@ -1215,6 +1231,7 @@ function graphNodeSummary(node) {
         ? `<p class="note-fallback">No Markdown note found. Showing VaERL data from <code>obsidian_import.json</code>.</p>`
         : `<p class="muted">No materialized note or VaERL detail for this node.</p>`}
     ${Object.keys(entity).length ? entityDetail(entity) : ""}
+    ${Object.keys(entity).length ? renderCanonicalizationVisibility(entity, { source: "graph" }) : ""}
     ${Object.keys(chapter).length ? chapterDetail(chapter) : ""}
   `;
 }
@@ -1240,6 +1257,27 @@ function bindGraphDetailNavigation() {
   });
 }
 
+function bindCanonicalizationInteractions() {
+  document.querySelectorAll("[data-canonvis-graph]").forEach((node) => {
+    node.addEventListener("click", () => {
+      const term = node.dataset.canonvisGraph || "";
+      if (term) navigateToGraphTerm(term, { from: "Canonicalization" });
+    });
+  });
+  document.querySelectorAll("[data-canonvis-review]").forEach((node) => {
+    node.addEventListener("click", () => {
+      const term = node.dataset.canonvisReview || "";
+      if (term) navigateToReviewContext(term, { from: "Canonicalization" });
+    });
+  });
+  document.querySelectorAll(".canonicalization-panel [data-health-artifact]").forEach((node) => {
+    node.addEventListener("click", () => {
+      setView("artifacts");
+      openArtifact(node.dataset.healthArtifact);
+    });
+  });
+}
+
 function entityDetail(entity) {
   const aliases = entity.aliases || [];
   const facts = entity.key_facts || [];
@@ -1258,6 +1296,101 @@ function entityDetail(entity) {
       ${relationships.length ? `<h4>Relationships</h4><ul>${relationships.slice(0, 12).map((rel) => `<li><strong>${escapeHtml(rel.target || "")}</strong>${rel.type || rel.relation_type ? ` (${escapeHtml(rel.type || rel.relation_type)})` : ""}${(rel.facts || []).length ? `: ${escapeHtml((rel.facts || [])[0])}` : ""}</li>`).join("")}</ul>` : ""}
       ${mentions.length ? `<h4>Source mentions</h4><p>${mentions.slice(0, 20).map((mention) => `<span class="badge">${escapeHtml(mention)}</span>`).join("")}</p>` : ""}
     </div>
+  `;
+}
+
+function selectedCanonEntity() {
+  const key = normalizeKey(state.selectedCanonEntityKey || "");
+  if (!key) return null;
+  return allCanonEntities().find((entity) => canonEntityKey(entity) === key) || null;
+}
+
+function canonicalizationSummary(entity) {
+  const payload = state.current && state.current.canonicalization ? state.current.canonicalization : {};
+  const byEntity = payload.by_entity || {};
+  const key = canonEntityKey(entity);
+  return byEntity[key] || null;
+}
+
+function renderCanonicalizationVisibility(entity, { source = "canon" } = {}) {
+  const summary = canonicalizationSummary(entity);
+  if (!summary) return `<div class="canonicalization-panel panel"><p class="muted">Canonicalization visibility: not available.</p></div>`;
+  const aliases = summary.aliases || [];
+  const mentions = summary.source_mentions || [];
+  const chapterRefs = summary.chapter_refs || [];
+  const riskSignals = summary.risk_signals || [];
+  const reviewItems = summary.related_review_items || [];
+  const nearbyReviewEntities = summary.nearby_review_entities || [];
+  const artifacts = summary.artifact_refs || [];
+  const preVaerl = summary.pre_vaerl_matches || { counts: {}, samples: {} };
+  const relationshipRec = summary.relationship_reconciliation || { counts: {}, samples: {} };
+  return `
+    <section class="canonicalization-panel panel">
+      <div class="canonicalization-header">
+        <div>
+          <p class="eyebrow">Merge & Canonicalization Visibility</p>
+          <h4>${escapeHtml(summary.canonical_name || entity.canonical_name || "not available")}</h4>
+        </div>
+        <span class="badge">${escapeHtml(summary.review_state || "not available")}</span>
+      </div>
+      <div class="canonicalization-metrics">
+        <div><span>Slug</span><strong>${escapeHtml(summary.preferred_slug || "not available")}</strong></div>
+        <div><span>Kind</span><strong>${escapeHtml(summary.entity_kind || "not available")}</strong></div>
+        <div><span>Subkind</span><strong>${escapeHtml(summary.entity_subkind || "not available")}</strong></div>
+        <div><span>Confidence</span><strong>${summary.confidence === null || summary.confidence === undefined ? "not available" : escapeHtml(summary.confidence)}</strong></div>
+        <div><span>Aliases</span><strong>${fmtCount(aliases.length)}</strong></div>
+        <div><span>Source mentions</span><strong>${fmtCount(mentions.length)}</strong></div>
+        <div><span>Chapter refs</span><strong>${fmtCount(chapterRefs.length)}</strong></div>
+        <div><span>Relationships</span><strong>${fmtCount(summary.relationship_count)}</strong></div>
+        <div><span>Key facts</span><strong>${fmtCount(summary.key_fact_count)}</strong></div>
+        <div><span>Review pressure</span><strong>${fmtCount(summary.review_pressure_count)}</strong></div>
+      </div>
+      <div class="canonicalization-actions">
+        ${summary.canonical_name ? `<button type="button" class="inline-action" data-canonvis-graph="${escapeHtml(summary.canonical_name)}">Open in Graph</button>` : ""}
+        ${summary.canonical_name ? `<button type="button" class="inline-action" data-canonvis-review="${escapeHtml(summary.canonical_name)}">Open Review Context</button>` : ""}
+        ${artifacts.length ? artifacts.slice(0, 4).map((artifact) => `<button type="button" class="inline-action" data-health-artifact="${escapeHtml(artifact)}">Open ${escapeHtml(artifact)}</button>`).join("") : `<span class="muted">Audit artifacts: not available</span>`}
+      </div>
+      <div class="canonicalization-columns">
+        <div>
+          <h5>Aliases</h5>
+          ${aliases.length ? `<p>${aliases.slice(0, 24).map((value) => `<span class="badge">${escapeHtml(value)}</span>`).join("")}</p>` : `<p class="muted">not available</p>`}
+          <h5>Source mentions</h5>
+          ${mentions.length ? `<p>${mentions.slice(0, 24).map((value) => `<span class="badge">${escapeHtml(value)}</span>`).join("")}</p>` : `<p class="muted">not available</p>`}
+          <h5>Chapter refs</h5>
+          ${chapterRefs.length ? `<p>${chapterRefs.slice(0, 20).map((value) => `<span class="badge">${escapeHtml(value)}</span>`).join("")}</p>` : `<p class="muted">not available</p>`}
+        </div>
+        <div>
+          <h5>Risk signals</h5>
+          ${riskSignals.length ? `<p>${riskSignals.map((signal) => `<span class="badge ${escapeHtml(signal.level === "warning" ? "warning-badge" : "")}">${escapeHtml(signal.label)}: ${escapeHtml(signal.value)}</span>`).join("")}</p>` : `<p class="muted">not available</p>`}
+          <h5>Nearby review entities</h5>
+          ${nearbyReviewEntities.length ? `<ul>${nearbyReviewEntities.slice(0, 6).map((row) => `<li><strong>${escapeHtml(row.canonical_name || "not available")}</strong> · ${escapeHtml(row.review_state || "review")} · conf ${escapeHtml(row.confidence === undefined ? "n/a" : row.confidence)}</li>`).join("")}</ul>` : `<p class="muted">not available</p>`}
+          <h5>Related review items</h5>
+          ${reviewItems.length ? `<ul>${reviewItems.slice(0, 6).map((row) => `<li><span class="badge severity-${escapeHtml(String(row.severity || "unknown").toLowerCase())}">${escapeHtml(row.severity || "unknown")}</span> ${escapeHtml(row.review_type || "unknown")} · ${escapeHtml(row.source_entity || "n/a")} → ${escapeHtml(row.target_text || "n/a")}</li>`).join("")}</ul>` : `<p class="muted">not available</p>`}
+        </div>
+      </div>
+      ${renderCanonicalizationAuditSection("Resolution audit", summary.resolution_match)}
+      ${renderCanonicalizationAuditSection("Cluster audit", summary.cluster_match)}
+      ${renderCanonicalizationAuditSection("Promotion decision", summary.promotion_match)}
+      ${renderCanonicalizationAuditSection("Resolved entity", summary.resolved_entity)}
+      ${renderCanonicalizationAuditSection("Cleaned entity", summary.cleaned_entity)}
+      ${renderCanonicalizationAuditSection("Cleanup summary", summary.cleanup_summary)}
+      ${renderCanonicalizationAuditSection("Pre-VaERL reconciliation", preVaerl)}
+      ${renderCanonicalizationAuditSection("Relationship reconciliation", relationshipRec)}
+      ${renderCanonicalizationAuditSection("Unresolved relationship hints", { items: summary.unresolved_relationship_hints || [] })}
+      ${source === "canon" ? `<p class="muted">Panel is observability-only. No merge/canonicalization actions are executed here.</p>` : ""}
+    </section>
+  `;
+}
+
+function renderCanonicalizationAuditSection(title, payload) {
+  if (!payload || (typeof payload === "object" && !Array.isArray(payload) && !Object.keys(payload).length)) {
+    return `<details class="canonicalization-audit"><summary>${escapeHtml(title)}</summary><p class="muted">not available</p></details>`;
+  }
+  return `
+    <details class="canonicalization-audit">
+      <summary>${escapeHtml(title)}</summary>
+      <pre class="frontmatter">${escapeHtml(JSON.stringify(payload, null, 2))}</pre>
+    </details>
   `;
 }
 

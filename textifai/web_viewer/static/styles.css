@@ -452,6 +452,74 @@ button:hover, button.active {
   color: var(--muted);
 }
 
+.canonicalization-panel {
+  margin: 12px 0 18px;
+}
+
+.canonicalization-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.canonicalization-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.canonicalization-metrics div {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 8px 10px;
+  background: rgba(255,255,255,0.45);
+}
+
+.canonicalization-metrics span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.canonicalization-metrics strong {
+  display: block;
+  margin-top: 2px;
+}
+
+.canonicalization-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.canonicalization-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.canonicalization-columns h5 {
+  margin: 10px 0 6px;
+}
+
+.canonicalization-audit {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255,255,255,0.36);
+  padding: 10px 12px;
+  margin-top: 8px;
+}
+
+.canonicalization-audit summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
 .artifact-link {
   background: #fff;
 }
