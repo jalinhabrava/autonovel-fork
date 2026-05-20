@@ -12,6 +12,7 @@ const state = {
   selectedCanonEntityKey: null,
   selectedReviewItemId: null,
   navNotice: null,
+  compareView: { baseId: "", candidateId: "", loading: false, result: null, error: "" },
   reviewView: { severity: "", reviewType: "", query: "", sortBy: "severity_desc" },
 };
 
@@ -61,6 +62,7 @@ async function selectProject(projectId) {
   state.selectedCanonEntityKey = null;
   state.selectedReviewItemId = null;
   state.navNotice = null;
+  state.compareView = { baseId: projectId, candidateId: state.compareView.candidateId || "", loading: false, result: null, error: "" };
   state.hiddenGraphTags = new Set();
   state.reviewView = { severity: "", reviewType: "", query: "", sortBy: "severity_desc" };
   resetGraphViewBox();
@@ -110,6 +112,7 @@ function renderOverview() {
       <div class="stat-card"><span>Review Items</span><strong>${fmtCount(queue.item_count)}</strong></div>
     </div>
     ${renderSemanticHealth(state.current.health || {})}
+    ${renderCompareRunsPanel()}
     <div class="panel">
       <h3>${escapeHtml((canon.work || {}).title || "Untitled work")}</h3>
       <p class="muted">Language: ${escapeHtml((canon.work || {}).language || "unknown")}</p>
@@ -117,6 +120,416 @@ function renderOverview() {
     </div>
   `;
   bindHealthInteractions();
+  bindCompareRunsInteractions();
+}
+
+function renderCompareRunsPanel() {
+  const compare = state.compareView || {};
+  const baseId = compare.baseId || state.currentId || "";
+  const candidateId = compare.candidateId || "";
+  const projectOptions = state.projects.map((project) => `
+    <option value="${escapeHtml(project.project_id)}">${escapeHtml(project.name)}</option>
+  `).join("");
+  return `
+    <section class="compare-runs panel">
+      <div class="compare-header">
+        <div>
+          <p class="eyebrow">Compare Runs</p>
+          <h3>Canon drift & cross-run diff</h3>
+          <p class="muted">Read-only comparison. Labels are metric-based observability, not canon truth.</p>
+        </div>
+        <button type="button" id="compare-runs-run">${compare.loading ? "Comparing..." : "Compare"}</button>
+      </div>
+      <div class="compare-controls">
+        <label>Base run
+          <select id="compare-base-run">
+            ${projectOptions}
+          </select>
+        </label>
+        <label>Candidate run
+          <select id="compare-candidate-run">
+            <option value="">select candidate</option>
+            ${projectOptions}
+          </select>
+        </label>
+      </div>
+      ${compare.error ? `<div class="nav-notice warning">${escapeHtml(compare.error)}</div>` : ""}
+      ${compare.result ? renderCompareResult(compare.result) : `<p class="muted">Select two runs to compare canon stability, review pressure, invariants, and manifest availability.</p>`}
+    </section>
+  `;
+}
+
+function bindCompareRunsInteractions() {
+  const base = $("compare-base-run");
+  const candidate = $("compare-candidate-run");
+  if (base) base.value = state.compareView.baseId || state.currentId || "";
+  if (candidate) candidate.value = state.compareView.candidateId || "";
+  base?.addEventListener("change", (event) => {
+    state.compareView.baseId = event.target.value || "";
+    state.compareView.result = null;
+  });
+  candidate?.addEventListener("change", (event) => {
+    state.compareView.candidateId = event.target.value || "";
+    state.compareView.result = null;
+  });
+  $("compare-runs-run")?.addEventListener("click", compareSelectedRuns);
+  document.querySelectorAll("[data-compare-project]").forEach((node) => {
+    node.addEventListener("click", () => selectProject(node.dataset.compareProject));
+  });
+  document.querySelectorAll("[data-compare-artifact]").forEach((node) => {
+    node.addEventListener("click", () => openCompareArtifact(node.dataset.compareProjectId || "", node.dataset.compareArtifact || ""));
+  });
+}
+
+async function compareSelectedRuns() {
+  const baseId = $("compare-base-run")?.value || state.currentId || "";
+  const candidateId = $("compare-candidate-run")?.value || "";
+  if (!baseId || !candidateId) {
+    state.compareView = { ...state.compareView, baseId, candidateId, result: null, error: "Select both base and candidate runs." };
+    renderOverview();
+    return;
+  }
+  state.compareView = { ...state.compareView, baseId, candidateId, loading: true, error: "" };
+  renderOverview();
+  try {
+    const [basePayload, candidatePayload] = await Promise.all([
+      baseId === state.currentId ? Promise.resolve(state.current) : api(`/api/projects/${encodeURIComponent(baseId)}`),
+      candidateId === state.currentId ? Promise.resolve(state.current) : api(`/api/projects/${encodeURIComponent(candidateId)}`),
+    ]);
+    const [baseManifest, candidateManifest] = await Promise.all([
+      fetchArtifactJson(baseId, "run_comparability_manifest.json"),
+      fetchArtifactJson(candidateId, "run_comparability_manifest.json"),
+    ]);
+    const result = buildRunComparison(basePayload, candidatePayload, baseManifest, candidateManifest);
+    state.compareView = { baseId, candidateId, loading: false, result, error: "" };
+  } catch (error) {
+    state.compareView = { ...state.compareView, loading: false, result: null, error: error.message || String(error) };
+  }
+  renderOverview();
+}
+
+async function fetchArtifactJson(projectId, artifactPath) {
+  try {
+    const data = await api(`/api/projects/${encodeURIComponent(projectId)}/artifact?path=${encodeURIComponent(artifactPath)}`);
+    return data.kind === "json" ? data.json : null;
+  } catch (_error) {
+    return null;
+  }
+}
+
+async function openCompareArtifact(projectId, artifactPath) {
+  if (!projectId || !artifactPath) return;
+  if (projectId !== state.currentId) await selectProject(projectId);
+  setView("artifacts");
+  openArtifact(artifactPath);
+}
+
+function buildRunComparison(basePayload, candidatePayload, baseManifest, candidateManifest) {
+  const baseEntities = canonicalEntityIndex(basePayload);
+  const candidateEntities = canonicalEntityIndex(candidatePayload);
+  const baseKeys = new Set(Object.keys(baseEntities));
+  const candidateKeys = new Set(Object.keys(candidateEntities));
+  const sharedKeys = [...baseKeys].filter((key) => candidateKeys.has(key)).sort();
+  const onlyBase = [...baseKeys].filter((key) => !candidateKeys.has(key)).sort();
+  const onlyCandidate = [...candidateKeys].filter((key) => !baseKeys.has(key)).sort();
+  const changed = sharedKeys.map((key) => entityDriftRow(key, baseEntities[key], candidateEntities[key])).filter((row) => row.change_count > 0);
+  const review = reviewPressureDiff(basePayload, candidatePayload);
+  const invariants = invariantDiff(basePayload, candidatePayload);
+  const comparability = comparabilityDiff(baseManifest, candidateManifest);
+  return {
+    base: projectSummaryForCompare(basePayload),
+    candidate: projectSummaryForCompare(candidatePayload),
+    entity_counts: {
+      base: Object.keys(baseEntities).length,
+      candidate: Object.keys(candidateEntities).length,
+      matched: sharedKeys.length,
+      only_base: onlyBase.length,
+      only_candidate: onlyCandidate.length,
+      changed: changed.length,
+    },
+    only_base: onlyBase.map((key) => entityCompareSummary(baseEntities[key])),
+    only_candidate: onlyCandidate.map((key) => entityCompareSummary(candidateEntities[key])),
+    changed,
+    review,
+    invariants,
+    comparability,
+  };
+}
+
+function canonicalEntityIndex(payload) {
+  const canon = payload.canon || {};
+  const entities = [...(canon.primaries || [])];
+  const out = {};
+  for (const entity of entities) {
+    const key = compareEntityKey(entity);
+    if (key && !out[key]) out[key] = entity;
+  }
+  return out;
+}
+
+function compareEntityKey(entity) {
+  const kind = normalizeKey(entity.entity_kind || "entity");
+  const id = normalizeKey(entity.preferred_slug || entity.canonical_name || "");
+  return id ? `${kind}:${id}` : "";
+}
+
+function entityCompareSummary(entity) {
+  return {
+    key: compareEntityKey(entity),
+    canonical_name: entity.canonical_name || "not available",
+    preferred_slug: entity.preferred_slug || "not available",
+    entity_kind: entity.entity_kind || "not available",
+    confidence: entity.confidence,
+    aliases: entity.aliases || [],
+    source_mentions: entity.source_mentions || [],
+  };
+}
+
+function entityDriftRow(key, baseEntity, candidateEntity) {
+  const aliasDiff = setDiff(baseEntity.aliases || [], candidateEntity.aliases || []);
+  const mentionDiff = setDiff(baseEntity.source_mentions || [], candidateEntity.source_mentions || []);
+  const chapterDiff = setDiff(baseEntity.chapter_refs || [], candidateEntity.chapter_refs || []);
+  const relationshipDelta = (candidateEntity.relationships || []).length - (baseEntity.relationships || []).length;
+  const keyFactDelta = (candidateEntity.key_facts || []).length - (baseEntity.key_facts || []).length;
+  const changes = [];
+  if ((baseEntity.canonical_name || "") !== (candidateEntity.canonical_name || "")) changes.push("canonical_name");
+  if ((baseEntity.preferred_slug || "") !== (candidateEntity.preferred_slug || "")) changes.push("preferred_slug");
+  if ((baseEntity.entity_kind || "") !== (candidateEntity.entity_kind || "")) changes.push("entity_kind");
+  if ((baseEntity.entity_subkind || "") !== (candidateEntity.entity_subkind || "")) changes.push("entity_subkind");
+  if ((baseEntity.review_state || "") !== (candidateEntity.review_state || "")) changes.push("review_state");
+  if ((baseEntity.confidence ?? null) !== (candidateEntity.confidence ?? null)) changes.push("confidence");
+  if (aliasDiff.added.length || aliasDiff.removed.length) changes.push("aliases");
+  if (mentionDiff.added.length || mentionDiff.removed.length) changes.push("source_mentions");
+  if (chapterDiff.added.length || chapterDiff.removed.length) changes.push("chapter_refs");
+  if (relationshipDelta) changes.push("relationships");
+  if (keyFactDelta) changes.push("key_facts");
+  return {
+    key,
+    base: entityCompareSummary(baseEntity),
+    candidate: entityCompareSummary(candidateEntity),
+    changes,
+    change_count: changes.length,
+    alias_diff: aliasDiff,
+    source_mention_diff: mentionDiff,
+    chapter_ref_diff: chapterDiff,
+    relationship_delta: relationshipDelta,
+    key_fact_delta: keyFactDelta,
+  };
+}
+
+function setDiff(baseValues, candidateValues) {
+  const base = new Map((baseValues || []).map((value) => [normalizeKey(value), value]).filter(([key]) => key));
+  const candidate = new Map((candidateValues || []).map((value) => [normalizeKey(value), value]).filter(([key]) => key));
+  return {
+    added: [...candidate.entries()].filter(([key]) => !base.has(key)).map(([, value]) => value),
+    removed: [...base.entries()].filter(([key]) => !candidate.has(key)).map(([, value]) => value),
+  };
+}
+
+function reviewPressureDiff(basePayload, candidatePayload) {
+  const base = reviewMetrics(basePayload);
+  const candidate = reviewMetrics(candidatePayload);
+  const totalDelta = candidate.total - base.total;
+  const highDelta = candidate.high - base.high;
+  return { base, candidate, total_delta: totalDelta, high_delta: highDelta, label: metricLabel(totalDelta + highDelta) };
+}
+
+function reviewMetrics(payload) {
+  const queue = ((payload.canon || {}).review_queue || {});
+  const items = queue.items || [];
+  const counts = queue.counts_by_severity || {};
+  return {
+    total: Number(queue.item_count ?? items.length ?? 0),
+    high: Number(counts.high || 0),
+    medium: Number(counts.medium || 0),
+    low: Number(counts.low || 0),
+    type_counts: queue.counts_by_type || {},
+    with_candidates: items.filter((item) => (item.candidate_entities || []).length).length,
+    with_evidence: items.filter((item) => (item.evidence || []).length).length,
+  };
+}
+
+function invariantDiff(basePayload, candidatePayload) {
+  const base = invariantMetrics(basePayload);
+  const candidate = invariantMetrics(candidatePayload);
+  return {
+    base,
+    candidate,
+    failure_delta: candidate.failure_count - base.failure_count,
+    warning_delta: candidate.warning_count - base.warning_count,
+    failing_added: setDiff(base.failing_checks, candidate.failing_checks).added,
+    failing_removed: setDiff(base.failing_checks, candidate.failing_checks).removed,
+    warning_added: setDiff(base.warning_checks, candidate.warning_checks).added,
+    warning_removed: setDiff(base.warning_checks, candidate.warning_checks).removed,
+  };
+}
+
+function invariantMetrics(payload) {
+  const invariants = ((payload.health || {}).semantic_invariants || {});
+  const checks = invariants.checks || invariants.failing_checks || [];
+  return {
+    status: invariants.status || "not available",
+    failure_count: Number(invariants.failure_count || 0),
+    warning_count: Number(invariants.warning_count || 0),
+    failing_checks: checks.filter((check) => String(check.status || "").toLowerCase() === "fail").map((check) => check.name || "unknown"),
+    warning_checks: checks.filter((check) => String(check.status || "").toLowerCase() === "warn").map((check) => check.name || "unknown"),
+  };
+}
+
+function comparabilityDiff(baseManifest, candidateManifest) {
+  return {
+    base_available: !!baseManifest,
+    candidate_available: !!candidateManifest,
+    base_summary: manifestSummary(baseManifest),
+    candidate_summary: manifestSummary(candidateManifest),
+  };
+}
+
+function manifestSummary(manifest) {
+  if (!manifest || typeof manifest !== "object") return { status: "not available" };
+  const warnings = manifest.warnings || manifest.comparability_warnings || [];
+  return {
+    status: manifest.status || manifest.comparable || manifest.semantic_quality_comparable || "available",
+    schema_version: manifest.schema_version || "not available",
+    warnings: Array.isArray(warnings) ? warnings.slice(0, 6) : [],
+    keys: Object.keys(manifest).slice(0, 12),
+  };
+}
+
+function projectSummaryForCompare(payload) {
+  return {
+    project_id: payload.project.project_id,
+    name: payload.project.name,
+  };
+}
+
+function metricLabel(delta) {
+  if (delta < 0) return "improved";
+  if (delta > 0) return "worsened";
+  return "unchanged";
+}
+
+function renderCompareResult(result) {
+  return `
+    <div class="compare-result">
+      <div class="compare-run-actions">
+        <button type="button" class="inline-action" data-compare-project="${escapeHtml(result.base.project_id)}">Open base run</button>
+        <button type="button" class="inline-action" data-compare-project="${escapeHtml(result.candidate.project_id)}">Open candidate run</button>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card"><span>Matched primaries</span><strong>${fmtCount(result.entity_counts.matched)}</strong></div>
+        <div class="stat-card"><span>Only base</span><strong>${fmtCount(result.entity_counts.only_base)}</strong></div>
+        <div class="stat-card"><span>Only candidate</span><strong>${fmtCount(result.entity_counts.only_candidate)}</strong></div>
+        <div class="stat-card"><span>Changed matched</span><strong>${fmtCount(result.entity_counts.changed)}</strong></div>
+      </div>
+      ${renderCompareSection("Review Pressure", renderReviewDiff(result.review))}
+      ${renderCompareSection("Semantic Invariants", renderInvariantDiff(result.invariants, result.base.project_id, result.candidate.project_id))}
+      ${renderCompareSection("Comparability Manifest", renderComparabilityDiff(result.comparability, result.base.project_id, result.candidate.project_id))}
+      ${renderCompareSection("Entities only in base", renderEntityCompareList(result.only_base, result.base.project_id))}
+      ${renderCompareSection("Entities only in candidate", renderEntityCompareList(result.only_candidate, result.candidate.project_id))}
+      ${renderCompareSection("Matched entity drift", renderChangedEntityRows(result.changed, result.base.project_id, result.candidate.project_id))}
+    </div>
+  `;
+}
+
+function renderCompareSection(title, body) {
+  return `<details class="compare-section" open><summary>${escapeHtml(title)}</summary>${body}</details>`;
+}
+
+function renderReviewDiff(review) {
+  return `
+    <p><span class="diff-label ${escapeHtml(review.label)}">${escapeHtml(review.label)}</span> total delta: ${escapeHtml(review.total_delta)}, high delta: ${escapeHtml(review.high_delta)}</p>
+    <table class="table compact-table"><thead><tr><th>Metric</th><th>Base</th><th>Candidate</th></tr></thead><tbody>
+      ${["total", "high", "medium", "low", "with_candidates", "with_evidence"].map((key) => `
+        <tr><td>${escapeHtml(key)}</td><td>${fmtCount(review.base[key])}</td><td>${fmtCount(review.candidate[key])}</td></tr>
+      `).join("")}
+    </tbody></table>
+    <p><strong>Review types:</strong> ${renderTypeCountDiff(review.base.type_counts, review.candidate.type_counts)}</p>
+  `;
+}
+
+function renderTypeCountDiff(baseCounts, candidateCounts) {
+  const keys = [...new Set([...Object.keys(baseCounts || {}), ...Object.keys(candidateCounts || {})])].sort();
+  if (!keys.length) return `<span class="muted">not available</span>`;
+  return keys.map((key) => `<span class="badge">${escapeHtml(key)}: ${fmtCount(baseCounts[key] || 0)} → ${fmtCount(candidateCounts[key] || 0)}</span>`).join("");
+}
+
+function renderInvariantDiff(invariants, baseId, candidateId) {
+  const label = metricLabel(invariants.failure_delta + invariants.warning_delta);
+  return `
+    <div class="compare-run-actions">
+      <button type="button" class="inline-action" data-compare-project-id="${escapeHtml(baseId)}" data-compare-artifact="semantic_invariants_audit.json">Open base invariants</button>
+      <button type="button" class="inline-action" data-compare-project-id="${escapeHtml(candidateId)}" data-compare-artifact="semantic_invariants_audit.json">Open candidate invariants</button>
+    </div>
+    <p><span class="diff-label ${escapeHtml(label)}">${escapeHtml(label)}</span> failures delta: ${escapeHtml(invariants.failure_delta)}, warnings delta: ${escapeHtml(invariants.warning_delta)}</p>
+    <table class="table compact-table"><thead><tr><th>Metric</th><th>Base</th><th>Candidate</th></tr></thead><tbody>
+      <tr><td>Status</td><td>${escapeHtml(invariants.base.status)}</td><td>${escapeHtml(invariants.candidate.status)}</td></tr>
+      <tr><td>Failures</td><td>${fmtCount(invariants.base.failure_count)}</td><td>${fmtCount(invariants.candidate.failure_count)}</td></tr>
+      <tr><td>Warnings</td><td>${fmtCount(invariants.base.warning_count)}</td><td>${fmtCount(invariants.candidate.warning_count)}</td></tr>
+    </tbody></table>
+    <p><strong>Failing checks added:</strong> ${renderBadgesOrUnavailable(invariants.failing_added)}</p>
+    <p><strong>Failing checks removed:</strong> ${renderBadgesOrUnavailable(invariants.failing_removed)}</p>
+    <p><strong>Warning checks added:</strong> ${renderBadgesOrUnavailable(invariants.warning_added)}</p>
+    <p><strong>Warning checks removed:</strong> ${renderBadgesOrUnavailable(invariants.warning_removed)}</p>
+  `;
+}
+
+function renderComparabilityDiff(comparability, baseId, candidateId) {
+  return `
+    <div class="compare-run-actions">
+      <button type="button" class="inline-action" data-compare-project-id="${escapeHtml(baseId)}" data-compare-artifact="run_comparability_manifest.json">Open base manifest</button>
+      <button type="button" class="inline-action" data-compare-project-id="${escapeHtml(candidateId)}" data-compare-artifact="run_comparability_manifest.json">Open candidate manifest</button>
+    </div>
+    <table class="table compact-table"><thead><tr><th>Metric</th><th>Base</th><th>Candidate</th></tr></thead><tbody>
+      <tr><td>Available</td><td>${comparability.base_available ? "yes" : "not available"}</td><td>${comparability.candidate_available ? "yes" : "not available"}</td></tr>
+      <tr><td>Status</td><td>${escapeHtml(comparability.base_summary.status)}</td><td>${escapeHtml(comparability.candidate_summary.status)}</td></tr>
+      <tr><td>Schema</td><td>${escapeHtml(comparability.base_summary.schema_version || "not available")}</td><td>${escapeHtml(comparability.candidate_summary.schema_version || "not available")}</td></tr>
+    </tbody></table>
+    <p><strong>Base warnings:</strong> ${renderBadgesOrUnavailable(comparability.base_summary.warnings || [])}</p>
+    <p><strong>Candidate warnings:</strong> ${renderBadgesOrUnavailable(comparability.candidate_summary.warnings || [])}</p>
+  `;
+}
+
+function renderEntityCompareList(rows, projectId) {
+  if (!rows.length) return `<p class="muted">not available</p>`;
+  return `<div class="compare-entity-list">${rows.slice(0, 24).map((row) => `
+    <div class="compare-entity-card">
+      <strong>${escapeHtml(row.canonical_name)}</strong>
+      <small>${escapeHtml(row.entity_kind)} · ${escapeHtml(row.preferred_slug)} · confidence ${escapeHtml(row.confidence === undefined ? "n/a" : row.confidence)}</small>
+      <button type="button" class="inline-action" data-compare-project="${escapeHtml(projectId)}">Open run</button>
+    </div>
+  `).join("")}</div>`;
+}
+
+function renderChangedEntityRows(rows, baseId, candidateId) {
+  if (!rows.length) return `<p class="muted">No matched entity drift detected by conservative key matching.</p>`;
+  return rows.slice(0, 30).map((row) => `
+    <details class="compare-entity-drift">
+      <summary><strong>${escapeHtml(row.base.canonical_name)}</strong> <span class="muted">→</span> <strong>${escapeHtml(row.candidate.canonical_name)}</strong> ${row.changes.map((change) => `<span class="badge">${escapeHtml(change)}</span>`).join("")}</summary>
+      <div class="compare-run-actions">
+        <button type="button" class="inline-action" data-compare-project="${escapeHtml(baseId)}">Open base run</button>
+        <button type="button" class="inline-action" data-compare-project="${escapeHtml(candidateId)}">Open candidate run</button>
+      </div>
+      <table class="table compact-table"><tbody>
+        <tr><th>Slug</th><td>${escapeHtml(row.base.preferred_slug)}</td><td>${escapeHtml(row.candidate.preferred_slug)}</td></tr>
+        <tr><th>Kind</th><td>${escapeHtml(row.base.entity_kind)}</td><td>${escapeHtml(row.candidate.entity_kind)}</td></tr>
+        <tr><th>Confidence</th><td>${escapeHtml(row.base.confidence === undefined ? "n/a" : row.base.confidence)}</td><td>${escapeHtml(row.candidate.confidence === undefined ? "n/a" : row.candidate.confidence)}</td></tr>
+        <tr><th>Relationships Δ</th><td colspan="2">${escapeHtml(row.relationship_delta)}</td></tr>
+        <tr><th>Key facts Δ</th><td colspan="2">${escapeHtml(row.key_fact_delta)}</td></tr>
+      </tbody></table>
+      <p><strong>Aliases added:</strong> ${renderBadgesOrUnavailable(row.alias_diff.added)}</p>
+      <p><strong>Aliases removed:</strong> ${renderBadgesOrUnavailable(row.alias_diff.removed)}</p>
+      <p><strong>Source mentions added:</strong> ${renderBadgesOrUnavailable(row.source_mention_diff.added)}</p>
+      <p><strong>Source mentions removed:</strong> ${renderBadgesOrUnavailable(row.source_mention_diff.removed)}</p>
+      <p><strong>Chapter refs added:</strong> ${renderBadgesOrUnavailable(row.chapter_ref_diff.added)}</p>
+      <p><strong>Chapter refs removed:</strong> ${renderBadgesOrUnavailable(row.chapter_ref_diff.removed)}</p>
+    </details>
+  `).join("");
+}
+
+function renderBadgesOrUnavailable(values) {
+  if (!values || !values.length) return `<span class="muted">not available</span>`;
+  return values.slice(0, 16).map((value) => `<span class="badge">${escapeHtml(value)}</span>`).join("");
 }
 
 function renderSemanticHealth(health) {

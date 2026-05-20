@@ -520,6 +520,92 @@ button:hover, button.active {
   font-weight: 700;
 }
 
+.compare-runs {
+  margin-bottom: 18px;
+}
+
+.compare-header,
+.compare-controls,
+.compare-run-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.compare-header {
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.compare-controls {
+  margin-bottom: 12px;
+}
+
+.compare-controls label {
+  display: grid;
+  gap: 6px;
+  min-width: min(320px, 100%);
+}
+
+.compare-section,
+.compare-entity-drift {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255,255,255,0.36);
+  padding: 10px 12px;
+  margin-top: 10px;
+}
+
+.compare-section summary,
+.compare-entity-drift summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.compare-entity-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.compare-entity-card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 10px;
+  background: rgba(255, 250, 240, 0.64);
+}
+
+.compare-entity-card strong,
+.compare-entity-card small {
+  display: block;
+}
+
+.diff-label {
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.diff-label.improved {
+  background: rgba(29, 111, 104, 0.12);
+  color: var(--accent);
+}
+
+.diff-label.worsened {
+  background: rgba(162, 59, 85, 0.14);
+  color: #8c2240;
+}
+
+.diff-label.unchanged {
+  background: rgba(108, 106, 95, 0.14);
+  color: var(--muted);
+}
+
 .artifact-link {
   background: #fff;
 }
