@@ -12,6 +12,16 @@ const state = {
   selectedCanonEntityKey: null,
   selectedReviewItemId: null,
   navNotice: null,
+  ingestionConfig: null,
+  ingestionConfigError: "",
+  ingestionWizard: {
+    sourceRoot: "",
+    projectTitle: "",
+    runName: "",
+    primaryLanguage: "",
+    workingLanguages: "",
+    skipPluginInstall: true,
+  },
   compareView: { baseId: "", candidateId: "", loading: false, result: null, error: "" },
   reviewView: { severity: "", reviewType: "", query: "", sortBy: "severity_desc" },
 };
@@ -37,9 +47,20 @@ function fmtCount(value) {
 }
 
 async function loadProjects() {
+  await loadIngestionConfig();
   const data = await api("/api/projects");
   state.projects = data.projects || [];
   renderProjects();
+}
+
+async function loadIngestionConfig() {
+  try {
+    state.ingestionConfig = await api("/api/ingestion/config");
+    state.ingestionConfigError = "";
+  } catch (error) {
+    state.ingestionConfig = null;
+    state.ingestionConfigError = error.message || String(error);
+  }
 }
 
 function renderProjects() {
@@ -112,6 +133,7 @@ function renderOverview() {
       <div class="stat-card"><span>Review Items</span><strong>${fmtCount(queue.item_count)}</strong></div>
     </div>
     ${renderSemanticHealth(state.current.health || {})}
+    ${renderIngestionWizard()}
     ${renderCompareRunsPanel()}
     ${renderEntityTriagePanel()}
     <div class="panel">
@@ -121,8 +143,130 @@ function renderOverview() {
     </div>
   `;
   bindHealthInteractions();
+  bindIngestionWizardInteractions();
   bindCompareRunsInteractions();
   bindEntityTriageInteractions();
+}
+
+function renderIngestionWizard() {
+  const config = state.ingestionConfig || {};
+  const wizard = state.ingestionWizard || {};
+  const preview = buildIngestionCommandPreview(config, wizard);
+  return `
+    <section class="ingestion-wizard panel">
+      <div class="wizard-header">
+        <div>
+          <p class="eyebrow">Ingestion Wizard</p>
+          <h3>Local path preview shell</h3>
+          <p class="muted">Preview only. No ingestion will run and no files will be written.</p>
+        </div>
+        <span class="badge">${escapeHtml(config.mode || "config unavailable")}</span>
+      </div>
+      ${state.ingestionConfigError ? `<div class="nav-notice warning">Ingestion config unavailable: ${escapeHtml(state.ingestionConfigError)}</div>` : ""}
+      <div class="wizard-steps">
+        ${["Start ingestion", "Input mode", "Source material", "Output/run settings", "Command preview", "Safety review", "Execution placeholder"].map((step, index) => `
+          <div class="wizard-step"><span>${index + 1}</span>${escapeHtml(step)}</div>
+        `).join("")}
+      </div>
+      <div class="wizard-grid">
+        <label>Source root path
+          <input id="wizard-source-root" class="search compact" placeholder="/path/to/source" value="${escapeHtml(wizard.sourceRoot || "")}" />
+        </label>
+        <label>Project title
+          <input id="wizard-project-title" class="search compact" placeholder="My Narrative Project" value="${escapeHtml(wizard.projectTitle || "")}" />
+        </label>
+        <label>Run name / output slug
+          <input id="wizard-run-name" class="search compact" placeholder="my_narrative_run" value="${escapeHtml(wizard.runName || "")}" />
+        </label>
+        <label>Primary language
+          <input id="wizard-primary-language" class="search compact" placeholder="es" value="${escapeHtml(wizard.primaryLanguage || "")}" />
+        </label>
+        <label>Working languages
+          <input id="wizard-working-languages" class="search compact" placeholder="es,en" value="${escapeHtml(wizard.workingLanguages || "")}" />
+        </label>
+        <label class="checkbox-row">
+          <input id="wizard-skip-plugin" type="checkbox" ${wizard.skipPluginInstall !== false ? "checked" : ""} />
+          skip plugin install (recommended)
+        </label>
+      </div>
+      <div class="wizard-preview">
+        <h4>Output root preview</h4>
+        <code>${escapeHtml(preview.outputRoot)}</code>
+        <h4>Args list preview</h4>
+        <ol class="args-list">${preview.args.map((arg) => `<li><code>${escapeHtml(arg)}</code></li>`).join("")}</ol>
+        ${preview.warnings.length ? `<div class="nav-notice warning">${preview.warnings.map(escapeHtml).join("<br />")}</div>` : ""}
+      </div>
+      <div class="wizard-safety">
+        <h4>Safety review</h4>
+        <ul>
+          ${(config.safety_notes || [
+            "Preview only: no subprocess execution.",
+            "No files will be written.",
+            "Execution will be enabled in a future safepoint.",
+          ]).map((note) => `<li>${escapeHtml(note)}</li>`).join("")}
+        </ul>
+        <button type="button" disabled>Execution will be enabled in a future safepoint.</button>
+      </div>
+    </section>
+  `;
+}
+
+function bindIngestionWizardInteractions() {
+  const bindValue = (id, key) => {
+    $(id)?.addEventListener("input", (event) => {
+      state.ingestionWizard[key] = event.target.value;
+      renderOverview();
+    });
+  };
+  bindValue("wizard-source-root", "sourceRoot");
+  bindValue("wizard-project-title", "projectTitle");
+  bindValue("wizard-run-name", "runName");
+  bindValue("wizard-primary-language", "primaryLanguage");
+  bindValue("wizard-working-languages", "workingLanguages");
+  $("wizard-skip-plugin")?.addEventListener("change", (event) => {
+    state.ingestionWizard.skipPluginInstall = event.target.checked;
+    renderOverview();
+  });
+}
+
+function buildIngestionCommandPreview(config, wizard) {
+  const base = (config.recommended_command || {}).program || ["uv", "run", "python", "scripts/textifai.py", "init"];
+  const defaultOutputRoot = config.default_output_root || "runs/web_ingestion";
+  const runSlug = sanitizePreviewSlug(wizard.runName || wizard.projectTitle || "new_run");
+  const outputRoot = `${defaultOutputRoot}/${runSlug || "<run_slug>"}`;
+  const args = [...base, "--vault-root", outputRoot];
+  if (wizard.sourceRoot) args.push("--source-root", wizard.sourceRoot);
+  else args.push("--source-root", "<source_root>");
+  if (wizard.projectTitle) args.push("--project-title", wizard.projectTitle);
+  else args.push("--project-title", "<project_title>");
+  if (wizard.primaryLanguage) args.push("--primary-language", wizard.primaryLanguage);
+  for (const lang of splitWorkingLanguages(wizard.workingLanguages)) {
+    args.push("--working-language", lang);
+  }
+  if (wizard.skipPluginInstall !== false) args.push("--skip-plugin-install");
+  const warnings = [];
+  if (!wizard.sourceRoot) warnings.push("source_root is required before execution can be enabled.");
+  if (!wizard.projectTitle) warnings.push("project_title is required before execution can be enabled.");
+  if (!wizard.runName) warnings.push("run_name/output_slug is required before execution can be enabled.");
+  warnings.push("Preview only: this args list is not executed in this safepoint.");
+  return { args, outputRoot, warnings };
+}
+
+function splitWorkingLanguages(value) {
+  return String(value || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function sanitizePreviewSlug(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 80);
 }
 
 function renderCompareRunsPanel() {

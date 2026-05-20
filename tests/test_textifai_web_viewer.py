@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 
 from textifai.web_viewer.project_reader import ProjectCatalog, build_graph, read_artifact, read_note, read_project
+from textifai.web_viewer.server import build_ingestion_config
 
 
 class TextifAIWebViewerTests(unittest.TestCase):
@@ -68,6 +69,22 @@ class TextifAIWebViewerTests(unittest.TestCase):
         self.assertEqual(sera_node["entity"]["aliases"], ["la princesa"])
         self.assertIn("#primary", sera_node["tags"])
         self.assertIn("#character", sera_node["tags"])
+
+    def test_ingestion_config_is_preview_only_and_safe(self):
+        config = build_ingestion_config()
+        self.assertEqual(config["mode"], "local_path_preview_only")
+        self.assertFalse(config["can_execute"])
+        self.assertFalse(config["can_upload"])
+        self.assertEqual(config["default_output_root"], "runs/web_ingestion")
+        self.assertEqual(config["recommended_command"]["program"][:5], ["uv", "run", "python", "scripts/textifai.py", "init"])
+        self.assertEqual(config["supported_input_mode"], "local_path")
+        self.assertIn("upload", config["future_input_modes"])
+        required = {item["name"]: item for item in config["required_fields"]}
+        self.assertTrue(required["source_root"]["required"])
+        self.assertTrue(required["project_title"]["required"])
+        self.assertTrue(required["run_name"]["required"])
+        self.assertFalse(required["skip_plugin_install"]["required"])
+        self.assertTrue(required["skip_plugin_install"]["default"])
 
 
 if __name__ == "__main__":

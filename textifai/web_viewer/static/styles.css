@@ -674,6 +674,84 @@ button:hover, button.active {
   margin-top: 10px;
 }
 
+.ingestion-wizard {
+  margin-bottom: 18px;
+}
+
+.wizard-header,
+.wizard-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.wizard-header {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  margin-bottom: 12px;
+}
+
+.wizard-steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.wizard-step {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255,255,255,0.4);
+  padding: 10px;
+  font-size: 14px;
+}
+
+.wizard-step span {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: white;
+  margin-right: 8px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.wizard-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  margin-bottom: 12px;
+}
+
+.wizard-grid label {
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.checkbox-row {
+  align-content: center;
+}
+
+.wizard-preview,
+.wizard-safety {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255,255,255,0.36);
+  padding: 12px 14px;
+  margin-top: 12px;
+}
+
+.args-list {
+  margin: 8px 0 0;
+  padding-left: 22px;
+}
+
+.args-list code,
+.wizard-preview code {
+  overflow-wrap: anywhere;
+}
+
 .artifact-link {
   background: #fff;
 }

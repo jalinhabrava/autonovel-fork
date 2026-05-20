@@ -15,6 +15,38 @@ from textifai.web_viewer.project_reader import ProjectCatalog, read_artifact, re
 STATIC_ROOT = Path(__file__).with_name("static")
 
 
+def build_ingestion_config() -> dict[str, object]:
+    return {
+        "mode": "local_path_preview_only",
+        "can_execute": False,
+        "can_upload": False,
+        "default_output_root": "runs/web_ingestion",
+        "recommended_command": {
+            "program": ["uv", "run", "python", "scripts/textifai.py", "init"],
+            "style": "args_list_preview",
+        },
+        "local_only_warning": "Local-only preview. No ingestion execution, upload, or filesystem writes happen in this safepoint.",
+        "safety_notes": [
+            "Preview only: no subprocess execution.",
+            "No files will be written.",
+            "Future execution should write only inside a dedicated output root.",
+            "No overwrite policy must be enforced before execution is enabled.",
+            "Uploads are not enabled in this MVP shell.",
+            "Skip plugin install is recommended for the MVP path flow.",
+        ],
+        "supported_input_mode": "local_path",
+        "future_input_modes": ["upload"],
+        "required_fields": [
+            {"name": "source_root", "required": True},
+            {"name": "project_title", "required": True},
+            {"name": "run_name", "required": True},
+            {"name": "primary_language", "required": False},
+            {"name": "working_languages", "required": False},
+            {"name": "skip_plugin_install", "required": False, "default": True},
+        ],
+    }
+
+
 def run_viewer_server(
     *,
     roots: list[str | Path],
@@ -73,6 +105,9 @@ def _make_handler(catalog: ProjectCatalog):
             parsed = urlparse(self.path)
             path = parsed.path
             query = parse_qs(parsed.query)
+            if path == "/api/ingestion/config":
+                self._json(build_ingestion_config())
+                return
             if path == "/api/projects":
                 self._json({"projects": catalog.list_projects()})
                 return
