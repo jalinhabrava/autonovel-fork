@@ -240,6 +240,15 @@ button:hover, button.active {
   vertical-align: top;
 }
 
+.row-highlight td {
+  background: rgba(29, 111, 104, 0.12);
+}
+
+.inline-action {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
 .semantic-health {
   margin-bottom: 18px;
 }
@@ -422,6 +431,11 @@ button:hover, button.active {
   padding: 12px 14px;
 }
 
+.review-item.review-highlight {
+  border-color: rgba(29, 111, 104, 0.6);
+  box-shadow: 0 0 0 2px rgba(29, 111, 104, 0.16);
+}
+
 .review-item + .review-item {
   margin-top: 12px;
 }
@@ -468,6 +482,13 @@ button:hover, button.active {
 .candidate-card strong,
 .candidate-card small {
   display: block;
+}
+
+.candidate-actions {
+  margin-top: 8px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .review-evidence {
@@ -575,6 +596,36 @@ button:hover, button.active {
   border: 0;
   border-top: 1px solid var(--line);
   margin: 14px 0;
+}
+
+.nav-notice {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+
+.nav-notice.info {
+  background: rgba(108, 106, 95, 0.12);
+  color: var(--ink);
+}
+
+.nav-notice.warning {
+  background: rgba(180, 91, 53, 0.14);
+  color: var(--accent-2);
+}
+
+.nav-notice.success {
+  background: rgba(29, 111, 104, 0.12);
+  color: var(--accent);
+}
+
+.nav-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 10px 0;
 }
 .entity-detail {
   margin-top: 14px;

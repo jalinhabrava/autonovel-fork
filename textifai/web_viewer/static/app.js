@@ -9,6 +9,9 @@ const state = {
   graphPan: null,
   graphDidPan: false,
   hiddenGraphTags: new Set(),
+  selectedCanonEntityKey: null,
+  selectedReviewItemId: null,
+  navNotice: null,
   reviewView: { severity: "", reviewType: "", query: "", sortBy: "severity_desc" },
 };
 
@@ -55,6 +58,9 @@ async function selectProject(projectId) {
   state.currentId = projectId;
   state.current = await api(`/api/projects/${encodeURIComponent(projectId)}`);
   state.selectedGraphNodeId = null;
+  state.selectedCanonEntityKey = null;
+  state.selectedReviewItemId = null;
+  state.navNotice = null;
   state.hiddenGraphTags = new Set();
   state.reviewView = { severity: "", reviewType: "", query: "", sortBy: "severity_desc" };
   resetGraphViewBox();
@@ -81,6 +87,15 @@ function setView(view) {
   document.querySelectorAll(".tabs button").forEach((button) => button.classList.toggle("active", button.dataset.view === view));
   document.querySelectorAll(".view").forEach((node) => node.classList.toggle("active", node.id === `view-${view}`));
   if (view === "graph") renderGraph();
+}
+
+function setNavNotice(message, level = "info") {
+  state.navNotice = message ? { message, level } : null;
+}
+
+function renderNavNotice() {
+  if (!state.navNotice || !state.navNotice.message) return "";
+  return `<div class="nav-notice ${escapeHtml(state.navNotice.level || "info")}">${escapeHtml(state.navNotice.message)}</div>`;
 }
 
 function renderOverview() {
@@ -372,6 +387,133 @@ function selectGraphNodeByNotePath(path, { render = true } = {}) {
   if (render && state.activeView === "graph") renderGraph();
 }
 
+function allCanonEntities() {
+  const canon = state.current && state.current.canon ? state.current.canon : {};
+  return [
+    ...(canon.primaries || []),
+    ...(canon.review_entities || []),
+  ];
+}
+
+function canonEntityKey(entity) {
+  return normalizeKey(entity.preferred_slug || entity.canonical_name || "");
+}
+
+function findCanonEntityByTerm(term) {
+  const key = normalizeKey(term);
+  if (!key) return null;
+  return allCanonEntities().find((entity) => {
+    const aliases = entity.aliases || [];
+    return (
+      normalizeKey(entity.preferred_slug || "") === key ||
+      normalizeKey(entity.canonical_name || "") === key ||
+      aliases.some((alias) => normalizeKey(alias) === key)
+    );
+  }) || null;
+}
+
+function findGraphNodeByTerm(term) {
+  const key = normalizeKey(term);
+  if (!key) return null;
+  const graph = state.current && state.current.graph ? state.current.graph : { nodes: [] };
+  return (graph.nodes || []).find((node) => {
+    const entity = node.entity || {};
+    const chapter = node.chapter || {};
+    const aliases = entity.aliases || [];
+    return (
+      normalizeKey(node.id || "") === key ||
+      normalizeKey((node.id || "").split(":").slice(1).join(":")) === key ||
+      normalizeKey(node.label || "") === key ||
+      normalizeKey(node.note_path || "") === key ||
+      normalizeKey(lastPathPartWithoutMd(node.note_path || "")) === key ||
+      normalizeKey(entity.preferred_slug || "") === key ||
+      normalizeKey(entity.canonical_name || "") === key ||
+      normalizeKey(chapter.chapter_id || "") === key ||
+      normalizeKey(chapter.chapter_title_original || chapter.chapter_title_canonical || "") === key ||
+      aliases.some((alias) => normalizeKey(alias) === key)
+    );
+  }) || null;
+}
+
+function findReviewItemsByTerm(term) {
+  const key = normalizeKey(term);
+  if (!key) return [];
+  const queue = state.current && state.current.canon ? state.current.canon.review_queue || {} : {};
+  return (queue.items || []).map((item, index) => ({ item, index, key: reviewItemKey(item, index) })).filter(({ item }) => {
+    const candidates = item.candidate_entities || [];
+    return (
+      normalizeKey(item.source_entity || "") === key ||
+      normalizeKey(item.target_text || "") === key ||
+      candidates.some((candidate) => normalizeKey(candidate.canonical_name || "") === key || normalizeKey(candidate.preferred_slug || "") === key)
+    );
+  });
+}
+
+function reviewItemKey(item, index) {
+  return normalizeKey([
+    index,
+    item.review_type || "",
+    item.source_entity || "",
+    item.target_text || "",
+  ].join(":"));
+}
+
+function navigateToGraphTerm(term, { from = "Viewer" } = {}) {
+  const node = findGraphNodeByTerm(term);
+  if (!node) {
+    setNavNotice(`${from}: "${term}" not found in graph.`, "warning");
+    if (state.activeView === "canon") renderCanon();
+    if (state.activeView === "review") renderReview();
+    return false;
+  }
+  state.selectedGraphNodeId = node.id;
+  const entity = node.entity || {};
+  if (Object.keys(entity).length) state.selectedCanonEntityKey = canonEntityKey(entity);
+  setNavNotice(`${from}: opened "${node.label || node.id}" in graph.`, "success");
+  setView("graph");
+  renderGraph();
+  renderGraphNodeDetail(node);
+  return true;
+}
+
+function navigateToCanonTerm(term, { from = "Viewer" } = {}) {
+  const entity = findCanonEntityByTerm(term);
+  if (!entity) {
+    setNavNotice(`${from}: "${term}" not found in canon.`, "warning");
+    if (state.activeView === "graph") {
+      const selected = findSelectedGraphNode();
+      if (selected) renderGraphNodeDetail(selected);
+    }
+    if (state.activeView === "review") renderReview();
+    return false;
+  }
+  state.selectedCanonEntityKey = canonEntityKey(entity);
+  setNavNotice(`${from}: highlighted "${entity.canonical_name || term}" in canon.`, "success");
+  setView("canon");
+  renderCanon();
+  return true;
+}
+
+function navigateToReviewContext(term, { from = "Graph" } = {}) {
+  const matches = findReviewItemsByTerm(term);
+  if (!matches.length) {
+    setNavNotice(`${from}: no review queue context found for "${term}".`, "info");
+    const selected = findSelectedGraphNode();
+    if (selected) renderGraphNodeDetail(selected);
+    return false;
+  }
+  state.selectedReviewItemId = matches[0].key;
+  setNavNotice(`${from}: opened review context for "${term}".`, "success");
+  setView("review");
+  renderReview();
+  return true;
+}
+
+function findSelectedGraphNode() {
+  const graph = state.current && state.current.graph ? state.current.graph : { nodes: [] };
+  return (graph.nodes || []).find((item) => item.id === state.selectedGraphNodeId) || null;
+}
+
 function highlightNote(path) {
   document.querySelectorAll("[data-note]").forEach((node) => node.classList.toggle("active", node.dataset.note === path));
 }
@@ -379,6 +521,7 @@ function highlightNote(path) {
 function renderCanon() {
   const canon = state.current.canon;
   $("view-canon").innerHTML = `
+    ${renderNavNotice()}
     <h3>Primaries</h3>
     ${entityTable(canon.primaries)}
     <h3 style="margin-top:24px">Chapters</h3>
@@ -386,16 +529,23 @@ function renderCanon() {
     <h3 style="margin-top:24px">Review Entities</h3>
     ${entityTable(canon.review_entities.slice(0, 80))}
   `;
+  bindCanonNavigation();
 }
 
 function entityTable(entities) {
-  return `<table class="table"><thead><tr><th>Name</th><th>Kind</th><th>Slug</th><th>Summary</th></tr></thead><tbody>
-    ${entities.map((entity) => `<tr>
+  return `<table class="table"><thead><tr><th>Name</th><th>Kind</th><th>Slug</th><th>Summary</th><th>Navigate</th></tr></thead><tbody>
+    ${entities.map((entity) => {
+      const key = canonEntityKey(entity);
+      return `<tr class="${state.selectedCanonEntityKey === key ? "row-highlight" : ""}">
       <td>${escapeHtml(entity.canonical_name)}</td>
       <td>${escapeHtml(entity.entity_kind || "")}</td>
       <td>${escapeHtml(entity.preferred_slug || "")}</td>
       <td>${escapeHtml(entity.summary || "").slice(0, 260)}</td>
-    </tr>`).join("")}
+      <td>
+        <button type="button" class="inline-action" data-canon-graph="${escapeHtml(key)}">View in graph</button>
+      </td>
+    </tr>`;
+    }).join("")}
   </tbody></table>`;
 }
 
@@ -422,6 +572,7 @@ function renderReview() {
   const evidenceCount = items.filter((item) => (item.evidence || []).length > 0).length;
   const highSeverity = severityCounts.high || 0;
   $("view-review").innerHTML = `
+    ${renderNavNotice()}
     <div class="review-header panel">
       <div class="review-header-title">
         <p class="eyebrow">Review Queue</p>
@@ -565,8 +716,9 @@ function renderCountBadges(counts, badgeType) {
 function renderReviewItemCard(item, index) {
   const candidates = item.candidate_entities || [];
   const evidence = item.evidence || [];
+  const reviewId = reviewItemKey(item, index);
   return `
-    <details class="review-item" ${index < 2 ? "open" : ""}>
+    <details class="review-item ${state.selectedReviewItemId === reviewId ? "review-highlight" : ""}" data-review-item-id="${escapeHtml(reviewId)}" ${index < 2 || state.selectedReviewItemId === reviewId ? "open" : ""}>
       <summary>
         <span class="badge severity-${escapeHtml(String(item.severity || "unknown").toLowerCase())}">${escapeHtml(item.severity || "unknown")}</span>
         <span class="badge">${escapeHtml(item.review_type || "unknown")}</span>
@@ -584,12 +736,18 @@ function renderReviewItemCard(item, index) {
         <div class="review-actions">
           ${item.source_entity ? `<button type="button" data-review-graph="${escapeHtml(item.source_entity)}">Source → graph</button>` : ""}
           ${item.target_text ? `<button type="button" data-review-graph="${escapeHtml(item.target_text)}">Target → graph</button>` : ""}
+          ${item.source_entity ? `<button type="button" data-review-canon="${escapeHtml(item.source_entity)}">Source → canon</button>` : ""}
+          ${item.target_text ? `<button type="button" data-review-canon="${escapeHtml(item.target_text)}">Target → canon</button>` : ""}
           <button type="button" data-review-open-canon="1">Open canon</button>
         </div>
         ${candidates.length ? `<h4>Candidates</h4><div class="review-candidates">${candidates.map((candidate) => `
           <div class="candidate-card">
             <strong>${escapeHtml(candidate.canonical_name || "not available")}</strong>
             <small>${escapeHtml(candidate.entity_kind || "not available")}</small>
+            <div class="candidate-actions">
+              ${candidate.canonical_name ? `<button type="button" class="inline-action" data-review-graph="${escapeHtml(candidate.canonical_name)}">Graph</button>` : ""}
+              ${candidate.canonical_name ? `<button type="button" class="inline-action" data-review-canon="${escapeHtml(candidate.canonical_name)}">Canon</button>` : ""}
+            </div>
           </div>
         `).join("")}</div>` : `<p class="muted">Candidates: not available</p>`}
         ${evidence.length ? `<h4>Evidence</h4><ul class="review-evidence">${evidence.map((entry) => `
@@ -604,6 +762,11 @@ function renderReviewItemCard(item, index) {
 }
 
 function bindReviewQueueInteractions() {
+  document.querySelectorAll("[data-review-item-id]").forEach((node) => {
+    node.addEventListener("toggle", () => {
+      if (node.open) state.selectedReviewItemId = node.dataset.reviewItemId || null;
+    });
+  });
   $("review-open-raw")?.addEventListener("click", () => {
     setView("artifacts");
     openArtifact("review_queue.json");
@@ -631,13 +794,26 @@ function bindReviewQueueInteractions() {
   document.querySelectorAll("[data-review-graph]").forEach((node) => {
     node.addEventListener("click", () => {
       const term = node.dataset.reviewGraph || "";
-      if (!term) return;
-      setView("graph");
-      navigateWikiLink(term);
+      if (term) navigateToGraphTerm(term, { from: "Review Queue" });
+    });
+  });
+  document.querySelectorAll("[data-review-canon]").forEach((node) => {
+    node.addEventListener("click", () => {
+      const term = node.dataset.reviewCanon || "";
+      if (term) navigateToCanonTerm(term, { from: "Review Queue" });
     });
   });
   document.querySelectorAll("[data-review-open-canon]").forEach((node) => {
     node.addEventListener("click", () => setView("canon"));
+  });
+}
+
+function bindCanonNavigation() {
+  document.querySelectorAll("[data-canon-graph]").forEach((node) => {
+    node.addEventListener("click", () => {
+      const key = node.dataset.canonGraph || "";
+      if (key) navigateToGraphTerm(key, { from: "Canon" });
+    });
   });
 }
 
@@ -848,6 +1024,8 @@ function selectGraphNode(nodeId) {
   const graph = state.current && state.current.graph ? state.current.graph : { nodes: [] };
   const node = (graph.nodes || []).find((item) => item.id === nodeId);
   if (!node) return;
+  const entity = node.entity || {};
+  if (Object.keys(entity).length) state.selectedCanonEntityKey = canonEntityKey(entity);
   renderGraphNodeDetail(node);
   document.querySelectorAll("[data-node]").forEach((nodeEl) => nodeEl.classList.toggle("selected", nodeEl.dataset.node === nodeId));
 }
@@ -858,6 +1036,7 @@ async function renderGraphNodeDetail(node) {
     return;
   }
   $("graph-detail").innerHTML = graphNodeSummary(node);
+  bindGraphDetailNavigation();
 }
 
 async function openGraphNote(path, nodeId = null) {
@@ -871,17 +1050,26 @@ async function openGraphNote(path, nodeId = null) {
     <article class="markdown">${renderMarkdown(data.markdown || "")}</article>
   `;
   attachWikiLinkHandlers($("graph-detail"));
+  bindGraphDetailNavigation();
 }
 
 function graphNodeSummary(node) {
   const entity = node.entity || {};
   const chapter = node.chapter || {};
   const hasVaerlDetail = Object.keys(entity).length || Object.keys(chapter).length;
+  const canonLabel = Object.keys(entity).length ? (entity.canonical_name || entity.preferred_slug || node.label || "") : "";
+  const reviewLabel = entity.canonical_name || entity.preferred_slug || node.label || chapter.chapter_id || "";
   return `
+    ${renderNavNotice()}
     <h3>${escapeHtml(node.label || "Unresolved")}</h3>
     <p><span class="badge">${escapeHtml(node.kind || "unknown")}</span> <span class="badge">${escapeHtml(node.role || "unknown")}</span></p>
     ${(node.tags || []).length ? `<p>${(node.tags || []).map((tag) => `<span class="badge tag-badge">${escapeHtml(tag)}</span>`).join("")}</p>` : ""}
     <p class="muted">${escapeHtml(node.id || "")}</p>
+    <div class="nav-actions">
+      ${canonLabel ? `<button type="button" data-graph-open-canon="${escapeHtml(canonLabel)}">Open in Canon</button>` : ""}
+      ${reviewLabel ? `<button type="button" data-graph-open-review="${escapeHtml(reviewLabel)}">Open Review Context</button>` : ""}
+      ${node.note_path ? `<button type="button" data-graph-open-note="${escapeHtml(node.note_path)}">Open note</button>` : ""}
+    </div>
     ${node.note_path
       ? `<p class="muted">${escapeHtml(node.note_path)}</p>`
       : hasVaerlDetail
@@ -890,6 +1078,27 @@ function graphNodeSummary(node) {
     ${Object.keys(entity).length ? entityDetail(entity) : ""}
     ${Object.keys(chapter).length ? chapterDetail(chapter) : ""}
   `;
+}
+
+function bindGraphDetailNavigation() {
+  document.querySelectorAll("[data-graph-open-canon]").forEach((node) => {
+    node.addEventListener("click", () => {
+      const term = node.dataset.graphOpenCanon || "";
+      if (term) navigateToCanonTerm(term, { from: "Graph" });
+    });
+  });
+  document.querySelectorAll("[data-graph-open-review]").forEach((node) => {
+    node.addEventListener("click", () => {
+      const term = node.dataset.graphOpenReview || "";
+      if (term) navigateToReviewContext(term, { from: "Graph" });
+    });
+  });
+  document.querySelectorAll("[data-graph-open-note]").forEach((node) => {
+    node.addEventListener("click", () => {
+      const path = node.dataset.graphOpenNote || "";
+      if (path) openGraphNote(path, state.selectedGraphNodeId);
+    });
+  });
 }
 
 function entityDetail(entity) {
