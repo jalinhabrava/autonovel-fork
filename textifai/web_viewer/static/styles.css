@@ -1069,6 +1069,50 @@ button:hover, button.active {
   overflow-wrap: anywhere;
 }
 
+.wizard-recent-jobs {
+  display: grid;
+  gap: 10px;
+}
+
+.wizard-job-row {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.wizard-job-row.active {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px rgba(29, 111, 104, 0.2);
+}
+
+.wizard-job-row p {
+  margin: 0;
+}
+
+.badge.status-queued {
+  background: rgba(108, 106, 95, 0.15);
+  color: var(--ink);
+}
+
+.badge.status-running {
+  background: rgba(29, 111, 104, 0.18);
+  color: var(--accent);
+}
+
+.badge.status-succeeded {
+  background: rgba(57, 113, 23, 0.18);
+  color: #2a6a0f;
+}
+
+.badge.status-failed {
+  background: rgba(180, 91, 53, 0.22);
+  color: var(--accent-2);
+}
+
 @media (max-width: 900px) {
   .app-shell, .split-view.active, .graph-layout {
     grid-template-columns: 1fr;

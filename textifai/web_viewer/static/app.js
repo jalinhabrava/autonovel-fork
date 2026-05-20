@@ -25,6 +25,8 @@ const state = {
     submitError: "",
     currentJobId: "",
     currentJob: null,
+    recentJobs: [],
+    pollingTimer: null,
   },
   compareView: { baseId: "", candidateId: "", loading: false, result: null, error: "" },
   reviewView: { severity: "", reviewType: "", query: "", sortBy: "severity_desc" },
@@ -52,6 +54,7 @@ function fmtCount(value) {
 
 async function loadProjects() {
   await loadIngestionConfig();
+  await loadIngestionJobs();
   const data = await api("/api/projects");
   state.projects = data.projects || [];
   renderProjects();
@@ -64,6 +67,19 @@ async function loadIngestionConfig() {
   } catch (error) {
     state.ingestionConfig = null;
     state.ingestionConfigError = error.message || String(error);
+  }
+}
+
+async function loadIngestionJobs() {
+  try {
+    const payload = await api("/api/ingestion/jobs");
+    state.ingestionWizard.recentJobs = payload.jobs || [];
+    if (state.ingestionWizard.currentJobId) {
+      const selected = state.ingestionWizard.recentJobs.find((job) => job.job_id === state.ingestionWizard.currentJobId);
+      if (selected) state.ingestionWizard.currentJob = selected;
+    }
+  } catch (_error) {
+    state.ingestionWizard.recentJobs = [];
   }
 }
 
@@ -156,7 +172,13 @@ function renderIngestionWizard() {
   const config = state.ingestionConfig || {};
   const wizard = state.ingestionWizard || {};
   const preview = buildIngestionCommandPreview(config, wizard);
-  const canSubmit = config.can_execute && preview.canSubmit && !wizard.submitting;
+  const hasPotentialDuplicate = Boolean((wizard.recentJobs || []).find((job) => {
+    const sameSource = normalizeKey(job.source_root) === normalizeKey(String(wizard.sourceRoot || "").trim());
+    const sameTitle = normalizeKey(job.project_title) === normalizeKey(String(wizard.projectTitle || "").trim());
+    const sameRun = normalizeKey(job.run_name) === normalizeKey(sanitizePreviewSlug(wizard.runName || ""));
+    return (job.status === "queued" || job.status === "running") && sameSource && sameTitle && sameRun;
+  }));
+  const canSubmit = config.can_execute && preview.canSubmit && !wizard.submitting && !hasPotentialDuplicate;
   return `
     <section class="ingestion-wizard panel">
       <div class="wizard-header">
@@ -211,11 +233,16 @@ function renderIngestionWizard() {
           ]).map((note) => `<li>${escapeHtml(note)}</li>`).join("")}
         </ul>
         <button type="button" id="wizard-submit-job" ${canSubmit ? "" : "disabled"}>${wizard.submitting ? "Submitting..." : "Submit ingestion job"}</button>
+        ${hasPotentialDuplicate ? `<div class="nav-notice warning">Active job already exists for same source/project/run. Wait for completion or change run name.</div>` : ""}
         ${wizard.submitError ? `<div class="nav-notice warning">${escapeHtml(wizard.submitError)}</div>` : ""}
       </div>
       <div class="wizard-job-status">
         <h4>Job status</h4>
         ${renderWizardJobStatus(wizard.currentJob)}
+      </div>
+      <div class="wizard-job-status">
+        <h4>Recent jobs</h4>
+        ${renderRecentJobs(wizard.recentJobs)}
       </div>
     </section>
   `;
@@ -286,14 +313,27 @@ function renderWizardJobStatus(job) {
   return `
     <div class="wizard-job-card">
       <p><strong>job_id:</strong> <code>${escapeHtml(job.job_id || "not available")}</code></p>
-      <p><strong>status:</strong> <span class="badge">${escapeHtml(job.status || "unknown")}</span></p>
+      <p><strong>status:</strong> <span class="badge ${escapeHtml(`status-${job.status || "unknown"}`)}">${escapeHtml(job.status || "unknown")}</span></p>
       <p><strong>output_root:</strong> <code>${escapeHtml(job.output_root || "not available")}</code></p>
+      <p><strong>safe_output_root:</strong> <code>${escapeHtml(job.safe_output_root || "not available")}</code></p>
       <p><strong>created:</strong> ${escapeHtml(job.created_at || "not available")}</p>
       <p><strong>started:</strong> ${escapeHtml(job.started_at || "not available")}</p>
       <p><strong>finished:</strong> ${escapeHtml(job.finished_at || "not available")}</p>
+      <p><strong>duration_seconds:</strong> ${escapeHtml(job.duration_seconds === null || job.duration_seconds === undefined ? "not available" : job.duration_seconds)}</p>
       <p><strong>exit_code:</strong> ${escapeHtml(job.exit_code === null || job.exit_code === undefined ? "not available" : job.exit_code)}</p>
+      <p><strong>result_detected:</strong> ${escapeHtml(job.result_detected ? "yes" : "no")}</p>
+      <p><strong>result_status:</strong> ${escapeHtml(job.result_status || "not available")}</p>
+      <p><strong>inspectable_artifacts:</strong> ${escapeHtml(job.inspectable_artifacts_available ? "yes" : "no")}</p>
+      <p><strong>review_queue_available:</strong> ${escapeHtml(job.review_queue_available ? "yes" : "no")}</p>
+      <p><strong>log_size_bytes:</strong> ${escapeHtml(job.log_size_bytes === null || job.log_size_bytes === undefined ? "not available" : job.log_size_bytes)}</p>
+      <p><strong>log_truncated:</strong> ${escapeHtml(job.log_truncated ? "yes" : "no")}</p>
       ${job.project_id ? `<p><strong>project_id:</strong> <code>${escapeHtml(job.project_id)}</code></p>` : ""}
+      ${(job.result_warnings || []).length ? `<div class="nav-notice warning">${job.result_warnings.map((item) => escapeHtml(item)).join("<br />")}</div>` : ""}
       ${job.error ? `<p class="nav-notice warning">${escapeHtml(job.error)}</p>` : ""}
+      <details>
+        <summary>Command preview</summary>
+        <ol class="args-list">${(job.command_preview || []).map((arg) => `<li><code>${escapeHtml(arg)}</code></li>`).join("")}</ol>
+      </details>
       <details>
         <summary>Log tail</summary>
         <pre class="frontmatter">${escapeHtml(job.log_tail || "not available")}</pre>
@@ -302,6 +342,24 @@ function renderWizardJobStatus(job) {
         <button type="button" id="wizard-refresh-projects">Refresh projects</button>
         ${job.project_id ? `<button type="button" id="wizard-open-result">Open result</button>` : ""}
       </div>
+    </div>
+  `;
+}
+
+function renderRecentJobs(jobs) {
+  const items = jobs || [];
+  if (!items.length) return `<p class="muted">No recent jobs in current server session.</p>`;
+  return `
+    <div class="wizard-recent-jobs">
+      ${items.slice(0, 8).map((job) => `
+        <div class="wizard-job-row ${job.job_id === state.ingestionWizard.currentJobId ? "active" : ""}">
+          <div>
+            <p><strong>${escapeHtml(job.project_title || "untitled")}</strong> · <code>${escapeHtml(job.run_name || "n/a")}</code></p>
+            <p class="muted"><code>${escapeHtml(job.job_id)}</code> · ${escapeHtml(job.status || "unknown")} · ${escapeHtml(job.output_root || "not available")}</p>
+          </div>
+          <button type="button" data-wizard-select-job="${escapeHtml(job.job_id)}">Inspect</button>
+        </div>
+      `).join("")}
     </div>
   `;
 }
@@ -327,12 +385,13 @@ async function submitIngestionJob() {
     });
     wizard.currentJobId = job.job_id || "";
     wizard.currentJob = job;
+    await loadIngestionJobs();
     wizard.submitting = false;
     renderOverview();
     bindWizardJobActions();
     scheduleJobPolling();
   } catch (error) {
-    wizard.submitError = error.message || String(error);
+    wizard.submitError = `Job submit failed: ${error.message || String(error)}`;
     wizard.submitting = false;
     renderOverview();
   }
@@ -347,29 +406,47 @@ function bindWizardJobActions() {
     const job = state.ingestionWizard.currentJob;
     if (job?.project_id) await selectProject(job.project_id);
   });
+  document.querySelectorAll("[data-wizard-select-job]").forEach((node) => {
+    node.addEventListener("click", async () => {
+      const jobId = node.getAttribute("data-wizard-select-job");
+      if (!jobId) return;
+      const job = await api(`/api/ingestion/jobs/${encodeURIComponent(jobId)}`);
+      state.ingestionWizard.currentJobId = jobId;
+      state.ingestionWizard.currentJob = job;
+      renderOverview();
+      bindWizardJobActions();
+      scheduleJobPolling();
+    });
+  });
 }
 
 function scheduleJobPolling() {
   const jobId = state.ingestionWizard.currentJobId;
   if (!jobId) return;
+  if (state.ingestionWizard.pollingTimer) {
+    clearTimeout(state.ingestionWizard.pollingTimer);
+    state.ingestionWizard.pollingTimer = null;
+  }
   const tick = async () => {
     try {
       const job = await api(`/api/ingestion/jobs/${encodeURIComponent(jobId)}`);
       state.ingestionWizard.currentJob = job;
+      await loadIngestionJobs();
       renderOverview();
       bindWizardJobActions();
       if (job.status === "queued" || job.status === "running") {
-        setTimeout(tick, 3000);
+        state.ingestionWizard.pollingTimer = setTimeout(tick, 3000);
       } else {
         await loadProjects();
         renderOverview();
         bindWizardJobActions();
+        state.ingestionWizard.pollingTimer = null;
       }
     } catch (_error) {
-      setTimeout(tick, 4000);
+      state.ingestionWizard.pollingTimer = setTimeout(tick, 4000);
     }
   };
-  setTimeout(tick, 1500);
+  state.ingestionWizard.pollingTimer = setTimeout(tick, 1200);
 }
 
 function renderCompareRunsPanel() {

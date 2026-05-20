@@ -1,12 +1,22 @@
 import json
 import tempfile
+import threading
 import unittest
+from http.server import ThreadingHTTPServer
 from pathlib import Path
+from urllib.request import urlopen
 from unittest.mock import patch
 
-from textifai.web_viewer.ingestion_jobs import build_ingestion_command, sanitize_run_slug
+from textifai.web_viewer.ingestion_jobs import (
+    IngestionJob,
+    IngestionJobRegistry,
+    build_ingestion_command,
+    detect_job_result,
+    log_json,
+    sanitize_run_slug,
+)
 from textifai.web_viewer.project_reader import ProjectCatalog, build_graph, read_artifact, read_note, read_project
-from textifai.web_viewer.server import build_ingestion_config
+from textifai.web_viewer.server import _make_handler, build_ingestion_config
 
 
 class TextifAIWebViewerTests(unittest.TestCase):
@@ -156,6 +166,77 @@ class TextifAIWebViewerTests(unittest.TestCase):
                         repo_root=repo_root,
                         output_root=output_root,
                     )
+
+    def test_result_detection_marks_inspectable_and_missing_system_warning(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            output_root = Path(tmp) / "run_001"
+            output_root.mkdir(parents=True)
+            warning_result = detect_job_result(output_root)
+            self.assertFalse(warning_result["result_detected"])
+            self.assertTrue(any("99_System" in item for item in warning_result["result_warnings"]))
+
+            system_root = output_root / "99_System"
+            system_root.mkdir(parents=True, exist_ok=True)
+            (system_root / "obsidian_import.json").write_text("{}", encoding="utf-8")
+            (system_root / "review_queue.json").write_text("{}", encoding="utf-8")
+            inspectable_result = detect_job_result(output_root)
+            self.assertTrue(inspectable_result["result_detected"])
+            self.assertTrue(inspectable_result["review_queue_available"])
+
+    def test_duplicate_active_job_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            source_root = repo_root / "src"
+            source_root.mkdir(parents=True)
+            registry = IngestionJobRegistry(repo_root=repo_root, start_immediately=False)
+            payload = {"source_root": str(source_root), "project_title": "Demo", "run_name": "run_demo"}
+            registry.create_job(payload)
+            with self.assertRaisesRegex(ValueError, "active job already exists"):
+                registry.create_job(payload)
+
+    def test_log_json_redacts_and_reports_truncation(self):
+        job = IngestionJob(
+            job_id="job_1",
+            status="running",
+            created_at="2026-01-01T00:00:00+00:00",
+            output_root="runs/web_ingestion/run_1",
+            command_preview=["uv", "run", "python"],
+            source_root="/tmp/source",
+            project_title="Demo",
+            run_name="demo",
+        )
+        job.append_log("token=abc123\n")
+        job.append_log("sk-1234567890abcdefABCDEF\n")
+        snapshot = log_json(job, max_chars=10)
+        self.assertIn("[REDACTED]", job.snapshot()["log_tail"])
+        self.assertTrue(snapshot["log_truncated"])
+        self.assertIn("last_log_lines", snapshot)
+
+    def test_jobs_list_endpoint_returns_registry_jobs(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            source_root = repo_root / "source"
+            source_root.mkdir(parents=True)
+            runs_root = repo_root / "runs"
+            runs_root.mkdir(parents=True)
+            catalog = ProjectCatalog([runs_root])
+            registry = IngestionJobRegistry(repo_root=repo_root, start_immediately=False)
+            registry.create_job({"source_root": str(source_root), "project_title": "Demo", "run_name": "run_demo"})
+            handler = _make_handler(catalog, registry)
+            server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            try:
+                with urlopen(f"http://127.0.0.1:{server.server_port}/api/ingestion/jobs") as response:
+                    payload = json.loads(response.read().decode("utf-8"))
+            finally:
+                server.shutdown()
+                server.server_close()
+                thread.join(timeout=1.0)
+            self.assertIn("jobs", payload)
+            self.assertEqual(len(payload["jobs"]), 1)
+            self.assertEqual(payload["jobs"][0]["status"], "queued")
+            self.assertIn("result_detected", payload["jobs"][0])
 
 
 if __name__ == "__main__":
