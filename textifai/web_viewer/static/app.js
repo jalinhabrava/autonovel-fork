@@ -113,6 +113,7 @@ function renderOverview() {
     </div>
     ${renderSemanticHealth(state.current.health || {})}
     ${renderCompareRunsPanel()}
+    ${renderEntityTriagePanel()}
     <div class="panel">
       <h3>${escapeHtml((canon.work || {}).title || "Untitled work")}</h3>
       <p class="muted">Language: ${escapeHtml((canon.work || {}).language || "unknown")}</p>
@@ -121,6 +122,7 @@ function renderOverview() {
   `;
   bindHealthInteractions();
   bindCompareRunsInteractions();
+  bindEntityTriageInteractions();
 }
 
 function renderCompareRunsPanel() {
@@ -434,6 +436,189 @@ function renderCompareResult(result) {
 
 function renderCompareSection(title, body) {
   return `<details class="compare-section" open><summary>${escapeHtml(title)}</summary>${body}</details>`;
+}
+
+function renderEntityTriagePanel() {
+  const triage = buildEntityTriage(state.current, state.compareView?.result || null);
+  return `
+    <section class="entity-triage panel">
+      <div class="triage-header">
+        <div>
+          <p class="eyebrow">Entity Triage</p>
+          <h3>Diagnostic priority</h3>
+          <p class="muted">Observability-only ranking. No semantic truth claims or automated fixes.</p>
+        </div>
+        <span class="badge">${triage.comparison_active ? `compare: ${escapeHtml(triage.base_name)} → ${escapeHtml(triage.candidate_name)}` : "single run"}</span>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card"><span>Entities flagged</span><strong>${fmtCount(triage.summary.flagged)}</strong></div>
+        <div class="stat-card"><span>High priority</span><strong>${fmtCount(triage.summary.high)}</strong></div>
+        <div class="stat-card"><span>Medium priority</span><strong>${fmtCount(triage.summary.medium)}</strong></div>
+        <div class="stat-card"><span>Top reasons</span><strong style="font-size:16px">${escapeHtml(triage.summary.top_reasons.join(", ") || "not available")}</strong></div>
+      </div>
+      ${triage.rows.length ? `<div class="triage-list">${triage.rows.map((row) => renderEntityTriageRow(row)).join("")}</div>` : `<p class="muted">No entity triage signals available.</p>`}
+    </section>
+  `;
+}
+
+function buildEntityTriage(currentPayload, compareResult) {
+  const canon = currentPayload?.canon || {};
+  const currentEntities = [...(canon.primaries || []), ...(canon.review_entities || [])];
+  const rows = currentEntities.map((entity) => triageRowForEntity(entity, compareResult)).filter(Boolean).sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
+  const high = rows.filter((row) => row.score >= 6).length;
+  const medium = rows.filter((row) => row.score >= 3 && row.score < 6).length;
+  const reasonCounts = {};
+  for (const row of rows) {
+    for (const reason of row.reasons) {
+      reasonCounts[reason.key] = (reasonCounts[reason.key] || 0) + 1;
+    }
+  }
+  const topReasons = Object.entries(reasonCounts).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([key]) => key.replaceAll("_", " "));
+  return {
+    comparison_active: !!compareResult,
+    base_name: compareResult?.base?.name || "",
+    candidate_name: compareResult?.candidate?.name || currentPayload?.project?.name || "",
+    summary: { flagged: rows.length, high, medium, top_reasons: topReasons },
+    rows: rows.slice(0, 24),
+  };
+}
+
+function triageRowForEntity(entity, compareResult) {
+  const canonical = canonicalizationSummary(entity) || {};
+  const terms = new Set([normalizeKey(entity.canonical_name), normalizeKey(entity.preferred_slug), ...(entity.aliases || []).map(normalizeKey), ...(entity.source_mentions || []).map(normalizeKey)].filter(Boolean));
+  const invariantRefs = invariantReferencesForTerms(terms);
+  const reasons = [];
+  let score = 0;
+  const confidence = typeof canonical.confidence === "number" ? canonical.confidence : entity.confidence;
+  if (typeof confidence === "number" && confidence < 0.75) {
+    reasons.push({ key: "low_confidence", label: `low confidence ${confidence.toFixed(2)}`, weight: 3 });
+    score += 3;
+  }
+  if ((canonical.review_pressure_count || 0) > 0) {
+    reasons.push({ key: "review_pressure", label: `review pressure ${canonical.review_pressure_count}`, weight: 2 });
+    score += Math.min(3, canonical.review_pressure_count);
+  }
+  if ((canonical.nearby_review_entity_count || 0) > 0) {
+    reasons.push({ key: "nearby_review_candidates", label: `nearby review ${canonical.nearby_review_entity_count}`, weight: 2 });
+    score += 2;
+  }
+  for (const signal of canonical.risk_signals || []) {
+    const key = normalizeKey(signal.label || "risk");
+    reasons.push({ key, label: `${signal.label}: ${signal.value}`, weight: 1 });
+    score += 1;
+  }
+  if (invariantRefs.length) {
+    reasons.push({ key: "invariant_reference", label: `invariant refs ${invariantRefs.length}`, weight: 2 });
+    score += Math.min(3, invariantRefs.length);
+  }
+  const drift = triageDriftForEntity(entity, compareResult);
+  for (const reason of drift.reasons) {
+    reasons.push(reason);
+    score += reason.weight;
+  }
+  if (!reasons.length) return null;
+  return {
+    key: canonEntityKey(entity),
+    name: entity.canonical_name || "not available",
+    entity_kind: entity.entity_kind || "not available",
+    entity_subkind: entity.entity_subkind || "",
+    review_state: entity.review_state || entity.note_role || "not available",
+    confidence: confidence,
+    score,
+    priority: score >= 6 ? "high" : score >= 3 ? "medium" : "low",
+    review_pressure_count: canonical.review_pressure_count || 0,
+    invariant_reference_count: invariantRefs.length,
+    invariant_references: invariantRefs,
+    reasons,
+    artifact_refs: canonical.artifact_refs || [],
+  };
+}
+
+function triageDriftForEntity(entity, compareResult) {
+  if (!compareResult) return { reasons: [] };
+  const key = compareEntityKey(entity);
+  const change = (compareResult.changed || []).find((row) => row.key === key || row.candidate?.key === key || row.base?.key === key);
+  if (!change) return { reasons: [] };
+  const reasons = [];
+  if (change.changes.includes("canonical_name")) reasons.push({ key: "canonical_drift", label: "canonical drift", weight: 2 });
+  if (change.changes.includes("preferred_slug")) reasons.push({ key: "slug_drift", label: "slug drift", weight: 2 });
+  if (change.changes.includes("review_state")) reasons.push({ key: "review_state_changed", label: "review_state changed", weight: 2 });
+  if ((change.alias_diff?.added?.length || 0) + (change.alias_diff?.removed?.length || 0) > 0) reasons.push({ key: "alias_drift", label: "alias drift", weight: 2 });
+  if ((change.source_mention_diff?.added?.length || 0) + (change.source_mention_diff?.removed?.length || 0) > 0) reasons.push({ key: "source_mention_drift", label: "source mention drift", weight: 2 });
+  if (change.relationship_delta) reasons.push({ key: "relationship_count_drift", label: `relationship drift ${change.relationship_delta > 0 ? "+" : ""}${change.relationship_delta}`, weight: 1 });
+  return { reasons };
+}
+
+function invariantReferencesForTerms(terms) {
+  const checks = state.current?.health?.semantic_invariants?.checks || [];
+  const matches = [];
+  for (const check of checks) {
+    const pool = [
+      ...(check.affected_entities || []),
+      ...(check.affected_targets || []),
+      ...(check.review_terms || []),
+    ];
+    if (pool.some((value) => terms.has(normalizeKey(value)))) {
+      matches.push(check.name || "unknown");
+    }
+  }
+  return [...new Set(matches)].slice(0, 8);
+}
+
+function renderEntityTriageRow(row) {
+  return `
+    <details class="triage-row ${escapeHtml(row.priority)}">
+      <summary>
+        <span class="badge triage-priority ${escapeHtml(row.priority)}">${escapeHtml(row.priority)}</span>
+        <strong>${escapeHtml(row.name)}</strong>
+        <span class="muted">${escapeHtml(row.entity_kind)}${row.entity_subkind ? ` / ${escapeHtml(row.entity_subkind)}` : ""}</span>
+        <span class="badge">score ${escapeHtml(row.score)}</span>
+        <span class="badge">${escapeHtml(row.review_state)}</span>
+      </summary>
+      <div class="triage-body">
+        <p><strong>Confidence:</strong> ${row.confidence === undefined || row.confidence === null ? "not available" : escapeHtml(row.confidence)}</p>
+        <p><strong>Review pressure:</strong> ${fmtCount(row.review_pressure_count)} · <strong>Invariant refs:</strong> ${fmtCount(row.invariant_reference_count)}</p>
+        <p><strong>Reasons:</strong> ${row.reasons.map((reason) => `<span class="badge">${escapeHtml(reason.label)}</span>`).join("")}</p>
+        <div class="triage-actions">
+          <button type="button" class="inline-action" data-triage-canon="${escapeHtml(row.key)}">Open in Canon</button>
+          <button type="button" class="inline-action" data-triage-graph="${escapeHtml(row.key)}">Open in Graph</button>
+          <button type="button" class="inline-action" data-triage-review="${escapeHtml(row.name)}">Open Review Context</button>
+          ${row.invariant_references[0] ? `<button type="button" class="inline-action" data-triage-artifact="semantic_invariants_audit.json">Open invariant artifact</button>` : ""}
+          ${row.artifact_refs[0] ? `<button type="button" class="inline-action" data-triage-artifact="${escapeHtml(row.artifact_refs[0])}">Open related artifact</button>` : ""}
+        </div>
+        ${row.invariant_references.length ? `<p><strong>Invariant checks:</strong> ${row.invariant_references.map((value) => `<span class="badge warning-badge">${escapeHtml(value)}</span>`).join("")}</p>` : `<p class="muted">Invariant context: not available</p>`}
+      </div>
+    </details>
+  `;
+}
+
+function bindEntityTriageInteractions() {
+  document.querySelectorAll("[data-triage-canon]").forEach((node) => {
+    node.addEventListener("click", () => {
+      const term = node.dataset.triageCanon || "";
+      if (term) navigateToCanonTerm(term, { from: "Entity Triage" });
+    });
+  });
+  document.querySelectorAll("[data-triage-graph]").forEach((node) => {
+    node.addEventListener("click", () => {
+      const term = node.dataset.triageGraph || "";
+      if (term) navigateToGraphTerm(term, { from: "Entity Triage" });
+    });
+  });
+  document.querySelectorAll("[data-triage-review]").forEach((node) => {
+    node.addEventListener("click", () => {
+      const term = node.dataset.triageReview || "";
+      if (term) navigateToReviewContext(term, { from: "Entity Triage" });
+    });
+  });
+  document.querySelectorAll("[data-triage-artifact]").forEach((node) => {
+    node.addEventListener("click", () => {
+      const artifact = node.dataset.triageArtifact || "";
+      if (!artifact) return;
+      setView("artifacts");
+      openArtifact(artifact);
+    });
+  });
 }
 
 function renderReviewDiff(review) {

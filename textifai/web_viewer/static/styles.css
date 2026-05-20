@@ -606,6 +606,74 @@ button:hover, button.active {
   color: var(--muted);
 }
 
+.entity-triage {
+  margin-bottom: 18px;
+}
+
+.triage-header,
+.triage-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.triage-header {
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.triage-list {
+  display: grid;
+  gap: 10px;
+}
+
+.triage-row {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255,255,255,0.36);
+  padding: 10px 12px;
+}
+
+.triage-row summary {
+  cursor: pointer;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.triage-row.high {
+  border-color: rgba(162, 59, 85, 0.35);
+}
+
+.triage-row.medium {
+  border-color: rgba(180, 91, 53, 0.35);
+}
+
+.triage-row.low {
+  border-color: rgba(29, 111, 104, 0.25);
+}
+
+.triage-priority.high {
+  background: rgba(162, 59, 85, 0.14);
+  color: #8c2240;
+}
+
+.triage-priority.medium {
+  background: rgba(180, 91, 53, 0.14);
+  color: var(--accent-2);
+}
+
+.triage-priority.low {
+  background: rgba(29, 111, 104, 0.12);
+  color: var(--accent);
+}
+
+.triage-body {
+  margin-top: 10px;
+}
+
 .artifact-link {
   background: #fff;
 }
