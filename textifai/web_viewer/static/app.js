@@ -9,6 +9,7 @@ const state = {
   graphPan: null,
   graphDidPan: false,
   hiddenGraphTags: new Set(),
+  reviewView: { severity: "", reviewType: "", query: "", sortBy: "severity_desc" },
 };
 
 const $ = (id) => document.getElementById(id);
@@ -55,6 +56,7 @@ async function selectProject(projectId) {
   state.current = await api(`/api/projects/${encodeURIComponent(projectId)}`);
   state.selectedGraphNodeId = null;
   state.hiddenGraphTags = new Set();
+  state.reviewView = { severity: "", reviewType: "", query: "", sortBy: "severity_desc" };
   resetGraphViewBox();
   $("graph-kind-filter").dataset.ready = "";
   renderProjects();
@@ -410,23 +412,233 @@ function chapterTable(chapters) {
 function renderReview() {
   const queue = state.current.canon.review_queue || {};
   const items = queue.items || [];
+  const severityCounts = deriveReviewSeverityCounts(queue, items);
+  const typeCounts = deriveReviewTypeCounts(queue, items);
+  const typeOptions = Object.keys(typeCounts).sort((a, b) => a.localeCompare(b));
+  const view = state.reviewView || { severity: "", reviewType: "", query: "", sortBy: "severity_desc" };
+  const filtered = applyReviewFilters(items, view);
+  const sorted = sortReviewItems(filtered, view.sortBy);
+  const candidateCount = items.filter((item) => (item.candidate_entities || []).length > 0).length;
+  const evidenceCount = items.filter((item) => (item.evidence || []).length > 0).length;
+  const highSeverity = severityCounts.high || 0;
   $("view-review").innerHTML = `
+    <div class="review-header panel">
+      <div class="review-header-title">
+        <p class="eyebrow">Review Queue</p>
+        <h3>Deep visibility</h3>
+        <p class="muted">Prioriza revisión por severidad, tipo, evidencia y candidatos.</p>
+      </div>
+      <div class="review-header-actions">
+        <button type="button" id="review-open-raw">Open raw review_queue.json</button>
+      </div>
+    </div>
     <div class="stats-grid">
-      <div class="stat-card"><span>Items</span><strong>${items.length}</strong></div>
-      <div class="stat-card"><span>Types</span><strong>${Object.keys(queue.counts_by_type || {}).length}</strong></div>
+      <div class="stat-card"><span>Total items</span><strong>${items.length}</strong></div>
+      <div class="stat-card"><span>High severity</span><strong>${highSeverity}</strong></div>
+      <div class="stat-card"><span>With candidates</span><strong>${candidateCount}</strong></div>
+      <div class="stat-card"><span>With evidence</span><strong>${evidenceCount}</strong></div>
+      <div class="stat-card"><span>Review types</span><strong>${Object.keys(typeCounts).length}</strong></div>
       <div class="stat-card"><span>Status</span><strong style="font-size:20px">${escapeHtml(queue.status || "unknown")}</strong></div>
     </div>
-    <table class="table"><thead><tr><th>Severity</th><th>Type</th><th>Source</th><th>Target</th><th>Candidates</th><th>Evidence</th></tr></thead><tbody>
-      ${items.map((item) => `<tr>
-        <td>${escapeHtml(item.severity)}</td>
-        <td>${escapeHtml(item.review_type)}</td>
-        <td>${escapeHtml(item.source_entity)}</td>
-        <td>${escapeHtml(item.target_text)}</td>
-        <td>${(item.candidate_entities || []).slice(0, 3).map((c) => `<span class="badge">${escapeHtml(c.canonical_name)} ${c.entity_kind ? `(${escapeHtml(c.entity_kind)})` : ""}</span>`).join("")}</td>
-        <td>${escapeHtml(((item.evidence || [])[0] || {}).text || "").slice(0, 220)}</td>
-      </tr>`).join("")}
-    </tbody></table>
+    <div class="review-summary panel">
+      <div class="review-summary-block">
+        <h4>By severity</h4>
+        <p>${renderCountBadges(severityCounts, "severity")}</p>
+      </div>
+      <div class="review-summary-block">
+        <h4>By review type</h4>
+        <p>${renderCountBadges(typeCounts, "type")}</p>
+      </div>
+    </div>
+    <div class="review-filters panel">
+      <label>Severity
+        <select id="review-filter-severity">
+          <option value="">all</option>
+          ${Object.keys(severityCounts).sort((a, b) => reviewSeverityRank(a) - reviewSeverityRank(b)).map((severity) => `
+            <option value="${escapeHtml(severity)}" ${view.severity === severity ? "selected" : ""}>${escapeHtml(severity)}</option>
+          `).join("")}
+        </select>
+      </label>
+      <label>Review type
+        <select id="review-filter-type">
+          <option value="">all</option>
+          ${typeOptions.map((reviewType) => `
+            <option value="${escapeHtml(reviewType)}" ${view.reviewType === reviewType ? "selected" : ""}>${escapeHtml(reviewType)}</option>
+          `).join("")}
+        </select>
+      </label>
+      <label>Search
+        <input id="review-filter-query" class="search compact" placeholder="source, target, type, evidence..." value="${escapeHtml(view.query || "")}" />
+      </label>
+      <label>Sort
+        <select id="review-sort-by">
+          <option value="severity_desc" ${view.sortBy === "severity_desc" ? "selected" : ""}>severity (high → low)</option>
+          <option value="review_type_asc" ${view.sortBy === "review_type_asc" ? "selected" : ""}>review_type (A→Z)</option>
+          <option value="source_asc" ${view.sortBy === "source_asc" ? "selected" : ""}>source (A→Z)</option>
+          <option value="target_asc" ${view.sortBy === "target_asc" ? "selected" : ""}>target (A→Z)</option>
+        </select>
+      </label>
+      <button type="button" id="review-filter-reset">Reset</button>
+    </div>
+    <div class="review-results panel">
+      <p class="muted">Showing ${sorted.length} of ${items.length} items</p>
+      ${sorted.length ? sorted.map((item, index) => renderReviewItemCard(item, index)).join("") : `<p class="muted">No items match current filters.</p>`}
+    </div>
   `;
+  bindReviewQueueInteractions();
+}
+
+function deriveReviewSeverityCounts(queue, items) {
+  const fromQueue = queue.counts_by_severity || {};
+  const fallback = {};
+  for (const item of items || []) {
+    const severity = String(item.severity || "unknown").toLowerCase();
+    fallback[severity] = (fallback[severity] || 0) + 1;
+  }
+  return Object.keys(fromQueue).length ? fromQueue : fallback;
+}
+
+function deriveReviewTypeCounts(queue, items) {
+  const fromQueue = queue.counts_by_type || {};
+  const fallback = {};
+  for (const item of items || []) {
+    const reviewType = String(item.review_type || "unknown");
+    fallback[reviewType] = (fallback[reviewType] || 0) + 1;
+  }
+  return Object.keys(fromQueue).length ? fromQueue : fallback;
+}
+
+function reviewSeverityRank(severity) {
+  const value = String(severity || "").toLowerCase();
+  if (value === "high") return 1;
+  if (value === "medium") return 2;
+  if (value === "low") return 3;
+  return 4;
+}
+
+function applyReviewFilters(items, view) {
+  const query = String(view.query || "").trim().toLowerCase();
+  return (items || []).filter((item) => {
+    const severity = String(item.severity || "").toLowerCase();
+    const reviewType = String(item.review_type || "");
+    if (view.severity && severity !== String(view.severity).toLowerCase()) return false;
+    if (view.reviewType && reviewType !== view.reviewType) return false;
+    if (!query) return true;
+    const haystack = [
+      item.severity,
+      item.review_type,
+      item.source_entity,
+      item.target_text,
+      ...((item.candidate_entities || []).map((candidate) => `${candidate.canonical_name || ""} ${candidate.entity_kind || ""}`)),
+      ...((item.evidence || []).map((entry) => entry.text || "")),
+    ].join(" ").toLowerCase();
+    return haystack.includes(query);
+  });
+}
+
+function sortReviewItems(items, sortBy) {
+  const sorted = [...(items || [])];
+  const byText = (value) => String(value || "").toLowerCase();
+  if (sortBy === "review_type_asc") {
+    sorted.sort((a, b) => byText(a.review_type).localeCompare(byText(b.review_type)));
+  } else if (sortBy === "source_asc") {
+    sorted.sort((a, b) => byText(a.source_entity).localeCompare(byText(b.source_entity)));
+  } else if (sortBy === "target_asc") {
+    sorted.sort((a, b) => byText(a.target_text).localeCompare(byText(b.target_text)));
+  } else {
+    sorted.sort((a, b) => reviewSeverityRank(a.severity) - reviewSeverityRank(b.severity));
+  }
+  return sorted;
+}
+
+function renderCountBadges(counts, badgeType) {
+  const entries = Object.entries(counts || {});
+  if (!entries.length) return `<span class="muted">not available</span>`;
+  const sorted = badgeType === "severity"
+    ? entries.sort((a, b) => reviewSeverityRank(a[0]) - reviewSeverityRank(b[0]))
+    : entries.sort((a, b) => String(a[0]).localeCompare(String(b[0])));
+  return sorted
+    .map(([label, count]) => `<span class="badge ${badgeType === "severity" ? `severity-${escapeHtml(String(label).toLowerCase())}` : ""}">${escapeHtml(label)}: ${fmtCount(count)}</span>`)
+    .join("");
+}
+
+function renderReviewItemCard(item, index) {
+  const candidates = item.candidate_entities || [];
+  const evidence = item.evidence || [];
+  return `
+    <details class="review-item" ${index < 2 ? "open" : ""}>
+      <summary>
+        <span class="badge severity-${escapeHtml(String(item.severity || "unknown").toLowerCase())}">${escapeHtml(item.severity || "unknown")}</span>
+        <span class="badge">${escapeHtml(item.review_type || "unknown")}</span>
+        <strong>${escapeHtml(item.source_entity || "not available")}</strong>
+        <span class="muted">→</span>
+        <strong>${escapeHtml(item.target_text || "not available")}</strong>
+      </summary>
+      <div class="review-item-body">
+        <div class="review-meta-grid">
+          <div><span class="muted">Candidates:</span> ${fmtCount(candidates.length)}</div>
+          <div><span class="muted">Evidence:</span> ${fmtCount(evidence.length)}</div>
+          <div><span class="muted">Severity:</span> ${escapeHtml(item.severity || "not available")}</div>
+          <div><span class="muted">Type:</span> ${escapeHtml(item.review_type || "not available")}</div>
+        </div>
+        <div class="review-actions">
+          ${item.source_entity ? `<button type="button" data-review-graph="${escapeHtml(item.source_entity)}">Source → graph</button>` : ""}
+          ${item.target_text ? `<button type="button" data-review-graph="${escapeHtml(item.target_text)}">Target → graph</button>` : ""}
+          <button type="button" data-review-open-canon="1">Open canon</button>
+        </div>
+        ${candidates.length ? `<h4>Candidates</h4><div class="review-candidates">${candidates.map((candidate) => `
+          <div class="candidate-card">
+            <strong>${escapeHtml(candidate.canonical_name || "not available")}</strong>
+            <small>${escapeHtml(candidate.entity_kind || "not available")}</small>
+          </div>
+        `).join("")}</div>` : `<p class="muted">Candidates: not available</p>`}
+        ${evidence.length ? `<h4>Evidence</h4><ul class="review-evidence">${evidence.map((entry) => `
+          <li>
+            <p>${escapeHtml(entry.text || "not available")}</p>
+            <small class="muted">${escapeHtml(entry.chapter_id || entry.source || "")}</small>
+          </li>
+        `).join("")}</ul>` : `<p class="muted">Evidence: not available</p>`}
+      </div>
+    </details>
+  `;
+}
+
+function bindReviewQueueInteractions() {
+  $("review-open-raw")?.addEventListener("click", () => {
+    setView("artifacts");
+    openArtifact("review_queue.json");
+  });
+  $("review-filter-severity")?.addEventListener("change", (event) => {
+    state.reviewView.severity = event.target.value || "";
+    renderReview();
+  });
+  $("review-filter-type")?.addEventListener("change", (event) => {
+    state.reviewView.reviewType = event.target.value || "";
+    renderReview();
+  });
+  $("review-filter-query")?.addEventListener("change", (event) => {
+    state.reviewView.query = event.target.value || "";
+    renderReview();
+  });
+  $("review-sort-by")?.addEventListener("change", (event) => {
+    state.reviewView.sortBy = event.target.value || "severity_desc";
+    renderReview();
+  });
+  $("review-filter-reset")?.addEventListener("click", () => {
+    state.reviewView = { severity: "", reviewType: "", query: "", sortBy: "severity_desc" };
+    renderReview();
+  });
+  document.querySelectorAll("[data-review-graph]").forEach((node) => {
+    node.addEventListener("click", () => {
+      const term = node.dataset.reviewGraph || "";
+      if (!term) return;
+      setView("graph");
+      navigateWikiLink(term);
+    });
+  });
+  document.querySelectorAll("[data-review-open-canon]").forEach((node) => {
+    node.addEventListener("click", () => setView("canon"));
+  });
 }
 
 function renderArtifacts() {
