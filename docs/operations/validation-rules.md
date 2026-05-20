@@ -2,6 +2,8 @@
 
 Use the smallest validation tier that gives useful confidence for the files touched.
 
+See `docs/operations/validation-surface-inventory.md` for the repo-zone map and command inventory.
+
 ## Tier 0 — Docs-Only
 
 Use for documentation-only changes that do not alter executable instructions, runtime behavior, schemas, tests, source code, generated outputs, or configuration.
