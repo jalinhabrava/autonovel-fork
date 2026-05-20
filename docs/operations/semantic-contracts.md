@@ -75,6 +75,8 @@ Unless explicitly waived, validation must include:
 - `git diff` review
 - explicit note of expected output changes
 
+Semantic contract changes should use fixture baselines or an explicit artifact diff strategy whenever possible. See `docs/operations/safe-fixtures-and-baselines.md`.
+
 ## Prohibited Without Approval
 
 - silent schema changes

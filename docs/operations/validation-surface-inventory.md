@@ -11,6 +11,7 @@ A passing low-level check is not enough when a change can alter downstream seman
 ## Validation Tiers Summary
 
 Reference `docs/operations/validation-rules.md` for the tier policy.
+Reference `docs/operations/safe-fixtures-and-baselines.md` for safe fixture and baseline strategy.
 
 - Tier 0 docs-only
 - Tier 1 CLI smoke
@@ -98,6 +99,7 @@ Recommended validation:
 Notes:
 
 - Treat persisted Markdown, note filenames, import payload shape, and vault folder layout as contract-sensitive.
+- Prefer safe fixtures and baseline comparisons over real vault outputs whenever possible.
 
 ### VaERL / Resolver / Invariants
 
@@ -116,6 +118,7 @@ Recommended validation:
 Notes:
 
 - Review queue shape, canonical entity naming, slugs, and invariant thresholds are semantic contract surfaces.
+- Prefer fixture-backed `99_System` inputs for invariant validation before touching real run artifacts.
 
 ### Bootstrap / Structured Ingestion
 
@@ -135,6 +138,7 @@ Recommended validation:
 Notes:
 
 - This is highest-risk semantic surface because small logic changes can reshape many downstream artifacts.
+- See `docs/operations/safe-fixtures-and-baselines.md` before choosing replay inputs or output locations.
 
 ### Prompt Engine / Templates
 
@@ -264,7 +268,7 @@ Notes:
   - Purpose: replay downstream semantic compilation from frozen upstream artifacts
   - Read-only or may write: may write
   - When to use it: bootstrap/replay/import contract changes
-  - Known caveats: writes new replay artifacts; not safe for docs-only iterations
+  - Known caveats: writes new replay artifacts; prefer safe fixture output dirs and baseline comparisons over real runs/vaults
 
 ### Viewer
 

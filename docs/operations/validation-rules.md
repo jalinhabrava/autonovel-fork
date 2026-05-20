@@ -67,6 +67,8 @@ Examples of areas that usually require Tier 3 planning:
 
 Preserve runs and vault outputs unless explicitly approved.
 
+Tier 3 should prefer safe fixtures/baselines over real runs/vaults whenever possible. See `docs/operations/safe-fixtures-and-baselines.md`.
+
 Any change touching semantic contracts requires an explicit validation plan before editing.
 
 Semantic contract changes require Tier 3 unless explicitly waived.
