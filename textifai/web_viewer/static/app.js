@@ -116,7 +116,7 @@ function renderOverview() {
       <p class="muted">System root: ${escapeHtml(state.current.project.system_root || "not found")}</p>
     </div>
   `;
-  attachHealthArtifactLinks();
+  bindHealthInteractions();
 }
 
 function renderSemanticHealth(health) {
@@ -200,22 +200,143 @@ function healthSection(title, body) {
 }
 
 function renderInvariantSummary(invariants) {
-  const checks = invariants.failing_checks || [];
+  const checks = invariants.checks || [];
+  const failing = checks.filter((check) => String(check.status || "").toLowerCase() === "fail");
+  const warnings = checks.filter((check) => String(check.status || "").toLowerCase() === "warn");
+  const statusCounts = invariantStatusCounts(checks, invariants);
+  const typeCounts = invariantTypeCounts([...failing, ...warnings]);
   return `
     <div class="health-inline">
       ${healthStatusBadge(invariants.status || "not_available")}
       <span>Failures: <strong>${fmtCount(invariants.failure_count)}</strong></span>
       <span>Warnings: <strong>${fmtCount(invariants.warning_count)}</strong></span>
+      <span>Pass: <strong>${fmtCount(statusCounts.pass)}</strong></span>
+      <span>Skip: <strong>${fmtCount(statusCounts.skip)}</strong></span>
+      <span>Total: <strong>${fmtCount(invariants.total_count === null || invariants.total_count === undefined ? checks.length : invariants.total_count)}</strong></span>
       ${invariants.raw_artifact_path ? `<button class="artifact-link" data-health-artifact="${escapeHtml(invariants.raw_artifact_path)}">Open raw artifact</button>` : ""}
     </div>
-    ${checks.length ? `<table class="table compact-table"><thead><tr><th>Check</th><th>Status</th><th>Summary</th></tr></thead><tbody>
-      ${checks.slice(0, 8).map((check) => `<tr>
-        <td>${escapeHtml(check.name)}</td>
-        <td>${escapeHtml(check.status)}</td>
-        <td>${escapeHtml(check.summary)}</td>
-      </tr>`).join("")}
-    </tbody></table>` : `<p class="muted">No failing or warning invariant checks available.</p>`}
+    <div class="invariant-summary-grid">
+      <div class="invariant-summary-card">
+        <h4>By severity/status</h4>
+        <p>${renderInvariantStatusBadges(statusCounts)}</p>
+      </div>
+      <div class="invariant-summary-card">
+        <h4>By check type (fail/warn)</h4>
+        <p>${renderInvariantTypeBadges(typeCounts)}</p>
+      </div>
+    </div>
+    ${renderInvariantGroup("Failing checks", failing)}
+    ${renderInvariantGroup("Warning checks", warnings)}
   `;
+}
+
+function invariantStatusCounts(checks, invariants) {
+  const fallback = { fail: 0, warn: 0, pass: 0, skip: 0, unknown: 0 };
+  for (const check of checks || []) {
+    const status = String(check.status || "unknown").toLowerCase();
+    if (!(status in fallback)) fallback.unknown += 1;
+    else fallback[status] += 1;
+  }
+  if (checks && checks.length) return fallback;
+  return {
+    fail: Number(invariants.failure_count || 0),
+    warn: Number(invariants.warning_count || 0),
+    pass: Number(invariants.pass_count || 0),
+    skip: Number(invariants.skip_count || 0),
+    unknown: 0,
+  };
+}
+
+function invariantTypeCounts(checks) {
+  const counts = {};
+  for (const check of checks || []) {
+    const key = String(check.name || "unknown");
+    counts[key] = (counts[key] || 0) + 1;
+  }
+  return counts;
+}
+
+function renderInvariantStatusBadges(counts) {
+  const ordered = ["fail", "warn", "pass", "skip", "unknown"];
+  return ordered
+    .filter((status) => (counts[status] || 0) > 0)
+    .map((status) => `<span class="badge invariant-status-badge ${escapeHtml(invariantSeverityClass(status))}">${escapeHtml(status)}: ${fmtCount(counts[status])}</span>`)
+    .join("") || `<span class="muted">not available</span>`;
+}
+
+function renderInvariantTypeBadges(counts) {
+  const entries = Object.entries(counts || {}).sort((a, b) => String(a[0]).localeCompare(String(b[0])));
+  if (!entries.length) return `<span class="muted">not available</span>`;
+  return entries
+    .map(([name, count]) => `<span class="badge">${escapeHtml(name)}: ${fmtCount(count)}</span>`)
+    .join("");
+}
+
+function renderInvariantGroup(title, checks) {
+  if (!checks.length) {
+    return `<div class="invariant-group"><h4>${escapeHtml(title)}</h4><p class="muted">not available</p></div>`;
+  }
+  return `
+    <div class="invariant-group">
+      <h4>${escapeHtml(title)} (${checks.length})</h4>
+      <div class="invariant-check-list">
+        ${checks.map((check, index) => renderInvariantCheckCard(check, index)).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function renderInvariantCheckCard(check, index) {
+  const entities = check.affected_entities || [];
+  const chapters = check.affected_chapters || [];
+  const targets = check.affected_targets || [];
+  const reviewTerms = check.review_terms || [];
+  const artifacts = check.related_artifacts || [];
+  const context = check.raw_context || {};
+  const severity = invariantSeverityClass(check.status || check.severity || "unknown");
+  return `
+    <details class="invariant-check ${escapeHtml(severity)}" ${index < 1 ? "open" : ""}>
+      <summary>
+        <span class="badge invariant-status-badge ${escapeHtml(severity)}">${escapeHtml(String(check.status || "unknown").toLowerCase())}</span>
+        <strong>${escapeHtml(check.name || "unknown_check")}</strong>
+        <span class="muted">${escapeHtml(check.summary || "details available")}</span>
+      </summary>
+      <div class="invariant-check-body">
+        <p><strong>Summary:</strong> ${escapeHtml(check.summary || "not available")}</p>
+        <p><strong>Severity:</strong> ${escapeHtml(check.severity || "not available")}</p>
+        <p><strong>Message:</strong> ${escapeHtml(check.message || "not available")}</p>
+        <div class="invariant-actions">
+          ${entities[0] ? `<button type="button" class="inline-action" data-health-to-canon="${escapeHtml(entities[0])}">Open entity in Canon</button>` : ""}
+          ${entities[0] ? `<button type="button" class="inline-action" data-health-to-graph="${escapeHtml(entities[0])}">Open entity in Graph</button>` : ""}
+          ${targets[0] ? `<button type="button" class="inline-action" data-health-to-graph="${escapeHtml(targets[0])}">Open target in Graph</button>` : ""}
+          ${reviewTerms[0] ? `<button type="button" class="inline-action" data-health-to-review="${escapeHtml(reviewTerms[0])}">Open review context</button>` : ""}
+          ${artifacts[0] ? `<button type="button" class="inline-action" data-health-artifact="${escapeHtml(artifacts[0])}">Open related artifact</button>` : ""}
+        </div>
+        ${renderInvariantField("Affected entities", entities)}
+        ${renderInvariantField("Affected chapters", chapters)}
+        ${renderInvariantField("Affected targets", targets)}
+        ${renderInvariantField("Affected review terms", reviewTerms)}
+        ${renderInvariantField("Related artifacts", artifacts, "warning-badge")}
+        ${Object.keys(context).length ? `<details><summary>Raw context (limited)</summary><pre class="frontmatter">${escapeHtml(JSON.stringify(context, null, 2))}</pre></details>` : `<p class="muted">Raw context: not available</p>`}
+      </div>
+    </details>
+  `;
+}
+
+function renderInvariantField(label, values, badgeClass = "") {
+  if (!values || !values.length) return `<p><strong>${escapeHtml(label)}:</strong> <span class="muted">not available</span></p>`;
+  return `
+    <p><strong>${escapeHtml(label)}:</strong></p>
+    <p>${values.slice(0, 10).map((value) => `<span class="badge ${badgeClass ? escapeHtml(badgeClass) : ""}">${escapeHtml(value)}</span>`).join("")}</p>
+  `;
+}
+
+function invariantSeverityClass(status) {
+  const value = String(status || "").toLowerCase();
+  if (value === "fail" || value === "critical") return "critical";
+  if (value === "warn" || value === "warning") return "warning";
+  if (value === "pass" || value === "healthy") return "healthy";
+  return "unknown";
 }
 
 function renderUnresolvedSummary(relationships) {
@@ -233,11 +354,29 @@ function renderMissingArtifacts(materialization) {
     : `<p class="muted">Expected viewer artifacts are present.</p>`;
 }
 
-function attachHealthArtifactLinks() {
+function bindHealthInteractions() {
   document.querySelectorAll("[data-health-artifact]").forEach((node) => {
     node.addEventListener("click", () => {
       setView("artifacts");
       openArtifact(node.dataset.healthArtifact);
+    });
+  });
+  document.querySelectorAll("[data-health-to-canon]").forEach((node) => {
+    node.addEventListener("click", () => {
+      const term = node.dataset.healthToCanon || "";
+      if (term) navigateToCanonTerm(term, { from: "Invariant Drilldown" });
+    });
+  });
+  document.querySelectorAll("[data-health-to-graph]").forEach((node) => {
+    node.addEventListener("click", () => {
+      const term = node.dataset.healthToGraph || "";
+      if (term) navigateToGraphTerm(term, { from: "Invariant Drilldown" });
+    });
+  });
+  document.querySelectorAll("[data-health-to-review]").forEach((node) => {
+    node.addEventListener("click", () => {
+      const term = node.dataset.healthToReview || "";
+      if (term) navigateToReviewContext(term, { from: "Invariant Drilldown" });
     });
   });
 }

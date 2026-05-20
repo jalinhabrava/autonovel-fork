@@ -369,6 +369,89 @@ button:hover, button.active {
   margin: 10px 0 14px;
 }
 
+.invariant-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.invariant-summary-card,
+.invariant-group {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.35);
+  padding: 12px 14px;
+}
+
+.invariant-summary-card h4,
+.invariant-group h4 {
+  margin: 0 0 8px;
+}
+
+.invariant-check-list {
+  display: grid;
+  gap: 10px;
+}
+
+.invariant-check {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255, 250, 240, 0.72);
+  padding: 10px 12px;
+}
+
+.invariant-check.critical {
+  border-color: rgba(162, 59, 85, 0.35);
+}
+
+.invariant-check.warning {
+  border-color: rgba(180, 91, 53, 0.35);
+}
+
+.invariant-check.healthy {
+  border-color: rgba(29, 111, 104, 0.35);
+}
+
+.invariant-check summary {
+  cursor: pointer;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.invariant-check-body {
+  margin-top: 10px;
+}
+
+.invariant-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0 12px;
+}
+
+.invariant-status-badge.critical {
+  background: rgba(162, 59, 85, 0.14);
+  color: #8c2240;
+}
+
+.invariant-status-badge.warning {
+  background: rgba(180, 91, 53, 0.14);
+  color: var(--accent-2);
+}
+
+.invariant-status-badge.healthy {
+  background: rgba(29, 111, 104, 0.12);
+  color: var(--accent);
+}
+
+.invariant-status-badge.unknown {
+  background: rgba(108, 106, 95, 0.14);
+  color: var(--muted);
+}
+
 .artifact-link {
   background: #fff;
 }

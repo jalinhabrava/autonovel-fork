@@ -352,6 +352,10 @@ def build_semantic_health(
         "passed": invariants.get("passed") if isinstance(invariants, dict) else None,
         "failure_count": invariants.get("failure_count") if isinstance(invariants, dict) else None,
         "warning_count": invariants.get("warning_count") if isinstance(invariants, dict) else None,
+        "total_count": len(invariant_checks),
+        "pass_count": sum(1 for check in invariant_checks if _check_status(check) == "pass"),
+        "skip_count": sum(1 for check in invariant_checks if _check_status(check) == "skip"),
+        "checks": [_health_check_summary(check) for check in invariant_checks],
         "failing_checks": failing_checks,
         "raw_artifact_path": "semantic_invariants_audit.json" if "semantic_invariants_audit.json" in artifact_paths else None,
     }
@@ -575,6 +579,7 @@ def _looks_like_canonical_ambiguity(item: Any) -> bool:
 
 
 def _health_check_summary(check: dict[str, Any]) -> dict[str, Any]:
+    name = str(check.get("name") or "")
     details = check.get("details") or {}
     summary_parts: list[str] = []
     for key in ("missing", "duplicates", "collisions", "suspicious", "errors", "warnings"):
@@ -584,11 +589,163 @@ def _health_check_summary(check: dict[str, Any]) -> dict[str, Any]:
     for key in ("count", "failed", "actual_chapter_count", "generated", "expected"):
         if key in details and isinstance(details.get(key), int):
             summary_parts.append(f"{key}: {details[key]}")
+    entities = _collect_check_entities(details, check_name=name)
+    chapters = _collect_check_chapters(details)
+    targets = _collect_check_targets(details)
+    artifacts = _collect_check_artifacts(details, check_name=name)
+    review_terms = _collect_check_review_terms(details)
+    message = _health_check_message(details)
+    raw_context = _health_check_raw_context(details)
     return {
         "name": check.get("name"),
         "status": check.get("status"),
+        "severity": _health_check_severity(check.get("status")),
         "summary": ", ".join(summary_parts) if summary_parts else "details available",
+        "message": message,
+        "affected_entities": entities,
+        "affected_chapters": chapters,
+        "affected_targets": targets,
+        "related_artifacts": artifacts,
+        "review_terms": review_terms,
+        "raw_context": raw_context,
     }
+
+
+def _health_check_severity(status: Any) -> str:
+    value = str(status or "").casefold()
+    if value == "fail":
+        return "critical"
+    if value == "warn":
+        return "warning"
+    if value == "pass":
+        return "healthy"
+    return "unknown"
+
+
+def _health_check_message(details: dict[str, Any]) -> str | None:
+    for key in ("recommended_review_action", "policy", "reason"):
+        value = details.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return None
+
+
+def _health_check_raw_context(details: dict[str, Any]) -> dict[str, Any]:
+    allowed = (
+        "missing",
+        "duplicates",
+        "collisions",
+        "suspicious",
+        "unresolved",
+        "findings",
+        "errors",
+        "warnings",
+        "broken",
+        "broken_count",
+        "actual_chapter_count",
+        "expected",
+        "generated",
+        "failed",
+        "count",
+        "unresolved_count",
+        "finding_count",
+        "path",
+        "language",
+    )
+    return {key: details[key] for key in allowed if key in details}
+
+
+def _collect_check_entities(details: dict[str, Any], *, check_name: str) -> list[str]:
+    values: list[str] = []
+    if check_name == "required_primaries_present":
+        values.extend(_strings(details.get("missing")))
+    values.extend(_collect_strings_from_objects(details.get("duplicates"), "canonical_names"))
+    collisions = details.get("collisions") or []
+    for collision in collisions if isinstance(collisions, list) else []:
+        values.extend(_collect_strings_from_objects((collision or {}).get("entities"), "canonical_name"))
+    values.extend(_collect_strings_from_objects(details.get("suspicious"), "canonical_name"))
+    values.extend(_collect_strings_from_objects(details.get("unresolved"), "source"))
+    values.extend(_collect_strings_from_objects(details.get("findings"), "canonical_name"))
+    values.extend(_collect_strings_from_objects(details.get("errors"), "canonical_name"))
+    values.extend(_collect_strings_from_objects(details.get("warnings"), "canonical_name"))
+    return _dedupe_strings(values)
+
+
+def _collect_check_chapters(details: dict[str, Any]) -> list[str]:
+    values: list[str] = []
+    values.extend(_collect_strings_from_objects(details.get("findings"), "chapter_id"))
+    values.extend(_collect_strings_from_objects(details.get("errors"), "chapter_id"))
+    values.extend(_collect_strings_from_objects(details.get("warnings"), "chapter_id"))
+    return _dedupe_strings(values)
+
+
+def _collect_check_targets(details: dict[str, Any]) -> list[str]:
+    values: list[str] = []
+    values.extend(_collect_strings_from_objects(details.get("unresolved"), "target"))
+    values.extend(_collect_strings_from_objects(details.get("broken"), "target"))
+    values.extend(_collect_strings_from_objects(details.get("findings"), "target"))
+    return _dedupe_strings(values)
+
+
+def _collect_check_artifacts(details: dict[str, Any], *, check_name: str) -> list[str]:
+    values: list[str] = []
+    path = details.get("path")
+    if isinstance(path, str) and path.strip():
+        values.append(Path(path).name)
+    if check_name == "required_phase1_artifacts_exist":
+        values.extend(_strings(details.get("missing")))
+    values.extend(_collect_strings_from_objects(details.get("broken"), "path"))
+    values.extend(_collect_strings_from_objects(details.get("suspicious_paths"),))
+    return _dedupe_strings(values)
+
+
+def _collect_check_review_terms(details: dict[str, Any]) -> list[str]:
+    values: list[str] = []
+    values.extend(_collect_strings_from_objects(details.get("unresolved"), "source"))
+    values.extend(_collect_strings_from_objects(details.get("unresolved"), "target"))
+    values.extend(_collect_strings_from_objects(details.get("findings"), "canonical_name"))
+    values.extend(_collect_strings_from_objects(details.get("findings"), "mention"))
+    values.extend(_collect_strings_from_objects(details.get("duplicates"), "preferred_slug"))
+    return _dedupe_strings(values)
+
+
+def _collect_strings_from_objects(values: Any, *path: str) -> list[str]:
+    if values is None:
+        return []
+    if not isinstance(values, list):
+        values = [values]
+    out: list[str] = []
+    for item in values:
+        current = item
+        if path:
+            for key in path:
+                if isinstance(current, dict):
+                    current = current.get(key)
+                else:
+                    current = None
+                    break
+        if isinstance(current, list):
+            out.extend(_strings(current))
+        elif isinstance(current, dict):
+            out.extend(_strings(current.get("canonical_name")))
+        else:
+            out.extend(_strings(current))
+    return out
+
+
+def _dedupe_strings(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for value in values:
+        text = str(value or "").strip()
+        if not text:
+            continue
+        key = text.casefold()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(text)
+    return out[:12]
 
 
 def _overall_health_status(
