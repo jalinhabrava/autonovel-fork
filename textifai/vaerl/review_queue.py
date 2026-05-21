@@ -12,6 +12,7 @@ def build_review_queue(
     *,
     obsidian_import: dict[str, Any],
     semantic_invariants_audit: dict[str, Any] | None = None,
+    retention_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     entities = [item for item in obsidian_import.get("entities") or [] if isinstance(item, dict)]
     primaries = [item for item in entities if _is_primary(item)]
@@ -25,6 +26,7 @@ def build_review_queue(
     items.extend(_ontological_collision_items(primaries=primaries))
     items.extend(_weak_canonical_items(primaries=primaries))
     items.extend(_orphan_primary_items(primaries=primaries))
+    items.extend(_retention_signal_items(primaries=primaries, retention_context=retention_context or {}))
     items.extend(_invariant_items(semantic_invariants_audit or {}))
 
     deduped = _dedupe_items(items)
@@ -61,6 +63,7 @@ def write_review_queue(
     obsidian_import_path: str | Path | None = None,
     semantic_invariants_audit: dict[str, Any] | None = None,
     semantic_invariants_audit_path: str | Path | None = None,
+    retention_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     if obsidian_import is None:
         if obsidian_import_path is None:
@@ -73,6 +76,7 @@ def write_review_queue(
     queue = build_review_queue(
         obsidian_import=obsidian_import,
         semantic_invariants_audit=semantic_invariants_audit,
+        retention_context=retention_context,
     )
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -255,6 +259,114 @@ def _invariant_items(audit: dict[str, Any]) -> list[dict[str, Any]]:
             )
         )
     return items
+
+
+def _retention_signal_items(*, primaries: list[dict[str, Any]], retention_context: dict[str, Any]) -> list[dict[str, Any]]:
+    discarded = _collect_discarded_entities(retention_context=retention_context)
+    if not discarded:
+        return []
+    primary_index = _reference_index(primaries)
+    items: list[dict[str, Any]] = []
+    for discarded_entity in discarded:
+        if _is_forbidden_ephemeral_retention_candidate(discarded_entity):
+            continue
+        if _resolve_key(str(discarded_entity.get("canonical_name") or ""), primary_index):
+            continue
+        candidate_entities = _retention_candidates_for_entity(discarded_entity=discarded_entity, primaries=primaries)
+        recommended_action = _recommended_retention_action(
+            discarded_entity=discarded_entity,
+            candidate_entities=candidate_entities,
+        )
+        if not recommended_action:
+            continue
+        items.append(
+            _item(
+                review_type="entity_retention_review",
+                severity="medium",
+                suggested_action=recommended_action,
+                source_entity=discarded_entity.get("canonical_name") or "",
+                target_text=discarded_entity.get("canonical_name") or "",
+                candidate_entities=candidate_entities,
+                evidence=[
+                    *_evidence("key_fact", discarded_entity.get("key_facts") or [], limit=3),
+                    *_evidence("source_mention", discarded_entity.get("source_mentions") or [], limit=3),
+                ],
+                confidence=_safe_float(discarded_entity.get("confidence")),
+                metadata={
+                    "entity_kind": discarded_entity.get("entity_kind") or "",
+                    "naming_quality": discarded_entity.get("naming_quality") or "",
+                    "chapter_refs": list(discarded_entity.get("chapter_refs") or []),
+                    "decision_reason": discarded_entity.get("_retention_decision_reason") or "",
+                    "recommended_action": recommended_action,
+                    "do_not_auto_merge": True,
+                    "no_clear_existing_primary": not bool(candidate_entities),
+                    "retention_review_required": True,
+                },
+            )
+        )
+    return items
+
+
+def _retention_candidates_for_entity(*, discarded_entity: dict[str, Any], primaries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    if _is_pronoun_like(discarded_entity.get("canonical_name")):
+        return []
+    candidates = _candidate_entities_for_review(discarded_entity, primaries)
+    for candidate in candidates:
+        candidate["confidence_bucket"] = _confidence_bucket(_safe_float(candidate.get("score")))
+    return candidates[:4]
+
+
+def _recommended_retention_action(*, discarded_entity: dict[str, Any], candidate_entities: list[dict[str, Any]]) -> str:
+    naming_quality = str(discarded_entity.get("naming_quality") or "").strip().casefold()
+    entity_kind = str(discarded_entity.get("entity_kind") or "").strip().casefold()
+    if _is_pronoun_like(discarded_entity.get("canonical_name")):
+        return "review_insufficient_evidence"
+    if candidate_entities:
+        if naming_quality in {"descriptor", "title_like"}:
+            return "review_attach_role_or_title"
+        return "review_merge_or_alias"
+    if entity_kind in _durable_entity_kinds() and _has_retention_weight(discarded_entity):
+        return "review_create_primary"
+    if _has_retention_weight(discarded_entity):
+        return "review_keep_secondary"
+    return ""
+
+
+def _collect_discarded_entities(*, retention_context: dict[str, Any]) -> list[dict[str, Any]]:
+    promotion_decisions = [item for item in (retention_context.get("promotion_decisions") or []) if isinstance(item, dict)]
+    resolved_entities = [item for item in (retention_context.get("resolved_entities") or []) if isinstance(item, dict)]
+    global_entities = [item for item in (retention_context.get("global_entities") or []) if isinstance(item, dict)]
+    by_key: dict[str, dict[str, Any]] = {}
+    for source_entity in [*resolved_entities, *global_entities]:
+        key = _key(source_entity.get("canonical_name"))
+        if key and key not in by_key:
+            by_key[key] = source_entity
+
+    discarded: list[dict[str, Any]] = []
+    for decision in promotion_decisions:
+        if str(decision.get("decision") or "").strip().casefold() != "discard":
+            continue
+        canonical_name = str(decision.get("canonical_name") or "")
+        base = by_key.get(_key(canonical_name)) or {}
+        metrics = decision.get("metrics") or {}
+        discarded.append(
+            {
+                "canonical_name": canonical_name,
+                "entity_kind": decision.get("entity_kind") or base.get("entity_kind") or "",
+                "preferred_slug": base.get("preferred_slug") or _key(canonical_name),
+                "aliases": list(base.get("aliases") or []),
+                "source_mentions": list(base.get("source_mentions") or []),
+                "key_facts": list(base.get("key_facts") or []),
+                "chapter_refs": list(base.get("chapter_refs") or []),
+                "relationships": list(base.get("relationships") or []),
+                "review_state": base.get("review_state") or "review",
+                "confidence": base.get("confidence") if base.get("confidence") is not None else 0.0,
+                "naming_quality": decision.get("naming_quality") or base.get("naming_quality") or "",
+                "_retention_decision_reason": decision.get("reason") or "",
+                "_metrics": metrics,
+            }
+        )
+    return discarded
 
 
 def _candidate_entities_for_review(review: dict[str, Any], primaries: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -444,6 +556,59 @@ def _looks_specific(value: Any) -> bool:
     if not text or "_" in text:
         return False
     return any(token[:1].isupper() and any(char.islower() for char in token[1:]) for token in text.split())
+
+
+def _has_retention_weight(entity: dict[str, Any]) -> bool:
+    metrics = entity.get("_metrics") or {}
+    chapter_ref_count = max(len(entity.get("chapter_refs") or []), int(metrics.get("chapter_ref_count") or 0))
+    fact_count = max(len(entity.get("key_facts") or []), int(metrics.get("fact_count") or 0))
+    relationship_count = max(len(entity.get("relationships") or []), int(metrics.get("relationship_count") or 0))
+    source_mention_count = max(len(entity.get("source_mentions") or []), int(metrics.get("source_mention_count") or 0))
+    return chapter_ref_count >= 2 or fact_count >= 2 or relationship_count >= 1 or source_mention_count >= 2
+
+
+def _is_forbidden_ephemeral_retention_candidate(entity: dict[str, Any]) -> bool:
+    if _is_pronoun_like(entity.get("canonical_name")):
+        return True
+    if _has_retention_weight(entity):
+        return False
+    entity_kind = str(entity.get("entity_kind") or "").strip().casefold()
+    naming_quality = str(entity.get("naming_quality") or "").strip().casefold()
+    if entity_kind == "object":
+        return False
+    return naming_quality in {"descriptor", "pronoun_like"} or entity_kind in {"character", "creature"}
+
+
+def _durable_entity_kinds() -> set[str]:
+    return {"object", "place", "character", "faction", "magic", "concept", "event"}
+
+
+def _is_pronoun_like(value: Any) -> bool:
+    key = _key(value)
+    return key in {
+        "el",
+        "ella",
+        "ellas",
+        "ellos",
+        "lo",
+        "la",
+        "le",
+        "les",
+        "he",
+        "she",
+        "they",
+        "them",
+        "him",
+        "her",
+    }
+
+
+def _confidence_bucket(score: float) -> str:
+    if score >= 0.85:
+        return "high"
+    if score >= 0.6:
+        return "medium"
+    return "low"
 
 
 def _safe_float(value: Any) -> float:

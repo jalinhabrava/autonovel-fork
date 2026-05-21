@@ -23,8 +23,10 @@
       "canonical_name": "brújula de plata",
       "expected_role": "persistent object",
       "current_status": "missing_from_replay_output",
-      "triage_status": "needs_retention_review",
-      "reason": "Aparece en replay input y expected artifacts manuales, pero el replay downstream actual no la retiene como primary."
+      "triage_status": "retention_signal_expected",
+      "reason": "Aparece en replay input y expected artifacts manuales, pero el replay downstream actual no la retiene como primary y debe generar señal de review accionable.",
+      "expected_recommended_action": "review_create_primary",
+      "expected_candidate_status": "no_clear_existing_primary"
     }
   ],
   "forbidden_primary_entities": [
@@ -68,23 +70,24 @@
       "drift_id": "missing_persistent_object_brujula_de_plata",
       "entity": "brújula de plata",
       "observed": "missing_from_replay_output",
-      "accepted_temporarily": true,
-      "triage_status": "needs_retention_review",
-      "notes": "No codifica que la brújula no importe; codifica drift conocido pendiente de decisión."
+      "accepted_temporarily": false,
+      "triage_status": "retention_signal_expected",
+      "notes": "No codifica que la brújula no importe; codifica drift conocido que ahora debe surfaced en review_queue."
     },
     {
       "drift_id": "empty_review_queue_for_retention_question",
       "artifact": "review_queue.json",
-      "observed": "empty_queue",
-      "accepted_temporarily": true,
-      "triage_status": "needs_review_queue_signal_decision",
-      "notes": "La queue vacía se acepta temporalmente, pero una fase futura debe decidir si la retención del objeto persistente debe surfaced como review."
+      "observed": "retention_signal_present",
+      "accepted_temporarily": false,
+      "triage_status": "resolved_by_retention_signal",
+      "notes": "La queue ya no debe estar vacía para este caso; la señal de retención debe ser comportamiento actual."
     }
   ],
   "review_queue_expectation": {
-    "current_empty_queue_allowed": true,
-    "future_should_surface_retention_question": true,
-    "reason": "El replay actual no genera item para la ausencia de objeto persistente; esta decisión queda pendiente."
+    "current_empty_queue_allowed": false,
+    "future_should_surface_retention_question": false,
+    "current_retention_signal_expected": true,
+    "reason": "El replay actual debe generar item de revisión para entidad persistente omitida."
   },
   "notes": [
     "Este archivo es manual y sintético.",

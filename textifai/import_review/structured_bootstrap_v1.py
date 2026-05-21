@@ -1477,6 +1477,12 @@ def run_structured_bootstrap_v1(
         output_path=review_queue_path,
         obsidian_import=obsidian_import,
         semantic_invariants_audit=semantic_invariants_audit,
+        retention_context={
+            "promotion_decisions": promotion_decisions_audit.get("decisions") or [],
+            "resolved_entities": resolved_entities,
+            "cleaned_entities": cleaned_entities,
+            "global_entities": global_payload.get("entities") or [],
+        },
     )
 
     return NovelBootstrapV1Result(
@@ -1772,6 +1778,12 @@ def run_semantic_ingestion_replay(
         output_path=review_queue_path,
         obsidian_import=obsidian_import,
         semantic_invariants_audit=semantic_invariants_audit,
+        retention_context={
+            "promotion_decisions": promotion_decisions_audit.get("decisions") or [],
+            "resolved_entities": resolved_entities,
+            "cleaned_entities": cleaned_entities,
+            "global_entities": global_payload.get("entities") or [],
+        },
     )
 
     return SemanticReplayResult(

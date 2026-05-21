@@ -80,22 +80,34 @@ class TextifAIReplayExpectedDriftRulesTests(unittest.TestCase):
         known_drift_ids = {item.get("drift_id") for item in expectations["known_current_drift"]}
         for optional in expectations["optional_entities"]:
             if optional["canonical_name"] == "brújula de plata":
-                self.assertEqual(optional.get("triage_status"), "needs_retention_review")
+                self.assertEqual(optional.get("triage_status"), "retention_signal_expected")
                 if _entity_by_name(entities, optional["canonical_name"]) is None:
                     self.assertIn("missing_persistent_object_brujula_de_plata", known_drift_ids)
                     drift = _drift_by_id(expectations, "missing_persistent_object_brujula_de_plata")
-                    self.assertTrue(drift.get("accepted_temporarily"))
-                    self.assertEqual(drift.get("triage_status"), "needs_retention_review")
+                    self.assertFalse(drift.get("accepted_temporarily"))
+                    self.assertEqual(drift.get("triage_status"), "retention_signal_expected")
 
     def _assert_review_queue_expectation(self, *, expectations: dict, review_queue: dict) -> None:
         queue_expectation = expectations["review_queue_expectation"]
         items = review_queue.get("items") or []
-        if not items:
-            self.assertTrue(queue_expectation.get("current_empty_queue_allowed"))
-            self.assertTrue(queue_expectation.get("future_should_surface_retention_question"))
-            drift = _drift_by_id(expectations, "empty_review_queue_for_retention_question")
-            self.assertTrue(drift.get("accepted_temporarily"))
-            self.assertEqual(drift.get("triage_status"), "needs_review_queue_signal_decision")
+        self.assertFalse(queue_expectation.get("current_empty_queue_allowed"))
+        self.assertTrue(queue_expectation.get("current_retention_signal_expected"))
+        self.assertTrue(items)
+
+        retention_items = [item for item in items if item.get("review_type") == "entity_retention_review"]
+        self.assertTrue(retention_items)
+        compass_items = [item for item in retention_items if item.get("source_entity") == "brújula de plata"]
+        self.assertTrue(compass_items)
+        compass_item = compass_items[0]
+        self.assertEqual(compass_item.get("severity"), "medium")
+        self.assertEqual(compass_item.get("suggested_action"), "review_create_primary")
+        metadata = compass_item.get("metadata") or {}
+        self.assertTrue(metadata.get("do_not_auto_merge"))
+        self.assertTrue(metadata.get("no_clear_existing_primary"))
+
+        drift = _drift_by_id(expectations, "empty_review_queue_for_retention_question")
+        self.assertFalse(drift.get("accepted_temporarily"))
+        self.assertEqual(drift.get("triage_status"), "resolved_by_retention_signal")
 
     def _assert_output_boundary(self, *, output_root: Path, result) -> None:
         expected_prefix = output_root.resolve()
