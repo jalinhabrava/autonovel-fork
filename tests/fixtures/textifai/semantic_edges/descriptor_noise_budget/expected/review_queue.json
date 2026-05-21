@@ -1,0 +1,52 @@
+{
+  "schema_version": "textifai.review_queue.v1",
+  "status": "ready_for_author_review",
+  "item_count": 3,
+  "counts_by_type": {"entity_retention_review": 3},
+  "counts_by_severity": {"medium": 3},
+  "items": [
+    {
+      "review_item_id": "rq_descriptor_novel_facts",
+      "review_type": "entity_retention_review",
+      "severity": "medium",
+      "suggested_action": "review_enrich_existing_entity",
+      "source_entity": "el cartógrafo sin memoria",
+      "target_text": "el cartógrafo sin memoria",
+      "candidate_entities": [{"canonical_name": "Ari Mar", "preferred_slug": "ari_mar", "entity_kind": "character", "review_state": "canonical", "reason": "exact_alias_or_source_overlap", "score": 0.8, "confidence_bucket": "medium"}],
+      "evidence": [{"kind": "key_fact", "text": "Recuerda la grieta exacta bajo el mapa antiguo."}],
+      "confidence": 0.78,
+      "blocking_phase1_gate": false,
+      "can_auto_apply": false,
+      "metadata": {"recommended_action": "review_enrich_existing_entity", "signal_tier": "medium", "candidate_status": "weak_candidate", "surface_type": "descriptor_like", "semantic_value": "descriptor", "descriptor_category": "epithet_descriptor", "language_hint": "es", "do_not_auto_merge": true, "future_viewer_actions": ["enrich_existing_entity", "merge", "keep_secondary", "reject_noise"], "chapter_refs": ["ch_002"]}
+    },
+    {
+      "review_item_id": "rq_descriptor_role",
+      "review_type": "entity_retention_review",
+      "severity": "medium",
+      "suggested_action": "review_attach_role_or_title",
+      "source_entity": "el capitán del paso",
+      "target_text": "el capitán del paso",
+      "candidate_entities": [{"canonical_name": "Ari Mar", "preferred_slug": "ari_mar", "entity_kind": "character", "review_state": "canonical", "reason": "exact_alias_or_source_overlap", "score": 0.8, "confidence_bucket": "medium"}],
+      "evidence": [{"kind": "source_mention", "text": "el capitán del paso"}],
+      "confidence": 0.72,
+      "blocking_phase1_gate": false,
+      "can_auto_apply": false,
+      "metadata": {"recommended_action": "review_attach_role_or_title", "signal_tier": "medium", "candidate_status": "weak_candidate", "surface_type": "role_like", "semantic_value": "role", "descriptor_category": "role_descriptor", "language_hint": "es", "do_not_auto_merge": true, "future_viewer_actions": ["attach_role_or_title", "merge", "mark_alias", "keep_secondary", "reject_noise"], "chapter_refs": ["ch_001"]}
+    },
+    {
+      "review_item_id": "rq_descriptor_relationship",
+      "review_type": "entity_retention_review",
+      "severity": "medium",
+      "suggested_action": "review_enrich_existing_entity",
+      "source_entity": "el protector de Luma",
+      "target_text": "el protector de Luma",
+      "candidate_entities": [{"canonical_name": "Ari Mar", "preferred_slug": "ari_mar", "entity_kind": "character", "review_state": "canonical", "reason": "exact_alias_or_source_overlap", "score": 0.8, "confidence_bucket": "medium"}],
+      "evidence": [{"kind": "key_fact", "text": "Protege a Luma Ser durante el cierre del paso."}],
+      "confidence": 0.77,
+      "blocking_phase1_gate": false,
+      "can_auto_apply": false,
+      "metadata": {"recommended_action": "review_enrich_existing_entity", "signal_tier": "medium", "candidate_status": "weak_candidate", "surface_type": "descriptor_like", "semantic_value": "descriptor", "descriptor_category": "relationship_descriptor", "language_hint": "es", "do_not_auto_merge": true, "future_viewer_actions": ["enrich_existing_entity", "merge", "keep_secondary", "reject_noise"], "chapter_refs": ["ch_003"]}
+    }
+  ],
+  "policy": {"pending_reviews_are_expected": true, "can_auto_apply_default": false, "notes": ["Manual expectation only; K-b2 will compare observed replay output."]}
+}

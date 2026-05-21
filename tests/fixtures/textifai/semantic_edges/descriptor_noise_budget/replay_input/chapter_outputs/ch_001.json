@@ -1,0 +1,15 @@
+{
+  "chapters": [
+    {
+      "chapter_id": "ch_001",
+      "summary": "Ari Mar aparece con descriptor genérico, pronombre y descriptor de rol junto a Luma Ser.",
+      "entities": [
+        {"canonical_name": "Ari Mar", "entity_kind": "character", "aliases": ["Ari"], "source_mentions": ["Ari Mar", "Ari"], "key_facts": ["Custodia el paso seco."], "chapter_refs": ["ch_001"], "confidence": 0.9, "review_state": "canonical", "surface_type": "named_entity_like", "semantic_value": "durable_entity", "language_hint": "es"},
+        {"canonical_name": "Luma Ser", "entity_kind": "character", "aliases": ["Luma"], "source_mentions": ["Luma Ser", "Luma"], "key_facts": ["Es protegida en el paso."], "chapter_refs": ["ch_001"], "confidence": 0.87, "review_state": "canonical", "surface_type": "named_entity_like", "semantic_value": "durable_entity", "language_hint": "es"},
+        {"canonical_name": "el viajero", "canonical_candidate": "Ari Mar", "entity_kind": "character", "source_mentions": ["el viajero"], "key_facts": [], "chapter_refs": ["ch_001"], "confidence": 0.68, "review_state": "review", "surface_type": "descriptor_like", "semantic_value": "descriptor", "descriptor_category": "generic_descriptor", "language_hint": "es"},
+        {"canonical_name": "él", "canonical_candidate": "Ari Mar", "entity_kind": "character", "source_mentions": ["él"], "key_facts": [], "chapter_refs": ["ch_001"], "confidence": 0.52, "review_state": "review", "surface_type": "pronoun_like", "semantic_value": "noise", "language_hint": "es"},
+        {"canonical_name": "el capitán del paso", "canonical_candidate": "Ari Mar", "entity_kind": "character", "source_mentions": ["el capitán del paso"], "key_facts": ["Ordena que nadie cruce hasta ver la señal azul."], "relationships": [{"target": "Ari Mar", "type": "related_to", "facts": ["Rol absorbido de Ari Mar."]}], "chapter_refs": ["ch_001"], "confidence": 0.72, "review_state": "review", "surface_type": "role_like", "semantic_value": "role", "descriptor_category": "role_descriptor", "language_hint": "es"}
+      ]
+    }
+  ]
+}

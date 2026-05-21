@@ -1,0 +1,60 @@
+{
+  "fixture_id": "descriptor_noise_budget",
+  "title": "La puerta sin mapa",
+  "language": "es",
+  "purpose": "Fixture sintético para validar genericidad de descriptores, supresión conservadora y baseline replay provider-free sin budget run-level completo.",
+  "source_files": [
+    "source/ch_001.md",
+    "source/ch_002.md",
+    "source/ch_003.md"
+  ],
+  "intended_coverage": [
+    "generic_descriptor suppression",
+    "generic multi-chapter descriptor without novel facts",
+    "descriptor with novel facts enrichment",
+    "title/role/status descriptor attachment",
+    "relationship descriptor impact",
+    "pronoun suppression",
+    "ephemeral/noise suppression",
+    "duplicate/equivalent descriptor budget preparation",
+    "language-agnostic metadata-driven behavior"
+  ],
+  "expected_canonical_entities": [
+    {"name": "Ari Mar", "kind": "character"},
+    {"name": "Luma Ser", "kind": "character"}
+  ],
+  "expected_descriptor_cases": [
+    {"surface": "el viajero", "canonical": "Ari Mar", "descriptor_category": "generic_descriptor", "expected_behavior": "suppressed"},
+    {"surface": "el caminante", "canonical": "Ari Mar", "descriptor_category": "generic_descriptor", "expected_behavior": "suppressed_or_low_not_medium"},
+    {"surface": "el cartógrafo sin memoria", "canonical": "Ari Mar", "descriptor_category": "epithet_descriptor", "expected_action": "review_enrich_existing_entity"},
+    {"surface": "el capitán del paso", "canonical": "Ari Mar", "descriptor_category": "role_descriptor", "expected_action": "review_attach_role_or_title"},
+    {"surface": "el protector de Luma", "canonical": "Ari Mar", "descriptor_category": "relationship_descriptor", "expected_action": "review_enrich_existing_entity"}
+  ],
+  "expected_suppressed_cases": [
+    {"surface": "él", "surface_type": "pronoun_like", "expected_behavior": "suppressed"},
+    {"surface": "mercader distraído", "descriptor_category": "generic_descriptor", "expected_behavior": "ephemeral_noise_suppressed"},
+    {"surface": "el viajero", "descriptor_category": "generic_descriptor", "expected_behavior": "suppressed"}
+  ],
+  "expected_review_signals": [
+    {"surface": "el cartógrafo sin memoria", "canonical": "Ari Mar", "recommended_action": "review_enrich_existing_entity"},
+    {"surface": "el capitán del paso", "canonical": "Ari Mar", "recommended_action": "review_attach_role_or_title"},
+    {"surface": "el protector de Luma", "canonical": "Ari Mar", "recommended_action": "review_enrich_existing_entity"}
+  ],
+  "expected_dedupe_or_budget_cases": [
+    {"surfaces": ["el capitán del paso", "el guardián del archivo", "el custodio del paso"], "canonical": "Ari Mar", "descriptor_category": "role_descriptor", "goal": "prepare no queue explosion assertion for K-b2"}
+  ],
+  "expected_relationships": [
+    {"source": "Ari Mar", "target": "Luma Ser", "relationship": "protects"}
+  ],
+  "language_agnostic_notes": [
+    "Las strings del fixture no son lógica universal.",
+    "Las decisiones esperadas se basan en surface_type, semantic_value, descriptor_category, candidate_status, language_hint y evidencia.",
+    "Spanish surface text es data sintética; la policy debe comportarse igual con metadata equivalente en otro idioma.",
+    "Drift ids deben ser taxonómicos, no ligados a personajes."
+  ],
+  "notes": [
+    "Fixture manual y sintético.",
+    "K-b1 solo crea baseline replay provider-free; K-b2 endurecerá contratos de drift/noise budget.",
+    "No hay outputs reales de runs o vault."
+  ]
+}

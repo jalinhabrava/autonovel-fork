@@ -1,0 +1,46 @@
+{
+  "fixture_id": "descriptor_noise_budget",
+  "purpose": "Baseline manual para observar replay provider-free de genericidad de descriptores y preparar contratos K-b2.",
+  "required_entities": [
+    {"canonical_name": "Ari Mar", "expected_role": "primary character", "non_negotiable": true},
+    {"canonical_name": "Luma Ser", "expected_role": "secondary canonical character", "non_negotiable": true}
+  ],
+  "expected_descriptor_signals": [
+    {"surface": "el cartógrafo sin memoria", "canonical_name": "Ari Mar", "descriptor_category": "epithet_descriptor", "recommended_action": "review_enrich_existing_entity"},
+    {"surface": "el capitán del paso", "canonical_name": "Ari Mar", "descriptor_category": "role_descriptor", "recommended_action": "review_attach_role_or_title"},
+    {"surface": "el protector de Luma", "canonical_name": "Ari Mar", "descriptor_category": "relationship_descriptor", "recommended_action": "review_enrich_existing_entity"}
+  ],
+  "suppressed_descriptor_cases": [
+    {"surface": "el viajero", "descriptor_category": "generic_descriptor", "expected_behavior": "suppressed"},
+    {"surface": "el caminante", "descriptor_category": "generic_descriptor", "expected_behavior": "suppressed_or_low_not_medium"},
+    {"surface": "mercader distraído", "descriptor_category": "generic_descriptor", "expected_behavior": "ephemeral_noise_suppressed"},
+    {"surface": "él", "surface_type": "pronoun_like", "expected_behavior": "suppressed"}
+  ],
+  "expected_dedupe_behavior": [
+    {"candidate": "Ari Mar", "descriptor_category": "role_descriptor", "surfaces": ["el capitán del paso", "el guardián del archivo", "el custodio del paso"], "current_phase": "observe_only", "future_assertion": "no_more_than_one_medium_per_candidate_category_action"}
+  ],
+  "noise_budget_expectations": {"phase": "K-b1 baseline", "strict_budget_enforced": false, "future_medium_budget": "max_1_per_candidate_descriptor_category_recommended_action"},
+  "known_current_drift": [],
+  "non_negotiable_failures": [
+    "Ari Mar missing",
+    "Luma Ser missing",
+    "pronoun promoted as primary",
+    "ephemeral descriptor promoted as primary",
+    "provider call occurs",
+    "output outside tempdir",
+    "auto-merge occurs",
+    "auto-promotion occurs"
+  ],
+  "future_desired_behavior": [
+    "generic descriptors remain suppressed unless semantic novelty is clear",
+    "role/title/status descriptors remain reviewable without auto-merge",
+    "relationship descriptors preserve relationship impact as reviewable evidence",
+    "run-level noise budget prevents descriptor queue explosion"
+  ],
+  "language_agnostic_notes": [
+    "Surface strings are fixture data, not runtime logic.",
+    "Expected behavior depends on surface_type, semantic_value, descriptor_category, candidate_status, language_hint and evidence.",
+    "Equivalent metadata should lead to equivalent behavior across literal text/language examples.",
+    "Drift ids are taxonomic and must not guide runtime behavior."
+  ]
+}

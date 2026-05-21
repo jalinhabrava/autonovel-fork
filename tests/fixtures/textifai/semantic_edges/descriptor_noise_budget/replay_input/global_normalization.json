@@ -1,0 +1,342 @@
+{
+  "work": {
+    "title": "La puerta sin mapa",
+    "language": "es"
+  },
+  "entities": [
+    {
+      "canonical_name": "Ari Mar",
+      "entity_kind": "character",
+      "preferred_slug": "ari_mar",
+      "aliases": [
+        "Ari"
+      ],
+      "summary": "Guarda el paso seco y conserva saber cartográfico fragmentado.",
+      "key_facts": [
+        "Custodia el paso seco.",
+        "Está ligado a Luma Ser por protección.",
+        "Conoce señales del archivo."
+      ],
+      "relationships": [
+        {
+          "target": "Luma Ser",
+          "type": "protects",
+          "facts": [
+            "La protege cuando el paso se cierra."
+          ]
+        }
+      ],
+      "chapter_refs": [
+        "ch_001",
+        "ch_002",
+        "ch_003"
+      ],
+      "source_mentions": [
+        "Ari Mar",
+        "Ari"
+      ],
+      "confidence": 0.91,
+      "review_state": "canonical",
+      "surface_type": "named_entity_like",
+      "semantic_value": "durable_entity",
+      "language_hint": "es"
+    },
+    {
+      "canonical_name": "Luma Ser",
+      "entity_kind": "character",
+      "preferred_slug": "luma_ser",
+      "aliases": [
+        "Luma"
+      ],
+      "summary": "Compañera protegida durante el cierre del paso.",
+      "key_facts": [
+        "Ari Mar la protege en el paso seco."
+      ],
+      "relationships": [
+        {
+          "target": "Ari Mar",
+          "type": "protected_by",
+          "facts": [
+            "Ari la protege."
+          ]
+        }
+      ],
+      "chapter_refs": [
+        "ch_001",
+        "ch_003"
+      ],
+      "source_mentions": [
+        "Luma Ser",
+        "Luma"
+      ],
+      "confidence": 0.88,
+      "review_state": "canonical",
+      "surface_type": "named_entity_like",
+      "semantic_value": "durable_entity",
+      "language_hint": "es"
+    },
+    {
+      "canonical_name": "el viajero",
+      "canonical_candidate": "Ari Mar",
+      "entity_kind": "character",
+      "preferred_slug": "el_viajero",
+      "aliases": [],
+      "summary": "Descriptor genérico débil.",
+      "key_facts": [],
+      "relationships": [],
+      "chapter_refs": [
+        "ch_001"
+      ],
+      "source_mentions": [
+        "el viajero"
+      ],
+      "confidence": 0.68,
+      "review_state": "review",
+      "naming_quality": "descriptor",
+      "surface_type": "descriptor_like",
+      "semantic_value": "descriptor",
+      "descriptor_category": "generic_descriptor",
+      "language_hint": "es"
+    },
+    {
+      "canonical_name": "el caminante",
+      "canonical_candidate": "Ari Mar",
+      "entity_kind": "character",
+      "preferred_slug": "el_caminante",
+      "aliases": [],
+      "summary": "Descriptor multicapítulo sin facts nuevos.",
+      "key_facts": [
+        "Es observado en el umbral sin novedad adicional."
+      ],
+      "relationships": [],
+      "chapter_refs": [
+        "ch_002",
+        "ch_003"
+      ],
+      "source_mentions": [
+        "el caminante",
+        "el caminante"
+      ],
+      "confidence": 0.73,
+      "review_state": "review",
+      "naming_quality": "descriptor",
+      "surface_type": "descriptor_like",
+      "semantic_value": "descriptor",
+      "descriptor_category": "generic_descriptor",
+      "language_hint": "es"
+    },
+    {
+      "canonical_name": "el cartógrafo sin memoria",
+      "canonical_candidate": "Ari Mar",
+      "entity_kind": "character",
+      "preferred_slug": "el_cartografo_sin_memoria",
+      "aliases": [],
+      "summary": "Descriptor con facts novedosos sobre Ari Mar.",
+      "key_facts": [
+        "Recuerda la grieta exacta bajo el mapa antiguo.",
+        "Corrige el dibujo oculto que llevaba Ari Mar."
+      ],
+      "relationships": [
+        {
+          "target": "Ari Mar",
+          "type": "related_to",
+          "facts": [
+            "Añade saber cartográfico específico sobre Ari Mar."
+          ]
+        }
+      ],
+      "chapter_refs": [
+        "ch_002"
+      ],
+      "source_mentions": [
+        "el cartógrafo sin memoria"
+      ],
+      "confidence": 0.78,
+      "review_state": "review",
+      "naming_quality": "descriptor",
+      "surface_type": "descriptor_like",
+      "semantic_value": "descriptor",
+      "descriptor_category": "epithet_descriptor",
+      "language_hint": "es"
+    },
+    {
+      "canonical_name": "el capitán del paso",
+      "canonical_candidate": "Ari Mar",
+      "entity_kind": "character",
+      "preferred_slug": "el_capitan_del_paso",
+      "aliases": [],
+      "summary": "Descriptor de rol asociado a Ari Mar.",
+      "key_facts": [
+        "Ordena que nadie cruce hasta ver la señal azul."
+      ],
+      "relationships": [
+        {
+          "target": "Ari Mar",
+          "type": "related_to",
+          "facts": [
+            "Actúa como rol/título de Ari Mar."
+          ]
+        }
+      ],
+      "chapter_refs": [
+        "ch_001"
+      ],
+      "source_mentions": [
+        "el capitán del paso"
+      ],
+      "confidence": 0.72,
+      "review_state": "review",
+      "naming_quality": "descriptor",
+      "surface_type": "role_like",
+      "semantic_value": "role",
+      "descriptor_category": "role_descriptor",
+      "language_hint": "es"
+    },
+    {
+      "canonical_name": "el protector de Luma",
+      "canonical_candidate": "Ari Mar",
+      "entity_kind": "character",
+      "preferred_slug": "el_protector_de_luma",
+      "aliases": [],
+      "summary": "Descriptor relacional con impacto sobre la relación Ari-Luma.",
+      "key_facts": [
+        "Protege a Luma Ser durante el cierre del paso."
+      ],
+      "relationships": [
+        {
+          "target": "Luma Ser",
+          "type": "protects",
+          "facts": [
+            "Protege a Luma durante la alarma."
+          ]
+        }
+      ],
+      "chapter_refs": [
+        "ch_003"
+      ],
+      "source_mentions": [
+        "el protector de Luma"
+      ],
+      "confidence": 0.77,
+      "review_state": "review",
+      "naming_quality": "descriptor",
+      "surface_type": "descriptor_like",
+      "semantic_value": "descriptor",
+      "descriptor_category": "relationship_descriptor",
+      "language_hint": "es"
+    },
+    {
+      "canonical_name": "él",
+      "canonical_candidate": "Ari Mar",
+      "entity_kind": "character",
+      "preferred_slug": "el_pronombre",
+      "aliases": [],
+      "summary": "Pronombre suprimible.",
+      "key_facts": [],
+      "relationships": [],
+      "chapter_refs": [
+        "ch_001"
+      ],
+      "source_mentions": [
+        "él"
+      ],
+      "confidence": 0.52,
+      "review_state": "review",
+      "naming_quality": "pronoun_like",
+      "surface_type": "pronoun_like",
+      "semantic_value": "noise",
+      "language_hint": "es"
+    },
+    {
+      "canonical_name": "mercader distraído",
+      "canonical_candidate": "",
+      "entity_kind": "character",
+      "preferred_slug": "mercader_distraido",
+      "aliases": [],
+      "summary": "Mención efímera de ruido.",
+      "key_facts": [
+        "Confunde las llaves y sale del salón."
+      ],
+      "relationships": [],
+      "chapter_refs": [
+        "ch_002"
+      ],
+      "source_mentions": [
+        "mercader distraído"
+      ],
+      "confidence": 0.44,
+      "review_state": "review",
+      "naming_quality": "descriptor",
+      "surface_type": "descriptor_like",
+      "semantic_value": "descriptor",
+      "descriptor_category": "generic_descriptor",
+      "language_hint": "es"
+    },
+    {
+      "canonical_name": "el guardián del archivo",
+      "canonical_candidate": "Ari Mar",
+      "entity_kind": "character",
+      "preferred_slug": "el_guardian_del_archivo",
+      "aliases": [],
+      "summary": "Surface equivalente de rol para observar dedupe/noise budget.",
+      "key_facts": [
+        "Confirma la misma orden con otra señal."
+      ],
+      "relationships": [
+        {
+          "target": "Ari Mar",
+          "type": "related_to",
+          "facts": [
+            "Role/title equivalente al capitán del paso."
+          ]
+        }
+      ],
+      "chapter_refs": [
+        "ch_003"
+      ],
+      "source_mentions": [
+        "el guardián del archivo"
+      ],
+      "confidence": 0.71,
+      "review_state": "review",
+      "naming_quality": "descriptor",
+      "surface_type": "role_like",
+      "semantic_value": "role",
+      "descriptor_category": "role_descriptor",
+      "language_hint": "es"
+    },
+    {
+      "canonical_name": "el custodio del paso",
+      "canonical_candidate": "Ari Mar",
+      "entity_kind": "character",
+      "preferred_slug": "el_custodio_del_paso",
+      "aliases": [],
+      "summary": "Otro descriptor equivalente de rol para observar posible explosión.",
+      "key_facts": [
+        "Repite la orden del capitán hasta el alba."
+      ],
+      "relationships": [
+        {
+          "target": "Ari Mar",
+          "type": "related_to",
+          "facts": [
+            "Role/title equivalente a otros casos del paso."
+          ]
+        }
+      ],
+      "chapter_refs": [
+        "ch_003"
+      ],
+      "source_mentions": [
+        "el custodio del paso"
+      ],
+      "confidence": 0.7,
+      "review_state": "review",
+      "naming_quality": "descriptor",
+      "surface_type": "role_like",
+      "semantic_value": "role",
+      "descriptor_category": "role_descriptor",
+      "language_hint": "es"
+    }
+  ]
+}

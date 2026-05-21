@@ -1,0 +1,8 @@
+{
+  "schema_version": "textifai.semantic_invariants_audit.v1",
+  "status": "pass",
+  "checks": [
+    {"name": "required_primary_entities_present", "status": "pass", "details": {"entities": ["Ari Mar", "Luma Ser"]}},
+    {"name": "forbidden_noise_not_primary", "status": "pass", "details": {"surfaces": ["él", "mercader distraído", "el viajero"]}}
+  ]
+}

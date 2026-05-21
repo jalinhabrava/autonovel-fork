@@ -1,0 +1,41 @@
+{
+  "schema_version": "textifai.obsidian_import.v1",
+  "work": {"title": "La puerta sin mapa", "language": "es"},
+  "entities": [
+    {
+      "canonical_name": "Ari Mar",
+      "entity_kind": "character",
+      "preferred_slug": "ari_mar",
+      "aliases": ["Ari"],
+      "summary": "Ari Mar custodia el paso seco y conserva memoria de mapas antiguos.",
+      "key_facts": [
+        "Custodia el paso seco.",
+        "Tiene relación de protección con Luma Ser.",
+        "Conoce señales vinculadas al archivo."
+      ],
+      "relationships": [{"target": "Luma Ser", "type": "protects", "facts": ["Protege a Luma durante el cierre del paso."]}],
+      "chapter_refs": ["ch_001", "ch_002", "ch_003"],
+      "source_mentions": ["Ari Mar", "Ari"],
+      "confidence": 0.91,
+      "review_state": "canonical",
+      "note_role": "primary"
+    },
+    {
+      "canonical_name": "Luma Ser",
+      "entity_kind": "character",
+      "preferred_slug": "luma_ser",
+      "aliases": ["Luma"],
+      "summary": "Luma Ser espera junto al paso seco y activa la relación protegida por Ari Mar.",
+      "key_facts": ["Es protegida por Ari Mar durante el cierre del paso."],
+      "relationships": [{"target": "Ari Mar", "type": "protected_by", "facts": ["Ari protege a Luma."]}],
+      "chapter_refs": ["ch_001", "ch_003"],
+      "source_mentions": ["Luma Ser", "Luma"],
+      "confidence": 0.88,
+      "review_state": "canonical",
+      "note_role": "primary"
+    }
+  ],
+  "relationships": [
+    {"source": "Ari Mar", "target": "Luma Ser", "type": "protects", "chapter_refs": ["ch_003"]}
+  ]
+}

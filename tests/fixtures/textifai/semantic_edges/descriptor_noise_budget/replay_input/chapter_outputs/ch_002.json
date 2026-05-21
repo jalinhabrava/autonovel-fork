@@ -1,0 +1,13 @@
+{
+  "chapters": [
+    {
+      "chapter_id": "ch_002",
+      "summary": "Persisten descriptor genérico multicapítulo, descriptor con hechos novedosos y mención efímera.",
+      "entities": [
+        {"canonical_name": "el caminante", "canonical_candidate": "Ari Mar", "entity_kind": "character", "source_mentions": ["el caminante"], "key_facts": ["Es observado en el umbral sin novedad adicional."], "chapter_refs": ["ch_002"], "confidence": 0.73, "review_state": "review", "surface_type": "descriptor_like", "semantic_value": "descriptor", "descriptor_category": "generic_descriptor", "language_hint": "es"},
+        {"canonical_name": "el cartógrafo sin memoria", "canonical_candidate": "Ari Mar", "entity_kind": "character", "source_mentions": ["el cartógrafo sin memoria"], "key_facts": ["Recuerda la grieta exacta bajo el mapa antiguo.", "Corrige el dibujo oculto que llevaba Ari Mar."], "relationships": [{"target": "Ari Mar", "type": "related_to", "facts": ["Añade saber cartográfico específico."]}], "chapter_refs": ["ch_002"], "confidence": 0.78, "review_state": "review", "surface_type": "descriptor_like", "semantic_value": "descriptor", "descriptor_category": "epithet_descriptor", "language_hint": "es"},
+        {"canonical_name": "mercader distraído", "entity_kind": "character", "source_mentions": ["mercader distraído"], "key_facts": ["Confunde las llaves y sale del salón."], "chapter_refs": ["ch_002"], "confidence": 0.44, "review_state": "review", "surface_type": "descriptor_like", "semantic_value": "descriptor", "descriptor_category": "generic_descriptor", "language_hint": "es"}
+      ]
+    }
+  ]
+}

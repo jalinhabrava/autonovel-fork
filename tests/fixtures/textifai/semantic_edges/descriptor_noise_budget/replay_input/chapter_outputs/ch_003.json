@@ -1,0 +1,14 @@
+{
+  "chapters": [
+    {
+      "chapter_id": "ch_003",
+      "summary": "Se observa descriptor relacional con impacto y surfaces equivalentes para dedupe/budget futuro.",
+      "entities": [
+        {"canonical_name": "el caminante", "canonical_candidate": "Ari Mar", "entity_kind": "character", "source_mentions": ["el caminante"], "key_facts": ["Permanece junto al umbral sin revelar novedad."], "chapter_refs": ["ch_003"], "confidence": 0.73, "review_state": "review", "surface_type": "descriptor_like", "semantic_value": "descriptor", "descriptor_category": "generic_descriptor", "language_hint": "es"},
+        {"canonical_name": "el protector de Luma", "canonical_candidate": "Ari Mar", "entity_kind": "character", "source_mentions": ["el protector de Luma"], "key_facts": ["Protege a Luma Ser durante el cierre del paso."], "relationships": [{"target": "Luma Ser", "type": "protects", "facts": ["Protege a Luma durante la alarma."]}], "chapter_refs": ["ch_003"], "confidence": 0.77, "review_state": "review", "surface_type": "descriptor_like", "semantic_value": "descriptor", "descriptor_category": "relationship_descriptor", "language_hint": "es"},
+        {"canonical_name": "el guardián del archivo", "canonical_candidate": "Ari Mar", "entity_kind": "character", "source_mentions": ["el guardián del archivo"], "key_facts": ["Confirma la misma orden con otra señal."], "relationships": [{"target": "Ari Mar", "type": "related_to", "facts": ["Role/title equivalente."]}], "chapter_refs": ["ch_003"], "confidence": 0.71, "review_state": "review", "surface_type": "role_like", "semantic_value": "role", "descriptor_category": "role_descriptor", "language_hint": "es"},
+        {"canonical_name": "el custodio del paso", "canonical_candidate": "Ari Mar", "entity_kind": "character", "source_mentions": ["el custodio del paso"], "key_facts": ["Repite la orden del capitán hasta el alba."], "relationships": [{"target": "Ari Mar", "type": "related_to", "facts": ["Role/title equivalente."]}], "chapter_refs": ["ch_003"], "confidence": 0.7, "review_state": "review", "surface_type": "role_like", "semantic_value": "role", "descriptor_category": "role_descriptor", "language_hint": "es"}
+      ]
+    }
+  ]
+}
