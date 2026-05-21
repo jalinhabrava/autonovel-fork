@@ -118,6 +118,45 @@ Para pronombre sin evidencia, clearly ephemeral/noise mention, una mención loca
 - Roles, títulos y descriptores deben preservarse como semántica revisable aunque varíen por lengua.
 - Descriptores genéricos con una sola mención débil se suprimen aunque estén absorbidos como alias/source mention, para evitar ruido.
 
+## Descriptor Genericity Policy
+
+Regla base: descriptor absorbido no implica review automático. Debe existir valor semántico no trivial y evidencia estructural.
+
+Señales mínimas para evaluar descriptor absorbido:
+
+- `surface_type`, `semantic_value`, `language_hint`.
+- `candidate_entities` + `candidate_status` + `score`.
+- `key_facts`, `chapter_refs`, `source_mentions`, `relationships`.
+- novedad semántica frente a facts ya presentes en canonical.
+
+Comportamiento conservador:
+
+- `generic_descriptor`, `appearance_descriptor`, `age_or_demographic_descriptor`, `unknown_descriptor`: suprimir por defecto.
+- subir a review solo si existe evidencia fuerte (facts nuevos relevantes, impacto relacional/canónico, persistencia multicapítulo con soporte).
+
+## Descriptor Taxonomy
+
+- `title_descriptor`: normalmente `review_attach_role_or_title`.
+- `role_descriptor`: normalmente `review_attach_role_or_title`.
+- `status_descriptor`: `attach`/`enrich` si expresa cambio canónico de estado.
+- `relationship_descriptor`: `review_enrich_existing_entity` si añade relación con impacto.
+- `epithet_descriptor`: señal solo con evidencia fuerte.
+- `generic_descriptor`: suprimir o low.
+- `appearance_descriptor`: suprimir salvo impacto canónico.
+- `age_or_demographic_descriptor`: suprimir salvo impacto canónico explícito.
+- `unknown_descriptor`: fallback conservador suprimir/low.
+
+## Noise Budget
+
+Presupuesto inicial de ruido:
+
+- máximo 1 señal descriptor de severidad `medium` por `(candidate canonical, descriptor category, recommended_action)` por run lógico.
+- extras equivalentes: degradar a `low` o suprimir.
+- no emitir si no hay novedad semántica.
+- dedupe por `source_entity/target_text/suggested_action` y equivalencia de candidato/categoría.
+
+Si runtime no mantiene estado global extendido, aplicar primero en heurística de emisión por item (K-a) y extender a budget run-level en K-b.
+
 ## Future Viewer Actions
 
 - Merge.

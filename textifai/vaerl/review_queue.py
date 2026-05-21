@@ -385,8 +385,6 @@ def _absorbed_semantic_surface_items(*, primaries: list[dict[str, Any]], retenti
     primary_index = _reference_index(primaries)
     items: list[dict[str, Any]] = []
     for entity in _semantic_surface_review_candidates(retention_context=retention_context):
-        if _is_forbidden_ephemeral_retention_candidate(entity):
-            continue
         if _surface_type(entity) == "pronoun_like":
             continue
         if not _resolve_key(str(entity.get("canonical_name") or ""), primary_index):
@@ -491,6 +489,7 @@ def _normalized_absorbed_semantic_surface_item(
             "language_hint": entity.get("language_hint") or "",
             "surface_type": _surface_type(entity),
             "semantic_value": _semantic_value(entity),
+            "descriptor_category": _descriptor_category(entity),
             "future_viewer_actions": _future_viewer_actions(recommended_action),
         },
     )
@@ -504,7 +503,11 @@ def _recommended_absorbed_surface_action(*, entity: dict[str, Any], candidate_en
     if surface_type in {"title_like", "role_like"}:
         return "review_attach_role_or_title" if _has_min_semantic_surface_evidence(entity) else ""
     if surface_type == "descriptor_like":
-        return "review_enrich_existing_entity" if _has_descriptor_enrichment_signal_value(entity) else ""
+        category = _descriptor_category(entity)
+        if category in {"title_descriptor", "role_descriptor", "status_descriptor"}:
+            return "review_attach_role_or_title" if _has_min_semantic_surface_evidence(entity) else ""
+        if _has_descriptor_enrichment_signal_value(entity):
+            return "review_enrich_existing_entity"
     return ""
 
 def _has_min_semantic_surface_evidence(entity: dict[str, Any]) -> bool:
@@ -513,10 +516,21 @@ def _has_min_semantic_surface_evidence(entity: dict[str, Any]) -> bool:
 def _has_descriptor_enrichment_signal_value(entity: dict[str, Any]) -> bool:
     if not _has_min_semantic_surface_evidence(entity):
         return False
+    category = _descriptor_category(entity)
     metrics = entity.get("_metrics") or {}
     fact_count = max(len(entity.get("key_facts") or []), int(metrics.get("fact_count") or 0))
     chapter_ref_count = max(len(entity.get("chapter_refs") or []), int(metrics.get("chapter_ref_count") or 0))
+    source_mention_count = max(len(entity.get("source_mentions") or []), int(metrics.get("source_mention_count") or 0))
     confidence = _safe_float(entity.get("confidence"))
+    relationship_impact = _has_relationship_descriptor_impact(entity)
+    if category in {"generic_descriptor", "appearance_descriptor", "age_or_demographic_descriptor", "unknown_descriptor"}:
+        if relationship_impact:
+            return True
+        if fact_count >= 2 and (chapter_ref_count >= 2 or source_mention_count >= 2 or confidence >= 0.74):
+            return True
+        return False
+    if category in {"relationship_descriptor", "status_descriptor", "epithet_descriptor"}:
+        return relationship_impact or fact_count >= 1 or chapter_ref_count >= 2 or confidence >= 0.74
     return fact_count >= 2 or chapter_ref_count >= 2 or confidence >= 0.74
 
 def _absorbed_surface_signal_tier(*, entity: dict[str, Any], candidate_entities: list[dict[str, Any]]) -> str:
@@ -526,6 +540,40 @@ def _absorbed_surface_signal_tier(*, entity: dict[str, Any], candidate_entities:
     if top_score >= 0.85 and _surface_type(entity) in {"title_like", "role_like"}:
         return "high"
     return "medium"
+
+def _descriptor_category(entity: dict[str, Any]) -> str:
+    explicit = str(entity.get("descriptor_category") or entity.get("descriptor_type") or entity.get("semantic_subtype") or "").strip().casefold()
+    known = {
+        "title_descriptor",
+        "role_descriptor",
+        "status_descriptor",
+        "relationship_descriptor",
+        "epithet_descriptor",
+        "generic_descriptor",
+        "appearance_descriptor",
+        "age_or_demographic_descriptor",
+        "unknown_descriptor",
+    }
+    if explicit in known:
+        return explicit
+    surface_type = _surface_type(entity)
+    if surface_type == "title_like":
+        return "title_descriptor"
+    if surface_type == "role_like":
+        return "role_descriptor"
+    return "unknown_descriptor" if surface_type == "descriptor_like" else ""
+
+def _has_relationship_descriptor_impact(entity: dict[str, Any]) -> bool:
+    for rel in entity.get("relationships") or []:
+        if not isinstance(rel, dict):
+            continue
+        rel_type = str(rel.get("type") or rel.get("relation_type") or "").strip().casefold()
+        facts = [fact for fact in (rel.get("facts") or []) if str(fact or "").strip()]
+        if facts:
+            return True
+        if rel_type and rel_type not in {"related_to", "mention_of", "same_as"}:
+            return True
+    return False
 
 def _absorbed_surface_decision_reason(*, entity: dict[str, Any], recommended_action: str) -> str:
     if recommended_action == "review_attach_role_or_title":
