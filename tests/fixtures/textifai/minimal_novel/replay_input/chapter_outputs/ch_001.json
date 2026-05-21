@@ -1,0 +1,85 @@
+{
+  "chapters": [
+    {
+      "chapter_id": "ch_001",
+      "chapter_title_original": "Capítulo 1 — La estación vacía",
+      "chapter_title_canonical": "Capítulo 1 — La estación vacía",
+      "chapter_label_type": "episode",
+      "chapter_number_in_label": 1,
+      "sequence_index": 1,
+      "chapter_summary": "Mara y Toren acuerdan huir de Aster Hollow.",
+      "characters": [
+        {
+          "surface": "Mara Elian",
+          "canonical": "Mara Elian",
+          "canonical_candidate": "Mara Elian",
+          "naming_quality": "proper_name",
+          "facts": [
+            "Promete proteger a Toren."
+          ],
+          "confidence": 0.95
+        },
+        {
+          "surface": "Toren",
+          "canonical": "Toren",
+          "canonical_candidate": "Toren",
+          "naming_quality": "proper_name",
+          "facts": [
+            "Confía en el plan de Mara."
+          ],
+          "confidence": 0.93
+        }
+      ],
+      "places": [
+        {
+          "surface": "Aster Hollow",
+          "canonical": "Aster Hollow",
+          "canonical_candidate": "Aster Hollow",
+          "facts": [
+            "Punto de inicio de la huida."
+          ],
+          "confidence": 0.9
+        }
+      ],
+      "concepts": [],
+      "events": [
+        {
+          "surface": "juramento de Mara",
+          "canonical": "juramento de Mara",
+          "canonical_candidate": "juramento de Mara",
+          "facts": [
+            "Mara jura sacar a Toren del valle."
+          ],
+          "confidence": 0.84
+        }
+      ],
+      "objects": [
+        {
+          "surface": "brújula de plata",
+          "canonical": "brújula de plata",
+          "canonical_candidate": "brújula de plata",
+          "facts": [
+            "Mara la conserva como guía."
+          ],
+          "confidence": 0.88
+        }
+      ],
+      "relations": [
+        {
+          "source": "Mara Elian",
+          "target": "Toren",
+          "type": "alliance",
+          "facts": [
+            "Mara protege a Toren."
+          ]
+        }
+      ],
+      "unresolved_mentions": [
+        {
+          "surface": "guardia cansado",
+          "reason": "mencion_episodica_baja_persistencia"
+        }
+      ]
+    }
+  ]
+}

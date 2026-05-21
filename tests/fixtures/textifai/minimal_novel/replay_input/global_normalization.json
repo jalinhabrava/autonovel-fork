@@ -1,0 +1,173 @@
+{
+  "work": {
+    "title": "La brújula de Aster Hollow",
+    "language": "es"
+  },
+  "entities": [
+    {
+      "canonical_name": "Mara Elian",
+      "canonical_candidate": "Mara Elian",
+      "entity_kind": "character",
+      "preferred_slug": "mara_elian",
+      "aliases": [
+        "Mara"
+      ],
+      "summary": "Protagonista que guía la salida desde Aster Hollow.",
+      "key_facts": [
+        "Protege a Toren durante la huida."
+      ],
+      "relationships": [
+        {
+          "target": "Toren",
+          "type": "alliance",
+          "facts": [
+            "Mara protege a Toren."
+          ]
+        }
+      ],
+      "chapter_refs": [
+        "ch_001",
+        "ch_002",
+        "ch_003"
+      ],
+      "source_mentions": [
+        "Mara Elian",
+        "Mara"
+      ],
+      "confidence": 0.93,
+      "review_state": "canonical",
+      "naming_quality": "proper_name",
+      "is_stable_entity": true,
+      "needs_review": false,
+      "review_reason": ""
+    },
+    {
+      "canonical_name": "Toren",
+      "canonical_candidate": "Toren",
+      "entity_kind": "character",
+      "preferred_slug": "toren",
+      "aliases": [],
+      "summary": "Compañero de Mara durante la salida del valle.",
+      "key_facts": [
+        "Confía en Mara para cruzar el puente."
+      ],
+      "relationships": [
+        {
+          "target": "Mara Elian",
+          "type": "alliance",
+          "facts": [
+            "Toren depende de Mara."
+          ]
+        }
+      ],
+      "chapter_refs": [
+        "ch_001",
+        "ch_002",
+        "ch_003"
+      ],
+      "source_mentions": [
+        "Toren"
+      ],
+      "confidence": 0.9,
+      "review_state": "canonical",
+      "naming_quality": "proper_name",
+      "is_stable_entity": true,
+      "needs_review": false,
+      "review_reason": ""
+    },
+    {
+      "canonical_name": "Aster Hollow",
+      "canonical_candidate": "Aster Hollow",
+      "entity_kind": "place",
+      "preferred_slug": "aster_hollow",
+      "aliases": [],
+      "summary": "Lugar persistente del arco de fuga.",
+      "key_facts": [
+        "Mara y Toren parten desde Aster Hollow."
+      ],
+      "relationships": [
+        {
+          "target": "Mara Elian",
+          "type": "related_to",
+          "facts": [
+            "Mara pertenece al entorno de Aster Hollow."
+          ]
+        }
+      ],
+      "chapter_refs": [
+        "ch_001",
+        "ch_002",
+        "ch_003"
+      ],
+      "source_mentions": [
+        "Aster Hollow"
+      ],
+      "confidence": 0.88,
+      "review_state": "canonical",
+      "naming_quality": "proper_name",
+      "is_stable_entity": true,
+      "needs_review": false,
+      "review_reason": ""
+    },
+    {
+      "canonical_name": "brújula de plata",
+      "canonical_candidate": "brújula de plata",
+      "entity_kind": "object",
+      "preferred_slug": "brujula_de_plata",
+      "aliases": [
+        "la brújula"
+      ],
+      "summary": "Objeto persistente que guía el desplazamiento.",
+      "key_facts": [
+        "La brújula apunta hacia la torre hundida."
+      ],
+      "relationships": [
+        {
+          "target": "Mara Elian",
+          "type": "related_to",
+          "facts": [
+            "Mara porta y usa la brújula."
+          ]
+        }
+      ],
+      "chapter_refs": [
+        "ch_001",
+        "ch_002",
+        "ch_003"
+      ],
+      "source_mentions": [
+        "brújula de plata"
+      ],
+      "confidence": 0.87,
+      "review_state": "canonical",
+      "naming_quality": "descriptive",
+      "is_stable_entity": true,
+      "needs_review": false,
+      "review_reason": ""
+    },
+    {
+      "canonical_name": "guardia cansado",
+      "canonical_candidate": "guardia cansado",
+      "entity_kind": "character",
+      "preferred_slug": "guardia_cansado",
+      "aliases": [],
+      "summary": "Mención episódica local.",
+      "key_facts": [
+        "Aparece en la estación y no interviene después."
+      ],
+      "relationships": [],
+      "chapter_refs": [
+        "ch_001"
+      ],
+      "source_mentions": [
+        "guardia cansado"
+      ],
+      "confidence": 0.42,
+      "review_state": "review",
+      "naming_quality": "descriptor",
+      "is_stable_entity": false,
+      "needs_review": true,
+      "review_reason": "Mención episódica de baja persistencia."
+    }
+  ]
+}

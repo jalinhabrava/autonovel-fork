@@ -1,0 +1,85 @@
+{
+  "chapters": [
+    {
+      "chapter_id": "ch_003",
+      "chapter_title_original": "Capítulo 3 — La promesa en la torre",
+      "chapter_title_canonical": "Capítulo 3 — La promesa en la torre",
+      "chapter_label_type": "episode",
+      "chapter_number_in_label": 3,
+      "sequence_index": 3,
+      "chapter_summary": "Mara reafirma su juramento y encuentra un mapa en la torre.",
+      "characters": [
+        {
+          "surface": "Mara Elian",
+          "canonical": "Mara Elian",
+          "canonical_candidate": "Mara Elian",
+          "naming_quality": "proper_name",
+          "facts": [
+            "Reafirma su juramento de proteger a Toren."
+          ],
+          "confidence": 0.94
+        },
+        {
+          "surface": "Toren",
+          "canonical": "Toren",
+          "canonical_candidate": "Toren",
+          "naming_quality": "proper_name",
+          "facts": [
+            "Acompaña a Mara dentro de la torre."
+          ],
+          "confidence": 0.9
+        }
+      ],
+      "places": [
+        {
+          "surface": "Aster Hollow",
+          "canonical": "Aster Hollow",
+          "canonical_candidate": "Aster Hollow",
+          "facts": [
+            "La torre conserva símbolos del valle."
+          ],
+          "confidence": 0.8
+        }
+      ],
+      "concepts": [],
+      "events": [
+        {
+          "surface": "juramento de Mara",
+          "canonical": "juramento de Mara",
+          "canonical_candidate": "juramento de Mara",
+          "facts": [
+            "El compromiso se repite en la torre."
+          ],
+          "confidence": 0.83
+        }
+      ],
+      "objects": [
+        {
+          "surface": "brújula de plata",
+          "canonical": "brújula de plata",
+          "canonical_candidate": "brújula de plata",
+          "facts": [
+            "Se usa para hallar la salida norte."
+          ],
+          "confidence": 0.86
+        }
+      ],
+      "relations": [
+        {
+          "source": "Mara Elian",
+          "target": "Toren",
+          "type": "alliance",
+          "facts": [
+            "Mara mantiene su protección sobre Toren."
+          ]
+        }
+      ],
+      "unresolved_mentions": [
+        {
+          "surface": "curandera adormilada",
+          "reason": "aparicion_breve_local"
+        }
+      ]
+    }
+  ]
+}

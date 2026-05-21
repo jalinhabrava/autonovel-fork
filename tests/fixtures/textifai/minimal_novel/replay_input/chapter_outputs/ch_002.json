@@ -1,0 +1,88 @@
+{
+  "chapters": [
+    {
+      "chapter_id": "ch_002",
+      "chapter_title_original": "Capítulo 2 — El puente de ceniza",
+      "chapter_title_canonical": "Capítulo 2 — El puente de ceniza",
+      "chapter_label_type": "episode",
+      "chapter_number_in_label": 2,
+      "sequence_index": 2,
+      "chapter_summary": "Mara y Toren cruzan el puente guiados por la brújula.",
+      "characters": [
+        {
+          "surface": "Mara",
+          "canonical": "Mara Elian",
+          "canonical_candidate": "Mara Elian",
+          "naming_quality": "proper_name",
+          "facts": [
+            "Sostiene a Toren para que no caiga."
+          ],
+          "confidence": 0.92
+        },
+        {
+          "surface": "Toren",
+          "canonical": "Toren",
+          "canonical_candidate": "Toren",
+          "naming_quality": "proper_name",
+          "facts": [
+            "Sigue la guía de Mara."
+          ],
+          "confidence": 0.9
+        },
+        {
+          "surface": "Lio el barquero",
+          "canonical": "Lio el barquero",
+          "canonical_candidate": "Lio el barquero",
+          "naming_quality": "proper_name",
+          "facts": [
+            "Advierte que no se queden en el puente."
+          ],
+          "confidence": 0.52
+        }
+      ],
+      "places": [
+        {
+          "surface": "Aster Hollow",
+          "canonical": "Aster Hollow",
+          "canonical_candidate": "Aster Hollow",
+          "facts": [
+            "Sigue como referencia del entorno."
+          ],
+          "confidence": 0.82
+        }
+      ],
+      "concepts": [],
+      "events": [],
+      "objects": [
+        {
+          "surface": "brújula de plata",
+          "canonical": "brújula de plata",
+          "canonical_candidate": "brújula de plata",
+          "facts": [
+            "La brújula apunta a la torre hundida."
+          ],
+          "confidence": 0.9
+        }
+      ],
+      "relations": [
+        {
+          "source": "Toren",
+          "target": "Mara Elian",
+          "type": "alliance",
+          "facts": [
+            "Toren depende de Mara durante el cruce."
+          ]
+        },
+        {
+          "source": "Mara Elian",
+          "target": "Aster Hollow",
+          "type": "located_in",
+          "facts": [
+            "El cruce ocurre en el entorno de Aster Hollow."
+          ]
+        }
+      ],
+      "unresolved_mentions": []
+    }
+  ]
+}
