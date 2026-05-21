@@ -48,6 +48,12 @@ class TextifAIReviewQueueRetentionSignalsTests(unittest.TestCase):
             self.assertTrue(metadata.get("do_not_auto_merge"))
             self.assertTrue(metadata.get("no_clear_existing_primary"))
             self.assertTrue(metadata.get("retention_review_required"))
+            self.assertEqual(metadata.get("candidate_status"), "no_clear_existing_primary")
+            self.assertEqual(metadata.get("signal_tier"), "medium")
+            self.assertEqual(metadata.get("surface_type"), "object_like")
+            self.assertEqual(metadata.get("semantic_value"), "persistent_object")
+            self.assertIsInstance(metadata.get("future_viewer_actions"), list)
+            self.assertIn("promote", metadata.get("future_viewer_actions") or [])
             self.assertIn("ch_001", metadata.get("chapter_refs") or [])
 
             self.assertIsNone(_review_item_by_source(review_queue, "guardia cansado"))
@@ -79,6 +85,8 @@ class TextifAIReviewQueueRetentionSignalsTests(unittest.TestCase):
                     "canonical_name": "la princesa",
                     "entity_kind": "character",
                     "naming_quality": "descriptor",
+                    "surface_type": "title_like",
+                    "language_hint": "es",
                     "decision": "discard",
                     "reason": "descriptor_with_possible_canonical_target",
                     "metrics": {
@@ -101,6 +109,8 @@ class TextifAIReviewQueueRetentionSignalsTests(unittest.TestCase):
                     "confidence": 0.72,
                     "review_state": "review",
                     "naming_quality": "descriptor",
+                    "surface_type": "title_like",
+                    "language_hint": "es",
                 }
             ],
         }
@@ -117,6 +127,12 @@ class TextifAIReviewQueueRetentionSignalsTests(unittest.TestCase):
         self.assertTrue(metadata.get("do_not_auto_merge"))
         self.assertFalse(metadata.get("no_clear_existing_primary"))
         self.assertEqual(metadata.get("naming_quality"), "descriptor")
+        self.assertEqual(metadata.get("signal_tier"), "medium")
+        self.assertEqual(metadata.get("candidate_status"), "weak_candidate")
+        self.assertEqual(metadata.get("surface_type"), "title_like")
+        self.assertEqual(metadata.get("semantic_value"), "title")
+        self.assertEqual(metadata.get("language_hint"), "es")
+        self.assertIn("attach_role_or_title", metadata.get("future_viewer_actions") or [])
 
     def test_pronoun_signal_never_gets_strong_primary_candidate(self):
         obsidian_import = {

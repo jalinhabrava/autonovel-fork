@@ -26,7 +26,9 @@
       "triage_status": "retention_signal_expected",
       "reason": "Aparece en replay input y expected artifacts manuales, pero el replay downstream actual no la retiene como primary y debe generar señal de review accionable.",
       "expected_recommended_action": "review_create_primary",
-      "expected_candidate_status": "no_clear_existing_primary"
+      "expected_candidate_status": "no_clear_existing_primary",
+      "expected_signal_tier": "medium",
+      "expected_semantic_value": "persistent_object"
     }
   ],
   "forbidden_primary_entities": [
@@ -87,6 +89,12 @@
     "current_empty_queue_allowed": false,
     "future_should_surface_retention_question": false,
     "current_retention_signal_expected": true,
+    "expected_retention_review_type": "entity_retention_review",
+    "expected_retention_signal_tiers": [
+      "high",
+      "medium",
+      "low"
+    ],
     "reason": "El replay actual debe generar item de revisión para entidad persistente omitida."
   },
   "notes": [

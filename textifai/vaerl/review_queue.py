@@ -273,16 +273,24 @@ def _retention_signal_items(*, primaries: list[dict[str, Any]], retention_contex
         if _resolve_key(str(discarded_entity.get("canonical_name") or ""), primary_index):
             continue
         candidate_entities = _retention_candidates_for_entity(discarded_entity=discarded_entity, primaries=primaries)
+        signal_tier = _retention_signal_tier(
+            discarded_entity=discarded_entity,
+            candidate_entities=candidate_entities,
+        )
         recommended_action = _recommended_retention_action(
             discarded_entity=discarded_entity,
             candidate_entities=candidate_entities,
         )
-        if not recommended_action:
+        if not recommended_action or signal_tier == "suppressed":
             continue
+        candidate_status = _candidate_status(
+            discarded_entity=discarded_entity,
+            candidate_entities=candidate_entities,
+        )
         items.append(
             _item(
                 review_type="entity_retention_review",
-                severity="medium",
+                severity=_tier_to_severity(signal_tier),
                 suggested_action=recommended_action,
                 source_entity=discarded_entity.get("canonical_name") or "",
                 target_text=discarded_entity.get("canonical_name") or "",
@@ -298,9 +306,15 @@ def _retention_signal_items(*, primaries: list[dict[str, Any]], retention_contex
                     "chapter_refs": list(discarded_entity.get("chapter_refs") or []),
                     "decision_reason": discarded_entity.get("_retention_decision_reason") or "",
                     "recommended_action": recommended_action,
+                    "signal_tier": signal_tier,
+                    "candidate_status": candidate_status,
                     "do_not_auto_merge": True,
                     "no_clear_existing_primary": not bool(candidate_entities),
                     "retention_review_required": True,
+                    "language_hint": discarded_entity.get("language_hint") or "",
+                    "surface_type": _surface_type(discarded_entity),
+                    "semantic_value": _semantic_value(discarded_entity),
+                    "future_viewer_actions": _future_viewer_actions(recommended_action),
                 },
             )
         )
@@ -308,7 +322,7 @@ def _retention_signal_items(*, primaries: list[dict[str, Any]], retention_contex
 
 
 def _retention_candidates_for_entity(*, discarded_entity: dict[str, Any], primaries: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    if _is_pronoun_like(discarded_entity.get("canonical_name")):
+    if _is_pronoun_like_entity(discarded_entity):
         return []
     candidates = _candidate_entities_for_review(discarded_entity, primaries)
     for candidate in candidates:
@@ -319,10 +333,11 @@ def _retention_candidates_for_entity(*, discarded_entity: dict[str, Any], primar
 def _recommended_retention_action(*, discarded_entity: dict[str, Any], candidate_entities: list[dict[str, Any]]) -> str:
     naming_quality = str(discarded_entity.get("naming_quality") or "").strip().casefold()
     entity_kind = str(discarded_entity.get("entity_kind") or "").strip().casefold()
-    if _is_pronoun_like(discarded_entity.get("canonical_name")):
-        return "review_insufficient_evidence"
+    surface_type = _surface_type(discarded_entity)
+    if surface_type == "pronoun_like":
+        return ""
     if candidate_entities:
-        if naming_quality in {"descriptor", "title_like"}:
+        if surface_type in {"descriptor_like", "title_like", "role_like"} or naming_quality in {"descriptor", "title_like", "role_like"}:
             return "review_attach_role_or_title"
         return "review_merge_or_alias"
     if entity_kind in _durable_entity_kinds() and _has_retention_weight(discarded_entity):
@@ -362,6 +377,8 @@ def _collect_discarded_entities(*, retention_context: dict[str, Any]) -> list[di
                 "review_state": base.get("review_state") or "review",
                 "confidence": base.get("confidence") if base.get("confidence") is not None else 0.0,
                 "naming_quality": decision.get("naming_quality") or base.get("naming_quality") or "",
+                "surface_type": decision.get("surface_type") or base.get("surface_type") or "",
+                "language_hint": decision.get("language_hint") or base.get("language_hint") or "",
                 "_retention_decision_reason": decision.get("reason") or "",
                 "_metrics": metrics,
             }
@@ -568,15 +585,15 @@ def _has_retention_weight(entity: dict[str, Any]) -> bool:
 
 
 def _is_forbidden_ephemeral_retention_candidate(entity: dict[str, Any]) -> bool:
-    if _is_pronoun_like(entity.get("canonical_name")):
+    if _is_pronoun_like_entity(entity):
         return True
     if _has_retention_weight(entity):
         return False
     entity_kind = str(entity.get("entity_kind") or "").strip().casefold()
-    naming_quality = str(entity.get("naming_quality") or "").strip().casefold()
+    surface_type = _surface_type(entity)
     if entity_kind == "object":
         return False
-    return naming_quality in {"descriptor", "pronoun_like"} or entity_kind in {"character", "creature"}
+    return surface_type in {"descriptor_like", "title_like", "role_like", "pronoun_like"} or entity_kind in {"character", "creature"}
 
 
 def _durable_entity_kinds() -> set[str]:
@@ -601,6 +618,85 @@ def _is_pronoun_like(value: Any) -> bool:
         "him",
         "her",
     }
+
+
+def _is_pronoun_like_entity(entity: dict[str, Any]) -> bool:
+    if _surface_type(entity) == "pronoun_like":
+        return True
+    return _is_pronoun_like(entity.get("canonical_name"))
+
+
+def _surface_type(entity: dict[str, Any]) -> str:
+    explicit = str(entity.get("surface_type") or "").strip().casefold()
+    if explicit:
+        return explicit
+    naming_quality = str(entity.get("naming_quality") or "").strip().casefold()
+    if naming_quality == "pronoun_like":
+        return "pronoun_like"
+    if naming_quality == "descriptor":
+        return "descriptor_like"
+    if naming_quality in {"title_like", "role_like"}:
+        return naming_quality
+    entity_kind = str(entity.get("entity_kind") or "").strip().casefold()
+    if entity_kind == "object":
+        return "object_like"
+    if _looks_specific(entity.get("canonical_name")):
+        return "named_entity_like"
+    return "mention_like"
+
+
+def _semantic_value(entity: dict[str, Any]) -> str:
+    surface_type = _surface_type(entity)
+    if surface_type == "object_like":
+        return "persistent_object"
+    if surface_type in {"descriptor_like", "title_like", "role_like"}:
+        return surface_type.removesuffix("_like")
+    if surface_type == "pronoun_like":
+        return "noise"
+    entity_kind = str(entity.get("entity_kind") or "").strip().casefold()
+    if entity_kind in _durable_entity_kinds():
+        return "durable_entity"
+    return "secondary_mention"
+
+
+def _candidate_status(*, discarded_entity: dict[str, Any], candidate_entities: list[dict[str, Any]]) -> str:
+    if _surface_type(discarded_entity) == "pronoun_like":
+        return "insufficient_evidence"
+    if not candidate_entities:
+        return "no_clear_existing_primary" if _has_retention_weight(discarded_entity) else "insufficient_evidence"
+    top_score = _safe_float(candidate_entities[0].get("score"))
+    return "strong_candidate" if top_score >= 0.85 else "weak_candidate"
+
+
+def _retention_signal_tier(*, discarded_entity: dict[str, Any], candidate_entities: list[dict[str, Any]]) -> str:
+    surface_type = _surface_type(discarded_entity)
+    entity_kind = str(discarded_entity.get("entity_kind") or "").strip().casefold()
+    if surface_type == "pronoun_like":
+        return "suppressed"
+    if candidate_entities:
+        top_score = _safe_float(candidate_entities[0].get("score"))
+        if surface_type in {"descriptor_like", "title_like", "role_like"} and _has_retention_weight(discarded_entity):
+            return "high" if top_score >= 0.85 else "medium"
+        return "medium" if top_score >= 0.6 else "low"
+    if entity_kind in _durable_entity_kinds() and _has_retention_weight(discarded_entity):
+        return "medium"
+    return "low" if _has_retention_weight(discarded_entity) else "suppressed"
+
+
+def _tier_to_severity(signal_tier: str) -> str:
+    return {"high": "high", "medium": "medium", "low": "low", "suppressed": "low"}.get(signal_tier, "medium")
+
+
+def _future_viewer_actions(recommended_action: str) -> list[str]:
+    if recommended_action == "review_merge_or_alias":
+        return ["merge", "mark_alias", "keep_secondary", "reject_noise"]
+    if recommended_action == "review_attach_role_or_title":
+        return ["attach_role_or_title", "merge", "mark_alias", "keep_secondary", "reject_noise"]
+    if recommended_action == "review_create_primary":
+        return ["promote", "keep_secondary", "reject_noise"]
+    if recommended_action == "review_enrich_existing_entity":
+        return ["enrich_existing_entity", "merge", "keep_secondary", "reject_noise"]
+    return ["keep_secondary", "reject_noise"]
 
 
 def _confidence_bucket(score: float) -> str:

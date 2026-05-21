@@ -104,6 +104,12 @@ class TextifAIReplayExpectedDriftRulesTests(unittest.TestCase):
         metadata = compass_item.get("metadata") or {}
         self.assertTrue(metadata.get("do_not_auto_merge"))
         self.assertTrue(metadata.get("no_clear_existing_primary"))
+        optional = next(item for item in expectations["optional_entities"] if item["canonical_name"] == "brújula de plata")
+        self.assertEqual(compass_item.get("review_type"), queue_expectation.get("expected_retention_review_type"))
+        self.assertEqual(metadata.get("candidate_status"), optional.get("expected_candidate_status"))
+        self.assertEqual(metadata.get("signal_tier"), optional.get("expected_signal_tier"))
+        self.assertEqual(metadata.get("semantic_value"), optional.get("expected_semantic_value"))
+        self.assertIn(metadata.get("signal_tier"), queue_expectation.get("expected_retention_signal_tiers") or [])
 
         drift = _drift_by_id(expectations, "empty_review_queue_for_retention_question")
         self.assertFalse(drift.get("accepted_temporarily"))
