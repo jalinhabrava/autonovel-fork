@@ -90,6 +90,14 @@ def _review_entity_items(*, reviews: list[dict[str, Any]], primaries: list[dict[
         candidates = _candidate_entities_for_review(review, primaries)
         confidence = _safe_float(review.get("confidence"))
         naming_quality = str(review.get("naming_quality") or "unknown").strip().casefold()
+        normalized_object_retention = _normalized_object_retention_item(
+            review=review,
+            candidate_entities=candidates,
+            confidence=confidence,
+        )
+        if normalized_object_retention is not None:
+            items.append(normalized_object_retention)
+            continue
         severity = "medium" if candidates or confidence >= 0.65 else "low"
         items.append(
             _item(
@@ -115,6 +123,58 @@ def _review_entity_items(*, reviews: list[dict[str, Any]], primaries: list[dict[
             )
         )
     return items
+
+def _normalized_object_retention_item(
+    *,
+    review: dict[str, Any],
+    candidate_entities: list[dict[str, Any]],
+    confidence: float,
+) -> dict[str, Any] | None:
+    entity_kind = str(review.get("entity_kind") or "").strip().casefold()
+    if entity_kind != "object":
+        return None
+    if _is_forbidden_ephemeral_retention_candidate(review):
+        return None
+    if not _has_retention_weight(review):
+        return None
+    top_score = _safe_float(candidate_entities[0].get("score")) if candidate_entities else 0.0
+    if top_score >= 0.85:
+        return None
+    recommended_action = "review_create_primary" if not candidate_entities else "review_keep_secondary"
+    candidate_status = _candidate_status(discarded_entity=review, candidate_entities=candidate_entities)
+    return _item(
+        review_type="entity_retention_review",
+        severity="medium",
+        suggested_action=recommended_action,
+        source_entity=review.get("canonical_name") or "",
+        target_text=review.get("canonical_name") or "",
+        candidate_entities=candidate_entities,
+        evidence=[
+            *_evidence("key_fact", review.get("key_facts") or [], limit=3),
+            *_evidence("source_mention", review.get("source_mentions") or [], limit=3),
+        ],
+        confidence=confidence,
+        metadata={
+            "entity_kind": review.get("entity_kind") or "",
+            "preferred_slug": review.get("preferred_slug") or "",
+            "naming_quality": str(review.get("naming_quality") or "unknown").strip().casefold(),
+            "review_reason": review.get("review_reason") or "",
+            "review_reason_code": review.get("review_reason_code") or "",
+            "relationship_count": len([rel for rel in review.get("relationships") or [] if isinstance(rel, dict)]),
+            "chapter_refs": list(review.get("chapter_refs") or []),
+            "decision_reason": review.get("review_reason") or review.get("review_reason_code") or "durable_object_review_entity_normalized",
+            "recommended_action": recommended_action,
+            "signal_tier": "medium",
+            "candidate_status": candidate_status,
+            "do_not_auto_merge": True,
+            "no_clear_existing_primary": not bool(candidate_entities),
+            "retention_review_required": True,
+            "language_hint": review.get("language_hint") or "",
+            "surface_type": _surface_type(review),
+            "semantic_value": _semantic_value(review),
+            "future_viewer_actions": ["promote", "keep_secondary", "reject_noise"],
+        },
+    )
 
 
 def _unresolved_relationship_items(

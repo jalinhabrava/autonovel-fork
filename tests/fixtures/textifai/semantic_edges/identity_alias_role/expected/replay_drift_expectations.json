@@ -17,11 +17,15 @@
     {
       "canonical_name": "llave de cristal",
       "entity_kind": "object",
-      "expected_behavior": "primary_or_actionable_review_signal",
-      "current_observed_behavior": "retained_as_review_entity_with_generic_review_entity_item",
-      "accepted_temporarily": true,
+      "expected_behavior": "actionable_entity_retention_review_signal",
+      "current_observed_behavior": "retained_as_review_entity_with_entity_retention_review_metadata",
+      "accepted_temporarily": false,
       "expected_surface_type": "object_like",
-      "expected_semantic_value": "persistent_object"
+      "expected_semantic_value": "persistent_object",
+      "expected_review_type": "entity_retention_review",
+      "expected_recommended_action": "review_create_primary",
+      "expected_candidate_status": "no_clear_existing_primary",
+      "expected_signal_tier": "medium"
     },
     {
       "surface": "la princesa",
@@ -106,10 +110,11 @@
       "recommended_actions": [
         "review_create_primary",
         "review_keep_secondary",
-        "merge_into_primary_or_keep_review"
+        "review_insufficient_evidence"
       ],
       "current_signal_required": true,
-      "known_drift_id": "persistent_object_review_entity_without_retention_metadata"
+      "known_drift_id": "",
+      "current_behavior": "entity_retention_review_with_modern_metadata"
     }
   ],
   "known_current_drift": [
@@ -133,13 +138,6 @@
       "observed": "alias_and_source_mention_on_Ren_Tal_without_review_queue_item",
       "accepted_temporarily": true,
       "future_desired_behavior": "surface_as_descriptor_review_or_explicit_alias_decision"
-    },
-    {
-      "drift_id": "persistent_object_review_entity_without_retention_metadata",
-      "surface": "llave de cristal",
-      "observed": "retained_as_review_entity_with_generic_review_entity_item",
-      "accepted_temporarily": true,
-      "future_desired_behavior": "primary_object_or_entity_retention_review_with_candidate_status_and_future_viewer_actions"
     }
   ],
   "non_negotiable_failures": [
@@ -165,7 +163,19 @@
   ],
   "notes": [
     "Replay provider-free observado en Safepoint 033.",
-    "No se hicieron cambios de runtime para reducir drift.",
-    "Este archivo separa manual expectation, observed behavior y drift aceptado temporalmente."
+    "Object retention metadata normalized in Safepoint 034 without schema version change.",
+    "Descriptor/title/role drifts remain intentionally deferred.",
+    "Este archivo separa manual expectation, observed behavior, drift aceptado temporalmente y behavior resuelto."
+  ],
+  "resolved_current_behavior": [
+    {
+      "drift_id": "persistent_object_review_entity_without_retention_metadata",
+      "surface": "llave de cristal",
+      "observed": "entity_retention_review_with_signal_tier_candidate_status_semantic_value_future_viewer_actions",
+      "accepted_temporarily": false,
+      "future_desired_behavior": "primary_object_or_entity_retention_review_with_candidate_status_and_future_viewer_actions",
+      "resolved_by": "safepoint-034_object-retention-signal-normalization",
+      "current_behavior": "llave_de_cristal_review_entity_is_normalized_to_entity_retention_review"
+    }
   ]
 }

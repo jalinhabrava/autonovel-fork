@@ -30,3 +30,9 @@ Desde `safepoint-033`, `replay_drift_expectations.json` registra observación re
 - `llave de cristal` queda retenida como review entity con review item genérico, no como `entity_retention_review` con metadata nueva.
 
 Estos son drifts conocidos, no fixes runtime.
+
+### Safepoint 034 update
+
+`llave de cristal` ya no se registra como drift de metadata de retención: el output esperado actual debe incluir un `entity_retention_review` moderno con `signal_tier`, `candidate_status`, `semantic_value`, `future_viewer_actions` y `do_not_auto_merge`.
+
+Los drifts de descriptor/title/role (`la princesa`, `la heredera silenciosa`, `el muchacho`) siguen diferidos.

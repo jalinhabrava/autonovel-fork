@@ -112,15 +112,22 @@ class TextifAISemanticEdgeReplayContractsTests(unittest.TestCase):
 
         key_entity = _entity_by_name(entities, "llave de cristal")
         key_item = _review_item_by_source_or_target(items, "llave de cristal")
-        self.assertTrue(key_entity is not None or key_item is not None)
-        if key_entity is not None and _is_primary(key_entity):
-            self.assertEqual(key_entity.get("entity_kind"), "object")
-        elif key_item is not None:
-            self.assertIn(key_item.get("suggested_action"), {"review_create_primary", "review_keep_secondary", "merge_into_primary_or_keep_review"})
-            if key_item.get("review_type") != "entity_retention_review":
-                self.assertTrue(_drift_is_declared(expectations, "persistent_object_review_entity_without_retention_metadata"))
-        else:
-            self.fail("llave de cristal missing without actionable review item")
+        self.assertIsNotNone(key_entity)
+        self.assertFalse(_is_primary(key_entity), key_entity)
+        self.assertIsNotNone(key_item)
+        self.assertEqual(key_item.get("review_type"), "entity_retention_review")
+        self.assertIn(key_item.get("suggested_action"), {"review_create_primary", "review_keep_secondary", "review_insufficient_evidence"})
+        metadata = key_item.get("metadata") or {}
+        self.assertEqual(metadata.get("signal_tier"), "medium")
+        self.assertEqual(metadata.get("surface_type"), "object_like")
+        self.assertEqual(metadata.get("semantic_value"), "persistent_object")
+        self.assertTrue(metadata.get("do_not_auto_merge"))
+        if not (key_item.get("candidate_entities") or []):
+            self.assertEqual(metadata.get("candidate_status"), "no_clear_existing_primary")
+        viewer_actions = metadata.get("future_viewer_actions") or []
+        self.assertIn("promote", viewer_actions)
+        self.assertIn("keep_secondary", viewer_actions)
+        self.assertIn("reject_noise", viewer_actions)
 
         self.assertIsNone(_review_item_by_source_or_target(items, "ella"))
         self.assertIsNone(_review_item_by_source_or_target(items, "guardia somnoliento"))
@@ -130,11 +137,15 @@ class TextifAISemanticEdgeReplayContractsTests(unittest.TestCase):
         self.assertTrue(drift_ids)
         self.assertIn("title_surface_alias_without_review_signal", drift_ids)
         self.assertIn("descriptor_surface_alias_without_enrichment_signal", drift_ids)
-        self.assertIn("persistent_object_review_entity_without_retention_metadata", drift_ids)
+        self.assertNotIn("persistent_object_review_entity_without_retention_metadata", drift_ids)
         for drift in expectations.get("known_current_drift") or []:
             self.assertIn("observed", drift)
             self.assertIn("future_desired_behavior", drift)
             self.assertIn("accepted_temporarily", drift)
+
+        resolved = expectations.get("resolved_current_behavior") or []
+        resolved_ids = {item.get("drift_id") for item in resolved}
+        self.assertIn("persistent_object_review_entity_without_retention_metadata", resolved_ids)
 
         failures = expectations.get("non_negotiable_failures") or []
         self.assertIn("Sera Valen missing", failures)
