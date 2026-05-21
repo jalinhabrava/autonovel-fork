@@ -1,0 +1,73 @@
+{
+  "schema_version": "textifai.review_queue.v1",
+  "status": "ready_for_author_review",
+  "item_count": 2,
+  "counts_by_type": {
+    "review_entity": 1,
+    "invariant_review_count_range": 1
+  },
+  "counts_by_severity": {
+    "medium": 1,
+    "low": 1
+  },
+  "items": [
+    {
+      "review_item_id": "synthetic-review-entity-guardia",
+      "review_type": "review_entity",
+      "severity": "low",
+      "suggested_action": "merge_into_primary_or_keep_review",
+      "source_entity": "guardia cansado",
+      "target_text": "guardia cansado",
+      "candidate_entities": [],
+      "evidence": [
+        {
+          "kind": "source_mention",
+          "text": "guardia cansado"
+        }
+      ],
+      "confidence": 0.42,
+      "blocking_phase1_gate": false,
+      "can_auto_apply": false,
+      "metadata": {
+        "entity_kind": "character",
+        "preferred_slug": "guardia_cansado",
+        "naming_quality": "descriptor",
+        "review_reason": "Mención episódica con baja persistencia.",
+        "review_reason_code": "ephemeral_single_scene",
+        "chapter_refs": [
+          "ch_001"
+        ],
+        "chapter_ref_count": 1
+      }
+    },
+    {
+      "review_item_id": "synthetic-invariant-review-count",
+      "review_type": "invariant_review_count_range",
+      "severity": "medium",
+      "suggested_action": "inspect_invariant_failure",
+      "source_entity": "",
+      "target_text": "review_count_range",
+      "candidate_entities": [],
+      "evidence": [],
+      "confidence": 0.0,
+      "blocking_phase1_gate": false,
+      "can_auto_apply": false,
+      "metadata": {
+        "check_name": "review_count_range",
+        "check_status": "warn",
+        "details": {
+          "review_count": 1,
+          "max": 0
+        }
+      }
+    }
+  ],
+  "policy": {
+    "pending_reviews_are_expected": true,
+    "can_auto_apply_default": false,
+    "notes": [
+      "The goal is not zero pending reviews.",
+      "Each item should carry enough metadata for author-assisted merge, rejection, promotion, or confirmation."
+    ]
+  }
+}

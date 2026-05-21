@@ -1,0 +1,230 @@
+{
+  "work": {
+    "title": "La brújula de Aster Hollow",
+    "language": "es"
+  },
+  "chapters": [
+    {
+      "chapter_id": "ch_001",
+      "summary": "Mara y Toren preparan su salida de Aster Hollow."
+    },
+    {
+      "chapter_id": "ch_002",
+      "summary": "Cruzan el puente de ceniza guiados por la brújula de plata."
+    },
+    {
+      "chapter_id": "ch_003",
+      "summary": "Mara reafirma su juramento en la torre hundida."
+    }
+  ],
+  "entities": [
+    {
+      "canonical_name": "Mara Elian",
+      "entity_kind": "character",
+      "preferred_slug": "mara_elian",
+      "aliases": [
+        "Mara"
+      ],
+      "summary": "Protagonista que guía la huida desde Aster Hollow.",
+      "key_facts": [
+        "Protege a Toren durante la huida.",
+        "Conserva la brújula de plata como objeto clave."
+      ],
+      "relationships": [
+        {
+          "target": "Toren",
+          "type": "alliance",
+          "facts": [
+            "Mara protege a Toren en varios capítulos."
+          ]
+        },
+        {
+          "target": "Aster Hollow",
+          "type": "located_in",
+          "facts": [
+            "Mara actúa inicialmente dentro de Aster Hollow."
+          ]
+        },
+        {
+          "target": "brújula de plata",
+          "type": "related_to",
+          "facts": [
+            "Mara usa la brújula para orientarse."
+          ]
+        }
+      ],
+      "chapter_refs": [
+        "ch_001",
+        "ch_002",
+        "ch_003"
+      ],
+      "source_mentions": [
+        "Mara Elian",
+        "Mara"
+      ],
+      "confidence": 0.93,
+      "review_state": "canonical"
+    },
+    {
+      "canonical_name": "Toren",
+      "entity_kind": "character",
+      "preferred_slug": "toren",
+      "aliases": [],
+      "summary": "Compañero de Mara y foco de protección durante la fuga.",
+      "key_facts": [
+        "Depende de la guía de Mara para salir del valle."
+      ],
+      "relationships": [
+        {
+          "target": "Mara Elian",
+          "type": "alliance",
+          "facts": [
+            "Toren confía en Mara para sobrevivir."
+          ]
+        },
+        {
+          "target": "Aster Hollow",
+          "type": "located_in",
+          "facts": [
+            "Toren parte desde Aster Hollow."
+          ]
+        }
+      ],
+      "chapter_refs": [
+        "ch_001",
+        "ch_002",
+        "ch_003"
+      ],
+      "source_mentions": [
+        "Toren"
+      ],
+      "confidence": 0.9,
+      "review_state": "canonical"
+    },
+    {
+      "canonical_name": "Aster Hollow",
+      "entity_kind": "place",
+      "preferred_slug": "aster_hollow",
+      "aliases": [],
+      "summary": "Pueblo y valle de origen del conflicto inicial.",
+      "key_facts": [
+        "Es el lugar del que Mara y Toren intentan escapar."
+      ],
+      "relationships": [
+        {
+          "target": "Mara Elian",
+          "type": "related_to",
+          "facts": [
+            "Mara inicia su recorrido en Aster Hollow."
+          ]
+        },
+        {
+          "target": "Toren",
+          "type": "related_to",
+          "facts": [
+            "Toren también pertenece al entorno de Aster Hollow."
+          ]
+        }
+      ],
+      "chapter_refs": [
+        "ch_001",
+        "ch_002",
+        "ch_003"
+      ],
+      "source_mentions": [
+        "Aster Hollow"
+      ],
+      "confidence": 0.88,
+      "review_state": "canonical"
+    },
+    {
+      "canonical_name": "brújula de plata",
+      "entity_kind": "object",
+      "preferred_slug": "brujula_de_plata",
+      "aliases": [
+        "la brújula"
+      ],
+      "summary": "Objeto persistente que orienta el movimiento narrativo.",
+      "key_facts": [
+        "La brújula señala la torre hundida.",
+        "Mara la conserva como promesa y guía."
+      ],
+      "relationships": [
+        {
+          "target": "Mara Elian",
+          "type": "related_to",
+          "facts": [
+            "Mara porta y consulta la brújula."
+          ]
+        }
+      ],
+      "chapter_refs": [
+        "ch_001",
+        "ch_002",
+        "ch_003"
+      ],
+      "source_mentions": [
+        "brújula de plata"
+      ],
+      "confidence": 0.87,
+      "review_state": "canonical"
+    },
+    {
+      "canonical_name": "juramento de Mara",
+      "entity_kind": "event",
+      "preferred_slug": "juramento_de_mara",
+      "aliases": [
+        "promesa de protección"
+      ],
+      "summary": "Evento estructural de compromiso recurrente.",
+      "key_facts": [
+        "Mara jura proteger a Toren hasta salir del valle."
+      ],
+      "relationships": [
+        {
+          "target": "Mara Elian",
+          "type": "related_to",
+          "facts": [
+            "El juramento nace de la decisión de Mara."
+          ]
+        },
+        {
+          "target": "Toren",
+          "type": "related_to",
+          "facts": [
+            "Toren es el beneficiario del juramento."
+          ]
+        }
+      ],
+      "chapter_refs": [
+        "ch_001",
+        "ch_003"
+      ],
+      "source_mentions": [
+        "juró que sacaría a Toren",
+        "protegería a Toren"
+      ],
+      "confidence": 0.8,
+      "review_state": "canonical"
+    },
+    {
+      "canonical_name": "guardia cansado",
+      "entity_kind": "character",
+      "preferred_slug": "guardia_cansado",
+      "aliases": [],
+      "summary": "Mención episódica local sin peso estructural.",
+      "key_facts": [
+        "Aparece una sola vez en la estación."
+      ],
+      "relationships": [],
+      "chapter_refs": [
+        "ch_001"
+      ],
+      "source_mentions": [
+        "guardia cansado"
+      ],
+      "confidence": 0.42,
+      "review_state": "review"
+    }
+  ]
+}

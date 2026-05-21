@@ -36,7 +36,13 @@ class TextifAIFixtureHarnessTests(unittest.TestCase):
             "semantic_invariants_audit.json",
             "web_ingestion_job.json",
         }
-        found = {path.name for path in self.fixture_root.rglob("*") if path.is_file() and path.name in forbidden_names}
+        found = {
+            path.name
+            for path in self.fixture_root.rglob("*")
+            if path.is_file()
+            and path.name in forbidden_names
+            and "expected" not in path.parts
+        }
         self.assertEqual(found, set())
 
     def test_fixture_manifest_does_not_point_to_runs_or_vault(self):

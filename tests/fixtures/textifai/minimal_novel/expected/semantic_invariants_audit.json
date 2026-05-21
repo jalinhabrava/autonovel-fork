@@ -1,0 +1,47 @@
+{
+  "schema_version": "textifai.semantic_invariants.v1",
+  "status": "pass_with_warnings",
+  "passed": true,
+  "failure_count": 0,
+  "warning_count": 1,
+  "entity_count": 6,
+  "primary_count": 5,
+  "review_count": 1,
+  "checks": [
+    {
+      "name": "obsidian_import_exists",
+      "status": "pass",
+      "details": {
+        "path": "tests/fixtures/textifai/minimal_novel/expected/obsidian_import.json"
+      }
+    },
+    {
+      "name": "required_primaries_present",
+      "status": "pass",
+      "details": {
+        "required_primaries": [
+          "Mara Elian",
+          "Toren",
+          "Aster Hollow",
+          "brújula de plata"
+        ],
+        "missing": []
+      }
+    },
+    {
+      "name": "review_count_range",
+      "status": "warn",
+      "details": {
+        "review_count": 1,
+        "max": 0
+      }
+    },
+    {
+      "name": "relationship_targets_resolve_to_primary",
+      "status": "pass",
+      "details": {
+        "unresolved": []
+      }
+    }
+  ]
+}
