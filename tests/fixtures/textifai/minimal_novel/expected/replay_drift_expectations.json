@@ -1,0 +1,95 @@
+{
+  "fixture_id": "minimal_novel",
+  "purpose": "Reglas manuales de drift esperado para comparar expectativas humanas del fixture minimal_novel contra replay provider-free generado en temp dir.",
+  "required_entities": [
+    {
+      "canonical_name": "Mara Elian",
+      "expected_role": "recurrent character",
+      "reason": "protagonista recurrente presente en los tres capítulos"
+    },
+    {
+      "canonical_name": "Toren",
+      "expected_role": "recurrent character",
+      "reason": "personaje recurrente y relación duradera con Mara"
+    },
+    {
+      "canonical_name": "Aster Hollow",
+      "expected_role": "persistent place",
+      "reason": "lugar persistente y contexto espacial principal"
+    }
+  ],
+  "optional_entities": [
+    {
+      "canonical_name": "brújula de plata",
+      "expected_role": "persistent object",
+      "current_status": "missing_from_replay_output",
+      "triage_status": "needs_retention_review",
+      "reason": "Aparece en replay input y expected artifacts manuales, pero el replay downstream actual no la retiene como primary."
+    }
+  ],
+  "forbidden_primary_entities": [
+    {
+      "canonical_name": "guardia cansado",
+      "reason": "mención episódica de baja persistencia"
+    },
+    {
+      "canonical_name": "curandera adormilada",
+      "reason": "aparición breve local"
+    }
+  ],
+  "expected_aliases": [
+    {
+      "alias": "Mara",
+      "canonical_name": "Mara Elian",
+      "acceptable_locations": [
+        "aliases",
+        "source_mentions"
+      ]
+    }
+  ],
+  "expected_relationships": [
+    {
+      "source": "Mara Elian",
+      "target": "Toren",
+      "direction": "either",
+      "required": true,
+      "reason": "relación duradera central"
+    },
+    {
+      "source": "Aster Hollow",
+      "target": "Mara Elian",
+      "direction": "either",
+      "required": false,
+      "reason": "relación espacial/contextual aceptable si aparece"
+    }
+  ],
+  "known_current_drift": [
+    {
+      "drift_id": "missing_persistent_object_brujula_de_plata",
+      "entity": "brújula de plata",
+      "observed": "missing_from_replay_output",
+      "accepted_temporarily": true,
+      "triage_status": "needs_retention_review",
+      "notes": "No codifica que la brújula no importe; codifica drift conocido pendiente de decisión."
+    },
+    {
+      "drift_id": "empty_review_queue_for_retention_question",
+      "artifact": "review_queue.json",
+      "observed": "empty_queue",
+      "accepted_temporarily": true,
+      "triage_status": "needs_review_queue_signal_decision",
+      "notes": "La queue vacía se acepta temporalmente, pero una fase futura debe decidir si la retención del objeto persistente debe surfaced como review."
+    }
+  ],
+  "review_queue_expectation": {
+    "current_empty_queue_allowed": true,
+    "future_should_surface_retention_question": true,
+    "reason": "El replay actual no genera item para la ausencia de objeto persistente; esta decisión queda pendiente."
+  },
+  "notes": [
+    "Este archivo es manual y sintético.",
+    "No es un snapshot de salida real completa.",
+    "No debe usarse para ocultar drift semántico; debe hacerlo visible y clasificable.",
+    "No implica cambios de runtime ni de contratos semánticos."
+  ]
+}

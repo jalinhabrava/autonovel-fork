@@ -20,3 +20,6 @@ Artifacts incluidos:
 - `obsidian_import.json`
 - `review_queue.json`
 - `semantic_invariants_audit.json`
+- `replay_drift_expectations.json`
+
+`replay_drift_expectations.json` no es un artifact generado. Es una regla manual para clasificar drift conocido entre expectativas humanas y output real de replay provider-free.
