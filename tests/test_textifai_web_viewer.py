@@ -309,6 +309,8 @@ class TextifAIWebViewerTests(unittest.TestCase):
             restored = next(job for job in payload["jobs"] if job["job_id"] == "job_restored_1")
             self.assertTrue(restored["restored_from_disk"])
             self.assertIn("artifact_availability", restored)
+            self.assertIn("can_compare", restored)
+            self.assertIn("comparability_manifest_available", restored)
 
     def test_log_json_falls_back_to_persisted_log(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -382,6 +384,8 @@ class TextifAIWebViewerTests(unittest.TestCase):
             self.assertIn("artifact_availability", snapshot)
             self.assertTrue(snapshot["artifact_availability"]["obsidian_import.json"])
             self.assertIn("project_id", snapshot)
+            self.assertIn("can_compare", snapshot)
+            self.assertIn("compare_unavailable_reason", snapshot)
 
     def test_web_ingestion_folders_without_metadata_reported_but_ignored(self):
         with tempfile.TemporaryDirectory() as tmp:

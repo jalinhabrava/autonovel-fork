@@ -1087,6 +1087,25 @@ button:hover, button.active {
   gap: 4px;
 }
 
+.wizard-qa-panel {
+  margin: 12px 0;
+  padding: 10px;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+}
+
+.qa-checklist {
+  display: grid;
+  gap: 8px;
+}
+
+.qa-checklist-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .wizard-job-row {
   border: 1px solid var(--line);
   border-radius: 12px;

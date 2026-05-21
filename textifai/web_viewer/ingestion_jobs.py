@@ -214,6 +214,10 @@ class IngestionJob:
                 "inspectable_artifacts_available": self.inspectable_artifacts_available,
                 "result_status": self.result_status,
                 "artifact_availability": dict(self.artifact_availability),
+                "can_compare": bool(self.project_id and self.artifact_availability.get("obsidian_import.json")),
+                "compare_unavailable_reason": _compare_unavailable_reason(self.project_id, self.artifact_availability),
+                "comparability_manifest_available": bool(self.artifact_availability.get("run_comparability_manifest.json")),
+                "semantic_artifacts_available": bool(self.artifact_availability.get("obsidian_import.json")),
                 "safe_output_root": self.safe_output_root,
                 "restored_from_disk": self.restored_from_disk,
                 "log_path_relative": self.log_path_relative,
@@ -579,6 +583,14 @@ def _coerce_int(value: Any) -> int | None:
         return None
 
 
+def _compare_unavailable_reason(project_id: str | None, artifact_availability: dict[str, bool]) -> str | None:
+    if not project_id:
+        return "project_id missing"
+    if not artifact_availability.get("obsidian_import.json"):
+        return "obsidian_import.json missing"
+    return None
+
+
 def _job_metadata_payload(job: IngestionJob) -> dict[str, Any]:
     snapshot = job.snapshot(log_tail_chars=0)
     return {
@@ -597,6 +609,10 @@ def _job_metadata_payload(job: IngestionJob) -> dict[str, Any]:
         "result_detected": snapshot["result_detected"],
         "result_status": snapshot["result_status"],
         "artifact_availability": snapshot["artifact_availability"],
+        "can_compare": snapshot["can_compare"],
+        "compare_unavailable_reason": snapshot["compare_unavailable_reason"],
+        "comparability_manifest_available": snapshot["comparability_manifest_available"],
+        "semantic_artifacts_available": snapshot["semantic_artifacts_available"],
         "result_warnings": snapshot["result_warnings"],
         "inspectable_artifacts_available": snapshot["inspectable_artifacts_available"],
         "review_queue_available": snapshot["review_queue_available"],
