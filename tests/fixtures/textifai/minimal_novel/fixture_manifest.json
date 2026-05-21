@@ -1,0 +1,93 @@
+{
+  "fixture_id": "minimal_novel",
+  "title": "La brújula de Aster Hollow",
+  "language": "es",
+  "purpose": "Fixture sintético mínimo y seguro para validar estructura de entrada narrativa antes de futuros contract tests y snapshot tests del flujo ingestion → VaERL.",
+  "source_files": [
+    "source/chapter_001.md",
+    "source/chapter_002.md",
+    "source/chapter_003.md"
+  ],
+  "intended_coverage": [
+    "dos personajes recurrentes",
+    "un personaje secundario de baja relevancia",
+    "un lugar persistente",
+    "un objeto persistente",
+    "una relación duradera fácil de resolver",
+    "un alias simple de nombre",
+    "un evento estructural sencillo",
+    "una mención episódica no persistente"
+  ],
+  "expected_persistent_entities": [
+    {
+      "name": "Mara Elian",
+      "kind": "character",
+      "notes": "protagonista recurrente; alias simple Mara"
+    },
+    {
+      "name": "Toren",
+      "kind": "character",
+      "notes": "coprotagonista recurrente protegido por Mara"
+    },
+    {
+      "name": "Aster Hollow",
+      "kind": "place",
+      "notes": "lugar persistente del arco mínimo"
+    },
+    {
+      "name": "brújula de plata",
+      "kind": "object",
+      "notes": "objeto persistente que guía desplazamiento y memoria"
+    }
+  ],
+  "expected_non_persistent_mentions": [
+    {
+      "name": "guardia cansado",
+      "kind": "character_like_ephemeral",
+      "notes": "mención episódica; no debería convertirse en primaria"
+    },
+    {
+      "name": "curandera adormilada",
+      "kind": "character_like_ephemeral",
+      "notes": "aparición breve y local"
+    }
+  ],
+  "expected_relationships": [
+    {
+      "source": "Mara Elian",
+      "target": "Toren",
+      "relationship": "protects",
+      "notes": "relación persistente y explícita"
+    },
+    {
+      "source": "Toren",
+      "target": "Mara Elian",
+      "relationship": "depends_on_or_trusts",
+      "notes": "dependencia/confianza fácil de inferir de forma segura"
+    }
+  ],
+  "expected_alias_cases": [
+    {
+      "canonical": "Mara Elian",
+      "variants": [
+        "Mara"
+      ],
+      "notes": "alias corto recurrente y claro"
+    }
+  ],
+  "expected_structural_events": [
+    {
+      "event": "huida de Aster Hollow",
+      "notes": "motor estructural sencillo del fixture"
+    },
+    {
+      "event": "juramento de Mara de proteger a Toren",
+      "notes": "evento/compromiso repetido en varios capítulos"
+    }
+  ],
+  "notes": [
+    "Fixture completamente sintético.",
+    "No usar para generar outputs en runs/ ni vault/.",
+    "No contiene snapshots de artifacts generados; solo expectativas humanas iniciales."
+  ]
+}
