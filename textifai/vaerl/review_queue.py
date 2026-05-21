@@ -22,6 +22,7 @@ def build_review_queue(
 
     items: list[dict[str, Any]] = []
     items.extend(_review_entity_items(reviews=reviews, primaries=primaries))
+    items.extend(_absorbed_semantic_surface_items(primaries=primaries, retention_context=retention_context or {}))
     items.extend(_unresolved_relationship_items(primaries=primaries, primary_index=primary_index, review_index=review_index))
     items.extend(_ontological_collision_items(primaries=primaries))
     items.extend(_weak_canonical_items(primaries=primaries))
@@ -380,6 +381,27 @@ def _retention_signal_items(*, primaries: list[dict[str, Any]], retention_contex
         )
     return items
 
+def _absorbed_semantic_surface_items(*, primaries: list[dict[str, Any]], retention_context: dict[str, Any]) -> list[dict[str, Any]]:
+    primary_index = _reference_index(primaries)
+    items: list[dict[str, Any]] = []
+    for entity in _semantic_surface_review_candidates(retention_context=retention_context):
+        if _is_forbidden_ephemeral_retention_candidate(entity):
+            continue
+        if _surface_type(entity) == "pronoun_like":
+            continue
+        if not _resolve_key(str(entity.get("canonical_name") or ""), primary_index):
+            continue
+        candidate_entities = _retention_candidates_for_entity(discarded_entity=entity, primaries=primaries)
+        if not candidate_entities:
+            continue
+        item = _normalized_absorbed_semantic_surface_item(
+            entity=entity,
+            candidate_entities=candidate_entities,
+        )
+        if item is not None:
+            items.append(item)
+    return items
+
 
 def _retention_candidates_for_entity(*, discarded_entity: dict[str, Any], primaries: list[dict[str, Any]]) -> list[dict[str, Any]]:
     if _is_pronoun_like_entity(discarded_entity):
@@ -405,6 +427,112 @@ def _recommended_retention_action(*, discarded_entity: dict[str, Any], candidate
     if _has_retention_weight(discarded_entity):
         return "review_keep_secondary"
     return ""
+
+def _semantic_surface_review_candidates(*, retention_context: dict[str, Any]) -> list[dict[str, Any]]:
+    resolved_entities = [item for item in (retention_context.get("resolved_entities") or []) if isinstance(item, dict)]
+    global_entities = [item for item in (retention_context.get("global_entities") or []) if isinstance(item, dict)]
+    seen: set[str] = set()
+    out: list[dict[str, Any]] = []
+    for entity in [*resolved_entities, *global_entities]:
+        surface_type = _surface_type(entity)
+        if surface_type not in {"title_like", "role_like", "descriptor_like"}:
+            continue
+        canonical_name = str(entity.get("canonical_name") or "").strip()
+        if not canonical_name:
+            continue
+        key = _key(canonical_name)
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        out.append(entity)
+    return out
+
+def _normalized_absorbed_semantic_surface_item(
+    *,
+    entity: dict[str, Any],
+    candidate_entities: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    recommended_action = _recommended_absorbed_surface_action(
+        entity=entity,
+        candidate_entities=candidate_entities,
+    )
+    if not recommended_action:
+        return None
+    candidate_status = _candidate_status(discarded_entity=entity, candidate_entities=candidate_entities)
+    signal_tier = _absorbed_surface_signal_tier(entity=entity, candidate_entities=candidate_entities)
+    return _item(
+        review_type="entity_retention_review",
+        severity=_tier_to_severity(signal_tier),
+        suggested_action=recommended_action,
+        source_entity=entity.get("canonical_name") or "",
+        target_text=entity.get("canonical_name") or "",
+        candidate_entities=candidate_entities,
+        evidence=[
+            *_evidence("key_fact", entity.get("key_facts") or [], limit=3),
+            *_evidence("source_mention", entity.get("source_mentions") or [], limit=3),
+            *_evidence("chapter_ref", entity.get("chapter_refs") or [], limit=3),
+        ],
+        confidence=_safe_float(entity.get("confidence")),
+        metadata={
+            "entity_kind": entity.get("entity_kind") or "",
+            "preferred_slug": entity.get("preferred_slug") or "",
+            "naming_quality": str(entity.get("naming_quality") or "unknown").strip().casefold(),
+            "review_reason": entity.get("review_reason") or "",
+            "review_reason_code": entity.get("review_reason_code") or "",
+            "relationship_count": len([rel for rel in entity.get("relationships") or [] if isinstance(rel, dict)]),
+            "chapter_refs": list(entity.get("chapter_refs") or []),
+            "decision_reason": _absorbed_surface_decision_reason(entity=entity, recommended_action=recommended_action),
+            "recommended_action": recommended_action,
+            "signal_tier": signal_tier,
+            "candidate_status": candidate_status,
+            "do_not_auto_merge": True,
+            "no_clear_existing_primary": False,
+            "retention_review_required": True,
+            "language_hint": entity.get("language_hint") or "",
+            "surface_type": _surface_type(entity),
+            "semantic_value": _semantic_value(entity),
+            "future_viewer_actions": _future_viewer_actions(recommended_action),
+        },
+    )
+
+def _recommended_absorbed_surface_action(*, entity: dict[str, Any], candidate_entities: list[dict[str, Any]]) -> str:
+    if not candidate_entities:
+        return ""
+    if _safe_float(candidate_entities[0].get("score")) < 0.6:
+        return ""
+    surface_type = _surface_type(entity)
+    if surface_type in {"title_like", "role_like"}:
+        return "review_attach_role_or_title" if _has_min_semantic_surface_evidence(entity) else ""
+    if surface_type == "descriptor_like":
+        return "review_enrich_existing_entity" if _has_descriptor_enrichment_signal_value(entity) else ""
+    return ""
+
+def _has_min_semantic_surface_evidence(entity: dict[str, Any]) -> bool:
+    return bool((entity.get("source_mentions") or []) or (entity.get("key_facts") or []) or (entity.get("chapter_refs") or []))
+
+def _has_descriptor_enrichment_signal_value(entity: dict[str, Any]) -> bool:
+    if not _has_min_semantic_surface_evidence(entity):
+        return False
+    metrics = entity.get("_metrics") or {}
+    fact_count = max(len(entity.get("key_facts") or []), int(metrics.get("fact_count") or 0))
+    chapter_ref_count = max(len(entity.get("chapter_refs") or []), int(metrics.get("chapter_ref_count") or 0))
+    confidence = _safe_float(entity.get("confidence"))
+    return fact_count >= 2 or chapter_ref_count >= 2 or confidence >= 0.74
+
+def _absorbed_surface_signal_tier(*, entity: dict[str, Any], candidate_entities: list[dict[str, Any]]) -> str:
+    if not candidate_entities:
+        return "suppressed"
+    top_score = _safe_float(candidate_entities[0].get("score"))
+    if top_score >= 0.85 and _surface_type(entity) in {"title_like", "role_like"}:
+        return "high"
+    return "medium"
+
+def _absorbed_surface_decision_reason(*, entity: dict[str, Any], recommended_action: str) -> str:
+    if recommended_action == "review_attach_role_or_title":
+        return "absorbed_title_or_role_surface_requires_editorial_attachment"
+    if recommended_action == "review_enrich_existing_entity":
+        return "absorbed_descriptor_surface_contains_non_trivial_enrichment_evidence"
+    return str(entity.get("review_reason") or entity.get("review_reason_code") or "absorbed_semantic_surface_requires_review")
 
 
 def _collect_discarded_entities(*, retention_context: dict[str, Any]) -> list[dict[str, Any]]:

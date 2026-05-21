@@ -88,27 +88,41 @@ class TextifAISemanticEdgeReplayContractsTests(unittest.TestCase):
         entities = obsidian_import.get("entities") or []
         items = review_queue.get("items") or []
 
-        sera = _entity_by_name(entities, "Sera Valen")
-        self.assertIsNotNone(sera)
-        for surface, drift_id in [
-            ("la princesa", "title_surface_alias_without_review_signal"),
-            ("la heredera silenciosa", "descriptor_surface_alias_without_enrichment_signal"),
-        ]:
-            item = _review_item_by_source_or_target(items, surface)
-            if item is not None:
-                self.assertTrue(item.get("candidate_entities") or _has_surface(sera, surface), item)
-                metadata = item.get("metadata") or {}
-                if metadata:
-                    self.assertTrue(metadata.get("do_not_auto_merge", True))
-            else:
-                self.assertTrue(_has_surface(sera, surface), surface)
-                self.assertTrue(_drift_is_declared(expectations, drift_id), drift_id)
+        title_item = _review_item_by_source_or_target(items, "la princesa")
+        self.assertIsNotNone(title_item)
+        self.assertEqual(title_item.get("review_type"), "entity_retention_review")
+        self.assertEqual(title_item.get("suggested_action"), "review_attach_role_or_title")
+        self.assertEqual(title_item.get("candidate_entities")[0].get("canonical_name"), "Sera Valen")
+        title_metadata = title_item.get("metadata") or {}
+        self.assertTrue(title_metadata.get("do_not_auto_merge"))
+        self.assertEqual(title_metadata.get("signal_tier"), "medium")
+        self.assertIn(title_metadata.get("candidate_status"), {"weak_candidate", "strong_candidate"})
+        self.assertEqual(title_metadata.get("surface_type"), "title_like")
+        self.assertIn(title_metadata.get("semantic_value"), {"title", "role"})
+        self.assertEqual(title_metadata.get("language_hint"), "es")
+        self.assertIn("attach_role_or_title", title_metadata.get("future_viewer_actions") or [])
+        self.assertTrue(title_item.get("evidence"))
+
+        descriptor_item = _review_item_by_source_or_target(items, "la heredera silenciosa")
+        self.assertIsNotNone(descriptor_item)
+        self.assertEqual(descriptor_item.get("review_type"), "entity_retention_review")
+        self.assertEqual(descriptor_item.get("suggested_action"), "review_enrich_existing_entity")
+        self.assertEqual(descriptor_item.get("candidate_entities")[0].get("canonical_name"), "Sera Valen")
+        descriptor_metadata = descriptor_item.get("metadata") or {}
+        self.assertTrue(descriptor_metadata.get("do_not_auto_merge"))
+        self.assertEqual(descriptor_metadata.get("signal_tier"), "medium")
+        self.assertIn(descriptor_metadata.get("candidate_status"), {"weak_candidate", "strong_candidate"})
+        self.assertEqual(descriptor_metadata.get("surface_type"), "descriptor_like")
+        self.assertEqual(descriptor_metadata.get("semantic_value"), "descriptor")
+        self.assertEqual(descriptor_metadata.get("language_hint"), "es")
+        self.assertIn("enrich_existing_entity", descriptor_metadata.get("future_viewer_actions") or [])
+        self.assertTrue(descriptor_item.get("evidence"))
 
         ren = _entity_by_name(entities, "Ren Tal")
         self.assertIsNotNone(ren)
         if _review_item_by_source_or_target(items, "el muchacho") is None:
             self.assertTrue(_has_surface(ren, "el muchacho"))
-            self.assertTrue(_drift_is_declared(expectations, "ren_descriptor_alias_without_review_signal"))
+            self.assertTrue(_drift_is_declared(expectations, "generic_descriptor_absorbed_without_review_signal"))
 
         key_entity = _entity_by_name(entities, "llave de cristal")
         key_item = _review_item_by_source_or_target(items, "llave de cristal")
@@ -135,8 +149,9 @@ class TextifAISemanticEdgeReplayContractsTests(unittest.TestCase):
     def _assert_drift_expectations_are_explicit(self, *, expectations: dict, obsidian_import: dict, review_queue: dict) -> None:
         drift_ids = {item.get("drift_id") for item in expectations.get("known_current_drift") or []}
         self.assertTrue(drift_ids)
-        self.assertIn("title_surface_alias_without_review_signal", drift_ids)
-        self.assertIn("descriptor_surface_alias_without_enrichment_signal", drift_ids)
+        self.assertIn("generic_descriptor_absorbed_without_review_signal", drift_ids)
+        self.assertNotIn("title_surface_absorbed_without_review_signal", drift_ids)
+        self.assertNotIn("descriptor_surface_absorbed_without_enrichment_signal", drift_ids)
         self.assertNotIn("persistent_object_review_entity_without_retention_metadata", drift_ids)
         for drift in expectations.get("known_current_drift") or []:
             self.assertIn("observed", drift)
@@ -146,12 +161,16 @@ class TextifAISemanticEdgeReplayContractsTests(unittest.TestCase):
         resolved = expectations.get("resolved_current_behavior") or []
         resolved_ids = {item.get("drift_id") for item in resolved}
         self.assertIn("persistent_object_review_entity_without_retention_metadata", resolved_ids)
+        self.assertIn("title_surface_absorbed_without_review_signal", resolved_ids)
+        self.assertIn("descriptor_surface_absorbed_without_enrichment_signal", resolved_ids)
 
         failures = expectations.get("non_negotiable_failures") or []
         self.assertIn("Sera Valen missing", failures)
         self.assertIn("Ren Tal missing", failures)
         self.assertIn("ella promoted as primary", failures)
         self.assertIn("output outside tempdir", failures)
+        self.assertIn("auto-merge occurs", failures)
+        self.assertIn("auto-promotion occurs", failures)
 
     def _assert_language_agnostic_metadata(self, *, expectations: dict) -> None:
         notes = expectations.get("language_agnostic_notes") or []

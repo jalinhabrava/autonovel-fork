@@ -30,18 +30,18 @@
     {
       "surface": "la princesa",
       "canonical_name": "Sera Valen",
-      "expected_behavior": "review_attach_role_or_title_signal_or_alias_with_drift",
-      "current_observed_behavior": "retained_as_alias_and_source_mention_without_review_signal",
-      "accepted_temporarily": true,
+      "expected_behavior": "review_attach_role_or_title_signal",
+      "current_observed_behavior": "entity_retention_review_with_attach_role_or_title_action",
+      "accepted_temporarily": false,
       "surface_type": "title_like",
       "semantic_value": "title"
     },
     {
       "surface": "la heredera silenciosa",
       "canonical_name": "Sera Valen",
-      "expected_behavior": "review_enrich_existing_entity_signal_or_alias_with_drift",
-      "current_observed_behavior": "retained_as_alias_and_source_mention_without_review_signal",
-      "accepted_temporarily": true,
+      "expected_behavior": "review_enrich_existing_entity_signal",
+      "current_observed_behavior": "entity_retention_review_with_enrich_existing_entity_action",
+      "accepted_temporarily": false,
       "surface_type": "descriptor_like",
       "semantic_value": "descriptor"
     },
@@ -90,8 +90,9 @@
         "review_attach_role_or_title",
         "review_merge_or_alias"
       ],
-      "current_signal_required": false,
-      "known_drift_id": "title_surface_alias_without_review_signal"
+      "current_signal_required": true,
+      "known_drift_id": "",
+      "current_behavior": "entity_retention_review_with_attach_role_or_title"
     },
     {
       "surface": "la heredera silenciosa",
@@ -101,8 +102,9 @@
         "review_attach_role_or_title",
         "review_merge_or_alias"
       ],
-      "current_signal_required": false,
-      "known_drift_id": "descriptor_surface_alias_without_enrichment_signal"
+      "current_signal_required": true,
+      "known_drift_id": "",
+      "current_behavior": "entity_retention_review_with_enrich_existing_entity"
     },
     {
       "surface": "llave de cristal",
@@ -119,34 +121,30 @@
   ],
   "known_current_drift": [
     {
-      "drift_id": "title_surface_alias_without_review_signal",
-      "surface": "la princesa",
-      "observed": "alias_and_source_mention_on_Sera_Valen_without_review_queue_item",
-      "accepted_temporarily": true,
-      "future_desired_behavior": "surface_as_attach_role_or_title_review_signal_with_do_not_auto_merge"
-    },
-    {
-      "drift_id": "descriptor_surface_alias_without_enrichment_signal",
-      "surface": "la heredera silenciosa",
-      "observed": "alias_and_source_mention_on_Sera_Valen_without_review_queue_item",
-      "accepted_temporarily": true,
-      "future_desired_behavior": "surface_as_enrich_existing_entity_review_signal_with_do_not_auto_merge"
-    },
-    {
-      "drift_id": "ren_descriptor_alias_without_review_signal",
+      "drift_id": "generic_descriptor_absorbed_without_review_signal",
       "surface": "el muchacho",
       "observed": "alias_and_source_mention_on_Ren_Tal_without_review_queue_item",
       "accepted_temporarily": true,
-      "future_desired_behavior": "surface_as_descriptor_review_or_explicit_alias_decision"
+      "future_desired_behavior": "surface_as_descriptor_review_or_explicit_alias_decision",
+      "surface_text": "el muchacho",
+      "candidate": "Ren Tal",
+      "fixture_case": "ren_descriptor",
+      "observed_behavior": "absorbed_as_alias_or_source_mention",
+      "decision": "suppressed_or_low_priority_due_to_generic_descriptor",
+      "reason": "generic_descriptor_without_enough_extra_facts"
     }
   ],
   "non_negotiable_failures": [
     "Sera Valen missing",
     "Ren Tal missing",
+    "la princesa promoted as primary",
+    "la heredera silenciosa promoted as primary",
     "ella promoted as primary",
     "guardia somnoliento promoted as primary",
     "provider call occurs",
-    "output outside tempdir"
+    "output outside tempdir",
+    "auto-merge occurs",
+    "auto-promotion occurs"
   ],
   "future_desired_behavior": [
     "pronoun-like surfaces remain suppressed and never become strong primaries",
@@ -164,10 +162,29 @@
   "notes": [
     "Replay provider-free observado en Safepoint 033.",
     "Object retention metadata normalized in Safepoint 034 without schema version change.",
-    "Descriptor/title/role drifts remain intentionally deferred.",
+    "Title and descriptor absorbed surfaces now emit explicit review signals in Safepoint 035.",
+    "Generic descriptor suppression remains explicit drift by policy.",
     "Este archivo separa manual expectation, observed behavior, drift aceptado temporalmente y behavior resuelto."
   ],
   "resolved_current_behavior": [
+    {
+      "drift_id": "title_surface_absorbed_without_review_signal",
+      "surface": "la princesa",
+      "observed": "entity_retention_review_with_attach_role_or_title_and_do_not_auto_merge",
+      "accepted_temporarily": false,
+      "future_desired_behavior": "surface_as_attach_role_or_title_review_signal_with_do_not_auto_merge",
+      "resolved_by": "safepoint-035_descriptor-role-review-signal-decision",
+      "current_behavior": "la_princesa_emits_medium_attach_role_or_title_signal"
+    },
+    {
+      "drift_id": "descriptor_surface_absorbed_without_enrichment_signal",
+      "surface": "la heredera silenciosa",
+      "observed": "entity_retention_review_with_enrich_existing_entity_and_do_not_auto_merge",
+      "accepted_temporarily": false,
+      "future_desired_behavior": "surface_as_enrich_existing_entity_review_signal_with_do_not_auto_merge",
+      "resolved_by": "safepoint-035_descriptor-role-review-signal-decision",
+      "current_behavior": "la_heredera_silenciosa_emits_medium_enrichment_signal"
+    },
     {
       "drift_id": "persistent_object_review_entity_without_retention_metadata",
       "surface": "llave de cristal",

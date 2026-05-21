@@ -65,6 +65,7 @@ TextifAI usa señales de retención para convertir dudas semánticas en decision
 ### `review_attach_role_or_title`
 
 - Cuándo: descriptor, título o rol apunta a entidad existente pero no debe ser primary separado.
+- Para surfaces absorbidas como alias/source mention, emitir solo si `surface_type`/`semantic_value` indica título/rol y existe candidato canonical claro.
 - Evidence esperado: surface, candidate entity, facts asociados y chapter refs.
 - `candidate_entities`: candidato probable.
 - Severity sugerida: `medium`; `high` si el descriptor contiene facts estructurales no presentes en canonical.
@@ -74,6 +75,7 @@ TextifAI usa señales de retención para convertir dudas semánticas en decision
 ### `review_enrich_existing_entity`
 
 - Cuándo: surface no es alias puro, pero trae facts útiles para enriquecer entidad existente.
+- Para descriptor absorbido, emitir solo si trae evidencia no trivial: facts múltiples, evidencia multi-capítulo o confianza suficiente.
 - Evidence esperado: facts nuevos, candidate entity, reason de enrichment.
 - `candidate_entities`: candidato probable.
 - Severity sugerida: `medium` o `high` si se perderían facts estructurales.
@@ -114,6 +116,7 @@ Para pronombre sin evidencia, clearly ephemeral/noise mention, una mención loca
 - Si existe detección específica por lengua, debe estar aislada, explícita y extensible.
 - Fallback conservador: si no sabemos, no promover ni mergear automáticamente.
 - Roles, títulos y descriptores deben preservarse como semántica revisable aunque varíen por lengua.
+- Descriptores genéricos con una sola mención débil se suprimen aunque estén absorbidos como alias/source mention, para evitar ruido.
 
 ## Future Viewer Actions
 
