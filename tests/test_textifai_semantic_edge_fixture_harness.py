@@ -47,13 +47,19 @@ class TextifAISemanticEdgeFixtureHarnessTests(unittest.TestCase):
             self.assertTrue(path.exists(), path)
             self.assertIsInstance(_load_json(path), dict)
 
-    def test_fixture_is_safe_and_has_no_replay_input_or_generated_logs(self):
+    def test_fixture_is_safe_and_has_no_generated_logs(self):
         forbidden_names = {
             "web_ingestion_job.log",
             "web_ingestion_job.json",
             "obsidian_import_audit.json",
         }
-        self.assertFalse((FIXTURE_ROOT / "replay_input").exists())
+        replay_input_root = FIXTURE_ROOT / "replay_input"
+        if replay_input_root.exists():
+            self.assertTrue((replay_input_root / "global_normalization.json").exists())
+            chapter_outputs = replay_input_root / "chapter_outputs"
+            self.assertTrue(chapter_outputs.exists())
+            for chapter_id in ("ch_001", "ch_002", "ch_003"):
+                self.assertTrue((chapter_outputs / f"{chapter_id}.json").exists())
         for path in FIXTURE_ROOT.rglob("*"):
             if not path.is_file():
                 continue

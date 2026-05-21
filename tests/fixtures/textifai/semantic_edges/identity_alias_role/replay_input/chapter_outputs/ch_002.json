@@ -1,0 +1,76 @@
+{
+  "chapters": [
+    {
+      "chapter_id": "ch_002",
+      "chapter_title_original": "Capítulo 2 — El corredor de piedra",
+      "chapter_title_canonical": "Capítulo 2 — El corredor de piedra",
+      "chapter_label_type": "episode",
+      "chapter_number_in_label": 2,
+      "sequence_index": 2,
+      "chapter_summary": "El descriptor de Sera añade facts mientras la relación con Ren se refuerza.",
+      "characters": [
+        {
+          "surface": "la heredera silenciosa",
+          "canonical": "la heredera silenciosa",
+          "canonical_candidate": "Sera Valen",
+          "naming_quality": "descriptor",
+          "facts": [
+            "Conoce el viejo juramento que la une a Ren Tal.",
+            "Cruza el corredor sin perder el pulso."
+          ],
+          "confidence": 0.75
+        },
+        {
+          "surface": "Sera Valen",
+          "canonical": "Sera Valen",
+          "canonical_candidate": "Sera Valen",
+          "naming_quality": "proper_name",
+          "facts": ["Sabe cuándo abrir la puerta solo si Ren está a salvo."],
+          "confidence": 0.9
+        },
+        {
+          "surface": "ella",
+          "canonical": "ella",
+          "canonical_candidate": "Sera Valen",
+          "naming_quality": "pronoun_like",
+          "facts": ["Ella recuerda la regla que debe proteger."],
+          "confidence": 0.57
+        },
+        {
+          "surface": "Ren Tal",
+          "canonical": "Ren Tal",
+          "canonical_candidate": "Ren Tal",
+          "naming_quality": "proper_name",
+          "facts": ["Advierte que la llave no debe caer en manos del consejo."],
+          "confidence": 0.89
+        }
+      ],
+      "places": [],
+      "concepts": [],
+      "events": [],
+      "objects": [
+        {
+          "surface": "llave de cristal",
+          "canonical": "llave de cristal",
+          "canonical_candidate": "llave de cristal",
+          "facts": ["La llave sigue siendo el objeto decisivo del plan."],
+          "confidence": 0.84
+        }
+      ],
+      "relations": [
+        {
+          "source": "Sera Valen",
+          "target": "Ren Tal",
+          "type": "alliance",
+          "facts": ["El juramento refuerza el secreto compartido entre ambos."]
+        }
+      ],
+      "unresolved_mentions": [
+        {
+          "surface": "guardia somnoliento",
+          "reason": "mencion_episodica_baja_persistencia"
+        }
+      ]
+    }
+  ]
+}

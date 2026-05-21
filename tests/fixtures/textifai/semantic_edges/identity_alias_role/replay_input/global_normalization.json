@@ -1,0 +1,224 @@
+{
+  "work": {
+    "title": "La llave del jardín seco",
+    "language": "es"
+  },
+  "entities": [
+    {
+      "canonical_name": "Sera Valen",
+      "canonical_candidate": "Sera Valen",
+      "entity_kind": "character",
+      "preferred_slug": "sera_valen",
+      "aliases": ["Sera"],
+      "summary": "Figura central del secreto compartido con Ren Tal.",
+      "key_facts": [
+        "Es conocida como la princesa.",
+        "Protege la salida y controla cuándo usar la llave de cristal."
+      ],
+      "relationships": [
+        {
+          "target": "Ren Tal",
+          "type": "alliance",
+          "facts": ["Sera y Ren sostienen un secreto compartido."]
+        }
+      ],
+      "chapter_refs": ["ch_001", "ch_002", "ch_003"],
+      "source_mentions": ["Sera Valen", "Sera"],
+      "confidence": 0.94,
+      "review_state": "canonical",
+      "naming_quality": "proper_name",
+      "surface_type": "named_entity_like",
+      "language_hint": "es",
+      "semantic_value": "durable_entity",
+      "is_stable_entity": true,
+      "needs_review": false,
+      "review_reason": ""
+    },
+    {
+      "canonical_name": "la princesa",
+      "canonical_candidate": "Sera Valen",
+      "entity_kind": "character",
+      "preferred_slug": "la_princesa",
+      "aliases": [],
+      "summary": "Surface de título asociado a Sera Valen.",
+      "key_facts": ["Se usa para referirse a Sera en contexto de poder o linaje."],
+      "relationships": [
+        {
+          "target": "Sera Valen",
+          "type": "related_to",
+          "facts": ["La princesa refiere a la misma figura que Sera Valen."]
+        }
+      ],
+      "chapter_refs": ["ch_001"],
+      "source_mentions": ["la princesa"],
+      "confidence": 0.72,
+      "review_state": "review",
+      "naming_quality": "descriptor",
+      "surface_type": "title_like",
+      "language_hint": "es",
+      "semantic_value": "title",
+      "is_stable_entity": false,
+      "needs_review": true,
+      "review_reason": "Surface de título; no promover automáticamente."
+    },
+    {
+      "canonical_name": "la heredera silenciosa",
+      "canonical_candidate": "Sera Valen",
+      "entity_kind": "character",
+      "preferred_slug": "la_heredera_silenciosa",
+      "aliases": [],
+      "summary": "Descriptor narrativo con facts nuevos sobre Sera Valen.",
+      "key_facts": [
+        "Conoce el juramento que protege a Ren Tal.",
+        "Atraviesa el corredor con control absoluto."
+      ],
+      "relationships": [
+        {
+          "target": "Sera Valen",
+          "type": "related_to",
+          "facts": ["El descriptor apunta a Sera Valen y añade facts útiles."]
+        }
+      ],
+      "chapter_refs": ["ch_002"],
+      "source_mentions": ["la heredera silenciosa"],
+      "confidence": 0.75,
+      "review_state": "review",
+      "naming_quality": "descriptor",
+      "surface_type": "descriptor_like",
+      "language_hint": "es",
+      "semantic_value": "descriptor",
+      "is_stable_entity": false,
+      "needs_review": true,
+      "review_reason": "Descriptor con facts potencialmente enriquecedores."
+    },
+    {
+      "canonical_name": "ella",
+      "canonical_candidate": "Sera Valen",
+      "entity_kind": "character",
+      "preferred_slug": "ella",
+      "aliases": [],
+      "summary": "Pronombre ligado a Sera en el fixture, no primary.",
+      "key_facts": ["Retoma decisiones ya atribuidas a Sera Valen."],
+      "relationships": [],
+      "chapter_refs": ["ch_001", "ch_002"],
+      "source_mentions": ["ella"],
+      "confidence": 0.58,
+      "review_state": "review",
+      "naming_quality": "pronoun_like",
+      "surface_type": "pronoun_like",
+      "language_hint": "es",
+      "semantic_value": "noise",
+      "is_stable_entity": false,
+      "needs_review": true,
+      "review_reason": "Pronombre; no promover automáticamente."
+    },
+    {
+      "canonical_name": "Ren Tal",
+      "canonical_candidate": "Ren Tal",
+      "entity_kind": "character",
+      "preferred_slug": "ren_tal",
+      "aliases": ["Ren"],
+      "summary": "Aliado principal de Sera Valen.",
+      "key_facts": [
+        "Sigue el plan de Sera.",
+        "Abre la salida del jardín seco."
+      ],
+      "relationships": [
+        {
+          "target": "Sera Valen",
+          "type": "alliance",
+          "facts": ["Ren comparte el secreto y colabora con Sera."]
+        }
+      ],
+      "chapter_refs": ["ch_001", "ch_002", "ch_003"],
+      "source_mentions": ["Ren Tal", "Ren"],
+      "confidence": 0.91,
+      "review_state": "canonical",
+      "naming_quality": "proper_name",
+      "surface_type": "named_entity_like",
+      "language_hint": "es",
+      "semantic_value": "durable_entity",
+      "is_stable_entity": true,
+      "needs_review": false,
+      "review_reason": ""
+    },
+    {
+      "canonical_name": "el muchacho",
+      "canonical_candidate": "Ren Tal",
+      "entity_kind": "character",
+      "preferred_slug": "el_muchacho",
+      "aliases": [],
+      "summary": "Descriptor asociado a Ren Tal.",
+      "key_facts": ["Repite el plan en voz baja para no olvidar ninguna señal."],
+      "relationships": [
+        {
+          "target": "Ren Tal",
+          "type": "related_to",
+          "facts": ["El muchacho refiere al mismo actor que Ren Tal."]
+        }
+      ],
+      "chapter_refs": ["ch_003"],
+      "source_mentions": ["el muchacho"],
+      "confidence": 0.68,
+      "review_state": "review",
+      "naming_quality": "descriptor",
+      "surface_type": "descriptor_like",
+      "language_hint": "es",
+      "semantic_value": "descriptor",
+      "is_stable_entity": false,
+      "needs_review": true,
+      "review_reason": "Descriptor; no convertir en primary separado."
+    },
+    {
+      "canonical_name": "llave de cristal",
+      "canonical_candidate": "llave de cristal",
+      "entity_kind": "object",
+      "preferred_slug": "llave_de_cristal",
+      "aliases": [],
+      "summary": "Objeto persistente usado por Sera y Ren.",
+      "key_facts": [
+        "Aparece en varios capítulos.",
+        "Permite abrir la salida del jardín seco."
+      ],
+      "relationships": [
+        {
+          "target": "Sera Valen",
+          "type": "related_to",
+          "facts": ["Sera decide cuándo usar la llave de cristal."]
+        }
+      ],
+      "chapter_refs": ["ch_001", "ch_002", "ch_003"],
+      "source_mentions": ["llave de cristal"],
+      "confidence": 0.85,
+      "review_state": "canonical",
+      "naming_quality": "descriptive",
+      "surface_type": "object_like",
+      "language_hint": "es",
+      "semantic_value": "persistent_object",
+      "is_stable_entity": true,
+      "needs_review": false,
+      "review_reason": ""
+    },
+    {
+      "canonical_name": "guardia somnoliento",
+      "canonical_candidate": "guardia somnoliento",
+      "entity_kind": "character",
+      "preferred_slug": "guardia_somnoliento",
+      "aliases": [],
+      "summary": "Mención episódica y local.",
+      "key_facts": ["Mira el humo del patio y no interviene."],
+      "relationships": [],
+      "chapter_refs": ["ch_002"],
+      "source_mentions": ["guardia somnoliento"],
+      "confidence": 0.41,
+      "review_state": "review",
+      "naming_quality": "descriptor",
+      "surface_type": "descriptor_like",
+      "language_hint": "es",
+      "semantic_value": "secondary_mention",
+      "is_stable_entity": false,
+      "needs_review": true,
+      "review_reason": "Mención episódica de baja persistencia."
+    }
+  ]
+}

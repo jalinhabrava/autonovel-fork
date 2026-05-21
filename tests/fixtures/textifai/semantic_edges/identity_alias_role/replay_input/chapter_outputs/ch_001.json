@@ -1,0 +1,84 @@
+{
+  "chapters": [
+    {
+      "chapter_id": "ch_001",
+      "chapter_title_original": "Capítulo 1 — La sala del mapa",
+      "chapter_title_canonical": "Capítulo 1 — La sala del mapa",
+      "chapter_label_type": "episode",
+      "chapter_number_in_label": 1,
+      "sequence_index": 1,
+      "chapter_summary": "Sera y Ren preparan una salida secreta con la llave de cristal.",
+      "characters": [
+        {
+          "surface": "Sera Valen",
+          "canonical": "Sera Valen",
+          "canonical_candidate": "Sera Valen",
+          "naming_quality": "proper_name",
+          "facts": ["Estudia el mapa roto y decide el plan."],
+          "confidence": 0.95
+        },
+        {
+          "surface": "Sera",
+          "canonical": "Sera Valen",
+          "canonical_candidate": "Sera Valen",
+          "naming_quality": "proper_name",
+          "facts": ["Muestra la llave de cristal a Ren Tal."],
+          "confidence": 0.92
+        },
+        {
+          "surface": "la princesa",
+          "canonical": "la princesa",
+          "canonical_candidate": "Sera Valen",
+          "naming_quality": "descriptor",
+          "facts": ["La princesa salió antes del alba según la cobertura del plan."],
+          "confidence": 0.72
+        },
+        {
+          "surface": "ella",
+          "canonical": "ella",
+          "canonical_candidate": "Sera Valen",
+          "naming_quality": "pronoun_like",
+          "facts": ["Ella guarda la llave en la manga."],
+          "confidence": 0.58
+        },
+        {
+          "surface": "Ren Tal",
+          "canonical": "Ren Tal",
+          "canonical_candidate": "Ren Tal",
+          "naming_quality": "proper_name",
+          "facts": ["Espera junto a la puerta hasta oír el plan completo."],
+          "confidence": 0.93
+        },
+        {
+          "surface": "Ren",
+          "canonical": "Ren Tal",
+          "canonical_candidate": "Ren Tal",
+          "naming_quality": "proper_name",
+          "facts": ["Promete seguir a Sera sin ruido."],
+          "confidence": 0.9
+        }
+      ],
+      "places": [],
+      "concepts": [],
+      "events": [],
+      "objects": [
+        {
+          "surface": "llave de cristal",
+          "canonical": "llave de cristal",
+          "canonical_candidate": "llave de cristal",
+          "facts": ["La salida depende de conservar la llave."],
+          "confidence": 0.87
+        }
+      ],
+      "relations": [
+        {
+          "source": "Sera Valen",
+          "target": "Ren Tal",
+          "type": "alliance",
+          "facts": ["Sera y Ren coordinan la salida secreta."]
+        }
+      ],
+      "unresolved_mentions": []
+    }
+  ]
+}

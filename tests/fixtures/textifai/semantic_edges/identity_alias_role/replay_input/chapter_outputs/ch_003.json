@@ -1,0 +1,68 @@
+{
+  "chapters": [
+    {
+      "chapter_id": "ch_003",
+      "chapter_title_original": "Capítulo 3 — La puerta del jardín seco",
+      "chapter_title_canonical": "Capítulo 3 — La puerta del jardín seco",
+      "chapter_label_type": "episode",
+      "chapter_number_in_label": 3,
+      "sequence_index": 3,
+      "chapter_summary": "Ren abre la salida mientras Sera protege el secreto compartido.",
+      "characters": [
+        {
+          "surface": "Ren Tal",
+          "canonical": "Ren Tal",
+          "canonical_candidate": "Ren Tal",
+          "naming_quality": "proper_name",
+          "facts": ["Abre el cierre oxidado de la puerta."],
+          "confidence": 0.92
+        },
+        {
+          "surface": "Ren",
+          "canonical": "Ren Tal",
+          "canonical_candidate": "Ren Tal",
+          "naming_quality": "proper_name",
+          "facts": ["Acepta guardar silencio hasta el final."],
+          "confidence": 0.89
+        },
+        {
+          "surface": "el muchacho",
+          "canonical": "el muchacho",
+          "canonical_candidate": "Ren Tal",
+          "naming_quality": "descriptor",
+          "facts": ["El muchacho repite el plan en voz baja para no olvidar ninguna señal."],
+          "confidence": 0.67
+        },
+        {
+          "surface": "Sera Valen",
+          "canonical": "Sera Valen",
+          "canonical_candidate": "Sera Valen",
+          "naming_quality": "proper_name",
+          "facts": ["Confirma que el secreto compartido sigue intacto."],
+          "confidence": 0.9
+        }
+      ],
+      "places": [],
+      "concepts": [],
+      "events": [],
+      "objects": [
+        {
+          "surface": "llave de cristal",
+          "canonical": "llave de cristal",
+          "canonical_candidate": "llave de cristal",
+          "facts": ["La llave permite abrir la puerta del jardín seco."],
+          "confidence": 0.86
+        }
+      ],
+      "relations": [
+        {
+          "source": "Ren Tal",
+          "target": "Sera Valen",
+          "type": "alliance",
+          "facts": ["Ren y Sera guardan el mismo secreto hasta el final."]
+        }
+      ],
+      "unresolved_mentions": []
+    }
+  ]
+}
