@@ -1,0 +1,42 @@
+{
+  "schema_version": "textifai.semantic_invariants.v1",
+  "status": "pass_with_warnings",
+  "passed": true,
+  "failure_count": 0,
+  "warning_count": 1,
+  "entity_count": 3,
+  "primary_count": 3,
+  "review_count": 3,
+  "checks": [
+    {
+      "name": "required_edge_primaries_present",
+      "status": "pass",
+      "details": {
+        "required_primaries": [
+          "Sera Valen",
+          "Ren Tal",
+          "llave de cristal"
+        ],
+        "missing": []
+      }
+    },
+    {
+      "name": "pronoun_not_promoted",
+      "status": "pass",
+      "details": {
+        "forbidden_primary_surfaces": [
+          "ella"
+        ],
+        "promoted": []
+      }
+    },
+    {
+      "name": "review_signal_count_expected",
+      "status": "warn",
+      "details": {
+        "review_count": 3,
+        "notes": "Review pressure is expected for semantic edge fixtures."
+      }
+    }
+  ]
+}

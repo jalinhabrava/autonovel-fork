@@ -29,6 +29,10 @@ Estos fixtures están pensados para fases posteriores como:
   - entidades persistentes intencionales
   - alias sencillo
   - menciones episódicas no persistentes
+- `semantic_edges/identity_alias_role/`
+  - fixture edge de identidad, alias, roles y retención
+  - expected artifacts manuales
+  - sin replay_input todavía
 
 ## Seguridad
 

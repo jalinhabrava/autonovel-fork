@@ -1,0 +1,166 @@
+{
+  "schema_version": "textifai.review_queue.v1",
+  "status": "ready_for_author_review",
+  "item_count": 3,
+  "counts_by_type": {
+    "entity_retention_review": 3
+  },
+  "counts_by_severity": {
+    "medium": 3
+  },
+  "items": [
+    {
+      "review_item_id": "rq_semantic_edge_title",
+      "review_type": "entity_retention_review",
+      "severity": "medium",
+      "suggested_action": "review_attach_role_or_title",
+      "source_entity": "la princesa",
+      "target_text": "la princesa",
+      "candidate_entities": [
+        {
+          "canonical_name": "Sera Valen",
+          "preferred_slug": "sera_valen",
+          "entity_kind": "character",
+          "review_state": "canonical",
+          "reason": "exact_alias_or_source_overlap",
+          "score": 0.8,
+          "confidence_bucket": "medium"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "source_mention",
+          "text": "la princesa"
+        }
+      ],
+      "confidence": 0.71,
+      "blocking_phase1_gate": false,
+      "can_auto_apply": false,
+      "metadata": {
+        "entity_kind": "character",
+        "naming_quality": "descriptor",
+        "chapter_refs": [
+          "ch_001"
+        ],
+        "decision_reason": "title_surface_points_to_existing_canonical",
+        "recommended_action": "review_attach_role_or_title",
+        "signal_tier": "medium",
+        "candidate_status": "weak_candidate",
+        "do_not_auto_merge": true,
+        "no_clear_existing_primary": false,
+        "retention_review_required": true,
+        "language_hint": "es",
+        "surface_type": "title_like",
+        "semantic_value": "title",
+        "future_viewer_actions": [
+          "attach_role_or_title",
+          "merge",
+          "mark_alias",
+          "keep_secondary",
+          "reject_noise"
+        ]
+      }
+    },
+    {
+      "review_item_id": "rq_semantic_edge_descriptor",
+      "review_type": "entity_retention_review",
+      "severity": "medium",
+      "suggested_action": "review_enrich_existing_entity",
+      "source_entity": "la heredera silenciosa",
+      "target_text": "la heredera silenciosa",
+      "candidate_entities": [
+        {
+          "canonical_name": "Sera Valen",
+          "preferred_slug": "sera_valen",
+          "entity_kind": "character",
+          "review_state": "canonical",
+          "reason": "descriptor_with_fact_overlap",
+          "score": 0.83,
+          "confidence_bucket": "medium"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "key_fact",
+          "text": "La heredera silenciosa mantiene el juramento que protege a Ren Tal."
+        }
+      ],
+      "confidence": 0.74,
+      "blocking_phase1_gate": false,
+      "can_auto_apply": false,
+      "metadata": {
+        "entity_kind": "character",
+        "naming_quality": "descriptor",
+        "chapter_refs": [
+          "ch_002"
+        ],
+        "decision_reason": "descriptor_contains_new_semantic_facts_for_existing_canonical",
+        "recommended_action": "review_enrich_existing_entity",
+        "signal_tier": "medium",
+        "candidate_status": "weak_candidate",
+        "do_not_auto_merge": true,
+        "no_clear_existing_primary": false,
+        "retention_review_required": true,
+        "language_hint": "es",
+        "surface_type": "descriptor_like",
+        "semantic_value": "descriptor",
+        "future_viewer_actions": [
+          "enrich_existing_entity",
+          "merge",
+          "keep_secondary",
+          "reject_noise"
+        ]
+      }
+    },
+    {
+      "review_item_id": "rq_semantic_edge_object",
+      "review_type": "entity_retention_review",
+      "severity": "medium",
+      "suggested_action": "review_create_primary",
+      "source_entity": "llave de cristal",
+      "target_text": "llave de cristal",
+      "candidate_entities": [],
+      "evidence": [
+        {
+          "kind": "source_mention",
+          "text": "llave de cristal"
+        }
+      ],
+      "confidence": 0.63,
+      "blocking_phase1_gate": false,
+      "can_auto_apply": false,
+      "metadata": {
+        "entity_kind": "object",
+        "naming_quality": "",
+        "chapter_refs": [
+          "ch_001",
+          "ch_002",
+          "ch_003"
+        ],
+        "decision_reason": "durable_object_without_clear_existing_primary_candidate",
+        "recommended_action": "review_create_primary",
+        "signal_tier": "medium",
+        "candidate_status": "no_clear_existing_primary",
+        "do_not_auto_merge": true,
+        "no_clear_existing_primary": true,
+        "retention_review_required": true,
+        "language_hint": "es",
+        "surface_type": "object_like",
+        "semantic_value": "persistent_object",
+        "future_viewer_actions": [
+          "promote",
+          "keep_secondary",
+          "reject_noise"
+        ]
+      }
+    }
+  ],
+  "policy": {
+    "pending_reviews_are_expected": true,
+    "can_auto_apply_default": false,
+    "notes": [
+      "The goal is not zero pending reviews.",
+      "Each item should carry enough metadata for author-assisted merge, rejection, promotion, or confirmation."
+    ]
+  }
+}

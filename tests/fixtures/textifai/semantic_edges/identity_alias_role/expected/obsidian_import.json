@@ -1,0 +1,119 @@
+{
+  "work": {
+    "title": "La llave del jardín seco",
+    "language": "es"
+  },
+  "chapters": [
+    {
+      "chapter_id": "ch_001",
+      "summary": "Sera y Ren preparan una salida secreta con la llave de cristal."
+    },
+    {
+      "chapter_id": "ch_002",
+      "summary": "La heredera silenciosa reafirma su juramento y el guardia somnoliento no interviene."
+    },
+    {
+      "chapter_id": "ch_003",
+      "summary": "Ren abre la puerta del jardín seco mientras Sera protege el secreto compartido."
+    }
+  ],
+  "entities": [
+    {
+      "canonical_name": "Sera Valen",
+      "entity_kind": "character",
+      "preferred_slug": "sera_valen",
+      "aliases": [
+        "Sera"
+      ],
+      "summary": "Figura central que protege un secreto y guía a Ren Tal.",
+      "key_facts": [
+        "Es conocida en el entorno como la princesa.",
+        "Mantiene un juramento de protección ligado a Ren Tal.",
+        "Sostiene la llave de cristal en momentos decisivos."
+      ],
+      "relationships": [
+        {
+          "target": "Ren Tal",
+          "type": "alliance",
+          "facts": [
+            "Sera y Ren comparten un secreto y coordinan su salida."
+          ]
+        }
+      ],
+      "chapter_refs": [
+        "ch_001",
+        "ch_002",
+        "ch_003"
+      ],
+      "source_mentions": [
+        "Sera Valen",
+        "Sera"
+      ],
+      "confidence": 0.93,
+      "review_state": "canonical"
+    },
+    {
+      "canonical_name": "Ren Tal",
+      "entity_kind": "character",
+      "preferred_slug": "ren_tal",
+      "aliases": [
+        "Ren"
+      ],
+      "summary": "Aliado de Sera que participa en la salida secreta.",
+      "key_facts": [
+        "Sigue el plan trazado por Sera Valen.",
+        "Abre el cierre oxidado en el jardín seco."
+      ],
+      "relationships": [
+        {
+          "target": "Sera Valen",
+          "type": "alliance",
+          "facts": [
+            "Ren confía en Sera y guarda el secreto compartido."
+          ]
+        }
+      ],
+      "chapter_refs": [
+        "ch_001",
+        "ch_002",
+        "ch_003"
+      ],
+      "source_mentions": [
+        "Ren Tal",
+        "Ren"
+      ],
+      "confidence": 0.9,
+      "review_state": "canonical"
+    },
+    {
+      "canonical_name": "llave de cristal",
+      "entity_kind": "object",
+      "preferred_slug": "llave_de_cristal",
+      "aliases": [],
+      "summary": "Objeto persistente que permite abrir la puerta del jardín seco.",
+      "key_facts": [
+        "Aparece en al menos dos capítulos.",
+        "Tiene valor narrativo y operativo en la salida secreta."
+      ],
+      "relationships": [
+        {
+          "target": "Sera Valen",
+          "type": "related_to",
+          "facts": [
+            "Sera conserva la llave y decide cuándo usarla."
+          ]
+        }
+      ],
+      "chapter_refs": [
+        "ch_001",
+        "ch_002",
+        "ch_003"
+      ],
+      "source_mentions": [
+        "llave de cristal"
+      ],
+      "confidence": 0.82,
+      "review_state": "canonical"
+    }
+  ]
+}

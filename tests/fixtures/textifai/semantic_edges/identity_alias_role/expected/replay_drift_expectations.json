@@ -1,0 +1,57 @@
+{
+  "fixture_id": "identity_alias_role",
+  "purpose": "Expectativas manuales para futura comparación de replay sobre casos edge de identidad, alias, roles y retención.",
+  "required_entities": [
+    {
+      "canonical_name": "Sera Valen",
+      "expected_role": "recurrent character"
+    },
+    {
+      "canonical_name": "Ren Tal",
+      "expected_role": "recurrent character"
+    }
+  ],
+  "persistent_or_review_entities": [
+    {
+      "canonical_name": "llave de cristal",
+      "entity_kind": "object",
+      "expected_behavior": "canonical_or_retention_review"
+    }
+  ],
+  "forbidden_primary_entities": [
+    {
+      "canonical_name": "ella",
+      "reason": "pronoun_like"
+    },
+    {
+      "canonical_name": "guardia somnoliento",
+      "reason": "ephemeral_noise"
+    }
+  ],
+  "expected_review_signals": [
+    {
+      "surface": "la princesa",
+      "canonical_name": "Sera Valen",
+      "recommended_action": "review_attach_role_or_title"
+    },
+    {
+      "surface": "la heredera silenciosa",
+      "canonical_name": "Sera Valen",
+      "recommended_action": "review_enrich_existing_entity"
+    },
+    {
+      "surface": "llave de cristal",
+      "canonical_name": "",
+      "recommended_action": "review_create_primary"
+    }
+  ],
+  "language_agnostic_notes": [
+    "Las strings del fixture no son lógica universal.",
+    "Las decisiones deben basarse en surface_type, semantic_value, candidate_status, language_hint y evidence overlap.",
+    "Pronombres no deben promocionarse por coincidencia superficial."
+  ],
+  "notes": [
+    "No ejecutar replay en esta fase.",
+    "Este archivo prepara expectativas para futura subfase replay."
+  ]
+}

@@ -1,0 +1,119 @@
+{
+  "fixture_id": "identity_alias_role",
+  "title": "La llave del jardín seco",
+  "language": "es",
+  "purpose": "Fixture edge sintético para validar identidad, alias, pronombres, títulos, roles, descriptores y retención sin tocar runtime ni replay.",
+  "source_files": [
+    "source/ch_001.md",
+    "source/ch_002.md",
+    "source/ch_003.md"
+  ],
+  "intended_coverage": [
+    "canonical name vs alias",
+    "canonical name vs title/role surface",
+    "canonical name vs descriptor with richer facts",
+    "pronoun suppression",
+    "persistent object retention",
+    "ephemeral mention suppression",
+    "candidate guessing conservador",
+    "review queue accionable sin auto-merge",
+    "enrichment review"
+  ],
+  "expected_canonical_entities": [
+    {
+      "name": "Sera Valen",
+      "kind": "character"
+    },
+    {
+      "name": "Ren Tal",
+      "kind": "character"
+    },
+    {
+      "name": "llave de cristal",
+      "kind": "object"
+    }
+  ],
+  "expected_alias_cases": [
+    {
+      "canonical": "Sera Valen",
+      "variants": ["Sera"]
+    },
+    {
+      "canonical": "Ren Tal",
+      "variants": ["Ren"]
+    }
+  ],
+  "expected_title_role_descriptor_cases": [
+    {
+      "surface": "la princesa",
+      "canonical": "Sera Valen",
+      "expected_action": "review_attach_role_or_title"
+    },
+    {
+      "surface": "la heredera silenciosa",
+      "canonical": "Sera Valen",
+      "expected_action": "review_enrich_existing_entity"
+    },
+    {
+      "surface": "el muchacho",
+      "canonical": "Ren Tal",
+      "expected_action": "review_attach_role_or_title"
+    }
+  ],
+  "expected_pronoun_suppression_cases": [
+    {
+      "surface": "ella",
+      "surface_type": "pronoun_like",
+      "canonical": "Sera Valen",
+      "notes": "no strong primary candidate"
+    }
+  ],
+  "expected_persistent_object_cases": [
+    {
+      "name": "llave de cristal",
+      "kind": "object",
+      "durable": true,
+      "expected_retention_action": "review_create_primary_or_keep_secondary"
+    }
+  ],
+  "expected_ephemeral_mentions": [
+    {
+      "name": "guardia somnoliento",
+      "expected_behavior": "suppressed_or_no_strong_review"
+    }
+  ],
+  "expected_relationships": [
+    {
+      "source": "Sera Valen",
+      "target": "Ren Tal",
+      "relationship": "alliance"
+    }
+  ],
+  "expected_review_signals": [
+    {
+      "surface": "la princesa",
+      "canonical": "Sera Valen",
+      "recommended_action": "review_attach_role_or_title"
+    },
+    {
+      "surface": "la heredera silenciosa",
+      "canonical": "Sera Valen",
+      "recommended_action": "review_enrich_existing_entity"
+    },
+    {
+      "surface": "llave de cristal",
+      "canonical": "",
+      "recommended_action": "review_create_primary"
+    }
+  ],
+  "language_agnostic_notes": [
+    "Las strings del fixture no son reglas universales.",
+    "Las decisiones esperadas deben apoyarse en surface_type, semantic_value, candidate_status, language_hint y overlap de evidencia.",
+    "Pronombres no deben promoverse como primary por la string en sí misma."
+  ],
+  "notes": [
+    "Fixture completamente sintético.",
+    "No contiene replay_input en esta fase.",
+    "Los artifacts expected son manuales y no generados."
+  ]
+}
