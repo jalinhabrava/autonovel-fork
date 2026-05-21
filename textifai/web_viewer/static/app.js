@@ -34,6 +34,82 @@ const state = {
   reviewView: { severity: "", reviewType: "", query: "", sortBy: "severity_desc" },
 };
 
+const RECOMMENDED_ACTION_VIEWER_ACTIONS = {
+  review_merge_or_alias: ["merge", "mark_alias"],
+  review_create_primary: ["promote"],
+  review_keep_secondary: ["keep_secondary"],
+  review_reject_noise: ["reject_noise"],
+  review_insufficient_evidence: [],
+  review_attach_role_or_title: ["attach_role_or_title"],
+  review_enrich_existing_entity: ["enrich_existing_entity"],
+};
+
+const VIEWER_ACTION_DESCRIPTORS = {
+  merge: {
+    label: "Future action: Merge",
+    shortLabel: "Merge",
+    explanation: "Potential merge into canonical entity. Advisory only.",
+    preconditions: ["candidate_entities available", "do_not_auto_merge remains true"],
+    requiredFields: ["candidate_entities", "metadata.recommended_action"],
+    safetyWarning: "Read-only. No merge or write-back happens here.",
+    futureWritebackTarget: "merge into canonical entity",
+  },
+  mark_alias: {
+    label: "Future action: Mark alias",
+    shortLabel: "Mark alias",
+    explanation: "Potential alias attachment to existing entity. Advisory only.",
+    preconditions: ["candidate_entities available"],
+    requiredFields: ["candidate_entities"],
+    safetyWarning: "Read-only. Alias is not persisted from viewer.",
+    futureWritebackTarget: "add alias to entity",
+  },
+  promote: {
+    label: "Future action: Promote",
+    shortLabel: "Promote",
+    explanation: "Potential promotion to primary entity. Advisory only.",
+    preconditions: ["durable signal", "review item evidence available"],
+    requiredFields: ["metadata.recommended_action", "metadata.semantic_value"],
+    safetyWarning: "Read-only. No entity promotion happens here.",
+    futureWritebackTarget: "promote review entity",
+  },
+  attach_role_or_title: {
+    label: "Future action: Attach role/title",
+    shortLabel: "Attach role/title",
+    explanation: "Potential role/title/descriptor attachment to existing entity. Advisory only.",
+    preconditions: ["surface_type role/title/descriptor", "candidate_entities preferred"],
+    requiredFields: ["metadata.surface_type", "metadata.semantic_value"],
+    safetyWarning: "Read-only. No role/title attachment happens here.",
+    futureWritebackTarget: "attach role/title/descriptor",
+  },
+  enrich_existing_entity: {
+    label: "Future action: Enrich existing entity",
+    shortLabel: "Enrich entity",
+    explanation: "Potential enrichment of existing canonical entity with retained facts. Advisory only.",
+    preconditions: ["candidate_entities available", "evidence available"],
+    requiredFields: ["candidate_entities", "evidence"],
+    safetyWarning: "Read-only. No entity enrichment happens here.",
+    futureWritebackTarget: "enrich existing entity",
+  },
+  keep_secondary: {
+    label: "Future action: Keep secondary",
+    shortLabel: "Keep secondary",
+    explanation: "Potential keep-as-secondary decision. Advisory only.",
+    preconditions: ["review item exists"],
+    requiredFields: ["review_type"],
+    safetyWarning: "Read-only. No state mutation happens here.",
+    futureWritebackTarget: "keep secondary mention",
+  },
+  reject_noise: {
+    label: "Future action: Reject noise",
+    shortLabel: "Reject noise",
+    explanation: "Potential reject-as-noise decision. Advisory only.",
+    preconditions: ["low-confidence or noisy signal"],
+    requiredFields: ["review_type"],
+    safetyWarning: "Read-only. No suppression happens here.",
+    futureWritebackTarget: "reject/noise suppression",
+  },
+};
+
 const $ = (id) => document.getElementById(id);
 
 async function api(path, options = {}) {
@@ -2162,6 +2238,7 @@ function applyReviewFilters(items, view) {
   return (items || []).filter((item) => {
     const severity = String(item.severity || "").toLowerCase();
     const reviewType = String(item.review_type || "");
+    const metadata = reviewMetadata(item);
     if (view.severity && severity !== String(view.severity).toLowerCase()) return false;
     if (view.reviewType && reviewType !== view.reviewType) return false;
     if (!query) return true;
@@ -2170,6 +2247,13 @@ function applyReviewFilters(items, view) {
       item.review_type,
       item.source_entity,
       item.target_text,
+      metadata.recommended_action,
+      metadata.signal_tier,
+      metadata.candidate_status,
+      metadata.surface_type,
+      metadata.semantic_value,
+      metadata.language_hint,
+      ...normalizedFutureViewerActions(item),
       ...((item.candidate_entities || []).map((candidate) => `${candidate.canonical_name || ""} ${candidate.entity_kind || ""}`)),
       ...((item.evidence || []).map((entry) => entry.text || "")),
     ].join(" ").toLowerCase();
@@ -2203,10 +2287,87 @@ function renderCountBadges(counts, badgeType) {
     .join("");
 }
 
+function reviewMetadata(item) {
+  return item?.metadata || {};
+}
+
+function viewerActionDescriptor(actionKey) {
+  return VIEWER_ACTION_DESCRIPTORS[actionKey] || null;
+}
+
+function mapRecommendedActionToViewerActions(recommendedAction) {
+  return [...(RECOMMENDED_ACTION_VIEWER_ACTIONS[recommendedAction] || [])];
+}
+
+function normalizedFutureViewerActions(item) {
+  const metadata = reviewMetadata(item);
+  const explicit = Array.isArray(metadata.future_viewer_actions)
+    ? metadata.future_viewer_actions.filter((actionKey) => !!viewerActionDescriptor(actionKey))
+    : [];
+  if (explicit.length) return explicit;
+  const recommendedAction = metadata.recommended_action || item?.suggested_action || "";
+  return mapRecommendedActionToViewerActions(recommendedAction);
+}
+
+function reviewActionPresentation(item) {
+  const metadata = reviewMetadata(item);
+  const actions = normalizedFutureViewerActions(item);
+  return {
+    recommendedAction: metadata.recommended_action || item?.suggested_action || "",
+    signalTier: metadata.signal_tier || "",
+    candidateStatus: metadata.candidate_status || "",
+    surfaceType: metadata.surface_type || "",
+    semanticValue: metadata.semantic_value || "",
+    languageHint: metadata.language_hint || "",
+    doNotAutoMerge: Boolean(metadata.do_not_auto_merge),
+    noClearCandidate: Boolean(metadata.no_clear_existing_primary),
+    actions,
+  };
+}
+
+function renderReviewActionDescriptors(item) {
+  const presentation = reviewActionPresentation(item);
+  const actionDescriptors = presentation.actions.map((actionKey) => viewerActionDescriptor(actionKey)).filter(Boolean);
+  if (!actionDescriptors.length) {
+    return `<p class="muted">Future actions: inspect evidence only.</p>`;
+  }
+  return `
+    <div class="future-action-badges">
+      ${actionDescriptors.map((descriptor) => `<span class="badge future-action-badge">${escapeHtml(descriptor.label)}</span>`).join("")}
+    </div>
+    <div class="future-action-buttons">
+      ${actionDescriptors.map((descriptor) => `
+        <button type="button" class="future-action-button" disabled title="${escapeHtml(descriptor.safetyWarning)}">
+          ${escapeHtml(descriptor.shortLabel)}
+        </button>
+      `).join("")}
+    </div>
+    <ul class="future-action-details">
+      ${actionDescriptors.map((descriptor) => `
+        <li>
+          <strong>${escapeHtml(descriptor.shortLabel)}</strong>
+          <span>${escapeHtml(descriptor.explanation)}</span>
+        </li>
+      `).join("")}
+    </ul>
+  `;
+}
+
+function renderReviewContractWarnings(item) {
+  const presentation = reviewActionPresentation(item);
+  const warnings = [];
+  if (presentation.doNotAutoMerge) warnings.push("do_not_auto_merge: true — viewer never executes merge automatically.");
+  if (presentation.noClearCandidate) warnings.push("No clear candidate available — review_create_primary / keep_secondary remains editorial.");
+  if (presentation.surfaceType === "pronoun_like") warnings.push("Pronoun-like surface — use conservative review wording and avoid primary promotion.");
+  if (!warnings.length) return "";
+  return `<div class="review-safety-warning">${warnings.map((warning) => `<p>${escapeHtml(warning)}</p>`).join("")}</div>`;
+}
+
 function renderReviewItemCard(item, index) {
   const candidates = item.candidate_entities || [];
   const evidence = item.evidence || [];
   const reviewId = reviewItemKey(item, index);
+  const presentation = reviewActionPresentation(item);
   return `
     <details class="review-item ${state.selectedReviewItemId === reviewId ? "review-highlight" : ""}" data-review-item-id="${escapeHtml(reviewId)}" ${index < 2 || state.selectedReviewItemId === reviewId ? "open" : ""}>
       <summary>
@@ -2222,7 +2383,14 @@ function renderReviewItemCard(item, index) {
           <div><span class="muted">Evidence:</span> ${fmtCount(evidence.length)}</div>
           <div><span class="muted">Severity:</span> ${escapeHtml(item.severity || "not available")}</div>
           <div><span class="muted">Type:</span> ${escapeHtml(item.review_type || "not available")}</div>
+          <div><span class="muted">Recommended action:</span> ${escapeHtml(presentation.recommendedAction || "not available")}</div>
+          <div><span class="muted">Signal tier:</span> ${escapeHtml(presentation.signalTier || "not available")}</div>
+          <div><span class="muted">Candidate status:</span> ${escapeHtml(presentation.candidateStatus || "not available")}</div>
+          <div><span class="muted">Semantic value:</span> ${escapeHtml(presentation.semanticValue || "not available")}</div>
+          <div><span class="muted">Surface type:</span> ${escapeHtml(presentation.surfaceType || "not available")}</div>
+          <div><span class="muted">Language hint:</span> ${escapeHtml(presentation.languageHint || "not available")}</div>
         </div>
+        ${renderReviewContractWarnings(item)}
         <div class="review-actions">
           ${item.source_entity ? `<button type="button" data-review-graph="${escapeHtml(item.source_entity)}">Source → graph</button>` : ""}
           ${item.target_text ? `<button type="button" data-review-graph="${escapeHtml(item.target_text)}">Target → graph</button>` : ""}
@@ -2230,6 +2398,8 @@ function renderReviewItemCard(item, index) {
           ${item.target_text ? `<button type="button" data-review-canon="${escapeHtml(item.target_text)}">Target → canon</button>` : ""}
           <button type="button" data-review-open-canon="1">Open canon</button>
         </div>
+        <h4>Future viewer actions</h4>
+        ${renderReviewActionDescriptors(item)}
         ${candidates.length ? `<h4>Candidates</h4><div class="review-candidates">${candidates.map((candidate) => `
           <div class="candidate-card">
             <strong>${escapeHtml(candidate.canonical_name || "not available")}</strong>
@@ -2840,6 +3010,15 @@ function nodeColor(node) {
   if (node.kind === "unresolved") return "#a23b55";
   return "#5b6577";
 }
+
+globalThis.__TEXTIFAI_REVIEW_ACTIONS__ = {
+  mapRecommendedActionToViewerActions,
+  normalizedFutureViewerActions,
+  reviewActionPresentation,
+  renderReviewActionDescriptors,
+  renderReviewContractWarnings,
+  renderReviewItemCard,
+};
 
 document.querySelectorAll(".tabs button").forEach((button) => button.addEventListener("click", () => setView(button.dataset.view)));
 $("refresh-projects").addEventListener("click", loadProjects);

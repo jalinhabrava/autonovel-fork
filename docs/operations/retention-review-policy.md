@@ -126,3 +126,7 @@ Para pronombre sin evidencia, clearly ephemeral/noise mention, una mención loca
 - Reject noise.
 
 Esta fase no implementa write-back ni botones. Solo deja metadata compatible para esas acciones futuras.
+
+Contrato viewer-facing complementario:
+
+- `docs/operations/viewer-review-actions-contract.md`

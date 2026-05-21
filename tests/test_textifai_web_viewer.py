@@ -435,6 +435,16 @@ class TextifAIWebViewerTests(unittest.TestCase):
                 server.server_close()
                 thread.join(timeout=1.0)
 
+    def test_static_viewer_future_actions_are_read_only(self):
+        source = Path("textifai/web_viewer/static/app.js").read_text(encoding="utf-8")
+        self.assertIn("RECOMMENDED_ACTION_VIEWER_ACTIONS", source)
+        self.assertIn("VIEWER_ACTION_DESCRIPTORS", source)
+        self.assertIn("future-action-button", source)
+        self.assertIn("do_not_auto_merge", source)
+        self.assertIn("disabled", source)
+        self.assertNotIn("data-future-action-post", source)
+        self.assertNotIn("/api/review/actions", source)
+
 
 if __name__ == "__main__":
     unittest.main()
