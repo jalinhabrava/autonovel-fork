@@ -4,6 +4,7 @@ import threading
 import unittest
 from http.server import ThreadingHTTPServer
 from pathlib import Path
+from urllib.error import HTTPError
 from urllib.request import urlopen
 from unittest.mock import patch
 
@@ -302,6 +303,8 @@ class TextifAIWebViewerTests(unittest.TestCase):
                 thread.join(timeout=1.0)
 
             self.assertGreaterEqual(len(payload["jobs"]), 2)
+            self.assertIn("summary", payload)
+            self.assertGreaterEqual(payload["summary"]["restored_count"], 1)
             restored = next(job for job in payload["jobs"] if job["job_id"] == "job_restored_1")
             self.assertTrue(restored["restored_from_disk"])
 
@@ -350,6 +353,54 @@ class TextifAIWebViewerTests(unittest.TestCase):
             job = registry.list_jobs()[0]
             self.assertFalse(job.result_detected)
             self.assertTrue(any("obsidian_import.json" in item for item in job.result_warnings))
+
+    def test_web_ingestion_folders_without_metadata_reported_but_ignored(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            output_root = repo_root / "runs" / "web_ingestion"
+            (output_root / "folder_without_metadata").mkdir(parents=True)
+            with_metadata = output_root / "20260101T000000Z_with_metadata"
+            with_metadata.mkdir(parents=True)
+            (with_metadata / JOB_METADATA_FILE).write_text(
+                json.dumps(
+                    {
+                        "job_id": "job_with_metadata",
+                        "status": "failed",
+                        "created_at": "2026-01-01T00:00:00+00:00",
+                        "project_title": "Demo",
+                        "source_root": "/tmp/source",
+                        "output_root": str(with_metadata),
+                        "safe_output_root": str(output_root),
+                        "command_preview": ["uv"],
+                        "run_name": "demo",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            registry = IngestionJobRegistry(repo_root=repo_root, start_immediately=False)
+            self.assertEqual(len(registry.list_jobs()), 1)
+            self.assertEqual(registry.history_summary()["ignored_output_dirs_without_metadata"], 1)
+
+    def test_no_destructive_or_upload_endpoints_exist(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            runs_root = repo_root / "runs"
+            runs_root.mkdir(parents=True)
+            catalog = ProjectCatalog([runs_root])
+            registry = IngestionJobRegistry(repo_root=repo_root, start_immediately=False)
+            handler = _make_handler(catalog, registry)
+            server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            try:
+                for path in ("/api/ingestion/uploads", "/api/ingestion/jobs/delete", "/api/ingestion/jobs/cleanup"):
+                    with self.assertRaises(HTTPError) as caught:
+                        urlopen(f"http://127.0.0.1:{server.server_port}{path}")
+                    self.assertEqual(caught.exception.code, 404)
+            finally:
+                server.shutdown()
+                server.server_close()
+                thread.join(timeout=1.0)
 
 
 if __name__ == "__main__":

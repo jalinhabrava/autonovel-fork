@@ -231,6 +231,7 @@ class IngestionJobRegistry:
         self._jobs: dict[str, IngestionJob] = {}
         self._targets: set[str] = set()
         self._active_keys: set[str] = set()
+        self._ignored_output_dirs_without_metadata = 0
         self._lock = threading.Lock()
         self._rehydrate_jobs()
 
@@ -274,6 +275,18 @@ class IngestionJobRegistry:
         with self._lock:
             jobs = list(self._jobs.values())
         return sorted(jobs, key=lambda item: item.created_at or "", reverse=True)
+
+    def history_summary(self) -> dict[str, Any]:
+        jobs = self.list_jobs()
+        return {
+            "job_count": len(jobs),
+            "restored_count": sum(1 for job in jobs if job.restored_from_disk),
+            "active_count": sum(1 for job in jobs if job.status in ACTIVE_STATUSES),
+            "inspectable_count": sum(1 for job in jobs if job.result_detected or job.project_id),
+            "failed_count": sum(1 for job in jobs if job.status == "failed"),
+            "ignored_output_dirs_without_metadata": self._ignored_output_dirs_without_metadata,
+            "approx_log_bytes": sum(int(job.log_size_bytes or 0) for job in jobs),
+        }
 
     def get_job(self, job_id: str) -> IngestionJob:
         try:
@@ -372,9 +385,16 @@ class IngestionJobRegistry:
     def _rehydrate_jobs(self) -> None:
         if not self.output_root.exists():
             return
+        metadata_dirs = {
+            metadata_path.parent.resolve()
+            for metadata_path in self.output_root.glob(f"*/{JOB_METADATA_FILE}")
+            if metadata_path.is_file()
+        }
+        all_dirs = {path.resolve() for path in self.output_root.iterdir() if path.is_dir()}
+        self._ignored_output_dirs_without_metadata = len([path for path in all_dirs if path not in metadata_dirs])
         seen_ids: set[str] = set()
         seen_outputs: set[str] = set()
-        metadata_files = sorted(self.output_root.glob(f"*/{JOB_METADATA_FILE}"), key=lambda item: item.stat().st_mtime, reverse=True)
+        metadata_files = sorted((path / JOB_METADATA_FILE for path in all_dirs if (path / JOB_METADATA_FILE).exists()), key=lambda item: item.stat().st_mtime, reverse=True)
         for metadata_path in metadata_files:
             data = _read_json(metadata_path)
             if not isinstance(data, dict):
@@ -596,6 +616,14 @@ def job_to_json(job: IngestionJob) -> dict[str, Any]:
 
 def jobs_list_json(jobs: list[IngestionJob]) -> dict[str, Any]:
     return {"jobs": [job.snapshot(log_tail_chars=0) for job in jobs]}
+
+
+def jobs_history_json(registry: IngestionJobRegistry) -> dict[str, Any]:
+    jobs = registry.list_jobs()
+    return {
+        "jobs": [job.snapshot(log_tail_chars=0) for job in jobs],
+        "summary": registry.history_summary(),
+    }
 
 
 def log_json(job: IngestionJob, *, max_chars: int = 64_000) -> dict[str, Any]:

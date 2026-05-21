@@ -26,6 +26,8 @@ const state = {
     currentJobId: "",
     currentJob: null,
     recentJobs: [],
+    historySummary: null,
+    historyFilters: { status: "", mode: "", query: "", sortBy: "newest" },
     pollingTimer: null,
   },
   compareView: { baseId: "", candidateId: "", loading: false, result: null, error: "" },
@@ -74,12 +76,14 @@ async function loadIngestionJobs() {
   try {
     const payload = await api("/api/ingestion/jobs");
     state.ingestionWizard.recentJobs = payload.jobs || [];
+    state.ingestionWizard.historySummary = payload.summary || null;
     if (state.ingestionWizard.currentJobId) {
       const selected = state.ingestionWizard.recentJobs.find((job) => job.job_id === state.ingestionWizard.currentJobId);
       if (selected) state.ingestionWizard.currentJob = selected;
     }
   } catch (_error) {
     state.ingestionWizard.recentJobs = [];
+    state.ingestionWizard.historySummary = null;
   }
 }
 
@@ -172,6 +176,7 @@ function renderIngestionWizard() {
   const config = state.ingestionConfig || {};
   const wizard = state.ingestionWizard || {};
   const preview = buildIngestionCommandPreview(config, wizard);
+  const historySummary = wizard.historySummary || {};
   const hasPotentialDuplicate = Boolean((wizard.recentJobs || []).find((job) => {
     const sameSource = normalizeKey(job.source_root) === normalizeKey(String(wizard.sourceRoot || "").trim());
     const sameTitle = normalizeKey(job.project_title) === normalizeKey(String(wizard.projectTitle || "").trim());
@@ -242,7 +247,7 @@ function renderIngestionWizard() {
       </div>
       <div class="wizard-job-status">
         <h4>Recent jobs</h4>
-        ${renderRecentJobs(wizard.recentJobs)}
+        ${renderIngestionHistory(wizard.recentJobs, historySummary, wizard.historyFilters)}
       </div>
     </section>
   `;
@@ -262,6 +267,22 @@ function bindIngestionWizardInteractions() {
   bindValue("wizard-working-languages", "workingLanguages");
   $("wizard-skip-plugin")?.addEventListener("change", (event) => {
     state.ingestionWizard.skipPluginInstall = event.target.checked;
+    renderOverview();
+  });
+  $("wizard-history-status")?.addEventListener("change", (event) => {
+    state.ingestionWizard.historyFilters.status = event.target.value;
+    renderOverview();
+  });
+  $("wizard-history-mode")?.addEventListener("change", (event) => {
+    state.ingestionWizard.historyFilters.mode = event.target.value;
+    renderOverview();
+  });
+  $("wizard-history-query")?.addEventListener("input", (event) => {
+    state.ingestionWizard.historyFilters.query = event.target.value;
+    renderOverview();
+  });
+  $("wizard-history-sort")?.addEventListener("change", (event) => {
+    state.ingestionWizard.historyFilters.sortBy = event.target.value;
     renderOverview();
   });
   $("wizard-submit-job")?.addEventListener("click", submitIngestionJob);
@@ -351,21 +372,115 @@ function renderWizardJobStatus(job) {
   `;
 }
 
-function renderRecentJobs(jobs) {
-  const items = jobs || [];
-  if (!items.length) return `<p class="muted">No recent jobs in memory or restored history.</p>`;
+function classifyJob(job) {
+  const warnings = job.result_warnings || [];
+  const stale = warnings.some((item) => String(item || "").toLowerCase().includes("status cannot be trusted"));
+  return {
+    stale,
+    restored: Boolean(job.restored_from_disk),
+    inspectable: Boolean(job.result_detected || job.project_id),
+    failed: job.status === "failed",
+    active: job.status === "queued" || job.status === "running",
+    finished: job.status === "succeeded" || job.status === "failed",
+  };
+}
+
+function applyHistoryFilters(jobs, filters) {
+  const items = [...(jobs || [])];
+  const activeFilters = filters || {};
+  const query = normalizeKey(activeFilters.query || "");
+  let filtered = items.filter((job) => {
+    const meta = classifyJob(job);
+    if (activeFilters.status && job.status !== activeFilters.status) return false;
+    if (activeFilters.mode === "restored" && !meta.restored) return false;
+    if (activeFilters.mode === "inspectable" && !meta.inspectable) return false;
+    if (activeFilters.mode === "failed_or_stale" && !(meta.failed || meta.stale)) return false;
+    if (!query) return true;
+    return [
+      job.project_title,
+      job.run_name,
+      job.output_root,
+      job.job_id,
+    ].some((value) => normalizeKey(value).includes(query));
+  });
+  const sortBy = activeFilters.sortBy || "newest";
+  filtered.sort((left, right) => {
+    if (sortBy === "oldest") return String(left.created_at || "").localeCompare(String(right.created_at || ""));
+    if (sortBy === "status") return String(left.status || "").localeCompare(String(right.status || "")) || String(right.created_at || "").localeCompare(String(left.created_at || ""));
+    if (sortBy === "project_title") return String(left.project_title || "").localeCompare(String(right.project_title || "")) || String(right.created_at || "").localeCompare(String(left.created_at || ""));
+    return String(right.created_at || "").localeCompare(String(left.created_at || ""));
+  });
+  return filtered;
+}
+
+function renderIngestionHistory(jobs, summary, filters) {
+  const items = applyHistoryFilters(jobs, filters);
+  const ignoredCount = Number(summary?.ignored_output_dirs_without_metadata || 0);
+  const approxLogBytes = Number(summary?.approx_log_bytes || 0);
+  if (!jobs || !jobs.length) {
+    return `
+      <p class="muted">No recent jobs in memory or restored history.</p>
+      ${ignoredCount ? `<div class="nav-notice warning">${ignoredCount} web ingestion folders without job metadata were ignored.</div>` : ""}
+    `;
+  }
   return `
+    <div class="wizard-history-summary">
+      <span class="badge">jobs ${escapeHtml(summary?.job_count ?? jobs.length)}</span>
+      <span class="badge">restored ${escapeHtml(summary?.restored_count ?? 0)}</span>
+      <span class="badge">active ${escapeHtml(summary?.active_count ?? 0)}</span>
+      <span class="badge">inspectable ${escapeHtml(summary?.inspectable_count ?? 0)}</span>
+      <span class="badge">failed ${escapeHtml(summary?.failed_count ?? 0)}</span>
+      <span class="badge">log bytes ${escapeHtml(approxLogBytes)}</span>
+    </div>
+    ${ignoredCount ? `<div class="nav-notice warning">${ignoredCount} web ingestion folders without job metadata were ignored.</div>` : ""}
+    <div class="wizard-history-controls">
+      <label>Status
+        <select id="wizard-history-status" class="search compact">
+          <option value="">All</option>
+          ${["queued", "running", "succeeded", "failed"].map((status) => `<option value="${status}" ${filters?.status === status ? "selected" : ""}>${status}</option>`).join("")}
+        </select>
+      </label>
+      <label>Mode
+        <select id="wizard-history-mode" class="search compact">
+          <option value="" ${!filters?.mode ? "selected" : ""}>All</option>
+          <option value="restored" ${filters?.mode === "restored" ? "selected" : ""}>Restored only</option>
+          <option value="inspectable" ${filters?.mode === "inspectable" ? "selected" : ""}>Inspectable only</option>
+          <option value="failed_or_stale" ${filters?.mode === "failed_or_stale" ? "selected" : ""}>Failed/Stale only</option>
+        </select>
+      </label>
+      <label>Search
+        <input id="wizard-history-query" class="search compact" placeholder="project / run / output" value="${escapeHtml(filters?.query || "")}" />
+      </label>
+      <label>Sort
+        <select id="wizard-history-sort" class="search compact">
+          <option value="newest" ${filters?.sortBy === "newest" ? "selected" : ""}>Newest first</option>
+          <option value="oldest" ${filters?.sortBy === "oldest" ? "selected" : ""}>Oldest first</option>
+          <option value="status" ${filters?.sortBy === "status" ? "selected" : ""}>Status</option>
+          <option value="project_title" ${filters?.sortBy === "project_title" ? "selected" : ""}>Project title</option>
+        </select>
+      </label>
+      <button type="button" disabled title="Future phase only">Retention cleanup is not implemented yet</button>
+    </div>
     <div class="wizard-recent-jobs">
-      ${items.slice(0, 8).map((job) => `
+      ${items.slice(0, 12).map((job) => {
+        const meta = classifyJob(job);
+        const staleBadge = meta.stale ? `<span class="badge stale-badge">stale</span>` : "";
+        const inspectableBadge = meta.inspectable ? `<span class="badge inspectable-badge">inspectable</span>` : `<span class="badge warning-badge">not inspectable</span>`;
+        const logBadge = `<span class="badge">${escapeHtml(job.log_source || (job.restored_from_disk ? "persisted?" : "memory"))}</span>`;
+        return `
         <div class="wizard-job-row ${job.job_id === state.ingestionWizard.currentJobId ? "active" : ""}">
           <div>
-            <p><strong>${escapeHtml(job.project_title || "untitled")}</strong> · <code>${escapeHtml(job.run_name || "n/a")}</code> ${job.restored_from_disk ? `<span class="badge restored-badge">restored</span>` : ""}</p>
+            <p><strong>${escapeHtml(job.project_title || "untitled")}</strong> · <code>${escapeHtml(job.run_name || "n/a")}</code> ${job.restored_from_disk ? `<span class="badge restored-badge">restored</span>` : ""} ${staleBadge} ${inspectableBadge}</p>
             <p class="muted"><code>${escapeHtml(job.job_id)}</code> · ${escapeHtml(job.status || "unknown")} · ${escapeHtml(job.output_root || "not available")}</p>
+            <p class="muted">created ${escapeHtml(job.created_at || "n/a")} · finished ${escapeHtml(job.finished_at || "n/a")} · duration ${escapeHtml(job.duration_seconds ?? "n/a")} · ${logBadge}</p>
             ${(job.result_warnings || []).length ? `<p class="muted">${escapeHtml(job.result_warnings[0])}</p>` : ""}
           </div>
-          <button type="button" data-wizard-select-job="${escapeHtml(job.job_id)}">Inspect</button>
+          <div class="wizard-job-actions">
+            <button type="button" data-wizard-select-job="${escapeHtml(job.job_id)}">Inspect</button>
+            ${job.project_id ? `<button type="button" data-wizard-open-job="${escapeHtml(job.job_id)}">Open result</button>` : ""}
+          </div>
         </div>
-      `).join("")}
+      `; }).join("")}
     </div>
   `;
 }
@@ -411,7 +526,7 @@ function bindWizardJobActions() {
   $("wizard-view-log")?.addEventListener("click", async () => {
     const job = state.ingestionWizard.currentJob;
     if (!job?.job_id) return;
-    const payload = await api(`/api/ingestion/jobs/${encodeURIComponent(job.job_id)}/log`);
+    const payload = await api(`/api/ingestion/jobs/${encodeURIComponent(job.job_id)}/log?max_chars=40000`);
     state.ingestionWizard.currentJob = {
       ...job,
       log_tail: payload.log || "",
@@ -438,6 +553,21 @@ function bindWizardJobActions() {
       renderOverview();
       bindWizardJobActions();
       scheduleJobPolling();
+    });
+  });
+  document.querySelectorAll("[data-wizard-open-job]").forEach((node) => {
+    node.addEventListener("click", async () => {
+      const jobId = node.getAttribute("data-wizard-open-job");
+      const job = (state.ingestionWizard.recentJobs || []).find((item) => item.job_id === jobId);
+      if (!job?.project_id) {
+        state.ingestionWizard.submitError = "Result is not inspectable yet. Try Refresh projects or inspect output root.";
+        renderOverview();
+        bindWizardJobActions();
+        return;
+      }
+      await loadProjects();
+      await selectProject(job.project_id);
+      setView("overview");
     });
   });
 }

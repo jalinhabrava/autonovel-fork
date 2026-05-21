@@ -9,7 +9,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
 
-from textifai.web_viewer.ingestion_jobs import IngestionJobRegistry, job_to_json, jobs_list_json
+from textifai.web_viewer.ingestion_jobs import IngestionJobRegistry, job_to_json, jobs_history_json
 from textifai.web_viewer.project_reader import ProjectCatalog, read_artifact, read_note, read_project
 
 
@@ -125,7 +125,7 @@ def _make_handler(catalog: ProjectCatalog, registry: IngestionJobRegistry):
                 self._json(build_ingestion_config())
                 return
             if path == "/api/ingestion/jobs":
-                self._json(jobs_list_json(registry.list_jobs()))
+                self._json(jobs_history_json(registry))
                 return
             if path.startswith("/api/ingestion/jobs/") and path.endswith("/log"):
                 parts = path.split("/")

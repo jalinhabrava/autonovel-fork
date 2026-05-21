@@ -1074,6 +1074,19 @@ button:hover, button.active {
   gap: 10px;
 }
 
+.wizard-history-summary,
+.wizard-history-controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.wizard-history-controls label {
+  display: grid;
+  gap: 4px;
+}
+
 .wizard-job-row {
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -1117,6 +1130,17 @@ button:hover, button.active {
   background: rgba(108, 106, 95, 0.2);
   color: var(--ink);
   margin-left: 6px;
+}
+
+.badge.stale-badge,
+.badge.warning-badge {
+  background: rgba(180, 91, 53, 0.18);
+  color: var(--accent-2);
+}
+
+.badge.inspectable-badge {
+  background: rgba(29, 111, 104, 0.16);
+  color: var(--accent);
 }
 
 @media (max-width: 900px) {
