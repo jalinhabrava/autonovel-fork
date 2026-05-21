@@ -127,6 +127,7 @@ class IngestionJob:
     review_queue_available: bool = False
     inspectable_artifacts_available: bool = False
     result_status: str = "pending"
+    artifact_availability: dict[str, bool] = field(default_factory=dict)
     safe_output_root: str = str(SAFE_OUTPUT_ROOT)
     duplicate_key: str = ""
     restored_from_disk: bool = False
@@ -212,6 +213,7 @@ class IngestionJob:
                 "review_queue_available": self.review_queue_available,
                 "inspectable_artifacts_available": self.inspectable_artifacts_available,
                 "result_status": self.result_status,
+                "artifact_availability": dict(self.artifact_availability),
                 "safe_output_root": self.safe_output_root,
                 "restored_from_disk": self.restored_from_disk,
                 "log_path_relative": self.log_path_relative,
@@ -329,6 +331,7 @@ class IngestionJobRegistry:
                 post_warnings = list(detection["result_warnings"])
                 if not detection["result_detected"]:
                     post_warnings.append("process exited with code 0 but inspectable result was not fully detected")
+                job.artifact_availability = dict(detection["artifact_availability"])
                 job.finalize(
                     status="succeeded",
                     exit_code=exit_code,
@@ -341,6 +344,7 @@ class IngestionJobRegistry:
                 )
                 job.append_log(f"Job succeeded at {job.finished_at}\n")
             else:
+                job.artifact_availability = dict(detection["artifact_availability"])
                 job.finalize(
                     status="failed",
                     exit_code=exit_code,
@@ -452,6 +456,7 @@ class IngestionJobRegistry:
                 review_queue_available=detection["review_queue_available"],
                 inspectable_artifacts_available=detection["inspectable_artifacts_available"],
                 result_status=("warning" if status == "failed" and stale_warning in warnings else detection["result_status"]),
+                artifact_availability=dict(detection["artifact_availability"]),
                 safe_output_root=str(self.output_root),
                 duplicate_key=f"rehydrated::{job_id}",
                 restored_from_disk=True,
@@ -522,12 +527,17 @@ def build_ingestion_command(payload: dict[str, Any], *, repo_root: Path, output_
 
 def detect_job_result(output_path: Path) -> dict[str, Any]:
     system_root = output_path / "99_System"
-    obsidian_import = system_root / "obsidian_import.json"
-    review_queue = system_root / "review_queue.json"
+    artifact_names = [
+        "obsidian_import.json",
+        "review_queue.json",
+        "semantic_invariants_audit.json",
+        "run_comparability_manifest.json",
+    ]
+    artifact_availability = {name: (system_root / name).exists() for name in artifact_names}
 
     warnings: list[str] = []
-    inspectable_artifacts_available = obsidian_import.exists()
-    review_queue_available = review_queue.exists()
+    inspectable_artifacts_available = artifact_availability["obsidian_import.json"]
+    review_queue_available = artifact_availability["review_queue.json"]
 
     if not system_root.exists():
         warnings.append("99_System directory not found; result may not be inspectable in viewer yet")
@@ -546,6 +556,7 @@ def detect_job_result(output_path: Path) -> dict[str, Any]:
         "result_warnings": warnings,
         "review_queue_available": review_queue_available,
         "inspectable_artifacts_available": inspectable_artifacts_available,
+        "artifact_availability": artifact_availability,
         "result_status": result_status,
     }
 
@@ -585,6 +596,7 @@ def _job_metadata_payload(job: IngestionJob) -> dict[str, Any]:
         "command_preview": snapshot["command_preview"],
         "result_detected": snapshot["result_detected"],
         "result_status": snapshot["result_status"],
+        "artifact_availability": snapshot["artifact_availability"],
         "result_warnings": snapshot["result_warnings"],
         "inspectable_artifacts_available": snapshot["inspectable_artifacts_available"],
         "review_queue_available": snapshot["review_queue_available"],

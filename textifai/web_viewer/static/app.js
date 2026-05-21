@@ -332,6 +332,7 @@ function sanitizePreviewSlug(value) {
 function renderWizardJobStatus(job) {
   if (!job) return `<p class="muted">No job submitted yet.</p>`;
   const restoredBadge = job.restored_from_disk ? `<span class="badge restored-badge">restored</span>` : "";
+  const summary = renderHistoricalRunQualitySummary(job);
   return `
     <div class="wizard-job-card">
       <p><strong>job_id:</strong> <code>${escapeHtml(job.job_id || "not available")}</code></p>
@@ -352,9 +353,11 @@ function renderWizardJobStatus(job) {
       <p><strong>log_source:</strong> ${escapeHtml(job.log_source || "memory")}</p>
       ${job.project_id ? `<p><strong>project_id:</strong> <code>${escapeHtml(job.project_id)}</code></p>` : ""}
       ${!job.project_id ? `<p class="muted"><strong>open result:</strong> not available yet. Inspect output root or refresh projects.</p>` : ""}
+      <p class="muted"><strong>execution log:</strong> wizard runtime log. Semantic artifacts are separate outputs.</p>
       ${(job.result_warnings || []).length ? `<div class="nav-notice warning">${job.result_warnings.map((item) => escapeHtml(item)).join("<br />")}</div>` : ""}
       ${job.log_warning ? `<div class="nav-notice warning">${escapeHtml(job.log_warning)}</div>` : ""}
       ${job.error ? `<p class="nav-notice warning">${escapeHtml(job.error)}</p>` : ""}
+      ${summary}
       <details>
         <summary>Command preview</summary>
         <ol class="args-list">${(job.command_preview || []).map((arg) => `<li><code>${escapeHtml(arg)}</code></li>`).join("")}</ol>
@@ -367,7 +370,54 @@ function renderWizardJobStatus(job) {
         <button type="button" id="wizard-refresh-projects">Refresh projects</button>
         <button type="button" id="wizard-view-log">View log</button>
         ${job.project_id ? `<button type="button" id="wizard-open-result">Open result</button>` : ""}
+        ${job.project_id ? `<button type="button" id="wizard-open-overview">Open Overview</button>` : ""}
+        ${job.project_id ? `<button type="button" id="wizard-open-health">Open Semantic Health</button>` : ""}
+        ${job.project_id ? `<button type="button" id="wizard-open-review">Open Review Queue</button>` : ""}
+        ${job.project_id ? `<button type="button" id="wizard-open-canon">Open Canon</button>` : ""}
+        ${job.project_id ? `<button type="button" id="wizard-open-graph">Open Graph</button>` : ""}
+        ${job.project_id ? `<button type="button" id="wizard-open-artifacts">Open Artifacts</button>` : ""}
+        ${job.project_id ? `<button type="button" id="wizard-open-triage">Open Entity Triage</button>` : ""}
+        ${job.project_id ? `<button type="button" id="wizard-use-base">Use as base</button>` : ""}
+        ${job.project_id ? `<button type="button" id="wizard-use-candidate">Use as candidate</button>` : ""}
       </div>
+      ${renderHistoricalArtifactShortcuts(job)}
+    </div>
+  `;
+}
+
+function renderHistoricalRunQualitySummary(job) {
+  if (!job?.project_id || state.currentId !== job.project_id || !state.current) {
+    return `<p class="muted">Semantic quality summary loads after opening this run in viewer.</p>`;
+  }
+  const project = state.current.project || {};
+  const canon = state.current.canon || {};
+  const health = state.current.health || {};
+  const triage = buildEntityTriage(state.current, state.compareView?.result || null);
+  return `
+    <div class="wizard-history-summary quality-summary">
+      <span class="badge">health ${escapeHtml((health.overall_status || "not available"))}</span>
+      <span class="badge">primaries ${escapeHtml((project.primary_count ?? canon.primaries?.length ?? "—"))}</span>
+      <span class="badge">review entities ${escapeHtml((canon.review_entities || []).length)}</span>
+      <span class="badge">review queue ${escapeHtml(((canon.review_queue || {}).item_count ?? "—"))}</span>
+      <span class="badge">invariants ${escapeHtml(((health.semantic_invariants || {}).status || "not available"))}</span>
+      <span class="badge">triage rows ${escapeHtml((triage.rows || []).length)}</span>
+    </div>
+  `;
+}
+
+function renderHistoricalArtifactShortcuts(job) {
+  const availability = job?.artifact_availability || {};
+  const button = (artifact, label) => {
+    const enabled = Boolean(job?.project_id && availability[artifact]);
+    return `<button type="button" class="inline-action" data-history-artifact="${escapeHtml(artifact)}" ${enabled ? "" : "disabled"}>${escapeHtml(label)}</button>`;
+  };
+  return `
+    <div class="wizard-history-artifacts">
+      <p class="muted"><strong>Semantic artifacts:</strong> ingestion outputs, separate from wizard execution log.</p>
+      ${button("obsidian_import.json", "Open obsidian_import.json")}
+      ${button("review_queue.json", "Open review_queue.json")}
+      ${button("semantic_invariants_audit.json", "Open semantic_invariants_audit.json")}
+      ${button("run_comparability_manifest.json", "Open run_comparability_manifest.json")}
     </div>
   `;
 }
@@ -472,12 +522,14 @@ function renderIngestionHistory(jobs, summary, filters) {
           <div>
             <p><strong>${escapeHtml(job.project_title || "untitled")}</strong> · <code>${escapeHtml(job.run_name || "n/a")}</code> ${job.restored_from_disk ? `<span class="badge restored-badge">restored</span>` : ""} ${staleBadge} ${inspectableBadge}</p>
             <p class="muted"><code>${escapeHtml(job.job_id)}</code> · ${escapeHtml(job.status || "unknown")} · ${escapeHtml(job.output_root || "not available")}</p>
-            <p class="muted">created ${escapeHtml(job.created_at || "n/a")} · finished ${escapeHtml(job.finished_at || "n/a")} · duration ${escapeHtml(job.duration_seconds ?? "n/a")} · ${logBadge}</p>
+            <p class="muted">created ${escapeHtml(job.created_at || "n/a")} · finished ${escapeHtml(job.finished_at || "n/a")} · duration ${escapeHtml(job.duration_seconds ?? "n/a")} · ${logBadge} · review queue ${escapeHtml(job.review_queue_available ? "yes" : "no")} · result ${escapeHtml(job.result_status || "n/a")}</p>
             ${(job.result_warnings || []).length ? `<p class="muted">${escapeHtml(job.result_warnings[0])}</p>` : ""}
           </div>
           <div class="wizard-job-actions">
             <button type="button" data-wizard-select-job="${escapeHtml(job.job_id)}">Inspect</button>
             ${job.project_id ? `<button type="button" data-wizard-open-job="${escapeHtml(job.job_id)}">Open result</button>` : ""}
+            ${job.project_id ? `<button type="button" data-wizard-use-base="${escapeHtml(job.job_id)}">Use as base</button>` : ""}
+            ${job.project_id ? `<button type="button" data-wizard-use-candidate="${escapeHtml(job.job_id)}">Use as candidate</button>` : ""}
           </div>
         </div>
       `; }).join("")}
@@ -541,8 +593,17 @@ function bindWizardJobActions() {
   });
   $("wizard-open-result")?.addEventListener("click", async () => {
     const job = state.ingestionWizard.currentJob;
-    if (job?.project_id) await selectProject(job.project_id);
+    if (job?.project_id) await openHistoricalJobTarget(job, "overview", null, "Opened result from historical job");
   });
+  $("wizard-open-overview")?.addEventListener("click", async () => openSelectedHistoricalView("overview", "Opened Overview from historical job"));
+  $("wizard-open-health")?.addEventListener("click", async () => openSelectedHistoricalView("overview", "Opened Semantic Health for historical job"));
+  $("wizard-open-review")?.addEventListener("click", async () => openSelectedHistoricalView("review", "Opened Review Queue for restored job"));
+  $("wizard-open-canon")?.addEventListener("click", async () => openSelectedHistoricalView("canon", "Opened Canon for historical job"));
+  $("wizard-open-graph")?.addEventListener("click", async () => openSelectedHistoricalView("graph", "Opened Graph for historical job"));
+  $("wizard-open-artifacts")?.addEventListener("click", async () => openSelectedHistoricalView("artifacts", "Opened Artifacts for historical job"));
+  $("wizard-open-triage")?.addEventListener("click", async () => openSelectedHistoricalView("overview", "Opened Entity Triage for historical job"));
+  $("wizard-use-base")?.addEventListener("click", async () => assignSelectedHistoricalCompareRole("base"));
+  $("wizard-use-candidate")?.addEventListener("click", async () => assignSelectedHistoricalCompareRole("candidate"));
   document.querySelectorAll("[data-wizard-select-job]").forEach((node) => {
     node.addEventListener("click", async () => {
       const jobId = node.getAttribute("data-wizard-select-job");
@@ -568,8 +629,74 @@ function bindWizardJobActions() {
       await loadProjects();
       await selectProject(job.project_id);
       setView("overview");
+      setNavNotice("Opened result from historical job", "info");
+      renderCurrentProject();
     });
   });
+  document.querySelectorAll("[data-wizard-use-base]").forEach((node) => {
+    node.addEventListener("click", () => assignHistoricalCompareRoleById(node.getAttribute("data-wizard-use-base"), "base"));
+  });
+  document.querySelectorAll("[data-wizard-use-candidate]").forEach((node) => {
+    node.addEventListener("click", () => assignHistoricalCompareRoleById(node.getAttribute("data-wizard-use-candidate"), "candidate"));
+  });
+  document.querySelectorAll("[data-history-artifact]").forEach((node) => {
+    node.addEventListener("click", async () => {
+      const artifact = node.getAttribute("data-history-artifact");
+      const job = state.ingestionWizard.currentJob;
+      if (!artifact || !job?.project_id) return;
+      await openHistoricalJobTarget(job, "artifacts", artifact, `Opened artifact ${artifact} from historical job`);
+    });
+  });
+}
+
+async function openSelectedHistoricalView(view, notice) {
+  const job = state.ingestionWizard.currentJob;
+  if (!job?.project_id) {
+    state.ingestionWizard.submitError = "Historical run is not inspectable yet. Refresh projects or inspect output root.";
+    renderOverview();
+    bindWizardJobActions();
+    return;
+  }
+  await openHistoricalJobTarget(job, view, null, notice);
+}
+
+async function assignSelectedHistoricalCompareRole(role) {
+  const job = state.ingestionWizard.currentJob;
+  await assignHistoricalCompareRole(job, role);
+}
+
+async function assignHistoricalCompareRoleById(jobId, role) {
+  const job = (state.ingestionWizard.recentJobs || []).find((item) => item.job_id === jobId);
+  await assignHistoricalCompareRole(job, role);
+}
+
+async function assignHistoricalCompareRole(job, role) {
+  if (!job?.project_id) {
+    state.ingestionWizard.submitError = "Cannot use this historical run in compare because project_id is not available.";
+    renderOverview();
+    bindWizardJobActions();
+    return;
+  }
+  if (role === "base") state.compareView.baseId = job.project_id;
+  if (role === "candidate") state.compareView.candidateId = job.project_id;
+  state.compareView.result = null;
+  state.compareView.error = "";
+  if (state.currentId !== job.project_id) await loadProjects();
+  setView("overview");
+  setNavNotice(`Historical run assigned as ${role} for Compare Runs`, "info");
+  renderOverview();
+  bindWizardJobActions();
+}
+
+async function openHistoricalJobTarget(job, view, artifactPath = null, notice = "") {
+  await loadProjects();
+  await selectProject(job.project_id);
+  setView(view);
+  if (artifactPath) {
+    await openArtifact(artifactPath);
+  }
+  setNavNotice(notice, "info");
+  if (state.current) renderCurrentProject();
 }
 
 function scheduleJobPolling() {

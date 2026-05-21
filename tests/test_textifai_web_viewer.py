@@ -305,8 +305,10 @@ class TextifAIWebViewerTests(unittest.TestCase):
             self.assertGreaterEqual(len(payload["jobs"]), 2)
             self.assertIn("summary", payload)
             self.assertGreaterEqual(payload["summary"]["restored_count"], 1)
+            self.assertIn("ignored_output_dirs_without_metadata", payload["summary"])
             restored = next(job for job in payload["jobs"] if job["job_id"] == "job_restored_1")
             self.assertTrue(restored["restored_from_disk"])
+            self.assertIn("artifact_availability", restored)
 
     def test_log_json_falls_back_to_persisted_log(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -353,6 +355,33 @@ class TextifAIWebViewerTests(unittest.TestCase):
             job = registry.list_jobs()[0]
             self.assertFalse(job.result_detected)
             self.assertTrue(any("obsidian_import.json" in item for item in job.result_warnings))
+            self.assertIn("semantic_invariants_audit.json", job.snapshot()["artifact_availability"])
+
+    def test_historical_job_snapshot_exposes_artifact_flags_and_missing_project_id(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            output_root = repo_root / "runs" / "web_ingestion" / "20260101T000000Z_demo"
+            system_root = output_root / "99_System"
+            system_root.mkdir(parents=True)
+            (system_root / "obsidian_import.json").write_text("{}", encoding="utf-8")
+            metadata = {
+                "job_id": "job_hist_1",
+                "status": "succeeded",
+                "created_at": "2026-01-01T00:00:00+00:00",
+                "project_title": "Hist",
+                "source_root": "/tmp/source",
+                "output_root": str(output_root),
+                "safe_output_root": str(repo_root / "runs" / "web_ingestion"),
+                "command_preview": ["uv"],
+                "run_name": "hist",
+                "project_id": None,
+            }
+            (output_root / JOB_METADATA_FILE).write_text(json.dumps(metadata), encoding="utf-8")
+            registry = IngestionJobRegistry(repo_root=repo_root, start_immediately=False)
+            snapshot = registry.list_jobs()[0].snapshot()
+            self.assertIn("artifact_availability", snapshot)
+            self.assertTrue(snapshot["artifact_availability"]["obsidian_import.json"])
+            self.assertIn("project_id", snapshot)
 
     def test_web_ingestion_folders_without_metadata_reported_but_ignored(self):
         with tempfile.TemporaryDirectory() as tmp:
