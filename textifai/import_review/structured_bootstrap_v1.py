@@ -101,7 +101,7 @@ def _validate_explanatory_language_with_policy(
 
 GLOBAL_NORMALIZATION_PROMPT = """You are a narrative entity normalization system.
 
-Your task is to analyze an ENTIRE novel or long-form narrative input and return a single JSON object containing a globally normalized entity layer for downstream ingestion into an Obsidian / knowledge graph import pipeline.
+Your task is to perform incremental global normalization for a long-form narrative input and return a single JSON object containing a globally normalized entity layer for downstream ingestion into an Obsidian / knowledge graph import pipeline.
 
 Your goal is NOT to summarize every scene.
 Your goal is to identify and normalize only the entities and facts that are:
@@ -228,7 +228,16 @@ Do NOT create entities for:
 GLOBAL NORMALIZATION RULES
 ==========================
 
-Use the ENTIRE work to normalize entities.
+You are performing incremental global normalization over available batch evidence.
+
+The full work may be represented by NOVEL_INDEX_METADATA, but only the expanded text in the current BATCH_SCOPE is narrative evidence for this call.
+
+Use NOVEL_INDEX_METADATA for structure, ordering, and navigation only.
+Do not assert facts from chapters outside BATCH_SCOPE.
+Return globally useful entity candidates supported by the current batch.
+Mark outputs as confirmed only when evidence appears in expanded text.
+Use review/candidate state when global identity is plausible but incomplete.
+You may describe entity certainty in normalization_notes using labels such as confirmed_global or global_candidate.
 
 You must:
 
@@ -420,7 +429,7 @@ CHAPTER_EXTRACTION_PROMPT = """You are a narrative chapter extraction system.
 
 Your task is to analyze ONE chapter of a novel and return a JSON object for downstream Obsidian / knowledge graph ingestion.
 
-This chapter must be interpreted using the provided global canonical entity map.
+This chapter must be interpreted using the provided global canonical entity map when available.
 
 Your objective is NOT to extract everything in the scene.
 Your objective is to extract only information that is:
@@ -447,6 +456,7 @@ OUTPUT SCHEMA
 },
 "chapters": [
 {
+"chapter_extraction_schema_version": "v2",
 "chapter_id": "...",
 "chapter_title_original": "...",
 "chapter_title_canonical": "...",
@@ -502,15 +512,36 @@ OUTPUT SCHEMA
 "confidence": 0.0
 }
 ],
+"objects": [
+{
+"surface": "...",
+"canonical": "...",
+"canonical_candidate": "...",
+"local_candidate": "...",
+"object_subkind": "persistent_artifact",
+"naming_quality": "descriptor",
+"needs_review": false,
+"review_reason": "",
+"review_state": "candidate",
+"facts": ["..."],
+"relationships": [],
+"confidence": 0.0,
+"retention_reason": "plot_persistent"
+}
+],
 "events": [
 {
 "surface": "...",
 "canonical": "...",
 "canonical_candidate": "...",
 "entity_subkind": "...",
+"local_candidate": "...",
+"event_importance": "major",
 "naming_quality": "proper_name",
 "gender_presentation_signal": "unknown",
 "needs_review": false,
+"review_reason": "",
+"review_state": "candidate",
 "facts": ["..."],
 "confidence": 0.0
 }
@@ -519,11 +550,18 @@ OUTPUT SCHEMA
 {
 "from_surface": "...",
 "from_canonical": "...",
+"from_canonical_candidate": "...",
 "to_surface": "...",
 "to_canonical": "...",
-"relation_type": "...",
+"to_canonical_candidate": "...",
+"relation_category": "interpersonal",
+"relation_label": "",
+"relation_summary": "",
+"evidence": ["..."],
 "facts": ["..."],
-"confidence": 0.0
+"confidence": 0.0,
+"needs_review": false,
+"review_reason": ""
 }
 ],
 "unresolved_mentions": [
@@ -592,6 +630,23 @@ Each extracted item may set gender_presentation_signal to one of:
 Use this only when the chapter provides clear narrative evidence through context, aliases, or co-occurrence. Do not infer from a proper name alone. If evidence is weak or absent, use unknown. This signal is a soft merge/alias feature, not an identity rule.
 
 ==================================================
+CANONICAL_MAP_MODE
+==================
+
+If CANONICAL_ENTITY_MAP is empty or incomplete:
+
+* Do not pretend that canon-approved identities exist.
+* Extract strong local candidates from the chapter evidence.
+* Use canonical only when the chapter text itself provides a stable explicit name or label.
+* Use canonical_candidate as the best normalized local guess.
+* Use local_candidate when the mention is important but not canon-ready.
+* Set needs_review = true when identity, naming, merge, role, or persistence is uncertain.
+* Use review_state values such as canonical, candidate, local_candidate, or needs_review when useful.
+* Never auto-merge.
+* Never auto-promote.
+* Do not discard important candidates merely because the canonical map is empty.
+
+==================================================
 RELEVANCE FILTER
 ================
 
@@ -628,7 +683,7 @@ chapter_summary must:
 CHAPTER FACT RULES
 ==================
 
-For chapter-level characters / places / concepts:
+For chapter-level characters / places / concepts / objects:
 
 * include only facts that matter beyond the current moment
 * do not repeat generic global facts unless the chapter materially reinforces or changes them
@@ -637,7 +692,6 @@ For chapter-level characters / places / concepts:
 Maximum:
 
 * 4 facts per extracted item
-* 3 events unless truly necessary
 
 ==================================================
 EVENT RULES
@@ -652,24 +706,78 @@ Include only events that:
 
 Do NOT include events that are just operational scene steps.
 
+Use event_importance as one of:
+
+* major
+* supporting
+* local
+
+Allowed shorthand: major|supporting|local.
+Use major for durable structural events.
+Use supporting for causal context that explains a major event.
+Use local only when it remains useful but is not durable enough for standalone canon.
+Do not use a hard cap of 3 if the chapter is dense.
+Prefer fewer high-value events over exhaustive scene chronology.
+
 ==================================================
 RELATION RULES
 ==============
 
-relation_type must be one of:
+Extract meaningful relationships between entities, objects, places, events, and concepts.
+A relationship may be explicit, strongly supported, or uncertain.
+Use a broad relation_category.
+Use relation_label as a short free label, preferably verb-first.
+Do not force a precise relationship type if the text does not support it.
+If the relation exists but exact type is unclear, use unknown_association.
+Always include evidence or fact summary.
+Set needs_review = true when inference is stronger than literal evidence.
 
+Allowed relation_category values:
+
+* interpersonal
 * familial
+* political
 * conflict
-* alliance
-* authority
-* dependency
-* magical_link
-* located_in
-* part_of
-* member_of
-* uses
+* affiliation
+* location
+* object_link
+* magic_or_system
+* identity_or_alias
+* causal
+* unknown_association
 
-Include only stable or narratively meaningful relations.
+Example label style only: rescues, raises, keeps_artifact, usurps_power, role_pair_candidate, linked_by_magic, erased_from_history.
+
+==================================================
+OBJECT RULES
+============
+
+Persistent objects/artifacts must go in objects, not concepts.
+Allowed object_subkind values include: persistent_artifact|weapon|tool|ritual_key|catalyst|temporary_prop|unknown.
+Weapons, tools, catalysts, keys, ritual items, and persistent props belong in objects.
+Temporary props should only be included if structurally relevant.
+If object importance is uncertain but plausible, include it with needs_review = true.
+Do not suppress durable artifacts because they are not characters.
+
+==================================================
+CONCEPT / OBJECT / EVENT BOUNDARIES
+===================================
+
+Characters: named or durable narrative actors.
+Places: locations, regions, or institutions when they function as location-like settings.
+Objects: artifacts, weapons, tools, catalysts, keys, and persistent props.
+Concepts: systems, laws, roles, doctrines, magic mechanics, and abstract lore.
+Events: durable changes, historical incidents, and turning points.
+If something can fit multiple categories, choose the most operational downstream category and cross-reference it via facts or relationships.
+Do not duplicate the same item across categories unless there is a clear reason.
+
+Examples:
+
+* A persistent artifact belongs in objects.
+* A magic law belongs in concepts.
+* A kingdom collapse belongs in events.
+* A role pair or title system belongs in concepts.
+* A named political actor belongs in characters.
 
 ==================================================
 UNRESOLVED MENTIONS RULES
@@ -784,8 +892,9 @@ OUTPUT SCHEMA
 "characters": [{"surface": "...", "canonical": "...", "facts": ["..."], "confidence": 0.0}],
 "places": [{"surface": "...", "canonical": "...", "facts": ["..."], "confidence": 0.0}],
 "concepts": [{"surface": "...", "canonical": "...", "facts": ["..."], "confidence": 0.0}],
-"events": [{"surface": "...", "canonical": "...", "facts": ["..."], "confidence": 0.0}],
-"relations": [{"from_surface": "...", "from_canonical": "...", "to_surface": "...", "to_canonical": "...", "relation_type": "...", "facts": ["..."], "confidence": 0.0}],
+"objects": [{"surface": "...", "canonical": "...", "facts": ["..."], "confidence": 0.0}],
+"events": [{"surface": "...", "canonical": "...", "event_importance": "major", "facts": ["..."], "confidence": 0.0}],
+"relations": [{"from_surface": "...", "from_canonical": "...", "to_surface": "...", "to_canonical": "...", "relation_category": "unknown_association", "relation_label": "", "evidence": ["..."], "facts": ["..."], "confidence": 0.0}],
 "unresolved_mentions": [{"surface": "...", "possible_kind": "...", "facts": ["..."], "confidence": 0.0}],
 "candidate_summary_points": ["..."]
 }
@@ -801,6 +910,7 @@ Keep explicit names separate unless identity is clearly confirmed.
 Use TITLE_ENTITY_HINTS as additional identity evidence when the title explicitly names a focal entity.
 Do not output chapter_text_markdown.
 Prefer high-signal durable facts over local choreography.
+If CANONICAL_ENTITY_MAP is empty or incomplete, keep strong local candidates without pretending they are canon-approved.
 """
 
 
@@ -824,6 +934,7 @@ OUTPUT SCHEMA
 },
 "chapters": [
 {
+"chapter_extraction_schema_version": "v2",
 "chapter_id": "...",
 "chapter_title_original": "...",
 "chapter_title_canonical": "...",
@@ -843,8 +954,9 @@ OUTPUT SCHEMA
 "characters": [{"surface": "...", "canonical": "...", "facts": ["..."], "confidence": 0.0}],
 "places": [{"surface": "...", "canonical": "...", "facts": ["..."], "confidence": 0.0}],
 "concepts": [{"surface": "...", "canonical": "...", "facts": ["..."], "confidence": 0.0}],
-"events": [{"surface": "...", "canonical": "...", "facts": ["..."], "confidence": 0.0}],
-"relations": [{"from_surface": "...", "from_canonical": "...", "to_surface": "...", "to_canonical": "...", "relation_type": "...", "facts": ["..."], "confidence": 0.0}],
+"objects": [{"surface": "...", "canonical": "...", "facts": ["..."], "confidence": 0.0}],
+"events": [{"surface": "...", "canonical": "...", "event_importance": "major", "facts": ["..."], "confidence": 0.0}],
+"relations": [{"from_surface": "...", "from_canonical": "...", "to_surface": "...", "to_canonical": "...", "relation_category": "unknown_association", "relation_label": "", "evidence": ["..."], "facts": ["..."], "confidence": 0.0}],
 "unresolved_mentions": [{"surface": "...", "possible_kind": "...", "facts": ["..."], "confidence": 0.0}]
 }
 ]
@@ -862,6 +974,8 @@ Use the canonical entity map when there is a safe match.
 Use TITLE_ENTITY_HINTS as a guardrail when the chapter title explicitly names a focal entity.
 Preserve chapter_title_original and chapter_title_canonical in the source language.
 Do not translate chapter titles, character names, place names, faction names, object names, or canonical names.
+Retain persistent objects in objects, not concepts.
+Use event_importance to keep major/supporting/local events distinguishable.
 
 ==================================================
 CHAPTER LABEL RULES
@@ -3283,7 +3397,7 @@ def _strip_entity_summary_to_safe_sentence(summary: str, *, canonical_name: str,
 
 def extract_local_entity_mentions(chapter: dict[str, Any]) -> list[dict[str, Any]]:
     mentions: list[dict[str, Any]] = []
-    for section in ("characters", "places", "concepts"):
+    for section in ("characters", "places", "concepts", "objects"):
         for item in chapter.get(section, []):
             mentions.append(
                 {
@@ -3300,7 +3414,7 @@ def extract_local_entity_mentions(chapter: dict[str, Any]) -> list[dict[str, Any
 def chapter_relation_to_entity_relation(rel: dict[str, Any], entity_name: str) -> dict[str, Any] | None:
     from_canonical = str(rel.get("from_canonical") or "").strip()
     to_canonical = str(rel.get("to_canonical") or "").strip()
-    relation_type = str(rel.get("relation_type") or "").strip()
+    relation_type = _legacy_relation_type(rel)
     facts = rel.get("facts", []) or []
     if not relation_type:
         return None
@@ -3331,6 +3445,16 @@ def merge_relationship_lists(existing: list[dict[str, Any]], candidates: list[di
     for rel in candidates:
         _add(rel)
     return sorted(bucket.values(), key=lambda r: (r["type"], str(r["target"]).lower()))
+
+def _legacy_relation_type(rel: dict[str, Any]) -> str:
+    relation_type = str(rel.get("relation_type") or "").strip()
+    if relation_type:
+        return relation_type
+    category = str(rel.get("relation_category") or "").strip()
+    label = str(rel.get("relation_label") or "").strip()
+    if category and label:
+        return f"{category}:{label}"
+    return category or label
 
 
 def unique_preserve_order(items: list[str]) -> list[str]:
@@ -3559,6 +3683,7 @@ def _build_global_normalization_prompt(
         "NORMALIZATION_STRATEGY:\n"
         "- Use metadata-first selective expansion.\n"
         "- The full novel text is represented externally by NOVEL_INDEX metadata.\n"
+        "- Use NOVEL_INDEX_METADATA for structure, ordering, and navigation only.\n"
         "- Only SELECTIVE_CHAPTER_TEXT is expanded in this call.\n"
         "- Do not claim evidence from chapters that are not in BATCH_SCOPE.\n\n"
         f"NOVEL_INDEX_METADATA:\n{json.dumps(_compact_novel_index_for_prompt(novel_index), ensure_ascii=False)}\n\n"
@@ -4407,6 +4532,8 @@ def _validate_chapter_extraction_payload(
     for key in ("characters", "places", "concepts", "events", "relations", "unresolved_mentions"):
         if not isinstance(chapter.get(key), list):
             errors.append(f"missing array field: {key}")
+    if "objects" in chapter and not isinstance(chapter.get("objects"), list):
+        errors.append("objects must be an array when present")
     language_errors, language_warnings = _validate_chapter_explanatory_language(
         chapter=chapter,
         language=language,
@@ -4427,7 +4554,7 @@ def _validate_chapter_explanatory_language(
     validation_mode: str,
 ) -> tuple[list[str], list[str]]:
     texts = [str(chapter.get("chapter_summary") or "").strip()]
-    for key in ("characters", "places", "concepts", "events"):
+    for key in ("characters", "places", "concepts", "objects", "events"):
         for item in chapter.get(key, []) or []:
             if not isinstance(item, dict):
                 continue
@@ -5064,9 +5191,15 @@ def _normalize_chapter_payload(
         chapter["chapter_number_in_label"] = int(chapter["chapter_number_in_label"])
     else:
         chapter["chapter_number_in_label"] = None
+    payload_schema_version = str(payload.get("chapter_extraction_schema_version") or "").strip()
+    chapter["chapter_extraction_schema_version"] = (
+        str(chapter.get("chapter_extraction_schema_version") or "").strip()
+        or payload_schema_version
+        or "v1"
+    )
     chapter["chapter_summary"] = str(chapter.get("chapter_summary") or "").strip()
     chapter["chapter_text_markdown"] = str(chapter.get("chapter_text_markdown") or chapter_text).strip()
-    for key in ("characters", "places", "concepts", "events", "relations", "unresolved_mentions"):
+    for key in ("characters", "places", "concepts", "objects", "events", "relations", "unresolved_mentions"):
         if not isinstance(chapter.get(key), list):
             chapter[key] = []
     for key in ("characters", "places", "concepts", "events"):
@@ -5082,15 +5215,74 @@ def _normalize_chapter_payload(
                     "surface": surface,
                     "canonical": canonical,
                     "canonical_candidate": str(item.get("canonical_candidate") or canonical or surface).strip() or canonical,
+                    "local_candidate": str(item.get("local_candidate") or "").strip(),
                     "entity_subkind": str(item.get("entity_subkind") or "").strip(),
+                    "event_importance": _normalize_event_importance(item.get("event_importance")) if key == "events" else str(item.get("event_importance") or "").strip(),
                     "naming_quality": str(item.get("naming_quality") or "unknown").strip() or "unknown",
                     "gender_presentation_signal": _normalize_gender_presentation_signal(item.get("gender_presentation_signal")),
                     "gender_signal_confidence": _normalize_optional_float(item.get("gender_signal_confidence")),
                     "gender_signal_evidence": _normalize_gender_signal_evidence(item.get("gender_signal_evidence")),
-                    "needs_review": bool(item.get("needs_review", False)),
+                    "needs_review": bool(item.get("needs_review", str(item.get("review_state") or "").casefold() == "review")),
+                    "review_reason": str(item.get("review_reason") or "").strip(),
+                    "review_state": str(item.get("review_state") or "").strip() or ("needs_review" if bool(item.get("needs_review", False)) else "candidate"),
                 }
             )
         chapter[key] = normalized_items
+    normalized_objects: list[dict[str, Any]] = []
+    for item in chapter.get("objects", []):
+        if not isinstance(item, dict):
+            continue
+        surface = str(item.get("surface") or "").strip()
+        canonical = str(item.get("canonical") or surface).strip() or surface
+        normalized_objects.append(
+            {
+                **item,
+                "surface": surface,
+                "canonical": canonical,
+                "canonical_candidate": str(item.get("canonical_candidate") or canonical or surface).strip() or canonical,
+                "local_candidate": str(item.get("local_candidate") or "").strip(),
+                "object_subkind": str(item.get("object_subkind") or "unknown").strip() or "unknown",
+                "naming_quality": str(item.get("naming_quality") or "unknown").strip() or "unknown",
+                "needs_review": bool(item.get("needs_review", False)),
+                "review_reason": str(item.get("review_reason") or "").strip(),
+                "review_state": str(item.get("review_state") or "").strip() or ("needs_review" if bool(item.get("needs_review", False)) else "candidate"),
+                "facts": item.get("facts", []) if isinstance(item.get("facts"), list) else [],
+                "relationships": item.get("relationships", []) if isinstance(item.get("relationships"), list) else [],
+                "confidence": _normalize_optional_float(item.get("confidence")),
+                "retention_reason": str(item.get("retention_reason") or "other").strip() or "other",
+            }
+        )
+    chapter["objects"] = normalized_objects
+    normalized_relations: list[dict[str, Any]] = []
+    for rel in chapter.get("relations", []):
+        if not isinstance(rel, dict):
+            continue
+        category = str(rel.get("relation_category") or "").strip()
+        label = str(rel.get("relation_label") or "").strip()
+        legacy_type = str(rel.get("relation_type") or "").strip()
+        if not category and legacy_type:
+            category = legacy_type
+        normalized_relations.append(
+            {
+                **rel,
+                "from_surface": str(rel.get("from_surface") or "").strip(),
+                "from_canonical": str(rel.get("from_canonical") or "").strip(),
+                "from_canonical_candidate": str(rel.get("from_canonical_candidate") or rel.get("from_canonical") or "").strip(),
+                "to_surface": str(rel.get("to_surface") or "").strip(),
+                "to_canonical": str(rel.get("to_canonical") or "").strip(),
+                "to_canonical_candidate": str(rel.get("to_canonical_candidate") or rel.get("to_canonical") or "").strip(),
+                "relation_category": category,
+                "relation_label": label,
+                "relation_summary": str(rel.get("relation_summary") or "").strip(),
+                "evidence": rel.get("evidence", []) if isinstance(rel.get("evidence"), list) else [],
+                "facts": rel.get("facts", []) if isinstance(rel.get("facts"), list) else [],
+                "confidence": _normalize_optional_float(rel.get("confidence")),
+                "needs_review": bool(rel.get("needs_review", False)),
+                "review_reason": str(rel.get("review_reason") or "").strip(),
+                "relation_type": legacy_type or (f"{category}:{label}" if category and label else category or label),
+            }
+        )
+    chapter["relations"] = normalized_relations
     return {
         "work": {
             "title": str(work.get("title") or work_title).strip() or work_title,
@@ -5098,6 +5290,13 @@ def _normalize_chapter_payload(
         },
         "chapters": [chapter],
     }
+
+
+def _normalize_event_importance(value: Any) -> str:
+    normalized = str(value or "supporting").strip().casefold()
+    if normalized in {"major", "supporting", "local"}:
+        return normalized
+    return "supporting"
 
 
 def _normalize_gender_presentation_signal(value: Any) -> str:
