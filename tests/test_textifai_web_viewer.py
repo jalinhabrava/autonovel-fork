@@ -629,6 +629,139 @@ class TextifAIWebViewerTests(unittest.TestCase):
         self.assertIn("Future action: Attach role/title", rendered)
         self.assertIn("disabled", rendered)
 
+    def test_review_group_summary_counts_cover_groups_severity_related_object_and_legacy(self):
+        grouped = _run_viewer_js_export(
+            "groupReviewItemsForPresentation",
+            [
+                {
+                    "review_type": "entity_retention_review",
+                    "severity": "medium",
+                    "source_entity": "Ari Mar",
+                    "target_text": "el capitán del paso",
+                    "suggested_action": "review_attach_role_or_title",
+                    "evidence": [{"text": "rol", "chapter_id": "ch_001"}],
+                    "candidate_entities": [{"canonical_name": "Ari Mar", "entity_kind": "character"}],
+                    "metadata": {
+                        "recommended_action": "review_attach_role_or_title",
+                        "descriptor_category": "role_descriptor",
+                        "signal_tier": "medium",
+                        "candidate_requires_review": True,
+                        "do_not_auto_merge": True,
+                        "do_not_auto_promote": True,
+                        "equivalent_signal_group": "ari-role-1",
+                        "primary_equivalent_surface": "el capitán del paso",
+                    },
+                },
+                {
+                    "review_type": "entity_retention_review",
+                    "severity": "low",
+                    "source_entity": "Ari Mar",
+                    "target_text": "el custodio del paso",
+                    "suggested_action": "review_attach_role_or_title",
+                    "evidence": [{"text": "variante", "chapter_id": "ch_002"}],
+                    "candidate_entities": [{"canonical_name": "Ari Mar", "entity_kind": "character"}],
+                    "metadata": {
+                        "recommended_action": "review_attach_role_or_title",
+                        "descriptor_category": "role_descriptor",
+                        "signal_tier": "low",
+                        "candidate_requires_review": True,
+                        "degraded_due_to_equivalent_signal": True,
+                        "equivalent_signal_group": "ari-role-1",
+                        "primary_equivalent_surface": "el capitán del paso",
+                    },
+                },
+                {
+                    "review_type": "entity_retention_review",
+                    "severity": "high",
+                    "source_entity": "llave de cristal",
+                    "target_text": "llave de cristal",
+                    "suggested_action": "review_create_primary",
+                    "evidence": [{"text": "objeto durable", "chapter_id": "ch_003"}],
+                    "candidate_entities": [],
+                    "metadata": {
+                        "recommended_action": "review_create_primary",
+                        "candidate_status": "no_clear_existing_primary",
+                        "semantic_value": "durable_object",
+                    },
+                },
+                {
+                    "review_type": "review_entity",
+                    "severity": "low",
+                    "source_entity": "mención vieja",
+                    "target_text": "algo viejo",
+                    "suggested_action": "",
+                    "candidate_entities": [],
+                    "metadata": {},
+                },
+            ],
+        )
+        summary = _run_viewer_js_export("summarizeReviewPresentationGroups", grouped)
+        self.assertEqual(summary["total_groups"], 2)
+        self.assertEqual(summary["requires_human_review_groups"], 1)
+        self.assertEqual(summary["groups_by_highest_severity"]["high"], 1)
+        self.assertEqual(summary["groups_by_highest_severity"]["medium"], 1)
+        self.assertEqual(summary["groups_with_related_items"], 1)
+        self.assertEqual(summary["object_retention_groups"], 1)
+        self.assertEqual(summary["legacy_ungrouped_count"], 1)
+
+    def test_review_group_header_and_summary_render_candidate_action_counts_and_badges(self):
+        grouped = {
+            "groups": [
+                {
+                    "group_type": "descriptor_group",
+                    "group_key": "descriptor|ari",
+                    "candidate_name": "Ari Mar",
+                    "recommended_action": "review_attach_role_or_title",
+                    "descriptor_category": "role_descriptor",
+                    "principal": {
+                        "review_type": "entity_retention_review",
+                        "severity": "medium",
+                        "source_entity": "Ari Mar",
+                        "target_text": "el capitán del paso",
+                        "suggested_action": "review_attach_role_or_title",
+                        "candidate_entities": [{"canonical_name": "Ari Mar", "entity_kind": "character"}],
+                        "evidence": [{"text": "rol", "chapter_id": "ch_001"}],
+                        "metadata": {
+                            "recommended_action": "review_attach_role_or_title",
+                            "signal_tier": "medium",
+                            "candidate_requires_review": True,
+                            "do_not_auto_merge": True,
+                            "do_not_auto_promote": True,
+                            "future_viewer_actions": ["attach_role_or_title"],
+                        },
+                    },
+                    "related_items": [
+                        {
+                            "review_type": "entity_retention_review",
+                            "severity": "low",
+                            "source_entity": "Ari Mar",
+                            "target_text": "el custodio del paso",
+                            "suggested_action": "review_attach_role_or_title",
+                            "evidence": [{"text": "variante", "chapter_id": "ch_002"}],
+                            "candidate_entities": [{"canonical_name": "Ari Mar", "entity_kind": "character"}],
+                            "metadata": {
+                                "recommended_action": "review_attach_role_or_title",
+                                "signal_tier": "low",
+                                "degraded_due_to_equivalent_signal": True,
+                            },
+                        }
+                    ],
+                }
+            ],
+            "ungrouped": [],
+        }
+        summary_html = _run_viewer_js_export("renderReviewPresentationSummary", grouped)
+        group_html = _run_viewer_js_export("renderReviewGroupCard", grouped["groups"][0])
+        self.assertIn("Total review groups", summary_html)
+        self.assertIn("Requires human review", summary_html)
+        self.assertIn("Groups with related/equivalent items", summary_html)
+        self.assertIn("Ari Mar", group_html)
+        self.assertIn("review_attach_role_or_title", group_html)
+        self.assertIn("1 related", group_html)
+        self.assertIn("Evidence", group_html)
+        self.assertIn("Read-only", group_html)
+        self.assertIn("Requires human review", group_html)
+
     def test_static_viewer_future_actions_are_read_only(self):
         source = Path("textifai/web_viewer/static/app.js").read_text(encoding="utf-8")
         self.assertIn("RECOMMENDED_ACTION_VIEWER_ACTIONS", source)
@@ -640,6 +773,8 @@ class TextifAIWebViewerTests(unittest.TestCase):
         self.assertNotIn("/api/review/actions", source)
         self.assertIn("groupReviewItemsForPresentation", source)
         self.assertIn("renderReviewGroupCard", source)
+        self.assertIn("summarizeReviewPresentationGroups", source)
+        self.assertIn("renderReviewPresentationSummary", source)
         self.assertIn("review-group", source)
         self.assertNotIn("fetch(\"/api/review", source)
 

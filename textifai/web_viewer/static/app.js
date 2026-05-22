@@ -2168,6 +2168,7 @@ function renderReview() {
         <p>${renderCountBadges(typeCounts, "type")}</p>
       </div>
     </div>
+    ${renderReviewPresentationSummary(grouped)}
     <div class="review-filters panel">
       <label>Severity
         <select id="review-filter-severity">
@@ -2391,6 +2392,71 @@ function renderReviewPresentationGroups(grouped) {
   return `${groupHtml}${legacyHtml}`;
 }
 
+function summarizeReviewPresentationGroups(grouped) {
+  const groups = grouped?.groups || [];
+  const ungrouped = grouped?.ungrouped || [];
+  const summary = {
+    total_groups: groups.length,
+    requires_human_review_groups: 0,
+    groups_by_highest_severity: { high: 0, medium: 0, low: 0, unknown: 0 },
+    groups_with_related_items: 0,
+    object_retention_groups: 0,
+    legacy_ungrouped_count: ungrouped.length,
+    future_action_groups: 0,
+    total_related_items: 0,
+    total_evidence_items: 0,
+    groups_by_action: {},
+  };
+  for (const group of groups) {
+    const items = groupItems(group);
+    const principal = group.principal || items[0] || {};
+    const severity = highestReviewSeverity(items);
+    summary.groups_by_highest_severity[severity] = (summary.groups_by_highest_severity[severity] || 0) + 1;
+    if (groupRequiresHumanReview(group)) summary.requires_human_review_groups += 1;
+    if ((group.related_items || []).length) summary.groups_with_related_items += 1;
+    if (group.group_type === "object_retention_group") summary.object_retention_groups += 1;
+    if (items.some((item) => normalizedFutureViewerActions(item).length)) summary.future_action_groups += 1;
+    summary.total_related_items += (group.related_items || []).length;
+    summary.total_evidence_items += groupEvidenceCount(group);
+    const action = group.recommended_action || reviewActionPresentation(principal).recommendedAction || "unknown";
+    summary.groups_by_action[action] = (summary.groups_by_action[action] || 0) + 1;
+  }
+  return summary;
+}
+
+function renderReviewPresentationSummary(grouped) {
+  const summary = summarizeReviewPresentationGroups(grouped);
+  return `
+    <div class="review-group-summary panel">
+      <div class="review-group-summary-title">
+        <p class="eyebrow">Decision summary</p>
+        <h4>Prioritized review groups</h4>
+        <p class="muted">Read-only grouping summary. Use groups below to inspect principal and related signals.</p>
+      </div>
+      <div class="review-group-summary-cards">
+        ${renderReviewSummaryCard("Total review groups", summary.total_groups)}
+        ${renderReviewSummaryCard("Requires human review", summary.requires_human_review_groups)}
+        ${renderReviewSummaryCard("High groups", summary.groups_by_highest_severity.high || 0)}
+        ${renderReviewSummaryCard("Medium groups", summary.groups_by_highest_severity.medium || 0)}
+        ${renderReviewSummaryCard("Low groups", summary.groups_by_highest_severity.low || 0)}
+        ${renderReviewSummaryCard("Groups with related/equivalent items", summary.groups_with_related_items)}
+        ${renderReviewSummaryCard("Object retention groups", summary.object_retention_groups)}
+        ${renderReviewSummaryCard("Legacy / ungrouped", summary.legacy_ungrouped_count)}
+      </div>
+      <div class="review-group-summary-actions">
+        <span class="muted">Groups by action:</span>
+        ${renderCountBadges(summary.groups_by_action, "action")}
+        <span class="badge review-group-badge">Read-only</span>
+        <span class="badge review-group-badge">Future actions disabled</span>
+      </div>
+    </div>
+  `;
+}
+
+function renderReviewSummaryCard(label, value) {
+  return `<div class="review-summary-card"><span>${escapeHtml(label)}</span><strong>${fmtCount(value)}</strong></div>`;
+}
+
 function renderCountBadges(counts, badgeType) {
   const entries = Object.entries(counts || {});
   if (!entries.length) return `<span class="muted">not available</span>`;
@@ -2486,6 +2552,9 @@ function renderReviewGroupCard(group, index) {
   const openAttr = index < 2 ? "open" : "";
   const presentation = reviewActionPresentation(principal);
   const related = group.related_items || [];
+  const highestSeverity = highestReviewSeverity(groupItems(group));
+  const evidenceCount = groupEvidenceCount(group);
+  const requiresHumanReview = groupRequiresHumanReview(group);
   return `
     <details class="review-group ${escapeHtml(group.group_type || "descriptor_group")}" ${openAttr}>
       <summary>
@@ -2494,8 +2563,9 @@ function renderReviewGroupCard(group, index) {
         <span class="muted">·</span>
         <span>${escapeHtml(group.recommended_action || "editorial review")}</span>
         ${group.descriptor_category ? `<span class="badge">${escapeHtml(group.descriptor_category)}</span>` : ""}
-        <span class="badge severity-${escapeHtml(String(principal.severity || "unknown").toLowerCase())}">${escapeHtml(principal.severity || "unknown")}</span>
+        <span class="badge severity-${escapeHtml(highestSeverity)}">${escapeHtml(highestSeverity)}</span>
         ${related.length ? `<span class="badge">${related.length} related</span>` : ""}
+        <span class="badge">${evidenceCount} evidence</span>
       </summary>
       <div class="review-group-body">
         <div class="review-group-header">
@@ -2506,9 +2576,10 @@ function renderReviewGroupCard(group, index) {
           </div>
           <div class="review-group-badges">
             <span class="badge review-group-badge">Read-only</span>
-            <span class="badge review-group-badge">Requires human review</span>
+            ${requiresHumanReview ? `<span class="badge review-group-badge">Requires human review</span>` : ""}
             ${presentation.doNotAutoMerge ? `<span class="badge review-group-badge">No auto-merge</span>` : ""}
             ${reviewMetadata(principal).do_not_auto_promote ? `<span class="badge review-group-badge">No auto-promote</span>` : ""}
+            ${group.group_type === "object_retention_group" ? `<span class="badge review-group-badge">Object retention</span>` : ""}
           </div>
         </div>
         <div class="review-group-section">
@@ -2524,6 +2595,31 @@ function renderReviewGroupCard(group, index) {
       </div>
     </details>
   `;
+}
+
+function groupItems(group) {
+  return [group?.principal, ...(group?.related_items || [])].filter(Boolean);
+}
+
+function highestReviewSeverity(items) {
+  const sorted = [...(items || [])].sort((left, right) => reviewSeverityRank(left?.severity) - reviewSeverityRank(right?.severity));
+  return String(sorted[0]?.severity || "unknown").toLowerCase();
+}
+
+function groupRequiresHumanReview(group) {
+  return groupItems(group).some((item) => {
+    const metadata = reviewMetadata(item);
+    return Boolean(
+      metadata.candidate_requires_review ||
+      metadata.do_not_auto_merge ||
+      metadata.do_not_auto_promote ||
+      String(metadata.candidate_review_state || "").toLowerCase() === "review"
+    );
+  });
+}
+
+function groupEvidenceCount(group) {
+  return groupItems(group).reduce((total, item) => total + ((item?.evidence || []).length), 0);
 }
 
 function renderReviewRelatedItem(item, index) {
@@ -3235,6 +3331,8 @@ globalThis.__TEXTIFAI_REVIEW_ACTIONS__ = {
   normalizedFutureViewerActions,
   reviewActionPresentation,
   groupReviewItemsForPresentation,
+  summarizeReviewPresentationGroups,
+  renderReviewPresentationSummary,
   renderReviewPresentationGroups,
   renderReviewGroupCard,
   renderReviewActionDescriptors,
