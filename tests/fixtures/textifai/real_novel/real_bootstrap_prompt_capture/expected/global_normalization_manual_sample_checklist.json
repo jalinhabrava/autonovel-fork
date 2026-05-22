@@ -1,0 +1,66 @@
+{
+  "sample_id": "chatgpt_response_bootstrap_global_normalization_ja_batch_001_after_sp051",
+  "prompt_source": "real_bootstrap_global_normalization_after_sp051",
+  "source_language": "ja",
+  "batch_scope": ["ch_001", "ch_002", "ch_003"],
+  "required_top_level_keys": ["work", "entities", "merge_plan"],
+  "required_entity_keys": [
+    "canonical_name",
+    "canonical_candidate",
+    "entity_kind",
+    "entity_subkind",
+    "preferred_slug",
+    "aliases",
+    "summary",
+    "key_facts",
+    "relationships",
+    "chapter_refs",
+    "source_mentions",
+    "confidence",
+    "review_state",
+    "naming_quality",
+    "is_stable_entity",
+    "needs_review",
+    "review_reason"
+  ],
+  "useful_coverage_targets": [
+    "アデルマン・レオフリック",
+    "ティセイア王国",
+    "杖の一族",
+    "王と杖|王者の杖",
+    "均衡",
+    "ベル|舌のないベル",
+    "赤子",
+    "セラ",
+    "触媒|アルモナイト",
+    "ティセイア王国の崩壊"
+  ],
+  "canonical_map_targets": [
+    "アデルマン・レオフリック",
+    "ティセイア王国",
+    "杖の一族",
+    "ベル",
+    "均衡"
+  ],
+  "review_safety_targets": {
+    "uncertain_identity_review_surfaces": ["私", "赤子", "杖", "王", "王妃", "後継者"],
+    "policy": "Uncertain identities must remain review/needs_review unless the sample provides explicit stable evidence.",
+    "merge_plan_policy": "Any merge must include reason and confidence; unsafe identity overmerge is non-negotiable failure."
+  },
+  "non_negotiable_failures": [
+    "invalid_json",
+    "empty_entities",
+    "canonical_map_empty",
+    "unsafe_auto_merge",
+    "missing_durable_object_artifact",
+    "missing_core_world_concept",
+    "provider_call",
+    "write_back"
+  ],
+  "provider_free": {
+    "provider_calls": false,
+    "network": false,
+    "write_back": false,
+    "secrets": false
+  }
+}

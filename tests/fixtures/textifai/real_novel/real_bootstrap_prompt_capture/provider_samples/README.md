@@ -24,6 +24,17 @@ Este fixture guarda respuestas manuales de ChatGPT obtenidas a partir de prompts
   - canonical map en prompt: vacío (`CANONICAL_ENTITY_MAP: []`)
   - prompt endurecido contiene `chapter_extraction_schema_version: v2`, `objects`, `CANONICAL_MAP_MODE`, `relation_category`, `relation_label`, `event_importance`
 
+- `chatgpt_response_bootstrap_global_normalization_ja_batch_001_after_sp051.json`
+  - manual global normalization sample para `safepoint-053`
+  - prompt real usado: captura post-`safepoint-051`
+  - task capturada: `bootstrap_global_normalization`
+  - source privada usada por el usuario: `/home/david/OnT/王者の杖.md`
+  - batch scope: `ch_001`, `ch_002`, `ch_003`
+  - language: `ja`
+  - provider-free manual ChatGPT sample
+  - no es provider runtime output
+  - no es canon approval
+
 ## Política
 
 - No contiene prompt capturado completo.

@@ -1,0 +1,388 @@
+[
+  {
+    "canonical_name": "アデルマン・レオフリック",
+    "entity_kind": "character",
+    "aliases": [
+      "アデルマン・レオフリック",
+      "摂政",
+      "王国の救世主"
+    ],
+    "summary": "アデルマン・レオフリックはティセイア王国崩壊後に摂政となった政治的権力者である。杖の一族への疑念を毒へ変えた人物として語られ、セラの継承や儀式上の配置にも関与している。",
+    "key_facts": [
+      "王宮評議会内の杖の一族への疑念を最初に毒へと変えた人物として語られる。",
+      "ティセイア王国崩壊後、摂政に就いた。",
+      "公式には王国の救世主として扱われている。",
+      "セラに対して、均衡・継承の印・未来の固定という政治的説明をした。"
+    ],
+    "review_state": "canonical",
+    "confidence": 0.94,
+    "canonical_candidate": "アデルマン・レオフリック",
+    "entity_subkind": "regent_political_actor",
+    "naming_quality": "proper_name",
+    "needs_review": false
+  },
+  {
+    "canonical_name": "セラ",
+    "entity_kind": "character",
+    "aliases": [
+      "セラ",
+      "姫",
+      "厄介な問題"
+    ],
+    "summary": "セラは王城に暮らす少女であり、制御困難な魔力と継承に関わる立場を持つ。父母の命日と儀式をめぐる政治的配置を知った後、自分の意志で訓練と逃走を選ぶ。",
+    "key_facts": [
+      "父様と母様の命日に、公的な儀式で悲しむ役割を演じさせられていた。",
+      "摂政から「均衡のため」「継承の印として」「未来の固定のため」と説明され、自分が飾りとして扱われていたと知った。",
+      "魔力が強すぎたり歪んだりして触媒を壊し、魔法訓練が成立しにくい。",
+      "純度の高いアルモナイトの珠で強大な魔力反応を起こし、防御壁と塔の一部を破壊した。"
+    ],
+    "review_state": "canonical",
+    "confidence": 0.93,
+    "canonical_candidate": "セラ",
+    "entity_subkind": "princess_magic_anomaly",
+    "naming_quality": "proper_name",
+    "needs_review": false
+  },
+  {
+    "canonical_name": "ネリス女王",
+    "entity_kind": "character",
+    "aliases": [
+      "ネリス女王",
+      "母様",
+      "王妃"
+    ],
+    "summary": "ネリス女王は、セラの母として言及される故人である。セラは母の記憶を持たず、肖像画と魔技の断片、他人の言葉だけを通じて母を知っている。",
+    "key_facts": [
+      "セラの母として言及される。",
+      "セラはネリス女王に似てきたと言われている。",
+      "セラには母の声の記憶がなく、肖像画と魔技の断片、他人の言葉だけが残っている。",
+      "公式記録では王妃は出産で命を落としたとされる。"
+    ],
+    "review_state": "review",
+    "confidence": 0.78,
+    "canonical_candidate": "ネリス女王",
+    "entity_subkind": "queen_mother",
+    "naming_quality": "title_plus_name",
+    "needs_review": true
+  },
+  {
+    "canonical_name": "仮面の男",
+    "entity_kind": "character",
+    "aliases": [
+      "仮面の男",
+      "男",
+      "彼",
+      "そいつ"
+    ],
+    "summary": "仮面の男は、逃走中のセラを追跡・包囲する戦闘要員である。蒼く光る槍のような武器と封印用の手枷を使い、セラを拘束または遮断しようとする。",
+    "key_facts": [
+      "セラの逃走中に森で現れ、仮面をつけたまま正確に着地した。",
+      "兵士とは異なり、全身が戦うためにできているように描かれる。",
+      "長い槍のような武器を持ち、その周囲では空気が魔法を食っているように感じられる。",
+      "黒く細い金属の手枷でセラを封印しようとした。"
+    ],
+    "review_state": "review",
+    "confidence": 0.74,
+    "canonical_candidate": "仮面の男",
+    "entity_subkind": "masked_pursuer",
+    "naming_quality": "descriptor",
+    "needs_review": true
+  },
+  {
+    "canonical_name": "証人",
+    "entity_kind": "character",
+    "aliases": [
+      "証人",
+      "執事",
+      "従者",
+      "家庭教師",
+      "護衛",
+      "密偵",
+      "私"
+    ],
+    "summary": "証人は、杖の一族に仕え、ティセイア王国の崩壊と王と杖の断絶を目撃した語り手である。赤子とベルを救い出し、王者の杖の目覚めを待ち続ける保護者的存在である。",
+    "key_facts": [
+      "生涯で執事、従者、家庭教師、護衛、密偵など複数の名で呼ばれてきた。",
+      "ティセイア王国の崩壊と王と杖の断絶を目撃した。",
+      "杖の一族に仕え、後継者と杖が兄弟のように育つのを見守っていた。",
+      "崩壊の夜に赤子とベルを救い出し、遠くで育てた。"
+    ],
+    "review_state": "review",
+    "confidence": 0.72,
+    "canonical_candidate": "証人",
+    "entity_subkind": "witness_guardian",
+    "naming_quality": "descriptor",
+    "needs_review": true
+  },
+  {
+    "canonical_name": "赤子",
+    "entity_kind": "character",
+    "aliases": [
+      "赤子",
+      "お前",
+      "王者の杖"
+    ],
+    "summary": "赤子は、杖の妻のそばの揺り籠で生き残っていた存在である。語り手によって救い出され遠くで育てられ、王者の杖の生存と強く結びつく候補である。",
+    "key_facts": [
+      "杖の妻のそばにある揺り籠の中で生き残っていた。",
+      "語り手によって救い出され、一族の者しか知らない抜け道から逃がされた。",
+      "語り手によって遠くで育てられ、魔力に頼らぬ生き方を教えられた。",
+      "王者の杖は今も生きているという章末の宣言と強く結びつく。"
+    ],
+    "review_state": "review",
+    "confidence": 0.76,
+    "canonical_candidate": "赤子",
+    "entity_subkind": "surviving_heir_candidate",
+    "naming_quality": "descriptor",
+    "needs_review": true
+  },
+  {
+    "canonical_name": "セラの魔力",
+    "entity_kind": "concept",
+    "aliases": [
+      "セラの壊れた魔力",
+      "魔力",
+      "制御できない魔力",
+      "積み重ねた魔力の層"
+    ],
+    "summary": "セラの魔力は、強すぎる・歪む・制御できないという形で描かれる異常な魔力である。触媒破壊、塔の損壊、封印への拒絶反応を通じて、彼女の力が通常の魔法制御から外れていることが示される。",
+    "key_facts": [
+      "セラの魔力は内側で張っていて気持ち悪いものとして描かれる。",
+      "触媒を壊し、呪文を暴走させ、成功しても荒く見苦しい結果になる。",
+      "純度の高いアルモナイトの珠への反応で防御壁と塔の一部を破壊した。",
+      "封印用の手枷に触れられる直前、魔力が逆流し、セラ自身の形が崩れるような拒絶反応を起こした。"
+    ],
+    "review_state": "canonical",
+    "confidence": 0.88,
+    "canonical_candidate": "セラの壊れた魔力",
+    "entity_subkind": "magic_anomaly",
+    "naming_quality": "descriptor",
+    "needs_review": false
+  },
+  {
+    "canonical_name": "均衡",
+    "entity_kind": "concept",
+    "aliases": [
+      "均衡",
+      "唯一の結びつき",
+      "調和"
+    ],
+    "summary": "均衡は、ティセイア王国を支えていた王と杖の結びつきであり、魔法や継承と関わる世界原理として語られる。セラの儀式上の配置や継承もこの均衡の名のもとに説明されている。",
+    "key_facts": [
+      "魔法は単なる力ではなく、王と杖だけが保つことのできた均衡として説明される。",
+      "ティセイア王国を支える唯一の結びつきだった。",
+      "摂政はセラに対し、均衡のため、継承の印として、未来の固定のためという説明をしている。",
+      "均衡の崩壊は王国崩壊とセラの立場に関わる。"
+    ],
+    "review_state": "canonical",
+    "confidence": 0.88,
+    "canonical_candidate": "均衡",
+    "entity_subkind": "world_rule",
+    "naming_quality": "proper_name",
+    "needs_review": false
+  },
+  {
+    "canonical_name": "王と杖",
+    "entity_kind": "concept",
+    "aliases": [
+      "王と杖",
+      "王者の杖"
+    ],
+    "summary": "王と杖は、ティセイア王国の均衡を支える対となる役割または制度である。ch_001では王と杖が並び歩むことをやめた日が時代の終わりとして語られ、王者の杖は今も生きていると示される。",
+    "key_facts": [
+      "王と杖だけが保つことのできた均衡が存在した。",
+      "王と杖が並び歩むことをやめた日が、ティセイア王国崩壊の象徴として語られる。",
+      "王者の杖は世界が忘れ去っても今も生きていると宣言される。",
+      "赤子やベルと結びつく可能性があるが、対応関係は現時点ではreviewが必要である。"
+    ],
+    "review_state": "review",
+    "confidence": 0.79,
+    "canonical_candidate": "王と杖",
+    "entity_subkind": "role_pair",
+    "naming_quality": "title_plus_name",
+    "needs_review": true
+  },
+  {
+    "canonical_name": "触媒",
+    "entity_kind": "concept",
+    "aliases": [
+      "触媒",
+      "高等触媒",
+      "集中珠",
+      "連結グリモア",
+      "制御手甲",
+      "刻印棒",
+      "二重棒",
+      "アルモナイトの珠"
+    ],
+    "summary": "触媒は、セラの魔力訓練に用いられる魔法器具群である。セラの魔力は触媒を壊すほど不安定で、触媒との不適合が彼女の問題と能力を示している。",
+    "key_facts": [
+      "王族専用訓練場には集中珠、連結グリモア、制御手甲、刻印棒、二重棒など高等触媒が揃っている。",
+      "セラは訓練で触媒を次々と壊している。",
+      "アンバリタ入りの手甲、黒革の小型グリモア、白い水晶の棒、アルモナイトの珠が使用される。",
+      "純度の高いアルモナイトの珠は爆発せず消え、防御壁と塔の一部を破壊する魔力反応につながった。"
+    ],
+    "review_state": "canonical",
+    "confidence": 0.86,
+    "canonical_candidate": "触媒",
+    "entity_subkind": "magic_tool_system",
+    "naming_quality": "proper_name",
+    "needs_review": false
+  },
+  {
+    "canonical_name": "セラの逃走",
+    "entity_kind": "event",
+    "aliases": [
+      "セラの逃走",
+      "塔からの逃走",
+      "確保し直す"
+    ],
+    "summary": "セラの逃走は、訓練場での魔力暴走後に王城から脱出し、追手に包囲される一連の転換である。保護ではなく再確保の対象として扱われ、封印未遂に至る。",
+    "key_facts": [
+      "セラは訓練場の壁を破壊した後、何も持たずに走り出した。",
+      "塔の裂け目から外へ出て森へ向かった。",
+      "内部緊急事態の警報により、捜索と再確保が始まった。",
+      "追跡型の魔導珠、魔導機、仮面の男によって追い詰められた。"
+    ],
+    "review_state": "canonical",
+    "confidence": 0.86,
+    "canonical_candidate": "セラの逃走",
+    "entity_subkind": "escape_and_pursuit",
+    "naming_quality": "descriptor",
+    "needs_review": false
+  },
+  {
+    "canonical_name": "ティセイア王国の崩壊",
+    "entity_kind": "event",
+    "aliases": [
+      "ティセイア王国の崩壊",
+      "ひとつの時代の終わり",
+      "王と杖が並び歩むことをやめた日"
+    ],
+    "summary": "ティセイア王国の崩壊は、王と杖の均衡が失われ、杖の一族が抹消された根本事件である。公式記録では王と王妃の死が別の物語として処理され、アデルマン・レオフリックの摂政就任につながった。",
+    "key_facts": [
+      "語り手が目撃した王国崩壊である。",
+      "王と杖が並び歩むことをやめた日として語られる。",
+      "杖の一族の住まいが痕跡ごと消された。",
+      "崩壊後、アデルマン・レオフリックが摂政となった。"
+    ],
+    "review_state": "canonical",
+    "confidence": 0.92,
+    "canonical_candidate": "ティセイア王国の崩壊",
+    "entity_subkind": "kingdom_fall",
+    "naming_quality": "proper_name",
+    "needs_review": false
+  },
+  {
+    "canonical_name": "杖の一族",
+    "entity_kind": "faction",
+    "aliases": [
+      "杖の一族",
+      "その一族",
+      "我らのような一族"
+    ],
+    "summary": "杖の一族は、土地も軍も称号も持たないが玉座の近くに席を与えられていた一族である。王と杖の均衡に関わる存在であり、王国崩壊の夜に痕跡ごと消し去られた。",
+    "key_facts": [
+      "語り手が仕えていた一族である。",
+      "王と杖の均衡に関わり、玉座のすぐ傍に席を与えられていた。",
+      "城の中心に隠された地図に載らない住まいを持っていた。",
+      "崩壊の夜に住まいを消され、公式記録でも触れられなかった。"
+    ],
+    "review_state": "canonical",
+    "confidence": 0.91,
+    "canonical_candidate": "杖の一族",
+    "entity_subkind": "lineage",
+    "naming_quality": "title_plus_name",
+    "needs_review": false
+  },
+  {
+    "canonical_name": "ベル",
+    "entity_kind": "object",
+    "aliases": [
+      "ベル",
+      "舌のないベル",
+      "小さなベル",
+      "鳴るべき鍵"
+    ],
+    "summary": "ベルは、杖の一族の赤子の揺り籠に掛けられていた舌のない小さなベルである。語り手はそれを時が来た時にだけ鳴るべき鍵として理解し、毎年儀式の日に携え続けている。",
+    "key_facts": [
+      "杖の妻のそばの揺り籠に掛けられていた。",
+      "語り手はそれを思い出ではなく、時が来た時にだけ鳴るべき鍵として理解していた。",
+      "崩壊の夜以来一度も鳴っていない。",
+      "語り手は毎年儀式の日にベルを携え、いつか鳴る日が来ると信じている。"
+    ],
+    "review_state": "canonical",
+    "confidence": 0.9,
+    "canonical_candidate": "ベル",
+    "entity_subkind": "ritual_key",
+    "naming_quality": "descriptor",
+    "needs_review": false
+  },
+  {
+    "canonical_name": "封印の手枷",
+    "entity_kind": "object",
+    "aliases": [
+      "手枷",
+      "黒く細い金属の輪",
+      "封印のためのもの",
+      "遮断のため"
+    ],
+    "summary": "封印の手枷は、セラの魔力または存在を拘束ではなく遮断するための道具として描かれる。セラに触れる直前、彼女の全存在が拒絶反応を起こす。",
+    "key_facts": [
+      "仮面の男が腰のベルトから取り出した黒く細い金属の輪である。",
+      "セラはそれを拘束ではなく遮断のためのものだと理解している。",
+      "手枷が肌に触れる瞬間、セラの魔力または存在が強い拒絶反応を起こした。"
+    ],
+    "review_state": "canonical",
+    "confidence": 0.84,
+    "canonical_candidate": "封印の手枷",
+    "entity_subkind": "sealing_restraint",
+    "naming_quality": "descriptor",
+    "needs_review": false
+  },
+  {
+    "canonical_name": "ティセイア王国",
+    "entity_kind": "place",
+    "aliases": [
+      "ティセイア王国",
+      "ティセイア",
+      "王国"
+    ],
+    "summary": "ティセイア王国は王と杖の均衡によって支えられていた王国である。崩壊後、公式記録と政治的沈黙によって真相の一部が隠された。",
+    "key_facts": [
+      "王と杖だけが保つことのできた均衡によって支えられていた。",
+      "ch_001で崩壊し、ひとつの時代の終わりとして語られる。",
+      "崩壊後、王は〈災厄〉に倒れ、王妃は出産で命を落としたという公式記録が残された。",
+      "王城や塔、王族専用訓練場などの舞台を含む政治的中心である。"
+    ],
+    "review_state": "canonical",
+    "confidence": 0.93,
+    "canonical_candidate": "ティセイア王国",
+    "entity_subkind": "kingdom",
+    "naming_quality": "proper_name",
+    "needs_review": false
+  },
+  {
+    "canonical_name": "王城",
+    "entity_kind": "place",
+    "aliases": [
+      "王城",
+      "城",
+      "塔",
+      "王族専用の訓練場"
+    ],
+    "summary": "王城はティセイア王国の政治とセラの隔離された生活の中心となる場所である。城内には塔や王族専用訓練場があり、セラの魔力暴走と逃走の起点となる。",
+    "key_facts": [
+      "ch_001ではティセイア王国崩壊の中心的舞台として描かれる。",
+      "城の中心には杖の住まいが隠されていた。",
+      "セラは王城内の塔と王族専用訓練場で孤立して訓練している。",
+      "セラの魔力反応で防御壁や塔の一部が破壊され、逃走の契機となった。"
+    ],
+    "review_state": "canonical",
+    "confidence": 0.85,
+    "canonical_candidate": "王城",
+    "entity_subkind": "castle",
+    "naming_quality": "descriptor",
+    "needs_review": false
+  }
+]

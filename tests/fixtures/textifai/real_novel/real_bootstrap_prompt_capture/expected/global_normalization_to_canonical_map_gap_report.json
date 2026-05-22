@@ -1,0 +1,60 @@
+{
+  "sample_id": "chatgpt_response_bootstrap_global_normalization_ja_batch_001_after_sp051",
+  "canonical_map_fixture_id": "canonical_entity_map_from_manual_global_ja_batch_001_after_sp051",
+  "prompt_source": "real_bootstrap_global_normalization_after_sp051",
+  "source_language": "ja",
+  "batch_scope": ["ch_001", "ch_002", "ch_003"],
+  "overall_assessment": "usable_for_populated_map_reaudit",
+  "what_worked": [
+    "Manual global normalization sample is valid JSON with non-empty entities and merge_plan.",
+    "Sample captures persistent entities across ch_001-ch_003, including セラ, アデルマン・レオフリック, ティセイア王国, 杖の一族, 王と杖, 均衡, ベル, 赤子, 触媒, 王城, and durable events.",
+    "build_canonical_entity_map(sample) produces a non-empty canonical map using real TextifAI code.",
+    "Canonical map retains object entry for ベル with aliases including 舌のないベル.",
+    "Uncertain identity links such as 赤子, 証人, 王と杖, ネリス女王, and 仮面の男 remain review/needs_review.",
+    "merge_plan entries include reason and confidence."
+  ],
+  "what_was_missing": [
+    "This phase does not recapture chapter extraction with the populated map.",
+    "This phase does not prove provider runtime behavior.",
+    "This phase does not validate chapters beyond ch_001-ch_003."
+  ],
+  "what_was_weaker_than_expected": [
+    "Manual sample marks some descriptor/object concepts as canonical because they are stable within batch, but later author review may prefer more granular object/concept boundaries.",
+    "赤子 aliases include 王者の杖 while keeping review state; downstream must not treat that as approved identity merge.",
+    "ネリス女王 and 王妃 linkage remains plausible but review-only."
+  ],
+  "canonical_map_quality": {
+    "assessment": "non_empty_and_sufficient_for_populated_map_reaudit",
+    "entry_count_expected_minimum": 8,
+    "core_targets_present": ["アデルマン・レオフリック", "ティセイア王国", "杖の一族", "ベル", "均衡"],
+    "uses_real_builder": true,
+    "shape_preserved_from_runtime_function": true
+  },
+  "merge_plan_quality": {
+    "assessment": "usable_with_review_guardrails",
+    "safe_properties": [
+      "merge entries include canonical_name",
+      "merge entries include merged_surfaces",
+      "merge entries include reason",
+      "merge entries include confidence"
+    ],
+    "review_needed": [
+      "Do not treat merge_plan as canon approval.",
+      "Check alias confidence when recapturing chapter prompts with populated map."
+    ]
+  },
+  "review_safety": {
+    "assessment": "acceptable_for_fixture_audit",
+    "kept_review_or_needs_review": ["赤子", "証人", "王と杖", "ネリス女王", "仮面の男"],
+    "not_canon_approval": true,
+    "no_write_back": true
+  },
+  "downstream_risks": [
+    "Manual sample is not provider runtime output.",
+    "Batch is limited to ch_001-ch_003 and may overfit the opening section.",
+    "Populated map may increase false confidence if downstream ignores review_state/needs_review.",
+    "Chapter extraction with populated map is not yet recaptured or audited.",
+    "Chunking/reduction path remains unaudited."
+  ],
+  "recommended_next_phase": "Phase 1.3.M-b5c-2 dev-only global-normalization override recapture with populated CANONICAL_ENTITY_MAP, then compare against SP-052 empty-map hardened response."
+}
