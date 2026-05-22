@@ -1,0 +1,37 @@
+{
+  "what_matched_curated": [
+    "Main entities retained: レン, セラ, ベルド/オヤジ.",
+    "ベル retained as durable key artifact.",
+    "エルサリエル retained as destination.",
+    "Ren/Sera linked magic retained as relationship/lore evidence.",
+    "ベルド death retained as explicit event/fact."
+  ],
+  "what_was_missing": [
+    "Some relationship edges present in curated replay are less explicit in sample (e.g., bell-path semantics).",
+    "Certain chapter-level context details remain sparse due to short excerpts."
+  ],
+  "what_was_weaker_than_curated": [
+    "Alias confidence for オヤジ↔ベルド still requires explicit human confirmation.",
+    "Event normalization quality (participants/objects/places) is weaker than curated replay.",
+    "王者/杖 role mapping remains intentionally cautious and unresolved."
+  ],
+  "false_positive_risks": [
+    "Treating 王者/杖 mapping as final canon.",
+    "Treating fragment-level hints as full scene certainty."
+  ],
+  "prompt_improvement_notes": [
+    "Ask explicitly for role/lore-vs-literal-object disambiguation with confidence rationale.",
+    "Require event participant and object linkage fields to reduce underspecified events.",
+    "Require explicit alias uncertainty tags when name forms differ (e.g., オヤジ vs ベルド)."
+  ],
+  "downstream_risk_notes": [
+    "Downstream can consume this sample, but human review remains needed on alias and lore-role mapping.",
+    "If provider output degrades event structure, review queue utility may shift from event-level to fact-level review."
+  ],
+  "author_review_notes": [
+    "Confirm whether オヤジ should merge as alias under ベルド.",
+    "Confirm interpretation boundaries for 王者と杖.",
+    "Confirm priority of セラの名乗り as relationship moment."
+  ],
+  "overall_assessment": "usable"
+}

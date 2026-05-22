@@ -1,0 +1,71 @@
+{
+  "comparison_scope": "provider_sample_vs_curated_replay_input",
+  "must_have_coverage": {
+    "status": "covered_most",
+    "items_checked": [
+      "レン",
+      "セラ",
+      "ベルド/オヤジ",
+      "ベル durable object",
+      "エルサリエル destination",
+      "Ren/Sera linked magic",
+      "ベルド death",
+      "pronoun suppression"
+    ],
+    "notes": [
+      "Core narrative entities and relations are retained.",
+      "Alias resolution remains review-level, not auto-resolved."
+    ]
+  },
+  "should_have_coverage": {
+    "status": "partially_covered",
+    "items_checked": [
+      "王者と杖 lore concept",
+      "杖 role/lore candidate",
+      "ガントレットの男 antagonist review",
+      "ガントレット weapon object",
+      "セラの名乗り relationship moment"
+    ],
+    "notes": [
+      "Most should-have items appear, but event granularity is weaker than curated replay."
+    ]
+  },
+  "false_positive_risks": [
+    "Over-committing 王者/杖 role mapping as final canon.",
+    "Over-resolving オヤジ alias without broader context."
+  ],
+  "pronoun_promotion_guard": {
+    "status": "pass",
+    "notes": ["Pronouns are listed under suppression_candidates and not as standalone canonical entities."]
+  },
+  "object_retention_guard": {
+    "status": "pass",
+    "notes": ["ベル classified as persistent_key_artifact with should_retain=true."]
+  },
+  "lore_concept_retention": {
+    "status": "pass",
+    "notes": ["王者と杖 and 繋がった力 retained as lore concepts with review notes."]
+  },
+  "relationship_retention": {
+    "status": "pass",
+    "notes": ["Ren/Sera linked magic relationship is explicit and evidence-backed."]
+  },
+  "event_retention": {
+    "status": "partial_pass",
+    "notes": ["Key events retained, but event schema may need stricter normalization for downstream comparability."]
+  },
+  "shape_compatibility": {
+    "status": "pass",
+    "notes": ["JSON is parseable and includes required top-level extraction sections."]
+  },
+  "author_usefulness_score": "usable",
+  "non_negotiable_failures": [
+    "provider call in tests",
+    "pronoun promoted",
+    "ベル missing",
+    "Ren/Sera linked magic missing",
+    "JSON invalid",
+    "full chapter committed",
+    "write-back"
+  ]
+}

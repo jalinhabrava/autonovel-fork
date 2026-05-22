@@ -1,0 +1,334 @@
+{
+  "sample_type": "manual_chatgpt_style_provider_sample",
+  "provider_calls": false,
+  "for_tests": true,
+  "not_canon_approval": true,
+  "extraction_metadata": {
+    "source_language": "ja",
+    "source_title": "王者の杖",
+    "chunk_id": "ch_017_019_excerpt_pack_v1",
+    "chapter_refs": ["ch_017", "ch_018", "ch_019"],
+    "extraction_mode": "llm_provider",
+    "confidence_overall": "medium",
+    "notes": [
+      "Based only on short excerpts.",
+      "Identity and lore-role mappings may require human review."
+    ]
+  },
+  "entities": [
+    {
+      "canonical_name_guess": "レン",
+      "entity_kind": "character",
+      "aliases": ["俺", "彼"],
+      "source_mentions": ["レン", "俺", "彼"],
+      "pronoun_like_mentions": ["俺", "彼"],
+      "roles_or_titles": ["杖 (role candidate)"],
+      "lore_identity_candidates": ["王者と杖::杖"],
+      "key_facts": [
+        "セラの魔力を運ぶ道になる。",
+        "ベルをセラと共に受け取る。",
+        "共同魔法で敵のガントレットを砕く。"
+      ],
+      "relationships": [
+        "セラとlinked_magic関係",
+        "ベルドから使命を託される"
+      ],
+      "chapter_refs": ["ch_017", "ch_018", "ch_019"],
+      "source_spans": ["今なら――鳴らせる。", "俺が――彼女の魔力を運ぶ道だった。"],
+      "confidence": "high",
+      "uncertainties": ["杖 roleは象徴的表現の可能性あり。"],
+      "review_suggestions": ["杖 role/lore candidate should be reviewed, not auto-canonized."]
+    },
+    {
+      "canonical_name_guess": "セラ",
+      "entity_kind": "character",
+      "aliases": ["彼女", "私"],
+      "source_mentions": ["セラ", "彼女", "私"],
+      "pronoun_like_mentions": ["彼女", "私"],
+      "roles_or_titles": ["王者 (role candidate)"],
+      "lore_identity_candidates": ["王者と杖::王者"],
+      "key_facts": [
+        "レンの支えで魔法が安定する。",
+        "痛みなく自分のまま魔法を使う。",
+        "ベルド死後にレンへ名を告げる。"
+      ],
+      "relationships": ["レンと相互支援", "レンとのlinked_magic"],
+      "chapter_refs": ["ch_017", "ch_018", "ch_019"],
+      "source_spans": ["彼は、境界線であり、流れを導く川だった。", "ただ、私のままで、魔法を使った。"],
+      "confidence": "high",
+      "uncertainties": ["王者 roleは比喩か役割概念か要レビュー。"],
+      "review_suggestions": ["王者 role/lore mapping should remain review-only."]
+    },
+    {
+      "canonical_name_guess": "ベルド",
+      "entity_kind": "character",
+      "aliases": ["オヤジ"],
+      "source_mentions": ["ベルド", "オヤジ"],
+      "pronoun_like_mentions": [],
+      "roles_or_titles": ["guardian"],
+      "lore_identity_candidates": [],
+      "key_facts": [
+        "レンとセラへベルを託す。",
+        "エルサリエルへ向かえと命じる。",
+        "王者と杖は共に歩むと言い残し死亡。"
+      ],
+      "relationships": ["レンの保護者", "セラの保護者/使命伝達者"],
+      "chapter_refs": ["ch_017", "ch_019"],
+      "source_spans": ["……エルサリエル。", "……王者と杖は……共に歩む。", "……オヤジ……"],
+      "confidence": "medium",
+      "uncertainties": ["オヤジ surfaceは別キャラでなくベルド aliasの可能性が高い。"],
+      "review_suggestions": ["alias_merge review: オヤジ -> ベルド"]
+    },
+    {
+      "canonical_name_guess": "ガントレットの男",
+      "entity_kind": "character",
+      "aliases": ["あいつ", "男"],
+      "source_mentions": ["ガントレットの男", "あいつ", "男"],
+      "pronoun_like_mentions": ["あいつ"],
+      "roles_or_titles": ["antagonist"],
+      "lore_identity_candidates": [],
+      "key_facts": ["レン/セラ/ベルドへ敵対。", "ガントレット使用。", "腕ごと破壊される。"],
+      "relationships": ["レン達に対する敵対者"],
+      "chapter_refs": ["ch_017"],
+      "source_spans": ["ガントレットが、肘ごと砕けた。"],
+      "confidence": "medium",
+      "uncertainties": ["個人識別情報が不足。"],
+      "review_suggestions": ["retain as review antagonist candidate"]
+    }
+  ],
+  "objects": [
+    {
+      "canonical_name_guess": "ベル",
+      "object_type": "persistent_key_artifact",
+      "source_mentions": ["ベル", "小さな音"],
+      "key_facts": [
+        "ベルドがレンとセラへ渡す。",
+        "二人が受けると一度鳴る。",
+        "使命と道の起動シグナルとして機能。"
+      ],
+      "relationships": ["レン/セラ co-activation", "エルサリエル destination linkage"],
+      "chapter_refs": ["ch_017"],
+      "source_spans": ["……ベルを。", "ベルが鳴った。"],
+      "confidence": "high",
+      "should_retain": true,
+      "uncertainties": [],
+      "review_suggestions": ["object_retention: durable key artifact"]
+    },
+    {
+      "canonical_name_guess": "ガントレット",
+      "object_type": "weapon",
+      "source_mentions": ["ガントレット"],
+      "key_facts": ["敵の武装。", "共同魔法で破壊される。"],
+      "relationships": ["ガントレットの男が使用"],
+      "chapter_refs": ["ch_017"],
+      "source_spans": ["ガントレットが、肘ごと砕けた。"],
+      "confidence": "medium",
+      "should_retain": true,
+      "uncertainties": [],
+      "review_suggestions": ["retain as battle-relevant object"]
+    }
+  ],
+  "places": [
+    {
+      "canonical_name_guess": "エルサリエル",
+      "place_type": "destination",
+      "source_mentions": ["エルサリエル"],
+      "key_facts": ["ベルドがレンとセラに向かうよう指示する目的地。"],
+      "relationships": ["レン/セラ mission destination", "ベルド knows destination"],
+      "chapter_refs": ["ch_017"],
+      "source_spans": ["……エルサリエル。"],
+      "confidence": "high",
+      "uncertainties": [],
+      "review_suggestions": ["retain as persistent place"]
+    }
+  ],
+  "lore_concepts": [
+    {
+      "canonical_name_guess": "王者と杖",
+      "concept_type": "role_system",
+      "source_mentions": ["王者と杖", "王者と杖は……共に歩む"],
+      "key_facts": [
+        "レンとセラの役割/絆/使命を示す句。",
+        "literal staff object扱いは不適切の可能性。"
+      ],
+      "related_entities": ["レン", "セラ", "ベル"],
+      "chapter_refs": ["ch_017"],
+      "source_spans": ["……王者と杖は……共に歩む。"],
+      "confidence": "high",
+      "uncertainties": ["王者=セラ, 杖=レンの対応は確定不可。"],
+      "review_suggestions": ["lore_concept_review: symbolic role mapping"]
+    },
+    {
+      "canonical_name_guess": "繋がった力",
+      "concept_type": "bond",
+      "source_mentions": ["繋がった力", "彼女の魔力を運ぶ道", "流れ", "導く", "支えた"],
+      "key_facts": [
+        "レンがセラの魔力を導き安定化する。",
+        "共同魔法成功の基盤。"
+      ],
+      "related_entities": ["レン", "セラ", "ベル"],
+      "chapter_refs": ["ch_017", "ch_018"],
+      "source_spans": ["俺が――彼女の魔力を運ぶ道だった。", "彼は、境界線であり、流れを導く川だった。"],
+      "confidence": "high",
+      "uncertainties": [],
+      "review_suggestions": ["retain as relationship/lore concept"]
+    }
+  ],
+  "events": [
+    {
+      "event_name_guess": "ベルドの死",
+      "event_kind": "death",
+      "participants": ["ベルド", "レン", "セラ", "ガントレットの男"],
+      "objects": ["ベル"],
+      "places": [],
+      "facts": ["ベルドが最期の使命を託して死亡する。", "レンが『オヤジ』と呼んで嘆く。"],
+      "chapter_refs": ["ch_017", "ch_019"],
+      "source_spans": ["……オヤジ……"],
+      "confidence": "high",
+      "uncertainties": [],
+      "review_suggestions": ["event_review: retain death/aftermath significance"]
+    },
+    {
+      "event_name_guess": "ベルの起動",
+      "event_kind": "artifact_activation",
+      "participants": ["レン", "セラ", "ベルド"],
+      "objects": ["ベル"],
+      "places": [],
+      "facts": ["ベルが手渡され、二人の接触で一度鳴る。"],
+      "chapter_refs": ["ch_017"],
+      "source_spans": ["ベルが鳴った。"],
+      "confidence": "high",
+      "uncertainties": [],
+      "review_suggestions": ["object_retention: bell activation meaning"]
+    },
+    {
+      "event_name_guess": "初めての安定した共同魔法",
+      "event_kind": "magic_activation",
+      "participants": ["レン", "セラ", "ガントレットの男"],
+      "objects": ["ガントレット"],
+      "places": [],
+      "facts": ["レンが流路となりセラの魔法が安定化。", "敵のガントレットが破壊される。"],
+      "chapter_refs": ["ch_017", "ch_018"],
+      "source_spans": ["魔法が走った。", "ガントレットが、肘ごと砕けた。"],
+      "confidence": "high",
+      "uncertainties": [],
+      "review_suggestions": ["relationship_review: linked magic as durable narrative fact"]
+    },
+    {
+      "event_name_guess": "セラの名乗り",
+      "event_kind": "relationship_moment",
+      "participants": ["セラ", "レン"],
+      "objects": [],
+      "places": [],
+      "facts": ["セラがレンへ名を告げ、喪失後の支えを示す。"],
+      "chapter_refs": ["ch_019"],
+      "source_spans": ["「セラ。」"],
+      "confidence": "medium",
+      "uncertainties": ["文脈断片のため背景は限定的。"],
+      "review_suggestions": ["relationship_review: support/bond moment"]
+    }
+  ],
+  "relationships": [
+    {
+      "source": "レン",
+      "target": "セラ",
+      "relationship_type": "linked_magic",
+      "evidence": ["魔力を運ぶ道", "境界線/流れを導く"],
+      "chapter_refs": ["ch_017", "ch_018"],
+      "confidence": "high",
+      "uncertainties": [],
+      "review_suggestions": ["retain as key relationship fact"]
+    },
+    {
+      "source": "ベルド",
+      "target": "レン",
+      "relationship_type": "guardian",
+      "evidence": ["オヤジ呼称", "使命継承"],
+      "chapter_refs": ["ch_017", "ch_019"],
+      "confidence": "high",
+      "uncertainties": [],
+      "review_suggestions": ["alias/guardian context review"]
+    },
+    {
+      "source": "ベルド",
+      "target": "セラ",
+      "relationship_type": "protector_mission_giver",
+      "evidence": ["エルサリエル指示", "ベル託し"],
+      "chapter_refs": ["ch_017"],
+      "confidence": "medium",
+      "uncertainties": [],
+      "review_suggestions": []
+    },
+    {
+      "source": "ガントレットの男",
+      "target": "レン",
+      "relationship_type": "antagonist",
+      "evidence": ["戦闘文脈", "武装破壊"],
+      "chapter_refs": ["ch_017"],
+      "confidence": "medium",
+      "uncertainties": [],
+      "review_suggestions": []
+    }
+  ],
+  "review_suggestions": [
+    {
+      "review_type": "alias_merge",
+      "target": "オヤジ",
+      "candidate": "ベルド",
+      "reason": "呼称としてベルドと同一人物の可能性が高いが文脈断片のため最終確定は人手レビュー。",
+      "evidence": ["……オヤジ……", "ベルドの最期の使命"],
+      "recommended_action": "review_merge_or_alias",
+      "confidence": "high",
+      "do_not_auto_merge": true,
+      "do_not_auto_promote": true
+    },
+    {
+      "review_type": "lore_concept_review",
+      "target": "王者と杖",
+      "candidate": "レン/セラ role mapping",
+      "reason": "literal objectでなく概念・役割として扱う必要。",
+      "evidence": ["王者と杖は……共に歩む"],
+      "recommended_action": "review_enrich_existing_entity",
+      "confidence": "medium",
+      "do_not_auto_merge": true,
+      "do_not_auto_promote": true
+    },
+    {
+      "review_type": "object_retention",
+      "target": "ベル",
+      "candidate": "durable key artifact",
+      "reason": "一回鳴動と使命継承で持続的重要性が高い。",
+      "evidence": ["ベルが鳴った。", "ベルを託す"],
+      "recommended_action": "review_create_primary",
+      "confidence": "high",
+      "do_not_auto_merge": true,
+      "do_not_auto_promote": true
+    }
+  ],
+  "suppression_candidates": [
+    {"surface": "彼", "reason": "pronoun", "should_not_promote": true, "evidence": ["彼は、境界線であり"]},
+    {"surface": "彼女", "reason": "pronoun", "should_not_promote": true, "evidence": ["彼女の魔力を運ぶ道"]},
+    {"surface": "俺", "reason": "pronoun", "should_not_promote": true, "evidence": ["俺が――彼女の魔力を運ぶ道だった"]},
+    {"surface": "私", "reason": "pronoun", "should_not_promote": true, "evidence": ["ただ、私のままで、魔法を使った"]},
+    {"surface": "あいつ", "reason": "other", "should_not_promote": true, "evidence": ["ガントレットの男への代名参照。"]},
+    {"surface": "兵士たち", "reason": "ephemeral_group", "should_not_promote": true, "evidence": []},
+    {"surface": "煙", "reason": "temporary_prop", "should_not_promote": true, "evidence": ["煙が晴れ"]}
+  ],
+  "quality_notes": {
+    "possible_missing_context": [
+      "前章由来の戦闘背景詳細が不足している可能性。"
+    ],
+    "possible_hallucination_risks": [
+      "王者/杖 role mappingを断定しすぎるリスク。",
+      "オヤジ=ベルド同一視を自動確定するリスク。"
+    ],
+    "schema_fit_notes": [
+      "downstream互換のため entities/objects/places/lore/events/relationships を分離。"
+    ],
+    "author_review_needed": [
+      "オヤジ alias merge decision",
+      "王者と杖 role mapping decision",
+      "relationship moment weighting for セラの名乗り"
+    ]
+  }
+}
