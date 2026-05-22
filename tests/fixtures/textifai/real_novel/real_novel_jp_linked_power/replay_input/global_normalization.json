@@ -1,0 +1,293 @@
+{
+  "work": {
+    "title": "王者の杖",
+    "language": "ja"
+  },
+  "entities": [
+    {
+      "canonical_name": "レン",
+      "canonical_candidate": "レン",
+      "entity_kind": "character",
+      "preferred_slug": "ren",
+      "aliases": ["俺", "彼"],
+      "summary": "セラの魔力を運ぶ道となる少年。",
+      "key_facts": [
+        "セラと共にベルを受け取る。",
+        "セラの魔力を運ぶ道になれると気づく。",
+        "セラと初めて安定した共同魔法を放つ。",
+        "ベルドの死を悼む。"
+      ],
+      "relationships": [
+        {"target": "セラ", "type": "linked_magic", "facts": ["セラの魔力の流れを支える。", "共有された魔法の流れが安定する。"]},
+        {"target": "ベルド", "type": "guarded_by", "facts": ["最期の使命を託される。"]},
+        {"target": "ベル", "type": "co_bearer", "facts": ["セラと共にベルを持つ。"]},
+        {"target": "エルサリエル", "type": "destination", "facts": ["ベルドに向かうよう命じられる。"]}
+      ],
+      "chapter_refs": ["ch_017", "ch_019"],
+      "source_mentions": ["レン", "俺", "彼"],
+      "confidence": 0.93,
+      "review_state": "canonical",
+      "naming_quality": "proper_name",
+      "surface_type": "named_entity_like",
+      "semantic_value": "durable_entity",
+      "language_hint": "ja"
+    },
+    {
+      "canonical_name": "セラ",
+      "canonical_candidate": "セラ",
+      "entity_kind": "character",
+      "preferred_slug": "sera",
+      "aliases": ["彼女", "私"],
+      "summary": "レンと繋がった力で安定した魔法を得る少女。",
+      "key_facts": [
+        "レンに支えられて安定した魔法を使う。",
+        "レンを境界線・流れ・川のように認識する。",
+        "ベルドの死後にレンへ名乗る。"
+      ],
+      "relationships": [
+        {"target": "レン", "type": "linked_magic", "facts": ["レンの支えで痛みなく魔法が流れる。", "相互の結びつきが深まる。"]},
+        {"target": "ベル", "type": "co_bearer", "facts": ["レンと共にベルを受け取る。"]},
+        {"target": "エルサリエル", "type": "destination", "facts": ["レンと共に向かう場所になる。"]}
+      ],
+      "chapter_refs": ["ch_017", "ch_018", "ch_019"],
+      "source_mentions": ["セラ", "彼女", "私"],
+      "confidence": 0.92,
+      "review_state": "canonical",
+      "naming_quality": "proper_name",
+      "surface_type": "named_entity_like",
+      "semantic_value": "durable_entity",
+      "language_hint": "ja"
+    },
+    {
+      "canonical_name": "ベルド",
+      "canonical_candidate": "ベルド",
+      "entity_kind": "character",
+      "preferred_slug": "beld",
+      "aliases": ["オヤジ", "私たちを守ってくれた男", "十七年もの間、秘密を背負い続けた人"],
+      "summary": "レンとセラを守り、使命を託して死ぬ保護者。",
+      "key_facts": [
+        "致命傷を負いながらレンとセラにベルを渡す。",
+        "エルサリエルへ行けと告げる。",
+        "王者と杖は共に歩むと言い残して死ぬ。"
+      ],
+      "relationships": [
+        {"target": "レン", "type": "guardian", "facts": ["レンに守護者として接する。", "オヤジと呼ばれる。"]},
+        {"target": "セラ", "type": "protector", "facts": ["最期に使命を託す。"]},
+        {"target": "ベル", "type": "keeper", "facts": ["以前の保持者としてベルを渡す。"]}
+      ],
+      "chapter_refs": ["ch_017", "ch_019"],
+      "source_mentions": ["ベルド", "オヤジ"],
+      "confidence": 0.82,
+      "review_state": "review",
+      "naming_quality": "proper_name",
+      "surface_type": "named_entity_like",
+      "semantic_value": "durable_entity",
+      "language_hint": "ja"
+    },
+    {
+      "canonical_name": "ガントレットの男",
+      "canonical_candidate": "",
+      "entity_kind": "character",
+      "preferred_slug": "gauntlet_man",
+      "aliases": ["あいつ", "男"],
+      "summary": "ガントレットで攻撃する敵対者。",
+      "key_facts": ["ガントレットで襲う。", "共同魔法で腕ごと砕かれる。"],
+      "relationships": [
+        {"target": "レン", "type": "antagonist", "facts": ["レンたちを襲う。"]},
+        {"target": "ガントレット", "type": "uses", "facts": ["武装として使う。"]}
+      ],
+      "chapter_refs": ["ch_017"],
+      "source_mentions": ["ガントレットの男", "あいつ", "男"],
+      "confidence": 0.63,
+      "review_state": "review",
+      "naming_quality": "descriptor",
+      "surface_type": "named_entity_like",
+      "semantic_value": "durable_entity",
+      "language_hint": "ja"
+    },
+    {
+      "canonical_name": "ベル",
+      "canonical_candidate": "ベル",
+      "entity_kind": "object",
+      "preferred_slug": "bell",
+      "aliases": ["小さな音"],
+      "summary": "レンとセラに託される持続的な鍵アーティファクト。",
+      "key_facts": [
+        "ベルドがレンとセラに渡す。",
+        "二人が持つと一度だけ鳴る。",
+        "道の承認や起動を示す。"
+      ],
+      "relationships": [
+        {"target": "レン", "type": "co_bearer", "facts": ["レンが手にする。"]},
+        {"target": "セラ", "type": "co_bearer", "facts": ["セラが共に触れる。"]},
+        {"target": "エルサリエル", "type": "path_key", "facts": ["行き先への鍵として結びつく。"]}
+      ],
+      "chapter_refs": ["ch_017"],
+      "source_mentions": ["ベル", "小さな音"],
+      "confidence": 0.95,
+      "review_state": "canonical",
+      "naming_quality": "descriptive",
+      "is_stable_entity": true,
+      "needs_review": false,
+      "review_reason": "",
+      "surface_type": "object_like",
+      "semantic_value": "durable_object",
+      "language_hint": "ja"
+    },
+    {
+      "canonical_name": "ガントレット",
+      "canonical_candidate": "ガントレット",
+      "entity_kind": "object",
+      "preferred_slug": "gauntlet",
+      "aliases": [],
+      "summary": "敵の武装。共同魔法で破壊される。",
+      "key_facts": ["敵が使用する。", "肘ごと砕ける。"],
+      "relationships": [{"target": "ガントレットの男", "type": "weapon_of", "facts": ["敵が身につける武装。"]}],
+      "chapter_refs": ["ch_017"],
+      "source_mentions": ["ガントレット"],
+      "confidence": 0.74,
+      "review_state": "review",
+      "naming_quality": "descriptive",
+      "surface_type": "object_like",
+      "semantic_value": "object",
+      "language_hint": "ja"
+    },
+    {
+      "canonical_name": "エルサリエル",
+      "canonical_candidate": "エルサリエル",
+      "entity_kind": "place",
+      "preferred_slug": "elthariel",
+      "aliases": [],
+      "summary": "ベルドが目的地として告げる場所。",
+      "key_facts": ["ベルドが行き先として名指しする。", "レンとセラが共に向かうべき場所。"],
+      "relationships": [{"target": "ベルド", "type": "known_by", "facts": ["ベルドが道筋を知っている。"]}],
+      "chapter_refs": ["ch_017"],
+      "source_mentions": ["エルサリエル"],
+      "confidence": 0.9,
+      "review_state": "canonical",
+      "naming_quality": "proper_name",
+      "surface_type": "named_entity_like",
+      "semantic_value": "durable_entity",
+      "language_hint": "ja"
+    },
+    {
+      "canonical_name": "王者と杖",
+      "canonical_candidate": "",
+      "entity_kind": "lore_concept",
+      "preferred_slug": "ouja_to_tsue",
+      "aliases": [],
+      "summary": "レンとセラの役割や使命を枠づける句。",
+      "key_facts": ["ベルドが『王者と杖は共に歩む』と告げる。", "レンとセラの結びつきと使命を象徴する。"],
+      "relationships": [
+        {"target": "レン", "type": "possible_role", "facts": ["杖に対応する候補として読める。"]},
+        {"target": "セラ", "type": "possible_role", "facts": ["王者に対応する候補として読める。"]}
+      ],
+      "chapter_refs": ["ch_017"],
+      "source_mentions": ["王者と杖", "王者と杖は……共に歩む"],
+      "confidence": 0.86,
+      "review_state": "review",
+      "naming_quality": "concept",
+      "surface_type": "descriptor_like",
+      "semantic_value": "lore_concept",
+      "language_hint": "ja"
+    },
+    {
+      "canonical_name": "繋がった力",
+      "canonical_candidate": "",
+      "entity_kind": "lore_concept",
+      "preferred_slug": "linked_power",
+      "aliases": ["彼女の魔力を運ぶ道", "流れ"],
+      "summary": "レンがセラの魔力を支え導く結びついた力。",
+      "key_facts": [
+        "レンはセラの魔力を運ぶ道になる。",
+        "セラの魔法は痛みなく安定する。",
+        "共同魔法が敵のガントレットを砕く。"
+      ],
+      "relationships": [
+        {"target": "レン", "type": "embodied_by", "facts": ["境界線・流れ・川として機能する。"]},
+        {"target": "セラ", "type": "stabilizes", "facts": ["セラの魔力を支えて安定させる。"]},
+        {"target": "ベル", "type": "linked_to", "facts": ["ベルの起動後に顕在化する。"]}
+      ],
+      "chapter_refs": ["ch_017", "ch_018"],
+      "source_mentions": ["繋がった力", "彼女の魔力を運ぶ道", "流れ", "導く", "支えた"],
+      "confidence": 0.84,
+      "review_state": "review",
+      "naming_quality": "concept",
+      "surface_type": "descriptor_like",
+      "semantic_value": "lore_concept",
+      "language_hint": "ja"
+    },
+    {
+      "canonical_name": "俺",
+      "canonical_candidate": "レン",
+      "entity_kind": "character",
+      "preferred_slug": "ore",
+      "aliases": [],
+      "summary": "一人称代名詞。",
+      "key_facts": [],
+      "relationships": [],
+      "chapter_refs": ["ch_017"],
+      "source_mentions": ["俺"],
+      "confidence": 0.45,
+      "review_state": "review",
+      "naming_quality": "pronoun_like",
+      "surface_type": "pronoun_like",
+      "semantic_value": "noise",
+      "language_hint": "ja"
+    },
+    {
+      "canonical_name": "彼女",
+      "canonical_candidate": "セラ",
+      "entity_kind": "character",
+      "preferred_slug": "kanojo",
+      "aliases": [],
+      "summary": "三人称代名詞。",
+      "key_facts": [],
+      "relationships": [],
+      "chapter_refs": ["ch_017", "ch_018"],
+      "source_mentions": ["彼女"],
+      "confidence": 0.45,
+      "review_state": "review",
+      "naming_quality": "pronoun_like",
+      "surface_type": "pronoun_like",
+      "semantic_value": "noise",
+      "language_hint": "ja"
+    },
+    {
+      "canonical_name": "私",
+      "canonical_candidate": "セラ",
+      "entity_kind": "character",
+      "preferred_slug": "watashi",
+      "aliases": [],
+      "summary": "一人称代名詞。",
+      "key_facts": [],
+      "relationships": [],
+      "chapter_refs": ["ch_018", "ch_019"],
+      "source_mentions": ["私"],
+      "confidence": 0.44,
+      "review_state": "review",
+      "naming_quality": "pronoun_like",
+      "surface_type": "pronoun_like",
+      "semantic_value": "noise",
+      "language_hint": "ja"
+    },
+    {
+      "canonical_name": "彼",
+      "canonical_candidate": "レン",
+      "entity_kind": "character",
+      "preferred_slug": "kare",
+      "aliases": [],
+      "summary": "三人称代名詞。",
+      "key_facts": [],
+      "relationships": [],
+      "chapter_refs": ["ch_018"],
+      "source_mentions": ["彼"],
+      "confidence": 0.44,
+      "review_state": "review",
+      "naming_quality": "pronoun_like",
+      "surface_type": "pronoun_like",
+      "semantic_value": "noise",
+      "language_hint": "ja"
+    }
+  ]
+}

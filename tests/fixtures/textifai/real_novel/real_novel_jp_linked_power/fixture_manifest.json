@@ -1,0 +1,21 @@
+{
+  "fixture_id": "real_novel_jp_linked_power",
+  "source_language": "ja",
+  "source_title": "王者の杖",
+  "selected_chapters": ["ch_017", "ch_018", "ch_019"],
+  "purpose": "real_novel_usefulness_audit",
+  "extraction_mode": "llm_like_manual_seed",
+  "provider_calls": false,
+  "replay_input_only": false,
+  "ip_privacy_note": "Short excerpts only; no full chapter dumps committed.",
+  "usefulness_targets": [
+    "ren_character_surfaces",
+    "sera_character_surfaces",
+    "beld_oyaji_alias_review",
+    "bell_durable_object",
+    "elthariel_destination",
+    "linked_magic_relation_or_lore",
+    "beld_death_event_or_key_fact",
+    "ouja_to_tsue_lore_concept"
+  ]
+}

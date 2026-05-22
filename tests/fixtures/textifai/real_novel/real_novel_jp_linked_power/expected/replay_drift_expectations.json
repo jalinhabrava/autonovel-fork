@@ -1,0 +1,52 @@
+{
+  "fixture_id": "real_novel_jp_linked_power",
+  "manual_expectation": {
+    "required_entities": ["レン", "セラ", "ベルド", "ベル", "エルサリエル"],
+    "required_usefulness": [
+      "linked magic between レン and セラ surfaces",
+      "ベルド death surfaces",
+      "ベル retained as durable object",
+      "王者と杖 retained as lore or review concept"
+    ]
+  },
+  "current_observed_behavior": {
+    "summary": "Provider-free replay preserves core entities and emits review information with no runtime/provider mutation."
+  },
+  "accepted_temporary_drift": [
+    {"drift_id": "jp_real_fixture_oyaji_beld_alias_needs_review", "reason": "Alias merge may remain a review concern in limited excerpt window."},
+    {"drift_id": "jp_real_fixture_relationship_moment_should_surface", "reason": "Relationship moment may remain in key_facts rather than dedicated event representation."}
+  ],
+  "resolved_current_behavior": [
+    {"drift_id": "jp_real_fixture_pronoun_should_not_promote", "observed_behavior": "pronoun-like forms remain non-primary", "accepted_temporarily": false},
+    {"drift_id": "jp_real_fixture_bell_should_be_durable_object", "observed_behavior": "ベル retained as durable object signal", "accepted_temporarily": false},
+    {"drift_id": "jp_real_fixture_ouja_tsue_should_be_lore_concept", "observed_behavior": "王者と杖 survives as review/lore concept", "accepted_temporarily": false},
+    {"drift_id": "jp_real_fixture_linked_magic_should_surface", "observed_behavior": "linked magic relation/facts survive", "accepted_temporarily": false},
+    {"drift_id": "jp_real_fixture_beld_death_should_surface", "observed_behavior": "death/aftermath facts survive as key facts/review evidence", "accepted_temporarily": false}
+  ],
+  "known_current_drift": [
+    {"drift_id": "jp_real_fixture_oyaji_beld_alias_needs_review", "reason": "Alias normalization may still require human confirmation."},
+    {"drift_id": "jp_real_fixture_relationship_moment_should_surface", "reason": "Sera naming moment may remain narrative fact rather than first-class event model."}
+  ],
+  "non_negotiable_failures": [
+    "provider call occurs",
+    "write to runs/vault",
+    "full novel source committed",
+    "pronoun promoted as strong primary",
+    "bell suppressed as noise",
+    "auto-merge occurs",
+    "auto-promotion occurs",
+    "schema version changes unexpectedly"
+  ],
+  "future_desired_behavior": [
+    "Compare provider-based extraction against this curated replay_input.",
+    "Represent real-novel event structure more explicitly without losing safety controls."
+  ],
+  "language_agnostic_notes": [
+    "Japanese strings are fixture data, not runtime rules.",
+    "Assertions evaluate structural usefulness, not literal-string-only behavior."
+  ],
+  "real_novel_usefulness_notes": [
+    "This fixture is a usefulness audit, not a full-canon audit.",
+    "Real-novel usefulness means author-relevant entities, relations, lore, objects and review cues survive provider-free replay."
+  ]
+}

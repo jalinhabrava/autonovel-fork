@@ -1,0 +1,19 @@
+{
+  "chapters": [
+    {
+      "chapter_id": "ch_019",
+      "chapter_title_original": "第19話：セラの揺れる大地",
+      "chapter_title_canonical": "第19話：セラの揺れる大地",
+      "chapter_label_type": "episode",
+      "chapter_number_in_label": 19,
+      "sequence_index": 19,
+      "chapter_summary": "煙が晴れ、ベルドの死の余波の中でレンが悲しみ、セラが名を告げて支える。",
+      "entities": [
+        {"canonical_name": "レン", "entity_kind": "character", "source_mentions": ["レン", "オヤジ"], "key_facts": ["ベルドを悼み『オヤジ』と呼ぶ。"], "chapter_refs": ["ch_019"], "confidence": 0.9, "review_state": "canonical", "surface_type": "named_entity_like", "semantic_value": "durable_entity", "language_hint": "ja"},
+        {"canonical_name": "セラ", "entity_kind": "character", "source_mentions": ["セラ", "私"], "key_facts": ["レンのそばに残り、自分の名を告げる。"], "relationships": [{"target": "レン", "type": "supports", "facts": ["ひとりにしないために名を告げる。"]}], "chapter_refs": ["ch_019"], "confidence": 0.91, "review_state": "canonical", "surface_type": "named_entity_like", "semantic_value": "durable_entity", "language_hint": "ja"},
+        {"canonical_name": "ベルド", "entity_kind": "character", "aliases": ["オヤジ"], "source_mentions": ["ベルド", "オヤジ"], "key_facts": ["遺体がレンとセラの間に横たわる。", "死が不可逆な転換点になる。"], "chapter_refs": ["ch_019"], "confidence": 0.81, "review_state": "review", "surface_type": "named_entity_like", "semantic_value": "durable_entity", "language_hint": "ja"},
+        {"canonical_name": "私", "canonical_candidate": "セラ", "entity_kind": "character", "source_mentions": ["私"], "key_facts": [], "chapter_refs": ["ch_019"], "confidence": 0.44, "review_state": "review", "surface_type": "pronoun_like", "semantic_value": "noise", "language_hint": "ja"}
+      ]
+    }
+  ]
+}

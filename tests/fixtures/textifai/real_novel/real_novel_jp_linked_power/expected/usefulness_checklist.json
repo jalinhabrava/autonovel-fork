@@ -1,0 +1,39 @@
+{
+  "must_have": [
+    "レン appears as character entity or candidate",
+    "セラ appears as character entity or candidate",
+    "ベルド or オヤジ appears as character entity or candidate with alias or review note if possible",
+    "ベル appears as durable object or key artifact",
+    "エルサリエル appears as place or destination",
+    "Ren/Sera linked magic appears as key fact, relationship, lore concept or review item",
+    "Beld/Oyaji death appears as key fact or event",
+    "Pronoun-like mentions are not promoted as standalone primaries",
+    "No auto-merge",
+    "No auto-promotion",
+    "No write-back"
+  ],
+  "should_have": [
+    "王者と杖 appears as lore concept or review item",
+    "杖 appears as role or lore candidate for Ren",
+    "ガントレットの男 appears as antagonist review entity or event actor",
+    "ガントレット appears as weapon or object if supported",
+    "セラの名乗り appears as relationship or key moment",
+    "Viewer can load/present review queue output"
+  ],
+  "accepted_temporary_drift": [
+    "Event facts may appear as key_facts instead of first-class event entities.",
+    "オヤジ may remain review entity with merge-needed note if ベルド alias recovery is incomplete.",
+    "王者/杖 role mapping may remain unresolved if lore concept still surfaces.",
+    "Relationship extraction may remain partial if drift is visible instead of silent loss."
+  ],
+  "non_negotiable_failures": [
+    "Provider call occurs during tests.",
+    "Write to runs or vault occurs.",
+    "Full novel or full chapter text committed unexpectedly.",
+    "Pronoun promoted as strong primary.",
+    "ベル suppressed as noise.",
+    "Auto-merge occurs.",
+    "Auto-promotion occurs.",
+    "Schema version changed unexpectedly."
+  ]
+}

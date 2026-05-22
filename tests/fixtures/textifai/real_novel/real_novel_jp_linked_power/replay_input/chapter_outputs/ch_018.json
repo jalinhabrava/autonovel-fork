@@ -1,0 +1,20 @@
+{
+  "chapters": [
+    {
+      "chapter_id": "ch_018",
+      "chapter_title_original": "第18話：セラの繋がった力・後編",
+      "chapter_title_canonical": "第18話：セラの繋がった力・後編",
+      "chapter_label_type": "episode",
+      "chapter_number_in_label": 18,
+      "sequence_index": 18,
+      "chapter_summary": "セラ視点でレンとの繋がった力と安定した魔法が再解釈される。",
+      "entities": [
+        {"canonical_name": "セラ", "entity_kind": "character", "aliases": ["私"], "source_mentions": ["セラ", "私"], "key_facts": ["痛みなく自分のままで魔法を使う。"], "chapter_refs": ["ch_018"], "confidence": 0.94, "review_state": "canonical", "surface_type": "named_entity_like", "semantic_value": "durable_entity", "language_hint": "ja"},
+        {"canonical_name": "レン", "entity_kind": "character", "aliases": ["彼"], "source_mentions": ["レン", "彼"], "key_facts": ["境界線・流れ・川のようにセラの魔力を支える。"], "chapter_refs": ["ch_018"], "confidence": 0.92, "review_state": "canonical", "surface_type": "named_entity_like", "semantic_value": "durable_entity", "language_hint": "ja"},
+        {"canonical_name": "繋がった力", "entity_kind": "lore_concept", "source_mentions": ["繋がった力", "流れ", "導く", "支えた"], "key_facts": ["セラの魔法が安定し、溢れず、痛みもない。"], "chapter_refs": ["ch_018"], "confidence": 0.88, "review_state": "review", "surface_type": "descriptor_like", "semantic_value": "lore_concept", "language_hint": "ja"},
+        {"canonical_name": "彼", "canonical_candidate": "レン", "entity_kind": "character", "source_mentions": ["彼"], "key_facts": [], "chapter_refs": ["ch_018"], "confidence": 0.44, "review_state": "review", "surface_type": "pronoun_like", "semantic_value": "noise", "language_hint": "ja"},
+        {"canonical_name": "私", "canonical_candidate": "セラ", "entity_kind": "character", "source_mentions": ["私"], "key_facts": [], "chapter_refs": ["ch_018"], "confidence": 0.44, "review_state": "review", "surface_type": "pronoun_like", "semantic_value": "noise", "language_hint": "ja"}
+      ]
+    }
+  ]
+}

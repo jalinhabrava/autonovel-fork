@@ -1,0 +1,26 @@
+{
+  "chapters": [
+    {
+      "chapter_id": "ch_017",
+      "chapter_title_original": "第17話：レンの繋がった力 ・前編",
+      "chapter_title_canonical": "第17話：レンの繋がった力 ・前編",
+      "chapter_label_type": "episode",
+      "chapter_number_in_label": 17,
+      "sequence_index": 17,
+      "chapter_summary": "ベルドがレンとセラにベルを託し、エルサリエルへの使命を告げ、共同魔法が発現する。",
+      "entities": [
+        {"canonical_name": "レン", "entity_kind": "character", "aliases": ["俺"], "source_mentions": ["レン", "俺"], "key_facts": ["セラの魔力を運ぶ道になれると気づく。"], "chapter_refs": ["ch_017"], "confidence": 0.95, "review_state": "canonical", "surface_type": "named_entity_like", "semantic_value": "durable_entity", "language_hint": "ja"},
+        {"canonical_name": "セラ", "entity_kind": "character", "aliases": ["彼女"], "source_mentions": ["セラ", "彼女"], "key_facts": ["レンと共に安定した魔法を放つ。"], "chapter_refs": ["ch_017"], "confidence": 0.93, "review_state": "canonical", "surface_type": "named_entity_like", "semantic_value": "durable_entity", "language_hint": "ja"},
+        {"canonical_name": "ベルド", "entity_kind": "character", "aliases": ["オヤジ"], "source_mentions": ["ベルド", "オヤジ"], "key_facts": ["エルサリエルへ行けと告げる。", "王者と杖は共に歩むと言い残す。", "ベルを二人に託す。"], "chapter_refs": ["ch_017"], "confidence": 0.84, "review_state": "review", "surface_type": "named_entity_like", "semantic_value": "durable_entity", "language_hint": "ja"},
+        {"canonical_name": "ガントレットの男", "entity_kind": "character", "aliases": ["あいつ"], "source_mentions": ["ガントレットの男", "あいつ"], "key_facts": ["ガントレットで襲う。", "共同魔法で腕ごと砕かれる。"], "chapter_refs": ["ch_017"], "confidence": 0.63, "review_state": "review", "surface_type": "named_entity_like", "semantic_value": "durable_entity", "language_hint": "ja"},
+        {"canonical_name": "ベル", "entity_kind": "object", "source_mentions": ["ベル"], "key_facts": ["ベルが一度鳴る。", "レンとセラの手に渡る。"], "chapter_refs": ["ch_017"], "confidence": 0.97, "review_state": "canonical", "surface_type": "object_like", "semantic_value": "durable_object", "language_hint": "ja"},
+        {"canonical_name": "ガントレット", "entity_kind": "object", "source_mentions": ["ガントレット"], "key_facts": ["肘ごと砕ける。"], "chapter_refs": ["ch_017"], "confidence": 0.75, "review_state": "review", "surface_type": "object_like", "semantic_value": "object", "language_hint": "ja"},
+        {"canonical_name": "エルサリエル", "entity_kind": "place", "source_mentions": ["エルサリエル"], "key_facts": ["ベルドが目的地として示す。"], "chapter_refs": ["ch_017"], "confidence": 0.92, "review_state": "canonical", "surface_type": "named_entity_like", "semantic_value": "durable_entity", "language_hint": "ja"},
+        {"canonical_name": "王者と杖", "entity_kind": "lore_concept", "source_mentions": ["王者と杖", "王者と杖は……共に歩む"], "key_facts": ["レンとセラの使命を枠づける句。"], "chapter_refs": ["ch_017"], "confidence": 0.87, "review_state": "review", "surface_type": "descriptor_like", "semantic_value": "lore_concept", "language_hint": "ja"},
+        {"canonical_name": "繋がった力", "entity_kind": "lore_concept", "source_mentions": ["彼女の魔力を運ぶ道"], "key_facts": ["レンがセラの魔力を支える道になる。"], "chapter_refs": ["ch_017"], "confidence": 0.86, "review_state": "review", "surface_type": "descriptor_like", "semantic_value": "lore_concept", "language_hint": "ja"},
+        {"canonical_name": "俺", "canonical_candidate": "レン", "entity_kind": "character", "source_mentions": ["俺"], "key_facts": [], "chapter_refs": ["ch_017"], "confidence": 0.45, "review_state": "review", "surface_type": "pronoun_like", "semantic_value": "noise", "language_hint": "ja"},
+        {"canonical_name": "彼女", "canonical_candidate": "セラ", "entity_kind": "character", "source_mentions": ["彼女"], "key_facts": [], "chapter_refs": ["ch_017"], "confidence": 0.45, "review_state": "review", "surface_type": "pronoun_like", "semantic_value": "noise", "language_hint": "ja"}
+      ]
+    }
+  ]
+}
