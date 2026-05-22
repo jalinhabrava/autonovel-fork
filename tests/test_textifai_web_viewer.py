@@ -1,6 +1,8 @@
 import json
+import subprocess
 import tempfile
 import threading
+import textwrap
 import unittest
 from http.server import ThreadingHTTPServer
 from pathlib import Path
@@ -435,6 +437,198 @@ class TextifAIWebViewerTests(unittest.TestCase):
                 server.server_close()
                 thread.join(timeout=1.0)
 
+    def test_review_grouping_keeps_principal_then_related_equivalents(self):
+        payload = [
+            {
+                "review_type": "entity_retention_review",
+                "severity": "medium",
+                "source_entity": "Ari Mar",
+                "target_text": "el capitán del paso",
+                "suggested_action": "review_attach_role_or_title",
+                "candidate_entities": [{"canonical_name": "Ari Mar", "entity_kind": "character"}],
+                "metadata": {
+                    "recommended_action": "review_attach_role_or_title",
+                    "descriptor_category": "role_descriptor",
+                    "signal_tier": "medium",
+                    "candidate_requires_review": True,
+                    "candidate_review_state": "review",
+                    "do_not_auto_merge": True,
+                    "do_not_auto_promote": True,
+                    "future_viewer_actions": ["attach_role_or_title", "keep_secondary", "reject_noise"],
+                    "equivalent_signal_group": "ari-role-1",
+                    "primary_equivalent_surface": "el capitán del paso",
+                },
+            },
+            {
+                "review_type": "entity_retention_review",
+                "severity": "low",
+                "source_entity": "Ari Mar",
+                "target_text": "el guardián del archivo",
+                "suggested_action": "review_attach_role_or_title",
+                "candidate_entities": [{"canonical_name": "Ari Mar", "entity_kind": "character"}],
+                "metadata": {
+                    "recommended_action": "review_attach_role_or_title",
+                    "descriptor_category": "role_descriptor",
+                    "signal_tier": "low",
+                    "candidate_requires_review": True,
+                    "candidate_review_state": "review",
+                    "do_not_auto_merge": True,
+                    "do_not_auto_promote": True,
+                    "degraded_due_to_equivalent_signal": True,
+                    "equivalent_signal_group": "ari-role-1",
+                    "primary_equivalent_surface": "el capitán del paso",
+                },
+            },
+            {
+                "review_type": "entity_retention_review",
+                "severity": "low",
+                "source_entity": "Ari Mar",
+                "target_text": "el custodio del paso",
+                "suggested_action": "review_attach_role_or_title",
+                "candidate_entities": [{"canonical_name": "Ari Mar", "entity_kind": "character"}],
+                "metadata": {
+                    "recommended_action": "review_attach_role_or_title",
+                    "descriptor_category": "role_descriptor",
+                    "signal_tier": "low",
+                    "candidate_requires_review": True,
+                    "candidate_review_state": "review",
+                    "do_not_auto_merge": True,
+                    "do_not_auto_promote": True,
+                    "degraded_due_to_equivalent_signal": True,
+                    "equivalent_signal_group": "ari-role-1",
+                    "primary_equivalent_surface": "el capitán del paso",
+                },
+            },
+        ]
+        result = _run_viewer_js_export("groupReviewItemsForPresentation", payload)
+        self.assertEqual(len(result["groups"]), 1)
+        group = result["groups"][0]
+        self.assertEqual(group["group_type"], "descriptor_group")
+        self.assertEqual(group["principal"]["target_text"], "el capitán del paso")
+        self.assertEqual([item["target_text"] for item in group["related_items"]], ["el guardián del archivo", "el custodio del paso"])
+        self.assertEqual(group["candidate_name"], "Ari Mar")
+        self.assertEqual(group["recommended_action"], "review_attach_role_or_title")
+        self.assertEqual(group["descriptor_category"], "role_descriptor")
+
+    def test_review_grouping_does_not_mix_candidates_actions_or_object_retention(self):
+        payload = [
+            {
+                "review_type": "entity_retention_review",
+                "severity": "medium",
+                "source_entity": "Ari Mar",
+                "target_text": "el capitán del paso",
+                "suggested_action": "review_attach_role_or_title",
+                "candidate_entities": [{"canonical_name": "Ari Mar", "entity_kind": "character"}],
+                "metadata": {
+                    "recommended_action": "review_attach_role_or_title",
+                    "descriptor_category": "role_descriptor",
+                    "equivalent_signal_group": "ari-role-1",
+                    "primary_equivalent_surface": "el capitán del paso",
+                },
+            },
+            {
+                "review_type": "entity_retention_review",
+                "severity": "low",
+                "source_entity": "Luma Ser",
+                "target_text": "la capitana del borde",
+                "suggested_action": "review_attach_role_or_title",
+                "candidate_entities": [{"canonical_name": "Luma Ser", "entity_kind": "character"}],
+                "metadata": {
+                    "recommended_action": "review_attach_role_or_title",
+                    "descriptor_category": "role_descriptor",
+                    "equivalent_signal_group": "luma-role-1",
+                    "primary_equivalent_surface": "la capitana del borde",
+                    "degraded_due_to_equivalent_signal": True,
+                },
+            },
+            {
+                "review_type": "entity_retention_review",
+                "severity": "medium",
+                "source_entity": "Ari Mar",
+                "target_text": "el cartógrafo sin memoria",
+                "suggested_action": "review_enrich_existing_entity",
+                "candidate_entities": [{"canonical_name": "Ari Mar", "entity_kind": "character"}],
+                "metadata": {
+                    "recommended_action": "review_enrich_existing_entity",
+                    "descriptor_category": "epithet_descriptor",
+                },
+            },
+            {
+                "review_type": "entity_retention_review",
+                "severity": "medium",
+                "source_entity": "llave de cristal",
+                "target_text": "llave de cristal",
+                "suggested_action": "review_create_primary",
+                "candidate_entities": [],
+                "metadata": {
+                    "recommended_action": "review_create_primary",
+                    "candidate_status": "no_clear_existing_primary",
+                    "semantic_value": "durable_object",
+                },
+            },
+        ]
+        result = _run_viewer_js_export("groupReviewItemsForPresentation", payload)
+        groups = result["groups"]
+        self.assertEqual(len(groups), 4)
+        self.assertEqual(sum(1 for group in groups if group["candidate_name"] == "Ari Mar"), 2)
+        self.assertEqual(sum(1 for group in groups if group["candidate_name"] == "Luma Ser"), 1)
+        object_group = next(group for group in groups if group["recommended_action"] == "review_create_primary")
+        self.assertEqual(object_group["group_type"], "object_retention_group")
+
+    def test_review_grouping_preserves_legacy_ungrouped_items_and_read_only_future_actions(self):
+        payload = [
+            {
+                "review_type": "review_entity",
+                "severity": "low",
+                "source_entity": "mención difusa",
+                "target_text": "algo viejo",
+                "suggested_action": "",
+                "candidate_entities": [],
+                "metadata": {},
+            }
+        ]
+        grouped = _run_viewer_js_export("groupReviewItemsForPresentation", payload)
+        self.assertEqual(len(grouped["ungrouped"]), 1)
+        self.assertEqual(grouped["ungrouped"][0]["target_text"], "algo viejo")
+
+        rendered = _run_viewer_js_export(
+            "renderReviewGroupCard",
+            {
+                "group": {
+                    "group_type": "descriptor_group",
+                    "group_key": "candidate:ari|action:review_attach_role_or_title|category:role_descriptor",
+                    "candidate_name": "Ari Mar",
+                    "recommended_action": "review_attach_role_or_title",
+                    "descriptor_category": "role_descriptor",
+                    "principal": {
+                        "review_type": "entity_retention_review",
+                        "severity": "medium",
+                        "source_entity": "Ari Mar",
+                        "target_text": "el capitán del paso",
+                        "suggested_action": "review_attach_role_or_title",
+                        "candidate_entities": [{"canonical_name": "Ari Mar", "entity_kind": "character"}],
+                        "evidence": [],
+                        "metadata": {
+                            "recommended_action": "review_attach_role_or_title",
+                            "signal_tier": "medium",
+                            "candidate_requires_review": True,
+                            "candidate_review_state": "review",
+                            "do_not_auto_merge": True,
+                            "do_not_auto_promote": True,
+                            "future_viewer_actions": ["attach_role_or_title", "keep_secondary", "reject_noise"],
+                        },
+                    },
+                    "related_items": [],
+                }
+            },
+        )
+        self.assertIn("Read-only", rendered)
+        self.assertIn("Requires human review", rendered)
+        self.assertIn("No auto-merge", rendered)
+        self.assertIn("No auto-promote", rendered)
+        self.assertIn("Future action: Attach role/title", rendered)
+        self.assertIn("disabled", rendered)
+
     def test_static_viewer_future_actions_are_read_only(self):
         source = Path("textifai/web_viewer/static/app.js").read_text(encoding="utf-8")
         self.assertIn("RECOMMENDED_ACTION_VIEWER_ACTIONS", source)
@@ -444,6 +638,70 @@ class TextifAIWebViewerTests(unittest.TestCase):
         self.assertIn("disabled", source)
         self.assertNotIn("data-future-action-post", source)
         self.assertNotIn("/api/review/actions", source)
+        self.assertIn("groupReviewItemsForPresentation", source)
+        self.assertIn("renderReviewGroupCard", source)
+        self.assertIn("review-group", source)
+        self.assertNotIn("fetch(\"/api/review", source)
+
+
+def _run_viewer_js_export(export_name, payload):
+    script = textwrap.dedent(
+        f"""
+        const fs = require("fs");
+        const vm = require("vm");
+        const source = fs.readFileSync("textifai/web_viewer/static/app.js", "utf8");
+        const elementFactory = () => ({{
+          addEventListener() {{}},
+          removeEventListener() {{}},
+          classList: {{ add() {{}}, remove() {{}} }},
+          dataset: {{}},
+          style: {{}},
+          value: "",
+          checked: false,
+          innerHTML: "",
+          textContent: "",
+          open: false,
+        }});
+        const elements = new Map();
+        const document = {{
+          getElementById(id) {{
+            if (!elements.has(id)) elements.set(id, elementFactory());
+            return elements.get(id);
+          }},
+          querySelectorAll() {{
+            return [];
+          }},
+        }};
+        const context = {{
+          console,
+          setTimeout,
+          clearTimeout,
+          document,
+          window: {{}},
+          fetch: async () => ({{ ok: true, json: async () => [] }}),
+          globalThis: {{}},
+        }};
+        context.window = context;
+        context.globalThis = context;
+        vm.createContext(context);
+        vm.runInContext(source, context, {{ filename: "app.js" }});
+        const exported = context.__TEXTIFAI_REVIEW_ACTIONS__;
+        const fn = exported[{json.dumps(export_name)}];
+        if (typeof fn !== "function") {{
+          throw new Error(`missing export: {export_name}`);
+        }}
+        const input = {json.dumps(payload)};
+        const result = fn(input);
+        process.stdout.write(JSON.stringify(result));
+        """
+    )
+    completed = subprocess.run(
+        ["node", "-e", script],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return json.loads(completed.stdout)
 
 
 if __name__ == "__main__":

@@ -2134,6 +2134,7 @@ function renderReview() {
   const view = state.reviewView || { severity: "", reviewType: "", query: "", sortBy: "severity_desc" };
   const filtered = applyReviewFilters(items, view);
   const sorted = sortReviewItems(filtered, view.sortBy);
+  const grouped = groupReviewItemsForPresentation(sorted);
   const candidateCount = items.filter((item) => (item.candidate_entities || []).length > 0).length;
   const evidenceCount = items.filter((item) => (item.evidence || []).length > 0).length;
   const highSeverity = severityCounts.high || 0;
@@ -2199,7 +2200,7 @@ function renderReview() {
     </div>
     <div class="review-results panel">
       <p class="muted">Showing ${sorted.length} of ${items.length} items</p>
-      ${sorted.length ? sorted.map((item, index) => renderReviewItemCard(item, index)).join("") : `<p class="muted">No items match current filters.</p>`}
+      ${sorted.length ? renderReviewPresentationGroups(grouped) : `<p class="muted">No items match current filters.</p>`}
     </div>
   `;
   bindReviewQueueInteractions();
@@ -2274,6 +2275,120 @@ function sortReviewItems(items, sortBy) {
     sorted.sort((a, b) => reviewSeverityRank(a.severity) - reviewSeverityRank(b.severity));
   }
   return sorted;
+}
+
+function groupReviewItemsForPresentation(items) {
+  const groupsByKey = new Map();
+  const ungrouped = [];
+  for (const item of items || []) {
+    const groupKey = reviewPresentationGroupKey(item);
+    if (!groupKey) {
+      ungrouped.push(item);
+      continue;
+    }
+    if (!groupsByKey.has(groupKey)) {
+      groupsByKey.set(groupKey, {
+        group_key: groupKey,
+        group_type: reviewPresentationGroupType(item),
+        candidate_name: primaryReviewCandidateName(item),
+        recommended_action: reviewActionPresentation(item).recommendedAction,
+        descriptor_category: reviewMetadata(item).descriptor_category || "",
+        equivalent_signal_group: reviewMetadata(item).equivalent_signal_group || "",
+        principal: null,
+        related_items: [],
+        items: [],
+      });
+    }
+    groupsByKey.get(groupKey).items.push(item);
+  }
+  const groups = [...groupsByKey.values()].map((group) => {
+    const sortedItems = sortReviewGroupItems(group.items);
+    const principal = sortedItems[0] || null;
+    return {
+      ...group,
+      principal,
+      related_items: sortedItems.slice(1),
+      items: sortedItems,
+    };
+  });
+  groups.sort((left, right) => {
+    const severityDelta = reviewSeverityRank(left.principal?.severity) - reviewSeverityRank(right.principal?.severity);
+    if (severityDelta) return severityDelta;
+    return String(left.group_key).localeCompare(String(right.group_key));
+  });
+  return { groups, ungrouped };
+}
+
+function reviewPresentationGroupKey(item) {
+  const metadata = reviewMetadata(item);
+  const candidateName = primaryReviewCandidateName(item);
+  const recommendedAction = reviewActionPresentation(item).recommendedAction;
+  const descriptorCategory = metadata.descriptor_category || "";
+  if (!candidateName || !recommendedAction) return "";
+  if (reviewPresentationGroupType(item) === "object_retention_group") {
+    return ["object", normalizeKey(candidateName || item.source_entity || item.target_text), recommendedAction].join("|");
+  }
+  if (!descriptorCategory && !metadata.equivalent_signal_group) return "";
+  return [
+    "descriptor",
+    normalizeKey(candidateName),
+    normalizeKey(recommendedAction),
+    normalizeKey(descriptorCategory || "uncategorized"),
+    normalizeKey(metadata.equivalent_signal_group || ""),
+  ].join("|");
+}
+
+function reviewPresentationGroupType(item) {
+  const metadata = reviewMetadata(item);
+  const recommendedAction = reviewActionPresentation(item).recommendedAction;
+  const semanticValue = String(metadata.semantic_value || "").toLowerCase();
+  if (
+    recommendedAction === "review_create_primary" ||
+    recommendedAction === "review_keep_secondary" ||
+    metadata.candidate_status === "no_clear_existing_primary" ||
+    semanticValue.includes("object")
+  ) {
+    return "object_retention_group";
+  }
+  return "descriptor_group";
+}
+
+function primaryReviewCandidateName(item) {
+  const candidates = item?.candidate_entities || [];
+  const candidate = candidates.find((entry) => entry.canonical_name || entry.name) || null;
+  return candidate?.canonical_name || candidate?.name || item?.source_entity || item?.target_text || "";
+}
+
+function sortReviewGroupItems(items) {
+  return [...(items || [])].sort((left, right) => {
+    const leftPrimary = reviewItemPrincipalScore(left);
+    const rightPrimary = reviewItemPrincipalScore(right);
+    if (leftPrimary !== rightPrimary) return rightPrimary - leftPrimary;
+    const severityDelta = reviewSeverityRank(left.severity) - reviewSeverityRank(right.severity);
+    if (severityDelta) return severityDelta;
+    return 0;
+  });
+}
+
+function reviewItemPrincipalScore(item) {
+  const metadata = reviewMetadata(item);
+  let score = 0;
+  if (!metadata.degraded_due_to_equivalent_signal) score += 4;
+  if (metadata.primary_equivalent_surface && item?.target_text === metadata.primary_equivalent_surface) score += 4;
+  if (String(item?.severity || "").toLowerCase() === "medium") score += 2;
+  if (String(item?.severity || "").toLowerCase() === "high") score += 3;
+  return score;
+}
+
+function renderReviewPresentationGroups(grouped) {
+  const groupHtml = (grouped.groups || []).map((group, index) => renderReviewGroupCard(group, index)).join("");
+  const legacyHtml = (grouped.ungrouped || []).length
+    ? `<div class="review-legacy-group">
+        <h4>Legacy / ungrouped review items</h4>
+        ${(grouped.ungrouped || []).map((item, index) => renderReviewItemCard(item, index + (grouped.groups || []).length)).join("")}
+      </div>`
+    : "";
+  return `${groupHtml}${legacyHtml}`;
 }
 
 function renderCountBadges(counts, badgeType) {
@@ -2357,10 +2472,114 @@ function renderReviewContractWarnings(item) {
   const presentation = reviewActionPresentation(item);
   const warnings = [];
   if (presentation.doNotAutoMerge) warnings.push("do_not_auto_merge: true — viewer never executes merge automatically.");
+  if (reviewMetadata(item).do_not_auto_promote) warnings.push("do_not_auto_promote: true — viewer never promotes entities automatically.");
   if (presentation.noClearCandidate) warnings.push("No clear candidate available — review_create_primary / keep_secondary remains editorial.");
   if (presentation.surfaceType === "pronoun_like") warnings.push("Pronoun-like surface — use conservative review wording and avoid primary promotion.");
   if (!warnings.length) return "";
   return `<div class="review-safety-warning">${warnings.map((warning) => `<p>${escapeHtml(warning)}</p>`).join("")}</div>`;
+}
+
+function renderReviewGroupCard(group, index) {
+  if (group?.group) group = group.group;
+  const principal = group.principal;
+  if (!principal) return "";
+  const openAttr = index < 2 ? "open" : "";
+  const presentation = reviewActionPresentation(principal);
+  const related = group.related_items || [];
+  return `
+    <details class="review-group ${escapeHtml(group.group_type || "descriptor_group")}" ${openAttr}>
+      <summary>
+        <span class="badge review-group-kind">${escapeHtml(groupLabel(group))}</span>
+        <strong>${escapeHtml(group.candidate_name || "Unknown candidate")}</strong>
+        <span class="muted">·</span>
+        <span>${escapeHtml(group.recommended_action || "editorial review")}</span>
+        ${group.descriptor_category ? `<span class="badge">${escapeHtml(group.descriptor_category)}</span>` : ""}
+        <span class="badge severity-${escapeHtml(String(principal.severity || "unknown").toLowerCase())}">${escapeHtml(principal.severity || "unknown")}</span>
+        ${related.length ? `<span class="badge">${related.length} related</span>` : ""}
+      </summary>
+      <div class="review-group-body">
+        <div class="review-group-header">
+          <div>
+            <p class="eyebrow">Editorial decision</p>
+            <h4>${escapeHtml(groupTitle(group))}</h4>
+            <p class="muted">${escapeHtml(groupSubtitle(group))}</p>
+          </div>
+          <div class="review-group-badges">
+            <span class="badge review-group-badge">Read-only</span>
+            <span class="badge review-group-badge">Requires human review</span>
+            ${presentation.doNotAutoMerge ? `<span class="badge review-group-badge">No auto-merge</span>` : ""}
+            ${reviewMetadata(principal).do_not_auto_promote ? `<span class="badge review-group-badge">No auto-promote</span>` : ""}
+          </div>
+        </div>
+        <div class="review-group-section">
+          <h5>Primary signal</h5>
+          ${renderReviewItemCard(principal, index)}
+        </div>
+        ${related.length ? `<div class="review-group-section">
+          <h5>Related / equivalent signals</h5>
+          <div class="review-related-list">
+            ${related.map((item, relatedIndex) => renderReviewRelatedItem(item, `${index}-${relatedIndex}`)).join("")}
+          </div>
+        </div>` : ""}
+      </div>
+    </details>
+  `;
+}
+
+function renderReviewRelatedItem(item, index) {
+  const presentation = reviewActionPresentation(item);
+  return `
+    <details class="review-item review-item-related" data-review-item-id="${escapeHtml(reviewItemKey(item, index))}">
+      <summary>
+        <span class="badge severity-${escapeHtml(String(item.severity || "unknown").toLowerCase())}">${escapeHtml(item.severity || "unknown")}</span>
+        <strong>${escapeHtml(item.target_text || "not available")}</strong>
+        ${reviewMetadata(item).degraded_due_to_equivalent_signal ? `<span class="badge">equivalent</span>` : ""}
+      </summary>
+      <div class="review-item-body">
+        <p class="muted">Related signal for same editorial decision.</p>
+        <div class="review-meta-grid">
+          <div><span class="muted">Source:</span> ${escapeHtml(item.source_entity || "not available")}</div>
+          <div><span class="muted">Action:</span> ${escapeHtml(presentation.recommendedAction || "not available")}</div>
+          <div><span class="muted">Signal tier:</span> ${escapeHtml(presentation.signalTier || "not available")}</div>
+          <div><span class="muted">Surface type:</span> ${escapeHtml(presentation.surfaceType || "not available")}</div>
+        </div>
+        ${renderReviewContractWarnings(item)}
+        <h5>Future viewer actions</h5>
+        ${renderReviewActionDescriptors(item)}
+      </div>
+    </details>
+  `;
+}
+
+function groupLabel(group) {
+  if (group.group_type === "object_retention_group") return "Object retention group";
+  return "Descriptor decision group";
+}
+
+function groupTitle(group) {
+  if (group.group_type === "object_retention_group") {
+    return `Review object retention for ${group.candidate_name || "item"}`;
+  }
+  return `Review ${humanizeReviewAction(group.recommended_action)} for ${group.candidate_name || "candidate"}`;
+}
+
+function groupSubtitle(group) {
+  if (group.group_type === "object_retention_group") {
+    return "Object retention remains separate from descriptor review grouping.";
+  }
+  return "Primary signal shown first; related low/equivalent signals stay visible underneath.";
+}
+
+function humanizeReviewAction(action) {
+  const map = {
+    review_attach_role_or_title: "role/title attachment",
+    review_enrich_existing_entity: "entity enrichment",
+    review_create_primary: "primary creation",
+    review_keep_secondary: "secondary retention",
+    review_merge_or_alias: "merge / alias review",
+    review_reject_noise: "noise rejection",
+  };
+  return map[action] || action || "editorial review";
 }
 
 function renderReviewItemCard(item, index) {
@@ -3015,6 +3234,9 @@ globalThis.__TEXTIFAI_REVIEW_ACTIONS__ = {
   mapRecommendedActionToViewerActions,
   normalizedFutureViewerActions,
   reviewActionPresentation,
+  groupReviewItemsForPresentation,
+  renderReviewPresentationGroups,
+  renderReviewGroupCard,
   renderReviewActionDescriptors,
   renderReviewContractWarnings,
   renderReviewItemCard,

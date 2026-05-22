@@ -842,6 +842,75 @@ button:hover, button.active {
   margin-top: 12px;
 }
 
+.review-group {
+  border: 1px solid rgba(29, 111, 104, 0.26);
+  border-radius: 20px;
+  background: rgba(255, 250, 240, 0.72);
+  padding: 12px 14px;
+}
+
+.review-group + .review-group,
+.review-group + .review-legacy-group,
+.review-legacy-group + .review-group {
+  margin-top: 14px;
+}
+
+.review-group summary {
+  cursor: pointer;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.review-group-body {
+  margin-top: 14px;
+}
+
+.review-group-header {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  align-items: start;
+  margin-bottom: 12px;
+}
+
+.review-group-header h4,
+.review-group-section h5 {
+  margin: 0 0 6px;
+}
+
+.review-group-badges,
+.review-related-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.review-group-badges {
+  justify-content: flex-end;
+}
+
+.review-group-badge,
+.review-group-kind {
+  background: rgba(29, 111, 104, 0.12);
+  color: var(--accent);
+}
+
+.review-group-section {
+  margin-top: 12px;
+}
+
+.review-item-related {
+  flex: 1 1 260px;
+  background: rgba(255, 255, 255, 0.42);
+}
+
+.review-legacy-group {
+  border-top: 1px dashed var(--line);
+  padding-top: 12px;
+}
+
 .review-item summary {
   cursor: pointer;
   display: flex;
