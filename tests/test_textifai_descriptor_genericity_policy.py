@@ -200,6 +200,56 @@ class TextifAIDescriptorGenericityPolicyTests(unittest.TestCase):
         self.assertTrue(metadata.get("do_not_auto_merge"))
         self.assertTrue(metadata.get("do_not_auto_promote"))
 
+    def test_equivalent_role_descriptors_degrade_to_low_after_primary_medium(self):
+        queue = build_review_queue(
+            obsidian_import={"entities": [_primary("Ari Mar", aliases=["captain of glass", "archive warden", "pass keeper"])]},
+            retention_context={
+                "global_entities": [
+                    {
+                        "canonical_name": "captain of glass",
+                        "canonical_candidate": "Ari Mar",
+                        "entity_kind": "character",
+                        "preferred_slug": "captain_of_glass",
+                        "source_mentions": ["captain of glass"],
+                        "key_facts": ["Commands the gate protocol."],
+                        "chapter_refs": ["ch_001"],
+                        "relationships": [{"target": "Ari Mar", "type": "related_to"}],
+                        "confidence": 0.79,
+                        "review_state": "review",
+                        "naming_quality": "descriptor",
+                        "surface_type": "role_like",
+                        "language_hint": "en",
+                        "semantic_value": "role",
+                        "descriptor_category": "role_descriptor",
+                    },
+                    {
+                        "canonical_name": "archive warden",
+                        "canonical_candidate": "Ari Mar",
+                        "entity_kind": "character",
+                        "preferred_slug": "archive_warden",
+                        "source_mentions": ["archive warden"],
+                        "key_facts": ["Repeats same gate order."],
+                        "chapter_refs": ["ch_001"],
+                        "relationships": [{"target": "Ari Mar", "type": "related_to"}],
+                        "confidence": 0.76,
+                        "review_state": "review",
+                        "naming_quality": "descriptor",
+                        "surface_type": "role_like",
+                        "language_hint": "en",
+                        "semantic_value": "role",
+                        "descriptor_category": "role_descriptor",
+                    },
+                ]
+            },
+        )
+        first = _review_item_by_source(queue, "captain of glass")
+        second = _review_item_by_source(queue, "archive warden")
+        self.assertIsNotNone(first)
+        self.assertIsNotNone(second)
+        self.assertEqual(first.get("severity"), "medium")
+        self.assertEqual(second.get("severity"), "low")
+        self.assertTrue((second.get("metadata") or {}).get("degraded_due_to_equivalent_signal"))
+
     def test_antihardcode_static_guard(self):
         runtime_source = Path("textifai/vaerl/review_queue.py").read_text(encoding="utf-8")
         for term in [

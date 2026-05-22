@@ -49,6 +49,15 @@ class TextifAIReviewStateCandidateDescriptorSignalsTests(unittest.TestCase):
             self.assertEqual(attach.get("suggested_action"), "review_attach_role_or_title")
             self._assert_review_state_candidate_metadata(attach, expected_category="role_descriptor")
             self.assertIn("attach_role_or_title", (attach.get("metadata") or {}).get("future_viewer_actions") or [])
+            role_items = [
+                item
+                for item in review_queue.get("items") or []
+                if (item.get("metadata") or {}).get("descriptor_category") == "role_descriptor"
+                and item.get("suggested_action") == "review_attach_role_or_title"
+                and any(candidate.get("canonical_name") == "Ari Mar" for candidate in item.get("candidate_entities") or [])
+            ]
+            self.assertEqual(len([item for item in role_items if item.get("severity") == "medium"]), 1)
+            self.assertGreaterEqual(len([item for item in role_items if item.get("severity") == "low"]), 2)
 
             relation = _review_item_by_surface(review_queue, "el protector de Luma")
             self.assertIsNotNone(relation)

@@ -181,6 +181,48 @@ Presupuesto inicial de ruido:
 
 Si runtime no mantiene estado global extendido, aplicar primero en heurística de emisión por item (K-a) y extender a budget run-level en K-b.
 
+## Equivalent Descriptor Signal Dedupe / Noise Budget
+
+No queremos varias señales equivalentes para la misma decisión editorial. La cola debe mostrar decisiones, no repeticiones de superficies parecidas.
+
+Equivalencia conservadora:
+
+- mismo candidate principal;
+- misma `descriptor_category`;
+- misma `recommended_action`;
+- `semantic_value` compatible;
+- relationships no diferenciales;
+- facts no claramente diferenciales.
+
+Señal principal:
+
+- queda como `medium`;
+- conserva candidate, evidence, action y metadata;
+- mantiene `do_not_auto_merge: true`;
+- mantiene `do_not_auto_promote: true`.
+
+Señal equivalente secundaria:
+
+- se degrada a `low` si aporta algún matiz útil;
+- incluye `degraded_due_to_equivalent_signal: true`;
+- incluye `equivalent_signal_group`;
+- incluye `primary_equivalent_surface`;
+- mantiene flags de no auto-merge/no auto-promote.
+
+Suprimir:
+
+- reservado para redundancia casi total;
+- si hay duda, preferir degradar a `low`.
+
+Conservar varias:
+
+- si cambian facts relevantes;
+- si cambian relationship target/type;
+- si cambia acción editorial;
+- si cambia categoría semántica relevante.
+
+Diseño language-agnostic: usar candidate, metadata, evidence, facts y relationships. No usar strings del fixture ni idioma como lógica.
+
 ## Future Viewer Actions
 
 - Merge.

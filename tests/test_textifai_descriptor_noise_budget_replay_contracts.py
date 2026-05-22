@@ -105,6 +105,16 @@ class TextifAIDescriptorNoiseBudgetReplayContractsTests(unittest.TestCase):
         self.assertLessEqual(len(descriptor_items), 6)
         self.assertLessEqual(len(medium_descriptor_items), 6)
         self.assertIn("descriptor_queue_no_explosion_observed", _resolved_ids(expectations))
+        self.assertIn("review_state_candidate_descriptor_no_explosion_observed", _resolved_ids(expectations))
+        role_items = [
+            item
+            for item in descriptor_items
+            if (item.get("metadata") or {}).get("descriptor_category") == "role_descriptor"
+            and (item.get("metadata") or {}).get("recommended_action") == "review_attach_role_or_title"
+            and _candidate_named(item, "Ari Mar")
+        ]
+        self.assertLessEqual(len([item for item in role_items if item.get("severity") == "medium"]), 1)
+        self.assertIn("equivalent_descriptor_signals_should_not_all_remain_medium", _resolved_ids(expectations))
         dedupe_keys = set()
         for item in descriptor_items:
             metadata = item.get("metadata") or {}
@@ -139,6 +149,10 @@ class TextifAIDescriptorNoiseBudgetReplayContractsTests(unittest.TestCase):
         self.assertFalse(metadata.get("candidate_is_primary"))
         self.assertTrue(metadata.get("candidate_requires_review"))
         self.assertEqual(metadata.get("candidate_review_state"), "review")
+        if item.get("severity") == "low":
+            self.assertTrue(metadata.get("degraded_due_to_equivalent_signal"))
+            self.assertTrue(metadata.get("equivalent_signal_group"))
+            self.assertTrue(metadata.get("primary_equivalent_surface"))
 
     def _assert_drift_expectations_are_explicit(self, *, expectations: dict) -> None:
         for key in [

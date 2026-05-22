@@ -31,6 +31,7 @@ def build_review_queue(
     items.extend(_invariant_items(semantic_invariants_audit or {}))
 
     deduped = _dedupe_items(items)
+    deduped = _dedupe_equivalent_descriptor_items(deduped)
     for item in deduped:
         item["review_item_id"] = _review_item_id(item)
     deduped.sort(key=lambda item: (_severity_rank(item.get("severity")), str(item.get("review_type") or ""), str(item.get("review_item_id") or "")))
@@ -504,6 +505,9 @@ def _normalized_absorbed_semantic_surface_item(
             "surface_type": _surface_type(entity),
             "semantic_value": _semantic_value(entity),
             "descriptor_category": _descriptor_category(entity),
+            "evidence_fact_count": len([fact for fact in entity.get("key_facts") or [] if str(fact or "").strip()]),
+            "relationship_targets": _relationship_targets(entity),
+            "relationship_types": _relationship_types(entity),
             "future_viewer_actions": _future_viewer_actions(recommended_action),
         },
     )
@@ -609,6 +613,28 @@ def _has_relationship_descriptor_impact(entity: dict[str, Any]) -> bool:
         if rel_type and rel_type not in {"related_to", "mention_of", "same_as"}:
             return True
     return False
+
+
+def _relationship_targets(entity: dict[str, Any]) -> list[str]:
+    targets: list[str] = []
+    for rel in entity.get("relationships") or []:
+        if not isinstance(rel, dict):
+            continue
+        target = str(rel.get("target") or rel.get("entity") or rel.get("to") or "").strip()
+        if target and target not in targets:
+            targets.append(target)
+    return targets
+
+
+def _relationship_types(entity: dict[str, Any]) -> list[str]:
+    types: list[str] = []
+    for rel in entity.get("relationships") or []:
+        if not isinstance(rel, dict):
+            continue
+        rel_type = str(rel.get("type") or rel.get("relation_type") or "").strip().casefold()
+        if rel_type and rel_type not in types:
+            types.append(rel_type)
+    return types
 
 def _absorbed_surface_decision_reason(*, entity: dict[str, Any], recommended_action: str) -> str:
     if recommended_action == "review_attach_role_or_title":
@@ -812,6 +838,106 @@ def _dedupe_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
         seen.add(key)
         out.append(item)
     return out
+
+
+def _dedupe_equivalent_descriptor_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    groups: dict[tuple[str, str, str], list[dict[str, Any]]] = {}
+    passthrough: list[dict[str, Any]] = []
+    for item in items:
+        budget_key = _descriptor_item_budget_key(item)
+        if budget_key is None:
+            passthrough.append(item)
+            continue
+        groups.setdefault(budget_key, []).append(item)
+
+    out = list(passthrough)
+    for grouped_items in groups.values():
+        if len(grouped_items) == 1:
+            out.extend(grouped_items)
+            continue
+        ordered = sorted(grouped_items, key=_descriptor_item_priority, reverse=True)
+        survivors: list[dict[str, Any]] = []
+        for item in ordered:
+            primary = next((kept for kept in survivors if not _descriptor_items_have_differential_evidence(kept, item)), None)
+            if primary is None:
+                survivors.append(item)
+                out.append(item)
+                continue
+            out.append(_degrade_equivalent_descriptor_item(item=item, primary_item=primary))
+    return out
+
+
+def _descriptor_item_budget_key(item: dict[str, Any]) -> tuple[str, str, str] | None:
+    metadata = item.get("metadata") or {}
+    if item.get("review_type") != "entity_retention_review":
+        return None
+    descriptor_category = str(metadata.get("descriptor_category") or "").strip().casefold()
+    recommended_action = str(metadata.get("recommended_action") or item.get("suggested_action") or "").strip()
+    semantic_value = str(metadata.get("semantic_value") or "").strip().casefold()
+    candidates = item.get("candidate_entities") or []
+    candidate_name = str((candidates[0] or {}).get("canonical_name") or "").strip() if candidates else ""
+    if not candidate_name or not descriptor_category or not recommended_action:
+        return None
+    if semantic_value not in {"descriptor", "role", "title", "status"}:
+        return None
+    return (candidate_name, descriptor_category, recommended_action)
+
+
+def _descriptor_item_priority(item: dict[str, Any]) -> tuple[float, float, float, float]:
+    metadata = item.get("metadata") or {}
+    relationship_count = float(metadata.get("relationship_count") or 0)
+    fact_count = float(metadata.get("evidence_fact_count") or 0)
+    chapter_ref_count = float(len(metadata.get("chapter_refs") or []))
+    confidence = _safe_float(item.get("confidence"))
+    return (relationship_count, fact_count, chapter_ref_count, confidence)
+
+
+def _descriptor_items_have_differential_evidence(left: dict[str, Any], right: dict[str, Any]) -> bool:
+    left_metadata = left.get("metadata") or {}
+    right_metadata = right.get("metadata") or {}
+
+    left_targets = set(str(value or "").strip() for value in left_metadata.get("relationship_targets") or [])
+    right_targets = set(str(value or "").strip() for value in right_metadata.get("relationship_targets") or [])
+    left_types = set(str(value or "").strip() for value in left_metadata.get("relationship_types") or [])
+    right_types = set(str(value or "").strip() for value in right_metadata.get("relationship_types") or [])
+    if (left_targets or right_targets or left_types or right_types) and (left_targets != right_targets or left_types != right_types):
+        return True
+
+    left_fact_count = int(left_metadata.get("evidence_fact_count") or 0)
+    right_fact_count = int(right_metadata.get("evidence_fact_count") or 0)
+    if left_fact_count >= 2 and right_fact_count >= 2:
+        left_facts = _item_fact_text(left)
+        right_facts = _item_fact_text(right)
+        if _token_overlap(_significant_tokens(left_facts), _significant_tokens(right_facts)) < 0.5:
+            return True
+
+    return False
+
+
+def _degrade_equivalent_descriptor_item(*, item: dict[str, Any], primary_item: dict[str, Any]) -> dict[str, Any]:
+    degraded = json.loads(json.dumps(item, ensure_ascii=False))
+    metadata = degraded.setdefault("metadata", {})
+    primary_surface = str(primary_item.get("source_entity") or primary_item.get("target_text") or "").strip()
+    metadata["signal_tier"] = "low"
+    metadata["degraded_due_to_equivalent_signal"] = True
+    metadata["equivalent_signal_group"] = "::".join(value for value in _descriptor_item_budget_key(primary_item) or () if value)
+    metadata["primary_equivalent_surface"] = primary_surface
+    metadata["decision_reason"] = "equivalent_descriptor_signal_degraded_to_reduce_repetitive_editorial_decisions"
+    degraded["severity"] = "low"
+    return degraded
+
+
+def _item_fact_text(item: dict[str, Any]) -> str:
+    texts: list[str] = []
+    for entry in item.get("evidence") or []:
+        if not isinstance(entry, dict):
+            continue
+        if entry.get("kind") != "key_fact":
+            continue
+        text = str(entry.get("text") or "").strip()
+        if text:
+            texts.append(text)
+    return " ".join(texts)
 
 
 def _review_item_id(item: dict[str, Any]) -> str:

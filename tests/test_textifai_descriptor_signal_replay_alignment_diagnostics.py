@@ -83,6 +83,7 @@ class TextifAIDescriptorSignalReplayAlignmentDiagnosticsTests(unittest.TestCase)
             self._assert_descriptor_surface_propagation(expectations=expectations, obsidian_import=obsidian_import, review_queue=review_queue)
             self._assert_metadata_presence_diagnosis(expectations=expectations, review_queue=review_queue)
             self._assert_review_state_candidate_signals_restored(expectations=expectations, review_queue=review_queue)
+            self._assert_equivalent_descriptor_dedupe(expectations=expectations, review_queue=review_queue)
             self._assert_suppression_regression(obsidian_import=obsidian_import, review_queue=review_queue)
             self._assert_identity_and_object_regression_guards()
             self._assert_anti_hardcode_guardrails()
@@ -215,6 +216,19 @@ class TextifAIDescriptorSignalReplayAlignmentDiagnosticsTests(unittest.TestCase)
         self.assertEqual(protector.get("suggested_action"), "review_enrich_existing_entity")
         evidence = protector.get("evidence") or []
         self.assertTrue(any(entry.get("kind") == "key_fact" for entry in evidence if isinstance(entry, dict)))
+
+    def _assert_equivalent_descriptor_dedupe(self, *, expectations: dict, review_queue: dict) -> None:
+        self.assertIn("equivalent_descriptor_signals_should_not_all_remain_medium", _resolved_ids(expectations))
+        self.assertIn("review_state_candidate_descriptor_no_explosion_observed", _resolved_ids(expectations))
+        role_items = [
+            item
+            for item in review_queue.get("items") or []
+            if (item.get("metadata") or {}).get("descriptor_category") == "role_descriptor"
+            and item.get("suggested_action") == "review_attach_role_or_title"
+            and _candidate_named(item, "Ari Mar")
+        ]
+        self.assertEqual(len([item for item in role_items if item.get("severity") == "medium"]), 1)
+        self.assertGreaterEqual(len([item for item in role_items if item.get("severity") == "low"]), 2)
 
     def _assert_suppression_regression(self, *, obsidian_import: dict, review_queue: dict) -> None:
         for surface in SUPPRESSED_SURFACES:

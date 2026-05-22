@@ -1,6 +1,6 @@
 {
   "fixture_id": "descriptor_noise_budget",
-  "purpose": "Contrato K-b2/K-b3b para replay provider-free: fijar comportamiento observado, señales descriptor restauradas para review-state candidates, drifts explícitos y límites iniciales sin schema/write-back.",
+  "purpose": "Contrato K-b2/K-b3c para replay provider-free: señales descriptor útiles sobre review-state candidates con dedupe/degrade conservador de equivalentes, sin schema/write-back.",
   "manual_expectation": {
     "required_entities": [
       {
@@ -55,7 +55,21 @@
         "surface_type": "pronoun_like",
         "expected_behavior": "suppressed"
       }
-    ]
+    ],
+    "equivalent_descriptor_policy": {
+      "primary_equivalence_key": [
+        "candidate",
+        "descriptor_category",
+        "recommended_action"
+      ],
+      "budget_rule": "max_one_medium_per_equivalence_key_unless_differential_evidence",
+      "equivalent_extras": "degrade_to_low_or_suppress_if_redundant",
+      "differential_escape_hatch": [
+        "distinct_key_facts",
+        "distinct_relationship_target_or_type",
+        "different_editorial_action"
+      ]
+    }
   },
   "current_observed_behavior": {
     "review_queue_item_count": 7,
@@ -65,7 +79,8 @@
       "review_entity": 1
     },
     "counts_by_severity": {
-      "medium": 7
+      "medium": 5,
+      "low": 2
     },
     "candidate_state_summary": {
       "ari_mar_top_level_review_state": "review",
@@ -88,7 +103,16 @@
         "el protector de Luma"
       ]
     },
-    "summary": "Replay provider-free actual emite señales descriptor útiles para Ari Mar aunque Ari Mar queda como review_entity; no promociona ni mergea automáticamente."
+    "equivalent_descriptor_dedupe_summary": {
+      "equivalence_key": "(candidate, descriptor_category, recommended_action)",
+      "role_descriptor_medium_count_for_ari_attach": 1,
+      "role_descriptor_low_count_for_ari_attach": 2,
+      "degraded_surfaces": [
+        "el guardián del archivo",
+        "el custodio del paso"
+      ]
+    },
+    "summary": "Replay actual conserva señales útiles y degrada equivalentes de rol a low para evitar decisiones repetitivas."
   },
   "accepted_temporary_drift": [
     {
@@ -100,7 +124,7 @@
       "observed_behavior": "review_entity_generic_without_descriptor_metadata_bundle_but_descriptor_items_have_modern_metadata",
       "decision": "accept_temporarily",
       "accepted_temporarily": true,
-      "reason": "K-b3b restaura metadata en items descriptor; el item genérico de Ari Mar sigue minimal por compatibilidad."
+      "reason": "items descriptor dedicados ya llevan metadata moderna; item review_entity genérico sigue minimal por compatibilidad."
     }
   ],
   "resolved_current_behavior": [
@@ -137,7 +161,7 @@
       "surface_text": "",
       "observed_behavior": "descriptor_review_item_count_within_reasonable_limit",
       "accepted_temporarily": false,
-      "reason": "no explosión observable en baseline actual"
+      "reason": "cola descriptor sin explosión severa en replay actual"
     },
     {
       "drift_id": "review_state_candidate_can_emit_descriptor_signals",
@@ -147,7 +171,7 @@
       "expected_action": "emit_editorial_signals_without_canon_mutation",
       "observed_behavior": "review_state_candidate_emits_descriptor_signals_with_do_not_auto_flags",
       "accepted_temporarily": false,
-      "reason": "K-b3b permite señales editoriales sobre candidatos en review con evidencia fuerte sin auto-merge ni auto-promote."
+      "reason": "K-b3b habilitó señales útiles sobre candidatos en review sin mutación canónica."
     },
     {
       "drift_id": "descriptor_signal_missing_for_novel_facts",
@@ -157,7 +181,7 @@
       "expected_action": "review_enrich_existing_entity",
       "observed_behavior": "entity_retention_review_emitted_for_review_state_candidate",
       "accepted_temporarily": false,
-      "reason": "K-b3b resuelve señal de enrichment para descriptor con facts novedosos."
+      "reason": "señal enrich presente y estable"
     },
     {
       "drift_id": "role_descriptor_missing_attach_signal",
@@ -167,7 +191,7 @@
       "expected_action": "review_attach_role_or_title",
       "observed_behavior": "entity_retention_review_emitted_for_review_state_candidate",
       "accepted_temporarily": false,
-      "reason": "K-b3b resuelve attach role/title para candidato en review."
+      "reason": "attach role/title presente y estable"
     },
     {
       "drift_id": "relationship_descriptor_missing_impact_signal",
@@ -177,7 +201,7 @@
       "expected_action": "review_enrich_existing_entity",
       "observed_behavior": "entity_retention_review_emitted_for_review_state_candidate",
       "accepted_temporarily": false,
-      "reason": "K-b3b resuelve señal relacional/enrichment para candidato en review."
+      "reason": "señal relacional/enrichment presente y estable"
     },
     {
       "drift_id": "candidate_state_blocks_descriptor_signal",
@@ -187,7 +211,7 @@
       "expected_action": "candidate_usable_for_descriptor_review_even_before_primary_promotion",
       "observed_behavior": "review_state_candidate_used_for_descriptor_signal_without_primary_promotion",
       "accepted_temporarily": false,
-      "reason": "K-b3b permite usar review_entity como candidato accionable, no como canon."
+      "reason": "candidate en review usable para señal editorial"
     },
     {
       "drift_id": "descriptor_surface_metadata_not_retained",
@@ -197,7 +221,37 @@
       "expected_action": "descriptor_surface_reaches_review_context_with_metadata_bundle",
       "observed_behavior": "descriptor_review_items_include_surface_metadata_and_candidate_review_state",
       "accepted_temporarily": false,
-      "reason": "K-b3b restaura metadata moderna en items descriptor dedicados."
+      "reason": "metadata descriptor completa en items dedicados"
+    },
+    {
+      "drift_id": "equivalent_descriptor_signals_should_not_all_remain_medium",
+      "surface_text": "role_descriptor_group",
+      "candidate": "Ari Mar",
+      "descriptor_category": "role_descriptor",
+      "expected_action": "review_attach_role_or_title",
+      "observed_behavior": "single_medium_plus_low_equivalents",
+      "accepted_temporarily": false,
+      "reason": "equivalentes de rol ya no aparecen todos como medium"
+    },
+    {
+      "drift_id": "review_state_candidate_descriptor_no_explosion_observed",
+      "surface_text": "",
+      "candidate": "Ari Mar",
+      "descriptor_category": "descriptor_budget",
+      "expected_action": "bounded_queue_for_equivalent_descriptors",
+      "observed_behavior": "descriptor_queue_bounded_after_dedupe_degrade",
+      "accepted_temporarily": false,
+      "reason": "degrade conservador reduce repetición sin perder señal principal"
+    },
+    {
+      "drift_id": "distinct_descriptor_signals_should_survive_when_facts_differ",
+      "surface_text": "descriptor_budget_escape_hatch",
+      "candidate": "review_state_candidate",
+      "descriptor_category": "epithet_descriptor_or_relationship_descriptor",
+      "expected_action": "keep_separate_when_differential_evidence_exists",
+      "observed_behavior": "unit_policy_preserves_distinct_facts_or_relationships",
+      "accepted_temporarily": false,
+      "reason": "escape hatch evita suprimir señales realmente distintas"
     }
   ],
   "known_current_drift": [
@@ -208,9 +262,9 @@
       "descriptor_category": "review_entity_generic",
       "expected_action": "review_entity_metadata_may_remain_generic_when_descriptor_items_carry_modern_metadata",
       "observed_behavior": "review_entity_generic_without_descriptor_metadata_bundle_but_descriptor_items_have_modern_metadata",
+      "decision": "accept_temporarily",
       "accepted_temporarily": true,
-      "reason": "descriptor signal metadata resuelta en items dedicados; item genérico de Ari Mar queda minimal por compatibilidad.",
-      "decision": "accept_temporarily"
+      "reason": "drift parcial controlado; no bloquea señales descriptor útiles."
     }
   ],
   "non_negotiable_failures": [
@@ -219,19 +273,19 @@
     "write to runs/vault",
     "auto-merge occurs",
     "auto-promotion occurs",
-    "pronoun promoted as primary",
-    "noise mention promoted as primary",
-    "schema version changes unexpectedly"
+    "schema version changes unexpectedly",
+    "suppressing a truly distinct descriptor signal",
+    "severe queue explosion"
   ],
   "future_desired_behavior": [
     "novel-fact descriptor emits review_enrich_existing_entity",
     "role descriptor emits review_attach_role_or_title",
     "relationship descriptor emits impact-compatible review signal",
-    "descriptor evidence remains actionable even when candidate cluster still sits in review/candidate state",
+    "equivalent descriptor groups keep one primary signal and degrade redundant extras",
+    "distinct descriptor signals survive when facts/relationships differ",
     "generic weak descriptors remain suppressed",
-    "descriptor queue remains bounded with explicit run-level budget when implemented",
-    "future UI can promote review-state candidate to primary with human approval",
-    "future UI can attach, enrich, keep secondary or reject descriptor suggestions with human approval"
+    "future UI can promote review-state candidate with human approval",
+    "future UI can attach, enrich, keep secondary or reject suggestions with human approval"
   ],
   "language_agnostic_notes": [
     "Fixture strings are test data; runtime logic must not hardcode them.",
