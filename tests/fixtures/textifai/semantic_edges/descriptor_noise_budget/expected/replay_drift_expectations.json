@@ -1,6 +1,6 @@
 {
   "fixture_id": "descriptor_noise_budget",
-  "purpose": "Contrato K-b2 para replay provider-free: fijar comportamiento observado, drifts explícitos y límites iniciales de no-explosión sin runtime budget global.",
+  "purpose": "Contrato K-b2/K-b3a para replay provider-free: fijar comportamiento observado, drifts explícitos y diagnóstico de por qué faltan señales útiles de descriptor sin tocar runtime.",
   "manual_expectation": {
     "required_entities": [
       {"canonical_name": "Ari Mar", "expected_role": "primary character", "non_negotiable": true},
@@ -27,6 +27,14 @@
     },
     "counts_by_severity": {
       "medium": 2
+    },
+    "candidate_state_summary": {
+      "ari_mar_top_level_review_state": "review",
+      "ari_mar_note_role": "review",
+      "ari_mar_strong_primary_candidate": false,
+      "ari_mar_review_reason_code": "weak_or_descriptive_naming",
+      "primary_count": 0,
+      "review_count": 1
     },
     "summary": "Replay provider-free actual no emitió señales descriptor esperadas; registró Luma Ser como retention review y Ari Mar como review_entity genérico."
   },
@@ -104,11 +112,56 @@
   ],
   "known_current_drift": [
     {
+      "drift_id": "candidate_state_blocks_descriptor_signal",
+      "surface_text": "Ari Mar",
+      "candidate": "Ari Mar",
+      "descriptor_category": "candidate_state",
+      "expected_action": "candidate_usable_for_descriptor_review_even_before_primary_promotion",
+      "observed_behavior": "candidate_cluster_retained_as_review_entity_not_primary",
+      "decision": "accept_temporarily",
+      "accepted_temporarily": true,
+      "reason": "diagnóstico K-b3a: Ari Mar existe y absorbe surfaces descriptor, pero queda como review_entity genérico sin primary canónico utilizable"
+    },
+    {
+      "drift_id": "descriptor_surface_metadata_not_retained",
+      "surface_text": "el cartógrafo sin memoria",
+      "candidate": "Ari Mar",
+      "descriptor_category": "epithet_descriptor",
+      "expected_action": "descriptor_surface_reaches_review_context_with_metadata_bundle",
+      "observed_behavior": "surface_absorbed_into_review_entity_without_descriptor_review_signal",
+      "decision": "accept_temporarily",
+      "accepted_temporarily": true,
+      "reason": "surface llega como alias/source mention absorbido, pero no reaparece como signal descriptor específico"
+    },
+    {
+      "drift_id": "descriptor_surface_metadata_not_retained",
+      "surface_text": "el capitán del paso",
+      "candidate": "Ari Mar",
+      "descriptor_category": "role_descriptor",
+      "expected_action": "descriptor_surface_reaches_review_context_with_metadata_bundle",
+      "observed_behavior": "surface_absorbed_into_review_entity_without_descriptor_review_signal",
+      "decision": "accept_temporarily",
+      "accepted_temporarily": true,
+      "reason": "surface role_like absorbida en Ari Mar sin item descriptor dedicado"
+    },
+    {
+      "drift_id": "descriptor_surface_metadata_not_retained",
+      "surface_text": "el protector de Luma",
+      "candidate": "Ari Mar",
+      "descriptor_category": "relationship_descriptor",
+      "expected_action": "descriptor_surface_reaches_review_context_with_metadata_bundle",
+      "observed_behavior": "surface_absorbed_into_review_entity_without_descriptor_review_signal",
+      "decision": "accept_temporarily",
+      "accepted_temporarily": true,
+      "reason": "surface relacional absorbida en Ari Mar sin item descriptor dedicado"
+    },
+    {
       "drift_id": "descriptor_signal_missing_for_novel_facts",
       "surface_text": "el cartógrafo sin memoria",
       "candidate": "Ari Mar",
       "descriptor_category": "epithet_descriptor",
       "expected_action": "review_enrich_existing_entity",
+      "decision": "accept_temporarily",
       "observed_behavior": "no_review_queue_item_for_surface",
       "accepted_temporarily": true,
       "reason": "drift visible hasta K-b3 o ajuste runtime posterior"
@@ -119,6 +172,7 @@
       "candidate": "Ari Mar",
       "descriptor_category": "role_descriptor",
       "expected_action": "review_attach_role_or_title",
+      "decision": "accept_temporarily",
       "observed_behavior": "no_review_queue_item_for_surface",
       "accepted_temporarily": true,
       "reason": "drift visible en output actual"
@@ -129,6 +183,7 @@
       "candidate": "Ari Mar",
       "descriptor_category": "relationship_descriptor",
       "expected_action": "review_enrich_existing_entity",
+      "decision": "accept_temporarily",
       "observed_behavior": "no_review_queue_item_for_surface",
       "accepted_temporarily": true,
       "reason": "drift visible en output actual"
@@ -158,6 +213,7 @@
     "novel-fact descriptor emits review_enrich_existing_entity",
     "role descriptor emits review_attach_role_or_title",
     "relationship descriptor emits impact-compatible review signal",
+    "descriptor evidence remains actionable even when candidate cluster still sits in review/candidate state",
     "generic weak descriptors remain suppressed",
     "descriptor queue remains bounded with explicit run-level budget when implemented"
   ],
