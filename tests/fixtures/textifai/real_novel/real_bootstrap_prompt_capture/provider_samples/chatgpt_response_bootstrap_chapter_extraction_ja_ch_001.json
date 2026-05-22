@@ -1,0 +1,399 @@
+{
+  "work": {
+    "title": "王者の杖",
+    "language": "ja"
+  },
+  "chapters": [
+    {
+      "chapter_id": "ch_001",
+      "chapter_title_original": "**（仮）証人**",
+      "chapter_title_canonical": "（仮）証人",
+      "sequence_index": 1,
+      "chapter_label_type": "other",
+      "chapter_number_in_label": null,
+      "title_parse_signals": {
+        "has_explicit_number": false,
+        "explicit_number_value": null,
+        "has_colon": false,
+        "has_em_dash": false,
+        "primary_separator": null,
+        "prefix_segment": "**（仮）証人**",
+        "suffix_segment": null
+      },
+      "chapter_summary": "語り手は、かつて杖の一族に仕えていた人物であり、ティセイア王国の崩壊と王と杖の断絶を目撃した証人として語る。アデルマン・レオフリックの疑念と策謀により、杖の一族の住まいは消し去られ、杖の妻を含む多くの者が命を落とした。語り手は揺り籠に残された赤子と舌のないベルを救い出し、一族しか知らない抜け道から逃亡する。翌朝、公式記録は王と王妃の死を別の物語として処理し、アデルマンは摂政となる。語り手は赤子を隠して育て、いつかベルが鳴り、王者の杖が目覚める時を待ち続ける。",
+      "characters": [
+        {
+          "surface": "私",
+          "canonical": "私",
+          "canonical_candidate": "証人",
+          "entity_subkind": "witness_guardian",
+          "naming_quality": "pronoun_like",
+          "gender_presentation_signal": "unknown",
+          "needs_review": true,
+          "facts": [
+            "杖の一族に仕えていた人物であり、ティセイア王国の崩壊を目撃した。",
+            "執事、従者、家庭教師、護衛、密偵など複数の役割で呼ばれていた。",
+            "杖の一族の赤子と舌のないベルを救い出し、遠くで育てた。",
+            "王者の杖が今も生きていると信じ、毎年儀式の日にベルを携えている。"
+          ],
+          "confidence": 0.72
+        },
+        {
+          "surface": "アデルマン・レオフリック",
+          "canonical": "アデルマン・レオフリック",
+          "canonical_candidate": "アデルマン・レオフリック",
+          "entity_subkind": "regent",
+          "naming_quality": "proper_name",
+          "gender_presentation_signal": "masculine",
+          "needs_review": false,
+          "facts": [
+            "王宮評議会の疑念を毒へと変えた人物として語られる。",
+            "ティセイア王国崩壊後、摂政に就いた。",
+            "公式には王国の救世主として扱われた。"
+          ],
+          "confidence": 0.92
+        },
+        {
+          "surface": "赤子",
+          "canonical": "赤子",
+          "canonical_candidate": "王者の杖",
+          "entity_subkind": "hidden_heir",
+          "naming_quality": "descriptor",
+          "gender_presentation_signal": "unknown",
+          "needs_review": true,
+          "facts": [
+            "杖の妻のそばにある揺り籠の中で生き残っていた。",
+            "語り手によって救い出され、遠くで育てられた。",
+            "世界が忘れ去っても王者の杖は今も生きている、という章末の宣言に結びつく存在である。"
+          ],
+          "confidence": 0.78
+        },
+        {
+          "surface": "杖の妻",
+          "canonical": "杖の妻",
+          "canonical_candidate": "杖の妻",
+          "entity_subkind": "deceased_family_member",
+          "naming_quality": "descriptor",
+          "gender_presentation_signal": "feminine",
+          "needs_review": true,
+          "facts": [
+            "主寝室の揺り籠の前で息絶えていた。",
+            "赤子の近くにいたことから、杖の一族と赤子の継承に強く関わる人物として示される。"
+          ],
+          "confidence": 0.66
+        },
+        {
+          "surface": "王",
+          "canonical": "王",
+          "canonical_candidate": "王",
+          "entity_subkind": "king",
+          "naming_quality": "title_plus_name",
+          "gender_presentation_signal": "masculine",
+          "needs_review": true,
+          "facts": [
+            "公式記録では〈災厄〉に倒れたと語られている。",
+            "王と杖が共に歩むことをやめた日が、王国崩壊の象徴として語られている。"
+          ],
+          "confidence": 0.62
+        },
+        {
+          "surface": "王妃",
+          "canonical": "王妃",
+          "canonical_candidate": "王妃",
+          "entity_subkind": "queen",
+          "naming_quality": "title_plus_name",
+          "gender_presentation_signal": "feminine",
+          "needs_review": true,
+          "facts": [
+            "公式記録では出産で命を落としたと語られている。",
+            "王の死とともに、王国崩壊後の公式物語を構成する存在である。"
+          ],
+          "confidence": 0.58
+        }
+      ],
+      "places": [
+        {
+          "surface": "ティセイア王国",
+          "canonical": "ティセイア王国",
+          "canonical_candidate": "ティセイア王国",
+          "entity_subkind": "kingdom",
+          "naming_quality": "proper_name",
+          "gender_presentation_signal": "unknown",
+          "needs_review": false,
+          "facts": [
+            "この章で崩壊した王国として語られる。",
+            "王と杖による均衡に支えられていた。"
+          ],
+          "confidence": 0.96
+        },
+        {
+          "surface": "城",
+          "canonical": "城",
+          "canonical_candidate": "ティセイア王城",
+          "entity_subkind": "castle",
+          "naming_quality": "descriptor",
+          "gender_presentation_signal": "unknown",
+          "needs_review": true,
+          "facts": [
+            "ティセイア王国崩壊の中心となる場所であり、杖の住まいが隠されていた。",
+            "翌朝には公式記録によって別の物語が語られる舞台となる。"
+          ],
+          "confidence": 0.74
+        },
+        {
+          "surface": "杖の住まい",
+          "canonical": "杖の住まい",
+          "canonical_candidate": "杖の一族の私邸",
+          "entity_subkind": "hidden_residence",
+          "naming_quality": "descriptor",
+          "gender_presentation_signal": "unknown",
+          "needs_review": true,
+          "facts": [
+            "城の中心に隠された私邸であり、王に最も近い者だけが知る場所だった。",
+            "その夜、痕跡すら残さず消し去られた。"
+          ],
+          "confidence": 0.82
+        }
+      ],
+      "concepts": [
+        {
+          "surface": "均衡",
+          "canonical": "均衡",
+          "canonical_candidate": "王と杖の均衡",
+          "entity_subkind": "world_rule",
+          "naming_quality": "proper_name",
+          "gender_presentation_signal": "unknown",
+          "needs_review": true,
+          "facts": [
+            "魔法は単なる力ではなく、王と杖だけが保つことのできる均衡として説明される。",
+            "ティセイア王国を支えていた唯一の結びつきとして語られる。"
+          ],
+          "confidence": 0.86
+        },
+        {
+          "surface": "王と杖",
+          "canonical": "王と杖",
+          "canonical_candidate": "王と杖",
+          "entity_subkind": "role_pair",
+          "naming_quality": "title_plus_name",
+          "gender_presentation_signal": "unknown",
+          "needs_review": true,
+          "facts": [
+            "王国の均衡を保つ対となる存在として語られる。",
+            "王と杖が並び歩むことをやめた日が、時代の終わりとして位置づけられる。"
+          ],
+          "confidence": 0.88
+        },
+        {
+          "surface": "杖の一族",
+          "canonical": "杖の一族",
+          "canonical_candidate": "杖の一族",
+          "entity_subkind": "lineage",
+          "naming_quality": "title_plus_name",
+          "gender_presentation_signal": "unknown",
+          "needs_review": false,
+          "facts": [
+            "語り手が仕えていた一族であり、土地も軍も称号も持たないが玉座の近くに席を与えられていた。",
+            "王国の均衡を支える役割を担っていた。",
+            "その住まいは地図に載らない隠された場所であり、崩壊の夜に消し去られた。"
+          ],
+          "confidence": 0.9
+        },
+        {
+          "surface": "舌のないベル",
+          "canonical": "舌のないベル",
+          "canonical_candidate": "ベル",
+          "entity_subkind": "artifact",
+          "naming_quality": "descriptor",
+          "gender_presentation_signal": "unknown",
+          "needs_review": true,
+          "facts": [
+            "揺り籠に掛けられていた小さなベルであり、語り手はそれを鍵として理解していた。",
+            "時が来た時にだけ鳴るべきものとして扱われる。",
+            "語り手は毎年儀式の日にベルを携え、いつか鳴る日が来ると信じている。"
+          ],
+          "confidence": 0.88
+        },
+        {
+          "surface": "〈災厄〉",
+          "canonical": "〈災厄〉",
+          "canonical_candidate": "〈災厄〉",
+          "entity_subkind": "disaster_or_threat",
+          "naming_quality": "title_plus_name",
+          "gender_presentation_signal": "unknown",
+          "needs_review": true,
+          "facts": [
+            "公式記録では王を倒した存在または出来事として語られている。",
+            "真実の一部か、あるいは用意された物語の一部として提示される。"
+          ],
+          "confidence": 0.64
+        },
+        {
+          "surface": "王者の杖",
+          "canonical": "王者の杖",
+          "canonical_candidate": "王者の杖",
+          "entity_subkind": "title_or_role_identity",
+          "naming_quality": "title_plus_name",
+          "gender_presentation_signal": "unknown",
+          "needs_review": true,
+          "facts": [
+            "章末で、世界が忘れ去っても今も生きている存在として宣言される。",
+            "救い出された赤子と結びつく可能性が高いが、章単体では完全には確定しない。"
+          ],
+          "confidence": 0.76
+        }
+      ],
+      "events": [
+        {
+          "surface": "ティセイア王国の崩壊",
+          "canonical": "ティセイア王国の崩壊",
+          "canonical_candidate": "ティセイア王国の崩壊",
+          "entity_subkind": "kingdom_fall",
+          "naming_quality": "proper_name",
+          "gender_presentation_signal": "unknown",
+          "needs_review": false,
+          "facts": [
+            "語り手が目撃した王国崩壊であり、ひとつの時代の終わりとして語られる。",
+            "魔力の火による静かで正確な破壊として描かれる。",
+            "王と杖の均衡が失われた転換点である。"
+          ],
+          "confidence": 0.94
+        },
+        {
+          "surface": "杖の一族の抹消",
+          "canonical": "杖の一族の抹消",
+          "canonical_candidate": "杖の一族の抹消",
+          "entity_subkind": "lineage_erasure",
+          "naming_quality": "descriptor",
+          "gender_presentation_signal": "unknown",
+          "needs_review": false,
+          "facts": [
+            "杖の住まいは痕跡すら残さず消し去られた。",
+            "誰も杖の一族には触れず、公式記録からも消された。",
+            "語り手は赤子に対して、自分たちは地図から消されたと語る。"
+          ],
+          "confidence": 0.9
+        },
+        {
+          "surface": "赤子の救出",
+          "canonical": "赤子の救出",
+          "canonical_candidate": "赤子の救出",
+          "entity_subkind": "rescue",
+          "naming_quality": "descriptor",
+          "gender_presentation_signal": "unknown",
+          "needs_review": false,
+          "facts": [
+            "語り手は杖の妻のそばにいた赤子を抱き上げ、一族しか知らない抜け道から逃げた。",
+            "赤子の生存により、彼らの勝ちではないという語り手の決意が生まれる。"
+          ],
+          "confidence": 0.9
+        },
+        {
+          "surface": "アデルマン・レオフリックの摂政就任",
+          "canonical": "アデルマン・レオフリックの摂政就任",
+          "canonical_candidate": "アデルマン・レオフリックの摂政就任",
+          "entity_subkind": "political_transition",
+          "naming_quality": "proper_name",
+          "gender_presentation_signal": "unknown",
+          "needs_review": false,
+          "facts": [
+            "ティセイア王国崩壊の翌朝、アデルマン・レオフリックは摂政に就いた。",
+            "公式には王国の救世主として扱われた。"
+          ],
+          "confidence": 0.9
+        }
+      ],
+      "relations": [
+        {
+          "from_surface": "私",
+          "from_canonical": "私",
+          "to_surface": "杖の一族",
+          "to_canonical": "杖の一族",
+          "relation_type": "member_of",
+          "facts": [
+            "語り手は杖の一族に仕えており、その共同体を仲間や家族として語る。"
+          ],
+          "confidence": 0.76
+        },
+        {
+          "from_surface": "アデルマン・レオフリック",
+          "from_canonical": "アデルマン・レオフリック",
+          "to_surface": "杖の一族",
+          "to_canonical": "杖の一族",
+          "relation_type": "conflict",
+          "facts": [
+            "アデルマンは杖の一族への疑念を毒へ変え、彼らの抹消と王国崩壊に結びつく人物として語られる。"
+          ],
+          "confidence": 0.84
+        },
+        {
+          "from_surface": "杖の一族",
+          "from_canonical": "杖の一族",
+          "to_surface": "均衡",
+          "to_canonical": "均衡",
+          "relation_type": "part_of",
+          "facts": [
+            "杖の一族は王国を支える王と杖の均衡に関わる一族として描かれる。"
+          ],
+          "confidence": 0.82
+        },
+        {
+          "from_surface": "私",
+          "from_canonical": "私",
+          "to_surface": "赤子",
+          "to_canonical": "赤子",
+          "relation_type": "dependency",
+          "facts": [
+            "語り手は赤子を救い出し、遠くで育てた。"
+          ],
+          "confidence": 0.86
+        },
+        {
+          "from_surface": "私",
+          "from_canonical": "私",
+          "to_surface": "舌のないベル",
+          "to_canonical": "舌のないベル",
+          "relation_type": "uses",
+          "facts": [
+            "語り手は舌のないベルを鍵として理解し、毎年儀式の日に携え続けている。"
+          ],
+          "confidence": 0.82
+        }
+      ],
+      "unresolved_mentions": [
+        {
+          "surface": "後継者",
+          "possible_kind": "character",
+          "facts": [
+            "杖と兄弟のように育っていた存在として語られるが、この章では固有名が示されない。"
+          ],
+          "confidence": 0.58
+        },
+        {
+          "surface": "杖",
+          "possible_kind": "concept",
+          "facts": [
+            "王と対になって均衡を保つ役割として語られるが、人物・役職・称号・系譜上の役割の区別は章単体では確定しない。"
+          ],
+          "confidence": 0.66
+        },
+        {
+          "surface": "お前",
+          "possible_kind": "character",
+          "facts": [
+            "語り手が救い出した赤子に向けて語っている可能性が高いが、代名詞的な呼びかけのため正規化には review が必要である。"
+          ],
+          "confidence": 0.7
+        },
+        {
+          "surface": "彼ら",
+          "possible_kind": "unknown",
+          "facts": [
+            "文脈により敵対者または杖の一族を消した勢力を指す可能性があるが、具体的な範囲は不明である。"
+          ],
+          "confidence": 0.44
+        }
+      ]
+    }
+  ]
+}

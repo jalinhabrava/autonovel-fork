@@ -1,0 +1,51 @@
+{
+  "sample_id": "chatgpt_response_bootstrap_chapter_extraction_ja_ch_001",
+  "issues": [
+    {
+      "id": "empty_canonical_entity_map_in_capture",
+      "severity": "medium",
+      "explanation": "Fake provider capture does not produce real global canon; chapter extraction was tested with CANONICAL_ENTITY_MAP: [].",
+      "recommended_fix": "Run global normalization through real/manual ChatGPT response and re-run chapter prompt capture with populated map, or add first-pass local candidate mode."
+    },
+    {
+      "id": "chapter_schema_missing_objects_section",
+      "severity": "high",
+      "explanation": "Persistent artifacts like ベル have no first-class home in chapter extraction output.",
+      "recommended_fix": "Add objects array to chapter extraction schema and downstream mapper."
+    },
+    {
+      "id": "global_prompt_entire_novel_wording_conflict",
+      "severity": "medium",
+      "explanation": "Global prompt wording implies entire novel while selective expansion may only send batch evidence.",
+      "recommended_fix": "Reword as incremental/global normalization over batch evidence."
+    },
+    {
+      "id": "relation_type_taxonomy_too_narrow",
+      "severity": "medium/high",
+      "explanation": "Narrative relations like protector, guardian, rescuer, usurper, survivor_of and keeper_of artifact are forced into broad relation types.",
+      "recommended_fix": "Expand relation taxonomy or allow subtype/details."
+    },
+    {
+      "id": "event_cap_may_be_too_low_for_dense_chapters",
+      "severity": "medium",
+      "explanation": "Dense prologue has more than three durable events and event prioritization may compress useful structure.",
+      "recommended_fix": "Allow higher event cap or event priority tiers."
+    },
+    {
+      "id": "chapter_prompt_needs_empty_map_mode",
+      "severity": "medium",
+      "explanation": "If canonical map is empty/incomplete, prompt should extract strong local candidates without pretending they are canonical.",
+      "recommended_fix": "Add explicit first-pass mode."
+    },
+    {
+      "id": "artifact_retention_not_first_class",
+      "severity": "high",
+      "explanation": "Important artifacts should not be represented as concepts only.",
+      "recommended_fix": "Add first-class object/artifact handling."
+    }
+  ],
+  "do_not_implement_in_this_phase": true,
+  "provider_calls": false,
+  "write_back": false,
+  "runtime_changes": false
+}

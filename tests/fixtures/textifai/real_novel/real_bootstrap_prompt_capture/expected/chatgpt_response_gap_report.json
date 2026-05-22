@@ -1,0 +1,56 @@
+{
+  "sample_id": "chatgpt_response_bootstrap_chapter_extraction_ja_ch_001",
+  "prompt_source": "real_bootstrap_capture",
+  "source_language": "ja",
+  "chapter_id": "ch_001",
+  "overall_assessment": "usable_with_minor_schema_fixes",
+  "what_worked": [
+    "Retains アデルマン・レオフリック as a named political actor/regent.",
+    "Retains ティセイア王国 and its collapse as major setting/event.",
+    "Retains 杖の一族 as lineage/concept and political target.",
+    "Retains 均衡 and 王と杖 as lore/role-pair concepts.",
+    "Retains ベル as 舌のないベル despite missing first-class objects schema.",
+    "Retains structural events: fall of Thiseia, erasure of 杖の一族, rescue of baby, rise of Adelman.",
+    "Marks 私 as pronoun_like and needs_review.",
+    "Keeps 赤子 as descriptor needing review rather than confirmed named canon."
+  ],
+  "what_was_missing": [
+    "No first-class objects/artifacts array for 舌のないベル.",
+    "No populated CANONICAL_ENTITY_MAP, so baby/testifier identity cannot be linked to later canon.",
+    "No explicit keeper_of/artifact ownership relation type."
+  ],
+  "what_was_weaker_than_expected": [
+    "Relation taxonomy forces rescue/guardian/keeper dynamics into dependency/uses/member_of/conflict.",
+    "Dense prologue events are compressed into four events and may lose priority tiers.",
+    "私 appears under characters because schema lacks better narrator/witness candidate handling."
+  ],
+  "false_positive_or_noise_risks": [
+    "canonical_candidate 王者の杖 for 赤子 is plausible but should remain review-only.",
+    "王 and 王妃 appear as title-like character entries with no names and need review.",
+    "〈災厄〉 could be actual threat or official narrative artifact."
+  ],
+  "schema_limitations_observed": [
+    "chapter_schema_missing_objects_section",
+    "artifact_retention_not_first_class",
+    "relation_type_taxonomy_too_narrow",
+    "event_cap_may_be_too_low_for_dense_chapters"
+  ],
+  "prompt_limitations_observed": [
+    "empty_canonical_entity_map_in_capture",
+    "chapter_prompt_needs_empty_map_mode",
+    "global_prompt_entire_novel_wording_conflict"
+  ],
+  "downstream_risks": [
+    "ベル may be mapped as concept instead of durable object.",
+    "Pronoun narrator 私 could become a noisy entity if downstream ignores naming_quality/needs_review.",
+    "赤子 could be over-promoted as 王者の杖 without later evidence/canonical map.",
+    "Relations may lose important narrative semantics before review queue."
+  ],
+  "recommended_next_fixes": [
+    "Add objects/artifacts array to chapter extraction schema and downstream mapper.",
+    "Add explicit empty canonical map mode for strong local candidates without canon approval.",
+    "Expand relation taxonomy or allow subtype/details for guardian/rescuer/keeper/usurper/survivor_of.",
+    "Raise or tier event cap for dense chapters.",
+    "Run global normalization manually/with captured ChatGPT response, then recapture chapter prompt with populated canonical map."
+  ]
+}

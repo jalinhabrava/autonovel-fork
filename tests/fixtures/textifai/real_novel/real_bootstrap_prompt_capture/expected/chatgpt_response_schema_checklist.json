@@ -1,0 +1,63 @@
+{
+  "sample_id": "chatgpt_response_bootstrap_chapter_extraction_ja_ch_001",
+  "prompt_source": "real_bootstrap_capture",
+  "source_language": "ja",
+  "chapter_id": "ch_001",
+  "json_shape": {
+    "required_top_level_keys": ["work", "chapters"],
+    "required_chapter_keys": [
+      "chapter_id",
+      "chapter_title_original",
+      "chapter_title_canonical",
+      "sequence_index",
+      "chapter_label_type",
+      "chapter_number_in_label",
+      "title_parse_signals",
+      "chapter_summary",
+      "characters",
+      "places",
+      "concepts",
+      "events",
+      "relations",
+      "unresolved_mentions"
+    ]
+  },
+  "chapter_identity": {
+    "expected_chapter_id": "ch_001",
+    "expected_original_title": "**（仮）証人**",
+    "accepted_label_types": ["other", "prologue"],
+    "canonical_title_policy": "preserve Japanese, remove obvious markdown formatting only"
+  },
+  "useful_coverage": {
+    "must_surface": [
+      "アデルマン・レオフリック",
+      "ティセイア王国",
+      "杖の一族",
+      "王と杖",
+      "均衡",
+      "ベル",
+      "赤子",
+      "ティセイア王国の崩壊",
+      "赤子の救出",
+      "杖の一族の抹消",
+      "摂政"
+    ],
+    "flexible_matching": true
+  },
+  "noise_review_behavior": {
+    "pronoun_like_surfaces": ["私", "彼", "彼女", "お前"],
+    "pronoun_policy": "pronoun-like entries must be review/unresolved, not canon-strong",
+    "descriptor_policy": "赤子 may appear as descriptor/candidate, not final strong canon without review",
+    "title_policy": "王, 王妃, 杖, 後継者 may remain review/unresolved if unnamed"
+  },
+  "known_schema_limitation": {
+    "objects_section_missing": true,
+    "bell_expected_fallback": ["concepts", "unresolved_mentions"],
+    "test_policy": "do not fail if ベル appears as concept/artifact because schema has no objects array"
+  },
+  "provider_free": {
+    "provider_calls": false,
+    "network": false,
+    "write_back": false
+  }
+}
