@@ -1,0 +1,81 @@
+{
+  "sample_id": "chatgpt_response_bootstrap_chapter_extraction_ja_ch_001_populated_map_after_sp054",
+  "baseline_sample_id": "chatgpt_response_bootstrap_chapter_extraction_ja_ch_001_after_sp051",
+  "prompt_source": "real_bootstrap_capture_populated_map_after_sp054",
+  "source_language": "ja",
+  "chapter_id": "ch_001",
+  "issues": [
+    {
+      "id": "empty_canonical_entity_map_in_capture",
+      "status": "improved_resolved_for_capture_harness_audit",
+      "severity_after_sp054": "low",
+      "evidence": "Recaptured chapter prompt includes non-empty CANONICAL_ENTITY_MAP and response reuses canonical endpoints."
+    },
+    {
+      "id": "canonical_reuse_in_chapter_prompt",
+      "status": "improved",
+      "severity_after_sp054": "low",
+      "evidence": "私->証人, 舌のないベル->ベル, 城->王城 reuse is observed in populated-map response."
+    },
+    {
+      "id": "object_retention_with_map",
+      "status": "improved",
+      "severity_after_sp054": "low",
+      "evidence": "ベル remains in objects as canonical ritual_key with retention_reason."
+    },
+    {
+      "id": "relation_endpoint_resolution",
+      "status": "improved",
+      "severity_after_sp054": "low_medium",
+      "evidence": "Relations use populated canonical endpoints while preserving two-layer relation contract and evidence."
+    },
+    {
+      "id": "review_safety_under_populated_map",
+      "status": "acceptable",
+      "severity_after_sp054": "low_medium",
+      "evidence": "赤子/王者の杖 and 王妃/ネリス女王 remain review-gated without forced absolute merge."
+    },
+    {
+      "id": "provider_runtime_output_still_untested",
+      "status": "still_open",
+      "severity_after_sp054": "medium",
+      "evidence": "Sample is manual ChatGPT response, not provider runtime execution."
+    },
+    {
+      "id": "global_normalization_manual_sample_dependency",
+      "status": "still_open",
+      "severity_after_sp054": "medium",
+      "evidence": "Canonical map source remains manual global normalization sample."
+    },
+    {
+      "id": "canonical_map_scope_limited_to_first_three_chapters",
+      "status": "still_open",
+      "severity_after_sp054": "medium",
+      "evidence": "Map was built from batch scope ch_001-ch_003 only."
+    },
+    {
+      "id": "multi_chapter_populated_map_audit_pending",
+      "status": "still_open",
+      "severity_after_sp054": "medium",
+      "evidence": "Only ch_001 populated-map response is audited so far."
+    },
+    {
+      "id": "multilingual_post_hardening_populated_map_pending",
+      "status": "still_open",
+      "severity_after_sp054": "medium",
+      "evidence": "No populated-map response audit for Spanish yet."
+    },
+    {
+      "id": "chunking_reduction_audit_pending",
+      "status": "still_open",
+      "severity_after_sp054": "medium",
+      "evidence": "Chunking/reduction path remains out of scope and unaudited."
+    },
+    {
+      "id": "downstream_object_relation_materialization_pending",
+      "status": "still_open",
+      "severity_after_sp054": "low_medium",
+      "evidence": "Viewer/import/review downstream behavior for object rendering and relation labels needs dedicated validation."
+    }
+  ]
+}

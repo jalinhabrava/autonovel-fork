@@ -1,0 +1,65 @@
+{
+  "baseline_sample_id": "chatgpt_response_bootstrap_chapter_extraction_ja_ch_001_after_sp051",
+  "populated_map_sample_id": "chatgpt_response_bootstrap_chapter_extraction_ja_ch_001_populated_map_after_sp054",
+  "prompt_source": "real_bootstrap_capture_populated_map_after_sp054",
+  "source_language": "ja",
+  "chapter_id": "ch_001",
+  "overall_assessment": "populated_map_improves_resolution_without_auto_promotion",
+  "what_improved": [
+    "私 now reuses canonical/candidate 証人 while preserving review status.",
+    "城 now reuses canonical 王城 where map evidence exists.",
+    "舌のないベル relation endpoints now resolve to canonical ベル.",
+    "王妃 can resolve to ネリス女王 with explicit review guardrails.",
+    "relation endpoints show stronger canonical reuse for 証人, ベル, 杖の一族, and アデルマン・レオフリック.",
+    "object retention remains strong with ベル canonical ritual_key and retention_reason.",
+    "event retention remains dense and prioritized with event_importance."
+  ],
+  "what_regressed": [],
+  "what_stayed_same": [
+    "赤子 remains review/descriptor and not auto-promoted to final canon identity.",
+    "王者の杖 uncertainty remains review-gated and not forced into absolute identity merge.",
+    "overall prologue coverage remains high for major actors, factions, concept, object, and political transition."
+  ],
+  "canonical_reuse": {
+    "assessment": "improved",
+    "examples": ["私->証人", "城->王城", "舌のないベル->ベル", "王妃->ネリス女王(review)"]
+  },
+  "local_candidate_reduction": {
+    "assessment": "improved",
+    "notes": "Some previously local candidates now attach to canonical map names while unresolved surfaces still stay unresolved when necessary."
+  },
+  "alias_descriptor_handling": {
+    "assessment": "improved_with_review_guards",
+    "notes": "Aliases are reused but kept under review where chapter-level certainty is insufficient."
+  },
+  "review_state_quality": {
+    "assessment": "good",
+    "notes": "Review flags remain on fragile identities and role/alias ambiguity."
+  },
+  "object_retention": {
+    "assessment": "stable_and_canonicalized",
+    "notes": "ベル remains first-class object with canonical reuse and relation continuity."
+  },
+  "relation_canonical_endpoints": {
+    "assessment": "improved",
+    "notes": "Key relations now use canonical endpoints from populated map, especially 証人 and ベル links."
+  },
+  "event_retention": {
+    "assessment": "stable",
+    "notes": "Major/supporting event structure remains robust and comparable to SP-052."
+  },
+  "hallucination_overmerge_risk": {
+    "assessment": "controlled_but_monitor",
+    "notes": "Sample keeps review safeguards, but map aliases like 赤子/王者の杖 still require monitoring in later chapters."
+  },
+  "downstream_risks": [
+    "Sample remains manual ChatGPT output, not provider runtime output.",
+    "Canonical map is based on ch_001-ch_003, not full novel evidence.",
+    "Alias-rich map entries can still over-influence downstream if review_state is ignored.",
+    "Multi-chapter populated-map behavior still untested.",
+    "Spanish post-hardening populated-map behavior still untested.",
+    "Chunking/reduction path still unaudited.",
+    "Downstream object/relation label materialization still needs dedicated checks."
+  ],
+  "recommended_next_phase": "Phase 1.3.M-b5c-2c multi-chapter populated-map response audit and then chunking/reduction audit gate."
+}

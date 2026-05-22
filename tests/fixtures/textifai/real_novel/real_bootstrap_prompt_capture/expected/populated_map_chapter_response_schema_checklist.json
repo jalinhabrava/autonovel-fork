@@ -1,0 +1,70 @@
+{
+  "sample_id": "chatgpt_response_bootstrap_chapter_extraction_ja_ch_001_populated_map_after_sp054",
+  "source_language": "ja",
+  "chapter_id": "ch_001",
+  "prompt_source": "real_bootstrap_capture_populated_map_after_sp054",
+  "required_top_level_keys": ["work", "chapters"],
+  "required_chapter_keys": [
+    "chapter_extraction_schema_version",
+    "chapter_id",
+    "chapter_title_original",
+    "chapter_title_canonical",
+    "sequence_index",
+    "chapter_label_type",
+    "chapter_number_in_label",
+    "title_parse_signals",
+    "chapter_summary",
+    "characters",
+    "places",
+    "concepts",
+    "objects",
+    "events",
+    "relations",
+    "unresolved_mentions"
+  ],
+  "v2_contract_targets": {
+    "objects": ["object_subkind", "retention_reason"],
+    "events": ["event_importance"],
+    "relations": ["relation_category", "relation_label", "relation_summary", "evidence"],
+    "legacy_relation_type_only_forbidden": true
+  },
+  "canonical_reuse_targets": [
+    "私 -> 証人 (review)",
+    "舌のないベル -> ベル",
+    "城 -> 王城",
+    "王妃 -> ネリス女王 (review)",
+    "赤子 review maintained",
+    "王者の杖/王と杖 uncertainty maintained"
+  ],
+  "useful_coverage_targets": [
+    "アデルマン・レオフリック",
+    "ティセイア王国",
+    "杖の一族",
+    "王と杖|王者の杖",
+    "均衡",
+    "ベル|舌のないベル",
+    "赤子",
+    "証人",
+    "ティセイア王国の崩壊",
+    "赤子の救出",
+    "杖の一族の抹消",
+    "摂政"
+  ],
+  "review_safety_targets": [
+    "no unsafe auto-promotion of 赤子/王者の杖 identity",
+    "no unsafe auto-promotion of 私 to canon without review",
+    "no unsafe auto-promotion of 王妃/ネリス女王 identity without review",
+    "no hallucinated names outside chapter/canonical map"
+  ],
+  "non_negotiable_failures": [
+    "invalid_json",
+    "missing_objects",
+    "missing_event_importance",
+    "missing_relation_two_layer_fields",
+    "canonical_map_benefits_absent",
+    "unsafe_auto_promotion_baby_ouja",
+    "unsafe_auto_promotion_watashi_without_review",
+    "provider_call",
+    "write_back"
+  ]
+}
