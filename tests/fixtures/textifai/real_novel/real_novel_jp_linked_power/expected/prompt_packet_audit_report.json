@@ -1,0 +1,65 @@
+{
+  "packet_status": "ready_for_manual_chatgpt_trial",
+  "blind_prompt_status": "passed_no_expected_leakage",
+  "length_assessment": {
+    "status": "compact_for_manual_chat",
+    "notes": [
+      "Packet includes only short excerpts and strict schema.",
+      "No full chapter bodies embedded."
+    ]
+  },
+  "context_coverage": {
+    "status": "sufficient_for_targeted_trial",
+    "notes": [
+      "Includes 3 excerpt payloads with explicit chapter_ref.",
+      "Includes general extraction rules and suppression guidance."
+    ]
+  },
+  "schema_clarity": {
+    "status": "high",
+    "notes": [
+      "All required top-level keys explicitly listed.",
+      "Review and uncertainty fields present."
+    ]
+  },
+  "privacy_assessment": {
+    "status": "pass",
+    "notes": [
+      "Excerpt-only source policy preserved.",
+      "No secrets, provider endpoints, or runtime paths."
+    ]
+  },
+  "copyability_assessment": {
+    "status": "copy_paste_ready",
+    "notes": [
+      "Single markdown packet usable in manual ChatGPT flow.",
+      "Equivalent JSON packet added for tooling checks."
+    ]
+  },
+  "expected_model_risks": [
+    "Alias uncertainty may stay unresolved.",
+    "Event structure may be weaker than curated replay.",
+    "Role/lore versus literal object may need post-review."
+  ],
+  "anti_leakage_result": {
+    "status": "pass",
+    "notes": [
+      "No expected-answer hints inside instruction/meta sections.",
+      "Expected semantic checklist kept outside prompt packet."
+    ]
+  },
+  "codex_blind_simulated_result": {
+    "status": "prompt_needs_minor_revision",
+    "strengths": [
+      "Core actor/entity signals surfaced.",
+      "Key object and destination retained.",
+      "Pronoun suppression preserved."
+    ],
+    "weaker_points": [
+      "Alias merge certainty remains medium.",
+      "Some event granularity still sparse."
+    ]
+  },
+  "chatgpt_response_status": "not_provided_yet",
+  "overall_prompt_readiness": "prompt_needs_minor_revision"
+}

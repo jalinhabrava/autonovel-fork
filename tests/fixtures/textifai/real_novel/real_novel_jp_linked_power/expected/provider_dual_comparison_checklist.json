@@ -1,0 +1,137 @@
+{
+  "comparison_targets": {
+    "curated_replay_input": "tests/fixtures/textifai/real_novel/real_novel_jp_linked_power/replay_input/**",
+    "codex_blind_simulated_extraction": "tests/fixtures/textifai/real_novel/real_novel_jp_linked_power/provider_samples/codex_blind_simulated_extraction_ch_017_019.json",
+    "chatgpt_response_optional": "tests/fixtures/textifai/real_novel/real_novel_jp_linked_power/provider_samples/chatgpt_response_ch_017_019.json"
+  },
+  "must_have_coverage": {
+    "items": [
+      "main protagonists detected",
+      "guardian/oyaji actor detected",
+      "key bell object retained",
+      "destination place retained",
+      "core linked-magic signal retained",
+      "major loss/death signal retained"
+    ],
+    "policy": "evaluate post-output only; never inject this list into blind prompt packet"
+  },
+  "should_have_coverage": {
+    "items": [
+      "lore role pair concept retained",
+      "enemy actor candidate retained",
+      "weapon object candidate retained",
+      "relationship moment retained"
+    ],
+    "policy": "missing should-have reduces quality, not immediate hard fail"
+  },
+  "cross_sample_consistency": {
+    "policy": "compare curated vs codex blind; compare curated vs optional chatgpt; compare codex vs optional chatgpt",
+    "notes": [
+      "Differences are expected.",
+      "Track consistent losses and consistent hallucination patterns."
+    ]
+  },
+  "pronoun_promotion_guard": {
+    "policy": "pronoun-like surfaces stay as suppression/references, not standalone primaries",
+    "status_keywords": [
+      "pass",
+      "warn",
+      "fail"
+    ]
+  },
+  "object_retention_guard": {
+    "policy": "key persistent artifact signal must survive extraction",
+    "status_keywords": [
+      "pass",
+      "warn",
+      "fail"
+    ]
+  },
+  "lore_concept_retention": {
+    "policy": "lore role-pair signal should stay visible as concept/review, not vanish silently"
+  },
+  "relationship_retention": {
+    "policy": "core dual-magic relationship should remain in relationships/lore/events/review"
+  },
+  "event_retention": {
+    "policy": "activation/loss/turning-point events should remain as events or explicit facts"
+  },
+  "hallucination_risk": {
+    "policy": "flag claims unsupported by excerpt lines",
+    "severity": [
+      "low",
+      "medium",
+      "high"
+    ]
+  },
+  "json_validity": {
+    "policy": "output must parse as JSON object"
+  },
+  "shape_compatibility": {
+    "required_top_level_keys": [
+      "extraction_metadata",
+      "entities",
+      "objects",
+      "places",
+      "lore_concepts",
+      "events",
+      "relationships",
+      "review_suggestions",
+      "suppression_candidates",
+      "quality_notes"
+    ]
+  },
+  "author_usefulness": {
+    "goal": "output supports author review without auto-canon mutation",
+    "qualitative_signal": "track whether output is directly reviewable with moderate effort"
+  },
+  "anti_leakage_policy": {
+    "blind_prompt_packet_must_not_include_expected_answers": true,
+    "forbidden_instruction_patterns": [
+      "must detect",
+      "must retain",
+      "should detect",
+      "expected entity",
+      "expected object",
+      "expected lore",
+      "expected event",
+      "expected relationship",
+      "treat X as Y"
+    ],
+    "allowance": "source payload may naturally contain story names/surfaces"
+  },
+  "pass_fail_states": {
+    "prompt_promising": [
+      "blind codex output covers all or most must-have",
+      "no non-negotiable failures",
+      "JSON parseable",
+      "pronouns not promoted",
+      "optional chatgpt output broadly consistent when provided"
+    ],
+    "prompt_needs_minor_revision": [
+      "core entities and key object retained",
+      "lore/event/alias metadata weaker than desired",
+      "still usable with light to moderate author review"
+    ],
+    "prompt_needs_major_revision": [
+      "loses key lore/object/relationship/event signals",
+      "requires heavy manual correction"
+    ],
+    "prompt_not_usable": [
+      "invalid JSON",
+      "major hallucination",
+      "pronoun promotion",
+      "critical signal losses",
+      "unsafe downstream fit"
+    ]
+  },
+  "non_negotiable_failures": [
+    "provider call in tests",
+    "pronoun promoted",
+    "ベル missing",
+    "Ren/Sera linked magic missing",
+    "JSON invalid",
+    "full chapter committed",
+    "write-back"
+  ]
+}

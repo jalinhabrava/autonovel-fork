@@ -1,0 +1,97 @@
+{
+  "packet_id": "real_novel_jp_linked_power_blind_prompt_packet_ch_017_019_v1",
+  "source_fixture": "real_novel_jp_linked_power",
+  "source_language": "ja",
+  "selected_chapters": [
+    "ch_017",
+    "ch_018",
+    "ch_019"
+  ],
+  "sample_type": "blind_prompt_packet_export",
+  "provider_calls": false,
+  "not_runtime_provider_output": true,
+  "not_canon_approval": true,
+  "blind_prompt": true,
+  "prompt_sections": {
+    "purpose": [
+      "Narrative semantic extraction for TextifAI downstream review.",
+      "Model must return structured JSON output."
+    ],
+    "rules": [
+      "Use only provided text.",
+      "Do not invent facts outside excerpt.",
+      "Preserve original source-language surfaces.",
+      "Do not continue story prose.",
+      "Do not approve canon.",
+      "Do not merge entities automatically.",
+      "Do not auto-promote candidates.",
+      "Do not promote pronouns as standalone primary entities.",
+      "Mark uncertainty explicitly.",
+      "Differentiate entities, objects, places, lore concepts, events, relationships, review suggestions, suppression candidates.",
+      "Include only short source spans.",
+      "Output valid JSON only."
+    ],
+    "final_instruction": [
+      "Return JSON only.",
+      "No markdown.",
+      "No explanation outside JSON."
+    ]
+  },
+  "source_payload": [
+    {
+      "chapter_ref": "ch_017",
+      "excerpt_lines": [
+        "「……エルサリエル。」",
+        "「……ベルを。」",
+        "「今なら――鳴らせる。」",
+        "「……王者と杖は……共に歩む。」",
+        "ベルが鳴った。",
+        "俺が――彼女の魔力を運ぶ道だった。",
+        "ガントレットが、肘ごと砕けた。"
+      ]
+    },
+    {
+      "chapter_ref": "ch_018",
+      "excerpt_lines": [
+        "彼は、境界線であり、流れを導く川だった。",
+        "押さえつけるでもなく、止めるでもなく、ただ、私を支えた。",
+        "魔法が走った。",
+        "ただ、私のままで、魔法を使った。"
+      ]
+    },
+    {
+      "chapter_ref": "ch_019",
+      "excerpt_lines": [
+        "「……オヤジ……」",
+        "「セラ。」",
+        "私たちは、まだ、ちゃんと名乗り合ってもいなかった。",
+        "ひとりにしないために。",
+        "後には戻れない。"
+      ]
+    }
+  ],
+  "output_schema_keys": [
+    "extraction_metadata",
+    "entities",
+    "objects",
+    "places",
+    "lore_concepts",
+    "events",
+    "relationships",
+    "review_suggestions",
+    "suppression_candidates",
+    "quality_notes"
+  ],
+  "privacy_constraints": [
+    "Use excerpt-only payload.",
+    "Do not include full chapter text.",
+    "Do not include full novel text."
+  ],
+  "expected_output_constraints": [
+    "Strict JSON output.",
+    "No extra prose.",
+    "No provider/tool invocation.",
+    "No persistent data mutation actions.",
+    "Uncertain mappings stay in review suggestions."
+  ]
+}
