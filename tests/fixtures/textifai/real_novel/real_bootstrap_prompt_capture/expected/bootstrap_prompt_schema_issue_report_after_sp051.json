@@ -1,0 +1,69 @@
+{
+  "sample_id": "chatgpt_response_bootstrap_chapter_extraction_ja_ch_001_after_sp051",
+  "baseline_sample_id": "chatgpt_response_bootstrap_chapter_extraction_ja_ch_001",
+  "prompt_source": "real_bootstrap_capture_after_sp051",
+  "source_language": "ja",
+  "chapter_id": "ch_001",
+  "issues": [
+    {
+      "id": "chapter_schema_missing_objects_section",
+      "status": "improved_resolved_at_prompt_schema_level",
+      "severity_after_sp051": "low",
+      "evidence": "Post-SP051 sample contains objects with 舌のないベル, object_subkind, relationships, and retention_reason.",
+      "remaining_work": "Audit downstream object rendering/materialization."
+    },
+    {
+      "id": "artifact_retention_not_first_class",
+      "status": "improved_resolved_at_prompt_schema_level",
+      "severity_after_sp051": "low",
+      "evidence": "舌のないベル is retained as first-class object instead of only concept fallback.",
+      "remaining_work": "Ensure review queue and import surfaces show object candidates clearly."
+    },
+    {
+      "id": "relation_type_taxonomy_too_narrow",
+      "status": "improved_with_two_layer_relation_model",
+      "severity_after_sp051": "low_medium",
+      "evidence": "Relations include relation_category, relation_label, relation_summary, evidence, and review fields.",
+      "remaining_work": "Keep relation_label free-form and prevent accidental enum hardening/noise amplification."
+    },
+    {
+      "id": "event_cap_may_be_too_low_for_dense_chapters",
+      "status": "improved_with_event_importance_no_hard_cap",
+      "severity_after_sp051": "low_medium",
+      "evidence": "Post-SP051 sample retains six events with event_importance major/supporting.",
+      "remaining_work": "Audit output size and event noise across longer/multi-chapter samples."
+    },
+    {
+      "id": "global_prompt_entire_novel_wording_conflict",
+      "status": "improved_by_incremental_batch_wording",
+      "severity_after_sp051": "low_medium",
+      "evidence": "SP051 prompt hardening tests verify incremental global normalization wording.",
+      "remaining_work": "Run populated canonical-map/global normalization re-audit."
+    },
+    {
+      "id": "chapter_prompt_needs_empty_map_mode",
+      "status": "improved_with_CANONICAL_MAP_MODE",
+      "severity_after_sp051": "low_medium",
+      "evidence": "Post-SP051 sample uses local_candidate/review_state/needs_review for pronoun and descriptor cases.",
+      "remaining_work": "Validate behavior when canonical map is partially populated."
+    },
+    {
+      "id": "empty_canonical_entity_map_in_capture",
+      "status": "still_open_for_real_e2e",
+      "severity_after_sp051": "medium",
+      "evidence": "Capture still used CANONICAL_ENTITY_MAP: [] and cannot prove populated-map merge/review behavior.",
+      "remaining_work": "Perform canonical-map populated audit before chunking."
+    }
+  ],
+  "still_open": [
+    "empty_canonical_entity_map_in_capture",
+    "downstream_object_materialization_rendering_deeper_audit",
+    "canonical_map_populated_reaudit",
+    "multi_chapter_multilingual_validation",
+    "chunking_reduction_path_audit_later"
+  ],
+  "do_not_implement_in_this_phase": true,
+  "provider_calls": false,
+  "write_back": false,
+  "runtime_changes": false
+}

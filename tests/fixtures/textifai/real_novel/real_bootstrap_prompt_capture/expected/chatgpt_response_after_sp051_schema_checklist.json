@@ -1,0 +1,79 @@
+{
+  "sample_id": "chatgpt_response_bootstrap_chapter_extraction_ja_ch_001_after_sp051",
+  "baseline_sample_id": "chatgpt_response_bootstrap_chapter_extraction_ja_ch_001",
+  "prompt_source": "real_bootstrap_capture_after_sp051",
+  "source_language": "ja",
+  "chapter_id": "ch_001",
+  "json_shape": {
+    "required_top_level_keys": ["work", "chapters"],
+    "required_chapter_keys": [
+      "chapter_extraction_schema_version",
+      "chapter_id",
+      "chapter_title_original",
+      "chapter_title_canonical",
+      "sequence_index",
+      "chapter_label_type",
+      "chapter_number_in_label",
+      "title_parse_signals",
+      "chapter_summary",
+      "characters",
+      "places",
+      "concepts",
+      "objects",
+      "events",
+      "relations",
+      "unresolved_mentions"
+    ]
+  },
+  "chapter_identity": {
+    "expected_chapter_id": "ch_001",
+    "expected_original_title": "**（仮）証人**",
+    "accepted_label_types": ["other", "prologue"],
+    "canonical_title_policy": "preserve Japanese text while removing obvious markdown formatting"
+  },
+  "v2_contract_expectations": {
+    "schema_version": "v2",
+    "objects_required": true,
+    "objects_must_include": [
+      "object_subkind",
+      "retention_reason",
+      "needs_review_or_review_state"
+    ],
+    "events_must_include": ["event_importance"],
+    "relations_two_layer_required": [
+      "relation_category",
+      "relation_label",
+      "relation_summary",
+      "evidence"
+    ],
+    "legacy_relation_type_only_not_allowed": true
+  },
+  "useful_coverage": {
+    "must_surface": [
+      "アデルマン・レオフリック",
+      "ティセイア王国",
+      "杖の一族",
+      "王と杖|王者の杖",
+      "均衡",
+      "ベル|舌のないベル",
+      "赤子",
+      "ティセイア王国の崩壊",
+      "赤子の救出",
+      "杖の一族の抹消",
+      "摂政"
+    ],
+    "flexible_matching": true
+  },
+  "noise_review_behavior": {
+    "pronoun_like_surfaces": ["私", "彼", "彼女", "お前"],
+    "pronoun_policy": "pronoun-like entries must remain review/local candidate, not canon-strong",
+    "descriptor_policy": "赤子 may appear as descriptor/local candidate but not canon-final without review",
+    "title_policy": "王, 王妃, 杖, 後継者 may remain unresolved/review if unnamed"
+  },
+  "provider_free": {
+    "provider_calls": false,
+    "network": false,
+    "write_back": false,
+    "secrets": false
+  }
+}

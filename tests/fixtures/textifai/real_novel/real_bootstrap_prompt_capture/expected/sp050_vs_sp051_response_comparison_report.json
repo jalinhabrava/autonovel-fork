@@ -1,0 +1,39 @@
+{
+  "baseline_sample_id": "chatgpt_response_bootstrap_chapter_extraction_ja_ch_001",
+  "hardened_sample_id": "chatgpt_response_bootstrap_chapter_extraction_ja_ch_001_after_sp051",
+  "prompt_source": "real_bootstrap_capture_after_sp051",
+  "source_language": "ja",
+  "chapter_id": "ch_001",
+  "overall_assessment": "improved_contract_usable",
+  "what_improved": [
+    "ベル / 舌のないベル moved from concept-like fallback handling into first-class objects.",
+    "objects include object_subkind and retention_reason, making durable artifacts reviewable downstream.",
+    "relations use relation_category, relation_label, relation_summary, and evidence instead of relying on a narrow relation_type enum.",
+    "events include event_importance and retain dense prologue events without a hard three-event cap.",
+    "私 remains pronoun_like with needs_review and local_candidate review behavior.",
+    "赤子 remains descriptor/local candidate with needs_review rather than canon-final identity.",
+    "Useful baseline coverage is preserved for Adelman, Thiseia, 杖の一族, 王と杖 / 王者の杖, 均衡, ベル, 赤子, collapse, rescue, erasure, and regency transition.",
+    "Author/review usefulness improved through labels such as rescues_and_raises, keeps_artifact, maintains_balance_together, and takes_regency."
+  ],
+  "what_regressed": [],
+  "what_stayed_same": [
+    "CANONICAL_ENTITY_MAP remains empty in capture context, so canonical identity approval is still out of scope.",
+    "Some title/descriptor entities such as 王, 王妃, 杖, 後継者 still require review because chapter evidence lacks stable names.",
+    "The sample remains a manual ChatGPT response, not provider runtime output or canon approval."
+  ],
+  "remaining_prompt_schema_issues": [
+    "empty_canonical_entity_map_in_capture remains open for real e2e because fake-provider capture has no populated canonical map.",
+    "Global normalization with a populated map has not been re-audited after SP051.",
+    "Only one Japanese chapter has been compared post-hardening.",
+    "Spanish post-hardening behavior has not been tested.",
+    "Chunking/reduction path has not been audited.",
+    "Object materialization/rendering in downstream review surfaces may need deeper audit."
+  ],
+  "downstream_risks": [
+    "Downstream consumers may need explicit object rendering and review queue support to benefit from objects.",
+    "Free relation_label values may add noise if UI/review tooling treats them as canonical taxonomy.",
+    "review_state/canonical_candidate semantics still require populated-map audit before auto-promotion is considered.",
+    "Large dense chapters may produce bigger outputs under event_importance policy."
+  ],
+  "recommended_next_phase": "Phase 1.3.M-b5c canonical-map populated audit before chunking, then multi-chapter/chunking audit after extraction contract stays stable."
+}
