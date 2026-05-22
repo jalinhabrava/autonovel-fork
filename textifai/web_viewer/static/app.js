@@ -31,7 +31,7 @@ const state = {
     pollingTimer: null,
   },
   compareView: { baseId: "", candidateId: "", loading: false, result: null, error: "" },
-  reviewView: { severity: "", reviewType: "", query: "", sortBy: "severity_desc" },
+  reviewView: { severity: "", reviewType: "", query: "", sortBy: "severity_desc", quickFilter: "all", candidate: "" },
 };
 
 const RECOMMENDED_ACTION_VIEWER_ACTIONS = {
@@ -185,7 +185,7 @@ async function selectProject(projectId) {
   state.navNotice = null;
   state.compareView = { baseId: projectId, candidateId: state.compareView.candidateId || "", loading: false, result: null, error: "" };
   state.hiddenGraphTags = new Set();
-  state.reviewView = { severity: "", reviewType: "", query: "", sortBy: "severity_desc" };
+  state.reviewView = { severity: "", reviewType: "", query: "", sortBy: "severity_desc", quickFilter: "all", candidate: "" };
   resetGraphViewBox();
   $("graph-kind-filter").dataset.ready = "";
   renderProjects();
@@ -2131,10 +2131,13 @@ function renderReview() {
   const severityCounts = deriveReviewSeverityCounts(queue, items);
   const typeCounts = deriveReviewTypeCounts(queue, items);
   const typeOptions = Object.keys(typeCounts).sort((a, b) => a.localeCompare(b));
-  const view = state.reviewView || { severity: "", reviewType: "", query: "", sortBy: "severity_desc" };
+  const view = state.reviewView || { severity: "", reviewType: "", query: "", sortBy: "severity_desc", quickFilter: "all", candidate: "" };
   const filtered = applyReviewFilters(items, view);
   const sorted = sortReviewItems(filtered, view.sortBy);
   const grouped = groupReviewItemsForPresentation(sorted);
+  const quickFiltered = applyReviewQuickFilter({ grouped, filterKey: view.quickFilter || "all" });
+  const candidateFiltered = applyReviewCandidateFilter({ grouped: quickFiltered, candidateName: view.candidate || "" });
+  const candidateEntries = deriveReviewCandidates(grouped);
   const candidateCount = items.filter((item) => (item.candidate_entities || []).length > 0).length;
   const evidenceCount = items.filter((item) => (item.evidence || []).length > 0).length;
   const highSeverity = severityCounts.high || 0;
@@ -2169,6 +2172,8 @@ function renderReview() {
       </div>
     </div>
     ${renderReviewPresentationSummary(grouped)}
+    ${renderReviewQuickFilters(view.quickFilter || "all")}
+    ${renderReviewCandidateDrilldown(candidateEntries, view.candidate || "")}
     <div class="review-filters panel">
       <label>Severity
         <select id="review-filter-severity">
@@ -2200,8 +2205,8 @@ function renderReview() {
       <button type="button" id="review-filter-reset">Reset</button>
     </div>
     <div class="review-results panel">
-      <p class="muted">Showing ${sorted.length} of ${items.length} items</p>
-      ${sorted.length ? renderReviewPresentationGroups(grouped) : `<p class="muted">No items match current filters.</p>`}
+      <p class="muted">Showing ${countRenderedReviewItems(candidateFiltered)} visible grouped entries from ${items.length} raw items</p>
+      ${countRenderedReviewItems(candidateFiltered) ? renderReviewPresentationGroups(candidateFiltered) : `<p class="muted">No groups match this filter.</p>`}
     </div>
   `;
   bindReviewQueueInteractions();
@@ -2455,6 +2460,122 @@ function renderReviewPresentationSummary(grouped) {
 
 function renderReviewSummaryCard(label, value) {
   return `<div class="review-summary-card"><span>${escapeHtml(label)}</span><strong>${fmtCount(value)}</strong></div>`;
+}
+
+function reviewQuickFilterPresentation(filterKey) {
+  const labels = {
+    all: "All groups",
+    requires_human_review: "Requires human review",
+    high: "High",
+    medium: "Medium",
+    has_related: "Has related/equivalent items",
+    object_retention: "Object retention",
+    legacy: "Legacy/ungrouped",
+    future_actions: "Future actions",
+  };
+  const key = labels[filterKey] ? filterKey : "all";
+  return {
+    key,
+    label: key === "all" ? "Active filter: All groups" : `Active filter: ${labels[key]}`,
+    showClear: key !== "all",
+  };
+}
+
+function renderReviewQuickFilters(activeFilter) {
+  const filters = [
+    { key: "all", label: "All" },
+    { key: "requires_human_review", label: "Requires human review" },
+    { key: "high", label: "High" },
+    { key: "medium", label: "Medium" },
+    { key: "has_related", label: "Has related/equivalent items" },
+    { key: "object_retention", label: "Object retention" },
+    { key: "legacy", label: "Legacy/ungrouped" },
+    { key: "future_actions", label: "Future actions" },
+  ];
+  const presentation = reviewQuickFilterPresentation(activeFilter || "all");
+  return `
+    <div class="review-quick-filters panel">
+      <div class="review-quick-filters-header">
+        <h4>Quick filters</h4>
+        <span class="badge review-group-badge">${escapeHtml(presentation.label)}</span>
+        ${presentation.showClear ? `<button type="button" id="review-quick-filter-clear">Clear filter</button>` : ""}
+      </div>
+      <div class="review-quick-filters-chips">
+        ${filters.map((filter) => `<button type="button" class="review-quick-filter-chip ${filter.key === presentation.key ? "is-active" : ""}" data-review-quick-filter="${escapeHtml(filter.key)}">${escapeHtml(filter.label)}</button>`).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function applyReviewQuickFilter({ grouped, filterKey }) {
+  const key = filterKey || "all";
+  const groups = [...(grouped?.groups || [])];
+  const ungrouped = [...(grouped?.ungrouped || [])];
+  if (key === "all") return { groups, ungrouped };
+  if (key === "legacy") return { groups: [], ungrouped };
+  const filteredGroups = groups.filter((group) => {
+    const highest = highestReviewSeverity(groupItems(group));
+    if (key === "high") return highest === "high";
+    if (key === "medium") return highest === "medium";
+    if (key === "requires_human_review") return groupRequiresHumanReview(group);
+    if (key === "has_related") return (group.related_items || []).length > 0;
+    if (key === "object_retention") return group.group_type === "object_retention_group";
+    if (key === "future_actions") return groupItems(group).some((item) => Array.isArray(reviewMetadata(item).future_viewer_actions) && reviewMetadata(item).future_viewer_actions.length > 0);
+    return true;
+  });
+  return { groups: filteredGroups, ungrouped: [] };
+}
+
+function deriveReviewCandidates(grouped) {
+  const map = new Map();
+  for (const group of grouped?.groups || []) {
+    const name = String(group.candidate_name || "").trim();
+    if (!name) continue;
+    if (!map.has(name)) {
+      map.set(name, {
+        name,
+        group_count: 0,
+        requires_human_review: false,
+        review_state: "",
+      });
+    }
+    const entry = map.get(name);
+    entry.group_count += 1;
+    if (groupRequiresHumanReview(group)) entry.requires_human_review = true;
+    if (!entry.review_state) {
+      const state = String(reviewMetadata(group.principal).candidate_review_state || "").toLowerCase();
+      if (state) entry.review_state = state;
+    }
+  }
+  return [...map.values()].sort((left, right) => left.name.localeCompare(right.name));
+}
+
+function renderReviewCandidateDrilldown(candidates, selectedCandidate) {
+  return `
+    <div class="review-candidate-drilldown panel">
+      <div class="review-quick-filters-header">
+        <h4>Candidate drilldown</h4>
+        <span class="muted">${selectedCandidate ? `Selected: ${escapeHtml(selectedCandidate)}` : "Selected: all candidates"}</span>
+      </div>
+      <div class="review-candidate-chips">
+        <button type="button" class="review-candidate-chip ${selectedCandidate ? "" : "is-active"}" data-review-candidate="">All candidates</button>
+        ${candidates.map((candidate) => `<button type="button" class="review-candidate-chip ${candidate.name === selectedCandidate ? "is-active" : ""}" data-review-candidate="${escapeHtml(candidate.name)}">${escapeHtml(candidate.name)} · ${fmtCount(candidate.group_count)}${candidate.review_state ? ` · ${escapeHtml(candidate.review_state)}` : ""}${candidate.requires_human_review ? " · requires review" : ""}</button>`).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function applyReviewCandidateFilter({ grouped, candidateName }) {
+  const selected = String(candidateName || "").trim();
+  if (!selected) return { groups: [...(grouped?.groups || [])], ungrouped: [...(grouped?.ungrouped || [])] };
+  return {
+    groups: (grouped?.groups || []).filter((group) => String(group.candidate_name || "") === selected),
+    ungrouped: [...(grouped?.ungrouped || [])],
+  };
+}
+
+function countRenderedReviewItems(grouped) {
+  return (grouped?.groups || []).length + ((grouped?.ungrouped || []).length ? 1 : 0);
 }
 
 function renderCountBadges(counts, badgeType) {
@@ -2763,8 +2884,25 @@ function bindReviewQueueInteractions() {
     renderReview();
   });
   $("review-filter-reset")?.addEventListener("click", () => {
-    state.reviewView = { severity: "", reviewType: "", query: "", sortBy: "severity_desc" };
+    state.reviewView = { severity: "", reviewType: "", query: "", sortBy: "severity_desc", quickFilter: "all", candidate: "" };
     renderReview();
+  });
+  document.querySelectorAll("[data-review-quick-filter]").forEach((node) => {
+    node.addEventListener("click", () => {
+      state.reviewView.quickFilter = node.dataset.reviewQuickFilter || "all";
+      renderReview();
+    });
+  });
+  $("review-quick-filter-clear")?.addEventListener("click", () => {
+    state.reviewView.quickFilter = "all";
+    state.reviewView.candidate = "";
+    renderReview();
+  });
+  document.querySelectorAll("[data-review-candidate]").forEach((node) => {
+    node.addEventListener("click", () => {
+      state.reviewView.candidate = node.dataset.reviewCandidate || "";
+      renderReview();
+    });
   });
   document.querySelectorAll("[data-review-graph]").forEach((node) => {
     node.addEventListener("click", () => {
@@ -3333,6 +3471,10 @@ globalThis.__TEXTIFAI_REVIEW_ACTIONS__ = {
   groupReviewItemsForPresentation,
   summarizeReviewPresentationGroups,
   renderReviewPresentationSummary,
+  reviewQuickFilterPresentation,
+  applyReviewQuickFilter,
+  deriveReviewCandidates,
+  applyReviewCandidateFilter,
   renderReviewPresentationGroups,
   renderReviewGroupCard,
   renderReviewActionDescriptors,

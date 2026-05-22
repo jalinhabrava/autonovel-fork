@@ -762,6 +762,117 @@ class TextifAIWebViewerTests(unittest.TestCase):
         self.assertIn("Read-only", group_html)
         self.assertIn("Requires human review", group_html)
 
+    def test_review_quick_filters_reduce_groups_by_priority_related_object_legacy_and_future_actions(self):
+        grouped = {
+            "groups": [
+                {
+                    "group_type": "descriptor_group",
+                    "candidate_name": "Ari Mar",
+                    "recommended_action": "review_attach_role_or_title",
+                    "principal": {
+                        "severity": "medium",
+                        "source_entity": "Ari Mar",
+                        "target_text": "el capitán del paso",
+                        "suggested_action": "review_attach_role_or_title",
+                        "candidate_entities": [{"canonical_name": "Ari Mar", "entity_kind": "character"}],
+                        "metadata": {
+                            "candidate_requires_review": True,
+                            "recommended_action": "review_attach_role_or_title",
+                            "future_viewer_actions": ["attach_role_or_title"],
+                        },
+                    },
+                    "related_items": [{"severity": "low", "target_text": "el custodio del paso", "metadata": {}}],
+                },
+                {
+                    "group_type": "object_retention_group",
+                    "candidate_name": "llave de cristal",
+                    "recommended_action": "review_create_primary",
+                    "principal": {
+                        "severity": "high",
+                        "source_entity": "llave de cristal",
+                        "target_text": "llave de cristal",
+                        "suggested_action": "review_create_primary",
+                        "candidate_entities": [],
+                        "metadata": {
+                            "recommended_action": "review_create_primary",
+                            "candidate_status": "no_clear_existing_primary",
+                        },
+                    },
+                    "related_items": [],
+                },
+            ],
+            "ungrouped": [{"target_text": "algo viejo", "severity": "low", "metadata": {}}],
+        }
+        self.assertEqual(len(_run_viewer_js_export("applyReviewQuickFilter", {"grouped": grouped, "filterKey": "all"})["groups"]), 2)
+        self.assertEqual(len(_run_viewer_js_export("applyReviewQuickFilter", {"grouped": grouped, "filterKey": "medium"})["groups"]), 1)
+        self.assertEqual(len(_run_viewer_js_export("applyReviewQuickFilter", {"grouped": grouped, "filterKey": "high"})["groups"]), 1)
+        self.assertEqual(len(_run_viewer_js_export("applyReviewQuickFilter", {"grouped": grouped, "filterKey": "requires_human_review"})["groups"]), 1)
+        self.assertEqual(len(_run_viewer_js_export("applyReviewQuickFilter", {"grouped": grouped, "filterKey": "has_related"})["groups"]), 1)
+        self.assertEqual(len(_run_viewer_js_export("applyReviewQuickFilter", {"grouped": grouped, "filterKey": "object_retention"})["groups"]), 1)
+        self.assertEqual(len(_run_viewer_js_export("applyReviewQuickFilter", {"grouped": grouped, "filterKey": "future_actions"})["groups"]), 1)
+        legacy_only = _run_viewer_js_export("applyReviewQuickFilter", {"grouped": grouped, "filterKey": "legacy"})
+        self.assertEqual(len(legacy_only["groups"]), 0)
+        self.assertEqual(len(legacy_only["ungrouped"]), 1)
+
+    def test_review_active_filter_and_clear_filter_metadata_are_visible(self):
+        active = _run_viewer_js_export("reviewQuickFilterPresentation", "medium")
+        cleared = _run_viewer_js_export("reviewQuickFilterPresentation", "all")
+        self.assertEqual(active["key"], "medium")
+        self.assertIn("Active filter: Medium", active["label"])
+        self.assertTrue(active["showClear"])
+        self.assertEqual(cleared["key"], "all")
+        self.assertFalse(cleared["showClear"])
+
+    def test_candidate_centric_drilldown_lists_candidates_counts_and_filters_associated_groups(self):
+        grouped = {
+            "groups": [
+                {
+                    "group_type": "descriptor_group",
+                    "candidate_name": "Ari Mar",
+                    "recommended_action": "review_attach_role_or_title",
+                    "principal": {
+                        "severity": "medium",
+                        "source_entity": "Ari Mar",
+                        "target_text": "el capitán del paso",
+                        "candidate_entities": [{"canonical_name": "Ari Mar", "entity_kind": "character"}],
+                        "metadata": {
+                            "candidate_requires_review": True,
+                            "candidate_review_state": "review",
+                        },
+                    },
+                    "related_items": [],
+                },
+                {
+                    "group_type": "descriptor_group",
+                    "candidate_name": "Luma Ser",
+                    "recommended_action": "review_enrich_existing_entity",
+                    "principal": {
+                        "severity": "medium",
+                        "source_entity": "Luma Ser",
+                        "target_text": "la navegante velada",
+                        "candidate_entities": [{"canonical_name": "Luma Ser", "entity_kind": "character"}],
+                        "metadata": {
+                            "candidate_requires_review": True,
+                            "candidate_review_state": "review",
+                        },
+                    },
+                    "related_items": [],
+                },
+            ],
+            "ungrouped": [{"target_text": "algo viejo", "severity": "low", "metadata": {}}],
+        }
+        candidates = _run_viewer_js_export("deriveReviewCandidates", grouped)
+        self.assertEqual([entry["name"] for entry in candidates], ["Ari Mar", "Luma Ser"])
+        self.assertEqual(candidates[0]["group_count"], 1)
+        self.assertEqual(candidates[0]["review_state"], "review")
+        self.assertTrue(candidates[0]["requires_human_review"])
+        filtered = _run_viewer_js_export("applyReviewCandidateFilter", {"grouped": grouped, "candidateName": "Ari Mar"})
+        self.assertEqual(len(filtered["groups"]), 1)
+        self.assertEqual(filtered["groups"][0]["candidate_name"], "Ari Mar")
+        self.assertEqual(len(filtered["ungrouped"]), 1)
+        all_again = _run_viewer_js_export("applyReviewCandidateFilter", {"grouped": grouped, "candidateName": ""})
+        self.assertEqual(len(all_again["groups"]), 2)
+
     def test_static_viewer_future_actions_are_read_only(self):
         source = Path("textifai/web_viewer/static/app.js").read_text(encoding="utf-8")
         self.assertIn("RECOMMENDED_ACTION_VIEWER_ACTIONS", source)
@@ -775,8 +886,13 @@ class TextifAIWebViewerTests(unittest.TestCase):
         self.assertIn("renderReviewGroupCard", source)
         self.assertIn("summarizeReviewPresentationGroups", source)
         self.assertIn("renderReviewPresentationSummary", source)
+        self.assertIn("applyReviewQuickFilter", source)
+        self.assertIn("deriveReviewCandidates", source)
+        self.assertIn("applyReviewCandidateFilter", source)
         self.assertIn("review-group", source)
         self.assertNotIn("fetch(\"/api/review", source)
+        self.assertNotIn("/api/review/merge", source)
+        self.assertNotIn("/api/review/promote", source)
 
 
 def _run_viewer_js_export(export_name, payload):

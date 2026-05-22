@@ -843,6 +843,46 @@ button:hover, button.active {
   flex-wrap: wrap;
 }
 
+.review-quick-filters,
+.review-candidate-drilldown {
+  margin-bottom: 16px;
+}
+
+.review-quick-filters-header {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.review-quick-filters-header h4 {
+  margin: 0;
+}
+
+.review-quick-filters-chips,
+.review-candidate-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.review-quick-filter-chip,
+.review-candidate-chip {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+  padding: 6px 10px;
+}
+
+.review-quick-filter-chip.is-active,
+.review-candidate-chip.is-active {
+  background: rgba(29, 111, 104, 0.12);
+  border-color: rgba(29, 111, 104, 0.45);
+  color: var(--accent);
+}
+
 .review-header-actions {
   display: flex;
   gap: 8px;
