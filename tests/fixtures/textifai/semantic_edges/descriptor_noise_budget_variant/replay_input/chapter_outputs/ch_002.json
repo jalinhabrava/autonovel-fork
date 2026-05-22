@@ -1,0 +1,13 @@
+{
+  "chapters": [
+    {
+      "chapter_id": "ch_002",
+      "summary": "Persisten descriptor genérico multicapítulo, descriptor con facts nuevos y mención efímera.",
+      "entities": [
+        {"canonical_name": "el centinela", "canonical_candidate": "Iven Ral", "entity_kind": "character", "source_mentions": ["el centinela"], "key_facts": ["Permanece junto al arco sin novedad adicional."], "chapter_refs": ["ch_002"], "confidence": 0.72, "review_state": "review", "surface_type": "descriptor_like", "semantic_value": "descriptor", "descriptor_category": "generic_descriptor", "language_hint": "es"},
+        {"canonical_name": "el trazador del umbral", "canonical_candidate": "Iven Ral", "entity_kind": "character", "source_mentions": ["el trazador del umbral"], "key_facts": ["Reconoce la línea exacta bajo la piedra hueca.", "Corrige la marca inversa que llevaba Iven Ral."], "relationships": [{"target": "Iven Ral", "type": "related_to", "facts": ["Añade saber técnico del umbral."]}], "chapter_refs": ["ch_002"], "confidence": 0.79, "review_state": "review", "surface_type": "descriptor_like", "semantic_value": "descriptor", "descriptor_category": "epithet_descriptor", "language_hint": "es"},
+        {"canonical_name": "vendedor ausente", "entity_kind": "character", "source_mentions": ["vendedor ausente"], "key_facts": ["Olvida su bolsa y abandona el corredor."], "chapter_refs": ["ch_002"], "confidence": 0.43, "review_state": "review", "surface_type": "descriptor_like", "semantic_value": "descriptor", "descriptor_category": "generic_descriptor", "language_hint": "es"}
+      ]
+    }
+  ]
+}

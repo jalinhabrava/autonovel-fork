@@ -1,0 +1,15 @@
+{
+  "chapters": [
+    {
+      "chapter_id": "ch_001",
+      "summary": "Iven Ral aparece con descriptor genérico, pronombre y descriptor de rol junto a Sora Niv.",
+      "entities": [
+        {"canonical_name": "Iven Ral", "entity_kind": "character", "aliases": ["Iven"], "source_mentions": ["Iven Ral", "Iven"], "key_facts": ["Custodia el arco sin sello."], "chapter_refs": ["ch_001"], "confidence": 0.9, "review_state": "canonical", "surface_type": "named_entity_like", "semantic_value": "durable_entity", "language_hint": "es"},
+        {"canonical_name": "Sora Niv", "entity_kind": "character", "aliases": ["Sora"], "source_mentions": ["Sora Niv", "Sora"], "key_facts": ["Es resguardada junto al arco."], "chapter_refs": ["ch_001"], "confidence": 0.87, "review_state": "canonical", "surface_type": "named_entity_like", "semantic_value": "durable_entity", "language_hint": "es"},
+        {"canonical_name": "el forastero", "canonical_candidate": "Iven Ral", "entity_kind": "character", "source_mentions": ["el forastero"], "key_facts": [], "chapter_refs": ["ch_001"], "confidence": 0.67, "review_state": "review", "surface_type": "descriptor_like", "semantic_value": "descriptor", "descriptor_category": "generic_descriptor", "language_hint": "es"},
+        {"canonical_name": "ella", "canonical_candidate": "Iven Ral", "entity_kind": "character", "source_mentions": ["ella"], "key_facts": [], "chapter_refs": ["ch_001"], "confidence": 0.51, "review_state": "review", "surface_type": "pronoun_like", "semantic_value": "noise", "language_hint": "es"},
+        {"canonical_name": "la voz del peaje", "canonical_candidate": "Iven Ral", "entity_kind": "character", "source_mentions": ["la voz del peaje"], "key_facts": ["Ordena que nadie pague hasta oír la campana negra."], "relationships": [{"target": "Iven Ral", "type": "related_to", "facts": ["Rol absorbido de Iven Ral."]}], "chapter_refs": ["ch_001"], "confidence": 0.73, "review_state": "review", "surface_type": "role_like", "semantic_value": "role", "descriptor_category": "role_descriptor", "language_hint": "es"}
+      ]
+    }
+  ]
+}

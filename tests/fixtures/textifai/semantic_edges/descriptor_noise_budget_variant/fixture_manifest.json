@@ -1,0 +1,56 @@
+{
+  "fixture_id": "descriptor_noise_budget_variant",
+  "title": "El arco sin sello",
+  "language": "es",
+  "purpose": "Variant sintética ligera para anti-overfitting de review-state descriptor signals, suppression y equivalent descriptor dedupe.",
+  "source_files": [],
+  "replay_input_only": true,
+  "intended_coverage": [
+    "review-state candidate descriptor enrichment generalization",
+    "role/title descriptor attachment generalization",
+    "relationship descriptor impact generalization",
+    "generic weak descriptor suppression with renamed surface",
+    "generic multichapter descriptor suppression with renamed surface",
+    "pronoun suppression with renamed pronoun surface",
+    "ephemeral/noise suppression with renamed surface",
+    "equivalent role descriptor dedupe/degrade with renamed surfaces",
+    "language-agnostic metadata-driven behavior"
+  ],
+  "expected_canonical_entities": [
+    {"name": "Iven Ral", "kind": "character"},
+    {"name": "Sora Niv", "kind": "character"}
+  ],
+  "expected_descriptor_cases": [
+    {"surface": "el forastero", "canonical": "Iven Ral", "descriptor_category": "generic_descriptor", "expected_behavior": "suppressed"},
+    {"surface": "el centinela", "canonical": "Iven Ral", "descriptor_category": "generic_descriptor", "expected_behavior": "suppressed_or_low_not_medium"},
+    {"surface": "el trazador del umbral", "canonical": "Iven Ral", "descriptor_category": "epithet_descriptor", "expected_action": "review_enrich_existing_entity"},
+    {"surface": "la voz del peaje", "canonical": "Iven Ral", "descriptor_category": "role_descriptor", "expected_action": "review_attach_role_or_title"},
+    {"surface": "el amparo de Sora", "canonical": "Iven Ral", "descriptor_category": "relationship_descriptor", "expected_action": "review_enrich_existing_entity"}
+  ],
+  "expected_suppressed_cases": [
+    {"surface": "ella", "surface_type": "pronoun_like", "expected_behavior": "suppressed"},
+    {"surface": "vendedor ausente", "descriptor_category": "generic_descriptor", "expected_behavior": "ephemeral_noise_suppressed"},
+    {"surface": "el forastero", "descriptor_category": "generic_descriptor", "expected_behavior": "suppressed"}
+  ],
+  "expected_review_signals": [
+    {"surface": "el trazador del umbral", "canonical": "Iven Ral", "recommended_action": "review_enrich_existing_entity"},
+    {"surface": "la voz del peaje", "canonical": "Iven Ral", "recommended_action": "review_attach_role_or_title"},
+    {"surface": "el amparo de Sora", "canonical": "Iven Ral", "recommended_action": "review_enrich_existing_entity"}
+  ],
+  "expected_dedupe_or_budget_cases": [
+    {"surfaces": ["la voz del peaje", "el custodio del pórtico", "el guarda del arco"], "canonical": "Iven Ral", "descriptor_category": "role_descriptor", "goal": "not all equivalent role descriptor signals remain medium"}
+  ],
+  "expected_relationships": [
+    {"source": "Iven Ral", "target": "Sora Niv", "relationship": "shields"}
+  ],
+  "language_agnostic_notes": [
+    "Las strings de esta variante son data de fixture, no lógica universal.",
+    "Las decisiones esperadas dependen de surface_type, semantic_value, descriptor_category, candidate state, language_hint y evidence.",
+    "La variante cambia nombres/surfaces para comprobar clase de comportamiento, no literal matching."
+  ],
+  "anti_overfitting_notes": [
+    "No reuse names or surfaces from descriptor_noise_budget.",
+    "PASS requiere mismo comportamiento semántico con surfaces renombradas.",
+    "FAIL si runtime necesita hardcodes por fixture."
+  ]
+}

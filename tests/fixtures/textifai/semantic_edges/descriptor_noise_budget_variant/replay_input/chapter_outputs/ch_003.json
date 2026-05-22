@@ -1,0 +1,14 @@
+{
+  "chapters": [
+    {
+      "chapter_id": "ch_003",
+      "summary": "Se observa descriptor relacional con impacto y surfaces equivalentes de rol.",
+      "entities": [
+        {"canonical_name": "el centinela", "canonical_candidate": "Iven Ral", "entity_kind": "character", "source_mentions": ["el centinela"], "key_facts": ["Permanece junto al arco sin revelar novedad."], "chapter_refs": ["ch_003"], "confidence": 0.72, "review_state": "review", "surface_type": "descriptor_like", "semantic_value": "descriptor", "descriptor_category": "generic_descriptor", "language_hint": "es"},
+        {"canonical_name": "el amparo de Sora", "canonical_candidate": "Iven Ral", "entity_kind": "character", "source_mentions": ["el amparo de Sora"], "key_facts": ["Resguarda a Sora Niv durante el temblor del arco."], "relationships": [{"target": "Sora Niv", "type": "shields", "facts": ["Resguarda a Sora durante la alarma."]}], "chapter_refs": ["ch_003"], "confidence": 0.78, "review_state": "review", "surface_type": "descriptor_like", "semantic_value": "descriptor", "descriptor_category": "relationship_descriptor", "language_hint": "es"},
+        {"canonical_name": "el custodio del pórtico", "canonical_candidate": "Iven Ral", "entity_kind": "character", "source_mentions": ["el custodio del pórtico"], "key_facts": ["Confirma la misma orden con la campana negra."], "relationships": [{"target": "Iven Ral", "type": "related_to", "facts": ["Role/title equivalente."]}], "chapter_refs": ["ch_003"], "confidence": 0.71, "review_state": "review", "surface_type": "role_like", "semantic_value": "role", "descriptor_category": "role_descriptor", "language_hint": "es"},
+        {"canonical_name": "el guarda del arco", "canonical_candidate": "Iven Ral", "entity_kind": "character", "source_mentions": ["el guarda del arco"], "key_facts": ["Repite la orden de peaje hasta el alba."], "relationships": [{"target": "Iven Ral", "type": "related_to", "facts": ["Role/title equivalente."]}], "chapter_refs": ["ch_003"], "confidence": 0.7, "review_state": "review", "surface_type": "role_like", "semantic_value": "role", "descriptor_category": "role_descriptor", "language_hint": "es"}
+      ]
+    }
+  ]
+}

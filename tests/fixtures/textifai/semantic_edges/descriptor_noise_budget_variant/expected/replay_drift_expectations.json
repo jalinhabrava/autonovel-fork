@@ -1,0 +1,67 @@
+{
+  "fixture_id": "descriptor_noise_budget_variant",
+  "purpose": "Anti-overfitting variant replay contracts: validar misma clase semántica con nombres/surfaces distintos del fixture base.",
+  "manual_expectation": {
+    "required_entities": [
+      {"canonical_name": "Iven Ral", "expected_role": "probable primary under review", "non_negotiable": true},
+      {"canonical_name": "Sora Niv", "expected_role": "secondary durable candidate under review", "non_negotiable": true}
+    ],
+    "expected_descriptor_signals": [
+      {"surface_text": "el trazador del umbral", "candidate": "Iven Ral", "descriptor_category": "epithet_descriptor", "expected_action": "review_enrich_existing_entity"},
+      {"surface_text": "la voz del peaje", "candidate": "Iven Ral", "descriptor_category": "role_descriptor", "expected_action": "review_attach_role_or_title"},
+      {"surface_text": "el amparo de Sora", "candidate": "Iven Ral", "descriptor_category": "relationship_descriptor", "expected_action": "review_enrich_existing_entity"}
+    ],
+    "suppressed_descriptor_cases": [
+      {"surface_text": "el forastero", "descriptor_category": "generic_descriptor", "expected_behavior": "suppressed"},
+      {"surface_text": "el centinela", "descriptor_category": "generic_descriptor", "expected_behavior": "suppressed_or_low_not_medium"},
+      {"surface_text": "vendedor ausente", "descriptor_category": "generic_descriptor", "expected_behavior": "suppressed"},
+      {"surface_text": "ella", "surface_type": "pronoun_like", "expected_behavior": "suppressed"}
+    ],
+    "equivalent_descriptor_policy": {
+      "primary_equivalence_key": ["candidate", "descriptor_category", "recommended_action"],
+      "budget_rule": "max_one_medium_per_equivalence_key_unless_differential_evidence",
+      "equivalent_extras": "degrade_to_low_or_suppress_if_redundant"
+    }
+  },
+  "current_observed_behavior": {
+    "summary": "To be filled by replay contracts; no implicit drift allowed.",
+    "expected_behavior_class": "same_as_descriptor_noise_budget_without_reusing_surfaces"
+  },
+  "accepted_temporary_drift": [],
+  "resolved_current_behavior": [
+    {"drift_id": "variant_semantic_behavior_matches_base_policy", "observed_behavior": "expected_replay_contract", "accepted_temporarily": false, "reason": "variant should preserve behavior class with renamed surfaces"},
+    {"drift_id": "variant_equivalent_descriptor_signals_not_all_medium", "observed_behavior": "expected_replay_contract", "accepted_temporarily": false, "reason": "equivalent role descriptors should not all remain medium"},
+    {"drift_id": "variant_distinct_descriptor_signals_survive_dedupe", "observed_behavior": "expected_unit_contract", "accepted_temporarily": false, "reason": "distinct facts or relationships remain covered by unit tests"},
+    {"drift_id": "variant_generic_weak_descriptor_suppressed", "observed_behavior": "expected_replay_contract", "accepted_temporarily": false, "reason": "generic weak descriptor should remain suppressed"},
+    {"drift_id": "variant_pronoun_noise_suppressed", "observed_behavior": "expected_replay_contract", "accepted_temporarily": false, "reason": "pronoun/noise should remain suppressed"},
+    {"drift_id": "variant_no_auto_promotion", "observed_behavior": "expected_replay_contract", "accepted_temporarily": false, "reason": "candidate remains human-review decision"},
+    {"drift_id": "variant_no_auto_merge", "observed_behavior": "expected_replay_contract", "accepted_temporarily": false, "reason": "review items must not auto-apply"}
+  ],
+  "known_current_drift": [],
+  "non_negotiable_failures": [
+    "provider call occurs",
+    "output outside tempdir",
+    "write to runs/vault",
+    "auto-merge occurs",
+    "auto-promotion occurs",
+    "schema version changes unexpectedly",
+    "variant fixture literal appears in runtime logic",
+    "useful descriptor signal missing after surface rename",
+    "suppressed descriptor becomes strong signal"
+  ],
+  "future_desired_behavior": [
+    "anti-overfitting variant remains small and replay-input only",
+    "same metadata class yields same review policy with renamed surfaces",
+    "future variants can cover other languages without runtime string rules"
+  ],
+  "language_agnostic_notes": [
+    "Fixture strings are data only.",
+    "Runtime decisions should rely on surface_type, semantic_value, descriptor_category, candidate state, facts, relationships and evidence.",
+    "Spanish surfaces are not policy conditions."
+  ],
+  "anti_overfitting_notes": [
+    "Names and surfaces intentionally differ from descriptor_noise_budget.",
+    "PASS means behavior class survives renamed synthetic data.",
+    "FAIL means either missing generalization or an overly fixture-specific test/runtime rule."
+  ]
+}
