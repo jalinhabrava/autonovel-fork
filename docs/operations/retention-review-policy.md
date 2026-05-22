@@ -106,8 +106,32 @@ Para pronombre sin evidencia, clearly ephemeral/noise mention, una mención loca
 - Nunca ejecutar merge ni promotion desde esta política.
 - Incluir `reason`, `score` y `confidence_bucket` si existe.
 - Incluir `do_not_auto_merge: true` en señales de retención/identidad.
+- Incluir `do_not_auto_promote: true` cuando el candidato todavía esté en review state.
 - Si no hay candidato claro, usar `candidate_entities: []` y `candidate_status: no_clear_existing_primary` o `insufficient_evidence`.
 - Estados esperados: `strong_candidate`, `weak_candidate`, `no_clear_existing_primary`, `insufficient_evidence`.
+
+## Review-State Candidate Signals
+
+Una entidad en `review` puede ser candidate accionable sin quedar confirmada como canon. Esto cubre clusters que parecen probable primary pero todavía requieren decisión humana.
+
+Reglas:
+
+- usar solo si la entidad existe en output como review entity real;
+- exigir evidencia estructural: aliases/source mentions, chapter refs, facts o relationships;
+- permitir descriptor/title/role/relationship signals cuando la surface tiene metadata suficiente;
+- no permitir pronoun/noise/ephemeral/generic weak como señal fuerte;
+- incluir `candidate_review_state`, `candidate_note_role`, `candidate_is_primary: false` y `candidate_requires_review: true`;
+- siempre `do_not_auto_merge: true`;
+- siempre `do_not_auto_promote: true`.
+
+Esto no confirma canon. Solo crea decisiones pendientes para autor.
+
+Flujo UI futuro:
+
+- detectar “esto parece una primary”;
+- promover a primary con aprobación humana;
+- revisar descriptores, aliases, roles y relaciones relacionados;
+- mergear, adjuntar rol, enriquecer, mantener secundario o rechazar con aprobación humana.
 
 ## Language-Agnostic Policy
 

@@ -1,29 +1,27 @@
 # Expected Artifacts — descriptor_noise_budget
 
-Artifacts manuales y sintéticos para especificar contrato deseado de genericidad de descriptores y presupuesto de ruido.
+Artifacts manuales y sintéticos para contrato de genericidad descriptor, ruido y señales de revisión editorial.
 
-No son outputs generados por pipeline. Sirven como baseline humano para K-b1/K-b2/K-b3a.
+No son outputs generados por pipeline. Sirven como baseline humano para K-b1/K-b2/K-b3a/K-b3b.
 
-## K-b2 update
+## K-b2 / K-b3a
 
-K-b2 observa replay output real provider-free y separa en `replay_drift_expectations.json`:
+- K-b2 fijó contratos replay y drift explícito.
+- K-b3a diagnosticó causa: `Ari Mar` quedaba en `review_entity` y las surfaces descriptor no llegaban a señales dedicadas.
 
-- expectativa manual;
-- comportamiento observado actual;
-- drift temporal aceptado;
-- comportamiento resuelto actual;
-- fallos no negociables;
-- futuro deseado.
+## K-b3b update
 
-Esta fase no implementa budget run-level real, no cambia schema y no introduce write-back. Si el output actual no emite signals de descriptor esperados, el drift queda explícito en vez de ocultarse.
+K-b3b no promueve canon automático. Habilita señales descriptor útiles sobre candidatos en review state:
 
-## K-b3a update
+- review-state candidate usable para signals editoriales;
+- `do_not_auto_merge: true`;
+- `do_not_auto_promote: true`;
+- metadata moderna en items descriptor dedicados (`candidate_review_state`, `candidate_requires_review`, `descriptor_category`, `surface_type`, `semantic_value`).
 
-K-b3a no corrige runtime. Hace diagnóstico explícito de causa probable:
+Comportamiento esperado:
 
-- `Ari Mar` absorbe surfaces descriptor, pero queda como `review_entity` genérico;
-- no hay primaries top-level en output final;
-- las surfaces esperadas sobreviven como aliases/source mentions;
-- no reaparecen como signals descriptor dedicados en `review_queue.json`.
-
-Por eso esta fase deja medible si bloqueo viene de estado de candidato, retención de metadata de surface o path conservador de signalización.
+- `el cartógrafo sin memoria` -> `review_enrich_existing_entity`;
+- `el capitán del paso` -> `review_attach_role_or_title`;
+- `el protector de Luma` -> `review_enrich_existing_entity` compatible relacional;
+- pronoun/noise/generic weak siguen suprimidos;
+- schema sin cambios, write-back sin cambios.

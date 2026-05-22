@@ -82,7 +82,7 @@ class TextifAIDescriptorSignalReplayAlignmentDiagnosticsTests(unittest.TestCase)
             )
             self._assert_descriptor_surface_propagation(expectations=expectations, obsidian_import=obsidian_import, review_queue=review_queue)
             self._assert_metadata_presence_diagnosis(expectations=expectations, review_queue=review_queue)
-            self._assert_missing_signal_drift_explicit(expectations=expectations)
+            self._assert_review_state_candidate_signals_restored(expectations=expectations, review_queue=review_queue)
             self._assert_suppression_regression(obsidian_import=obsidian_import, review_queue=review_queue)
             self._assert_identity_and_object_regression_guards()
             self._assert_anti_hardcode_guardrails()
@@ -148,10 +148,7 @@ class TextifAIDescriptorSignalReplayAlignmentDiagnosticsTests(unittest.TestCase)
         self.assertEqual(decision.get("decision"), "review")
         self.assertEqual(decision.get("naming_quality"), "descriptor")
 
-        drift = _drift_by_id(expectations, "candidate_state_blocks_descriptor_signal")
-        self.assertEqual(drift.get("candidate"), "Ari Mar")
-        self.assertEqual(drift.get("observed_behavior"), "candidate_cluster_retained_as_review_entity_not_primary")
-        self.assertTrue(drift.get("accepted_temporarily"))
+        self.assertIn("candidate_state_blocks_descriptor_signal", _resolved_ids(expectations))
 
     def _assert_descriptor_surface_propagation(self, *, expectations: dict, obsidian_import: dict, review_queue: dict) -> None:
         top_entity = _entity_by_name(obsidian_import.get("entities") or [], "Ari Mar")
@@ -163,10 +160,10 @@ class TextifAIDescriptorSignalReplayAlignmentDiagnosticsTests(unittest.TestCase)
             self.assertTrue(_surface_exists_in_replay_input(surface))
             self.assertIn(surface, aliases)
             self.assertIn(surface, source_mentions)
-            self.assertIsNone(_review_item_by_surface(review_queue, surface))
-            drift = _drift_by_surface(expectations, "descriptor_surface_metadata_not_retained", surface)
-            self.assertEqual(drift.get("observed_behavior"), "surface_absorbed_into_review_entity_without_descriptor_review_signal")
-            self.assertTrue(drift.get("accepted_temporarily"))
+            item = _review_item_by_surface(review_queue, surface)
+            self.assertIsNotNone(item)
+            self.assertTrue(_candidate_named(item, "Ari Mar"))
+            self.assertIn("descriptor_surface_metadata_not_retained", _resolved_ids(expectations))
 
     def _assert_metadata_presence_diagnosis(self, *, expectations: dict, review_queue: dict) -> None:
         for surface, expected_category, expected_surface_type, expected_semantic_value in [
@@ -184,28 +181,40 @@ class TextifAIDescriptorSignalReplayAlignmentDiagnosticsTests(unittest.TestCase)
             self.assertTrue(replay_entity.get("chapter_refs"))
             self.assertTrue(replay_entity.get("source_mentions"))
             self.assertEqual(replay_entity.get("canonical_candidate"), "Ari Mar")
+            item = _review_item_by_surface(review_queue, surface)
+            self.assertIsNotNone(item)
+            metadata = item.get("metadata") or {}
+            self.assertEqual(metadata.get("descriptor_category"), expected_category)
+            self.assertEqual(metadata.get("surface_type"), expected_surface_type)
+            self.assertEqual(metadata.get("semantic_value"), expected_semantic_value)
+            self.assertEqual(metadata.get("candidate_review_state"), "review")
+            self.assertEqual(metadata.get("candidate_note_role"), "review")
+            self.assertFalse(metadata.get("candidate_is_primary"))
+            self.assertTrue(metadata.get("candidate_requires_review"))
+            self.assertTrue(metadata.get("do_not_auto_merge"))
+            self.assertTrue(metadata.get("do_not_auto_promote"))
 
-        ari_item = _review_item_by_source(review_queue, "Ari Mar")
-        self.assertIsNotNone(ari_item)
-        metadata = ari_item.get("metadata") or {}
-        self.assertNotIn("surface_type", metadata)
-        self.assertNotIn("semantic_value", metadata)
-        self.assertNotIn("descriptor_category", metadata)
-        self.assertNotIn("future_viewer_actions", metadata)
-        self.assertNotIn("do_not_auto_merge", metadata)
+        metadata_drift = _drift_by_id(expectations, "descriptor_metadata_incomplete")
+        self.assertTrue(metadata_drift.get("accepted_temporarily"))
 
-        drift = _drift_by_id(expectations, "descriptor_metadata_incomplete")
-        self.assertEqual(drift.get("observed_behavior"), "review_entity_generic_without_descriptor_metadata_bundle")
-
-    def _assert_missing_signal_drift_explicit(self, *, expectations: dict) -> None:
+    def _assert_review_state_candidate_signals_restored(self, *, expectations: dict, review_queue: dict) -> None:
         for drift_id in [
             "descriptor_signal_missing_for_novel_facts",
             "role_descriptor_missing_attach_signal",
             "relationship_descriptor_missing_impact_signal",
+            "candidate_state_blocks_descriptor_signal",
         ]:
-            drift = _drift_by_id(expectations, drift_id)
-            self.assertTrue(drift.get("accepted_temporarily"))
-            self.assertEqual(drift.get("decision"), "accept_temporarily")
+            self.assertIn(drift_id, _resolved_ids(expectations))
+
+        restored = _resolved_by_id(expectations, "review_state_candidate_can_emit_descriptor_signals")
+        self.assertEqual(restored.get("observed_behavior"), "review_state_candidate_emits_descriptor_signals_with_do_not_auto_flags")
+        self.assertFalse(restored.get("accepted_temporarily"))
+
+        protector = _review_item_by_surface(review_queue, "el protector de Luma")
+        self.assertIsNotNone(protector)
+        self.assertEqual(protector.get("suggested_action"), "review_enrich_existing_entity")
+        evidence = protector.get("evidence") or []
+        self.assertTrue(any(entry.get("kind") == "key_fact" for entry in evidence if isinstance(entry, dict)))
 
     def _assert_suppression_regression(self, *, obsidian_import: dict, review_queue: dict) -> None:
         for surface in SUPPRESSED_SURFACES:
@@ -273,6 +282,10 @@ def _review_item_by_surface(review_queue: dict, surface: str) -> dict | None:
     return None
 
 
+def _candidate_named(item: dict, canonical_name: str) -> bool:
+    return any(candidate.get("canonical_name") == canonical_name for candidate in item.get("candidate_entities") or [])
+
+
 def _promotion_decision_by_name(promotion_audit: dict, canonical_name: str) -> dict | None:
     for item in promotion_audit.get("decisions") or []:
         if item.get("canonical_name") == canonical_name:
@@ -302,6 +315,17 @@ def _drift_by_surface(expectations: dict, drift_id: str, surface_text: str) -> d
     if not matches:
         raise AssertionError(f"Missing drift expectation: {drift_id}:{surface_text}")
     return matches[0]
+
+
+def _resolved_ids(expectations: dict) -> set[str]:
+    return {item.get("drift_id") for item in expectations.get("resolved_current_behavior") or []}
+
+
+def _resolved_by_id(expectations: dict, drift_id: str) -> dict:
+    for item in expectations.get("resolved_current_behavior") or []:
+        if item.get("drift_id") == drift_id:
+            return item
+    raise AssertionError(f"Missing resolved drift expectation: {drift_id}")
 
 
 def _surface_exists_in_replay_input(surface_text: str) -> bool:

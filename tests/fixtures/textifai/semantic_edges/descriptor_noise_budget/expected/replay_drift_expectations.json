@@ -1,32 +1,71 @@
 {
   "fixture_id": "descriptor_noise_budget",
-  "purpose": "Contrato K-b2/K-b3a para replay provider-free: fijar comportamiento observado, drifts explícitos y diagnóstico de por qué faltan señales útiles de descriptor sin tocar runtime.",
+  "purpose": "Contrato K-b2/K-b3b para replay provider-free: fijar comportamiento observado, señales descriptor restauradas para review-state candidates, drifts explícitos y límites iniciales sin schema/write-back.",
   "manual_expectation": {
     "required_entities": [
-      {"canonical_name": "Ari Mar", "expected_role": "primary character", "non_negotiable": true},
-      {"canonical_name": "Luma Ser", "expected_role": "secondary canonical character", "non_negotiable": true}
+      {
+        "canonical_name": "Ari Mar",
+        "expected_role": "probable primary under review",
+        "non_negotiable": true
+      },
+      {
+        "canonical_name": "Luma Ser",
+        "expected_role": "secondary durable candidate under review",
+        "non_negotiable": true
+      }
     ],
     "expected_descriptor_signals": [
-      {"surface_text": "el cartógrafo sin memoria", "candidate": "Ari Mar", "descriptor_category": "epithet_descriptor", "expected_action": "review_enrich_existing_entity"},
-      {"surface_text": "el capitán del paso", "candidate": "Ari Mar", "descriptor_category": "role_descriptor", "expected_action": "review_attach_role_or_title"},
-      {"surface_text": "el protector de Luma", "candidate": "Ari Mar", "descriptor_category": "relationship_descriptor", "expected_action": "review_enrich_existing_entity"}
+      {
+        "surface_text": "el cartógrafo sin memoria",
+        "candidate": "Ari Mar",
+        "descriptor_category": "epithet_descriptor",
+        "expected_action": "review_enrich_existing_entity"
+      },
+      {
+        "surface_text": "el capitán del paso",
+        "candidate": "Ari Mar",
+        "descriptor_category": "role_descriptor",
+        "expected_action": "review_attach_role_or_title"
+      },
+      {
+        "surface_text": "el protector de Luma",
+        "candidate": "Ari Mar",
+        "descriptor_category": "relationship_descriptor",
+        "expected_action": "review_enrich_existing_entity"
+      }
     ],
     "suppressed_descriptor_cases": [
-      {"surface_text": "el viajero", "descriptor_category": "generic_descriptor", "expected_behavior": "suppressed"},
-      {"surface_text": "el caminante", "descriptor_category": "generic_descriptor", "expected_behavior": "suppressed_or_low_not_medium"},
-      {"surface_text": "mercader distraído", "descriptor_category": "generic_descriptor", "expected_behavior": "suppressed"},
-      {"surface_text": "él", "surface_type": "pronoun_like", "expected_behavior": "suppressed"}
+      {
+        "surface_text": "el viajero",
+        "descriptor_category": "generic_descriptor",
+        "expected_behavior": "suppressed"
+      },
+      {
+        "surface_text": "el caminante",
+        "descriptor_category": "generic_descriptor",
+        "expected_behavior": "suppressed_or_low_not_medium"
+      },
+      {
+        "surface_text": "mercader distraído",
+        "descriptor_category": "generic_descriptor",
+        "expected_behavior": "suppressed"
+      },
+      {
+        "surface_text": "él",
+        "surface_type": "pronoun_like",
+        "expected_behavior": "suppressed"
+      }
     ]
   },
   "current_observed_behavior": {
-    "review_queue_item_count": 2,
-    "descriptor_review_item_count": 0,
+    "review_queue_item_count": 7,
+    "descriptor_review_item_count": 5,
     "counts_by_type": {
-      "entity_retention_review": 1,
+      "entity_retention_review": 6,
       "review_entity": 1
     },
     "counts_by_severity": {
-      "medium": 2
+      "medium": 7
     },
     "candidate_state_summary": {
       "ari_mar_top_level_review_state": "review",
@@ -36,41 +75,32 @@
       "primary_count": 0,
       "review_count": 1
     },
-    "summary": "Replay provider-free actual no emitió señales descriptor esperadas; registró Luma Ser como retention review y Ari Mar como review_entity genérico."
+    "review_state_candidate_signal_summary": {
+      "enabled": true,
+      "candidate": "Ari Mar",
+      "candidate_is_primary": false,
+      "candidate_requires_review": true,
+      "do_not_auto_merge": true,
+      "do_not_auto_promote": true,
+      "restored_surfaces": [
+        "el cartógrafo sin memoria",
+        "el capitán del paso",
+        "el protector de Luma"
+      ]
+    },
+    "summary": "Replay provider-free actual emite señales descriptor útiles para Ari Mar aunque Ari Mar queda como review_entity; no promociona ni mergea automáticamente."
   },
   "accepted_temporary_drift": [
     {
-      "drift_id": "descriptor_signal_missing_for_novel_facts",
-      "surface_text": "el cartógrafo sin memoria",
-      "candidate": "Ari Mar",
-      "descriptor_category": "epithet_descriptor",
-      "expected_action": "review_enrich_existing_entity",
-      "observed_behavior": "no_review_queue_item_for_surface",
+      "drift_id": "descriptor_metadata_incomplete",
+      "surface_text": "Ari Mar",
+      "candidate": "",
+      "descriptor_category": "review_entity_generic",
+      "expected_action": "review_entity_metadata_may_remain_generic_when_descriptor_items_carry_modern_metadata",
+      "observed_behavior": "review_entity_generic_without_descriptor_metadata_bundle_but_descriptor_items_have_modern_metadata",
       "decision": "accept_temporarily",
       "accepted_temporarily": true,
-      "reason": "output actual aún no materializa signal descriptor desde este fixture"
-    },
-    {
-      "drift_id": "role_descriptor_missing_attach_signal",
-      "surface_text": "el capitán del paso",
-      "candidate": "Ari Mar",
-      "descriptor_category": "role_descriptor",
-      "expected_action": "review_attach_role_or_title",
-      "observed_behavior": "no_review_queue_item_for_surface",
-      "decision": "accept_temporarily",
-      "accepted_temporarily": true,
-      "reason": "attach signal no observado en replay actual"
-    },
-    {
-      "drift_id": "relationship_descriptor_missing_impact_signal",
-      "surface_text": "el protector de Luma",
-      "candidate": "Ari Mar",
-      "descriptor_category": "relationship_descriptor",
-      "expected_action": "review_enrich_existing_entity",
-      "observed_behavior": "no_review_queue_item_for_surface",
-      "decision": "accept_temporarily",
-      "accepted_temporarily": true,
-      "reason": "relationship-impact signal no observado en replay actual"
+      "reason": "K-b3b restaura metadata en items descriptor; el item genérico de Ari Mar sigue minimal por compatibilidad."
     }
   ],
   "resolved_current_behavior": [
@@ -108,52 +138,16 @@
       "observed_behavior": "descriptor_review_item_count_within_reasonable_limit",
       "accepted_temporarily": false,
       "reason": "no explosión observable en baseline actual"
-    }
-  ],
-  "known_current_drift": [
-    {
-      "drift_id": "candidate_state_blocks_descriptor_signal",
-      "surface_text": "Ari Mar",
-      "candidate": "Ari Mar",
-      "descriptor_category": "candidate_state",
-      "expected_action": "candidate_usable_for_descriptor_review_even_before_primary_promotion",
-      "observed_behavior": "candidate_cluster_retained_as_review_entity_not_primary",
-      "decision": "accept_temporarily",
-      "accepted_temporarily": true,
-      "reason": "diagnóstico K-b3a: Ari Mar existe y absorbe surfaces descriptor, pero queda como review_entity genérico sin primary canónico utilizable"
     },
     {
-      "drift_id": "descriptor_surface_metadata_not_retained",
-      "surface_text": "el cartógrafo sin memoria",
-      "candidate": "Ari Mar",
-      "descriptor_category": "epithet_descriptor",
-      "expected_action": "descriptor_surface_reaches_review_context_with_metadata_bundle",
-      "observed_behavior": "surface_absorbed_into_review_entity_without_descriptor_review_signal",
-      "decision": "accept_temporarily",
-      "accepted_temporarily": true,
-      "reason": "surface llega como alias/source mention absorbido, pero no reaparece como signal descriptor específico"
-    },
-    {
-      "drift_id": "descriptor_surface_metadata_not_retained",
-      "surface_text": "el capitán del paso",
-      "candidate": "Ari Mar",
-      "descriptor_category": "role_descriptor",
-      "expected_action": "descriptor_surface_reaches_review_context_with_metadata_bundle",
-      "observed_behavior": "surface_absorbed_into_review_entity_without_descriptor_review_signal",
-      "decision": "accept_temporarily",
-      "accepted_temporarily": true,
-      "reason": "surface role_like absorbida en Ari Mar sin item descriptor dedicado"
-    },
-    {
-      "drift_id": "descriptor_surface_metadata_not_retained",
-      "surface_text": "el protector de Luma",
-      "candidate": "Ari Mar",
-      "descriptor_category": "relationship_descriptor",
-      "expected_action": "descriptor_surface_reaches_review_context_with_metadata_bundle",
-      "observed_behavior": "surface_absorbed_into_review_entity_without_descriptor_review_signal",
-      "decision": "accept_temporarily",
-      "accepted_temporarily": true,
-      "reason": "surface relacional absorbida en Ari Mar sin item descriptor dedicado"
+      "drift_id": "review_state_candidate_can_emit_descriptor_signals",
+      "surface_text": "",
+      "candidate": "review_state_candidate",
+      "descriptor_category": "review_state_candidate_policy",
+      "expected_action": "emit_editorial_signals_without_canon_mutation",
+      "observed_behavior": "review_state_candidate_emits_descriptor_signals_with_do_not_auto_flags",
+      "accepted_temporarily": false,
+      "reason": "K-b3b permite señales editoriales sobre candidatos en review con evidencia fuerte sin auto-merge ni auto-promote."
     },
     {
       "drift_id": "descriptor_signal_missing_for_novel_facts",
@@ -161,10 +155,9 @@
       "candidate": "Ari Mar",
       "descriptor_category": "epithet_descriptor",
       "expected_action": "review_enrich_existing_entity",
-      "decision": "accept_temporarily",
-      "observed_behavior": "no_review_queue_item_for_surface",
-      "accepted_temporarily": true,
-      "reason": "drift visible hasta K-b3 o ajuste runtime posterior"
+      "observed_behavior": "entity_retention_review_emitted_for_review_state_candidate",
+      "accepted_temporarily": false,
+      "reason": "K-b3b resuelve señal de enrichment para descriptor con facts novedosos."
     },
     {
       "drift_id": "role_descriptor_missing_attach_signal",
@@ -172,10 +165,9 @@
       "candidate": "Ari Mar",
       "descriptor_category": "role_descriptor",
       "expected_action": "review_attach_role_or_title",
-      "decision": "accept_temporarily",
-      "observed_behavior": "no_review_queue_item_for_surface",
-      "accepted_temporarily": true,
-      "reason": "drift visible en output actual"
+      "observed_behavior": "entity_retention_review_emitted_for_review_state_candidate",
+      "accepted_temporarily": false,
+      "reason": "K-b3b resuelve attach role/title para candidato en review."
     },
     {
       "drift_id": "relationship_descriptor_missing_impact_signal",
@@ -183,20 +175,42 @@
       "candidate": "Ari Mar",
       "descriptor_category": "relationship_descriptor",
       "expected_action": "review_enrich_existing_entity",
-      "decision": "accept_temporarily",
-      "observed_behavior": "no_review_queue_item_for_surface",
-      "accepted_temporarily": true,
-      "reason": "drift visible en output actual"
+      "observed_behavior": "entity_retention_review_emitted_for_review_state_candidate",
+      "accepted_temporarily": false,
+      "reason": "K-b3b resuelve señal relacional/enrichment para candidato en review."
     },
+    {
+      "drift_id": "candidate_state_blocks_descriptor_signal",
+      "surface_text": "Ari Mar",
+      "candidate": "Ari Mar",
+      "descriptor_category": "candidate_state",
+      "expected_action": "candidate_usable_for_descriptor_review_even_before_primary_promotion",
+      "observed_behavior": "review_state_candidate_used_for_descriptor_signal_without_primary_promotion",
+      "accepted_temporarily": false,
+      "reason": "K-b3b permite usar review_entity como candidato accionable, no como canon."
+    },
+    {
+      "drift_id": "descriptor_surface_metadata_not_retained",
+      "surface_text": "",
+      "candidate": "Ari Mar",
+      "descriptor_category": "descriptor_metadata",
+      "expected_action": "descriptor_surface_reaches_review_context_with_metadata_bundle",
+      "observed_behavior": "descriptor_review_items_include_surface_metadata_and_candidate_review_state",
+      "accepted_temporarily": false,
+      "reason": "K-b3b restaura metadata moderna en items descriptor dedicados."
+    }
+  ],
+  "known_current_drift": [
     {
       "drift_id": "descriptor_metadata_incomplete",
       "surface_text": "Ari Mar",
       "candidate": "",
-      "descriptor_category": "unknown_descriptor",
-      "expected_action": "metadata_should_include_descriptor_fields_when_descriptor_signal_exists",
-      "observed_behavior": "review_entity_generic_without_descriptor_metadata_bundle",
+      "descriptor_category": "review_entity_generic",
+      "expected_action": "review_entity_metadata_may_remain_generic_when_descriptor_items_carry_modern_metadata",
+      "observed_behavior": "review_entity_generic_without_descriptor_metadata_bundle_but_descriptor_items_have_modern_metadata",
       "accepted_temporarily": true,
-      "reason": "metadata moderna de descriptor no aplica porque signal esperado no fue emitido"
+      "reason": "descriptor signal metadata resuelta en items dedicados; item genérico de Ari Mar queda minimal por compatibilidad.",
+      "decision": "accept_temporarily"
     }
   ],
   "non_negotiable_failures": [
@@ -215,7 +229,9 @@
     "relationship descriptor emits impact-compatible review signal",
     "descriptor evidence remains actionable even when candidate cluster still sits in review/candidate state",
     "generic weak descriptors remain suppressed",
-    "descriptor queue remains bounded with explicit run-level budget when implemented"
+    "descriptor queue remains bounded with explicit run-level budget when implemented",
+    "future UI can promote review-state candidate to primary with human approval",
+    "future UI can attach, enrich, keep secondary or reject descriptor suggestions with human approval"
   ],
   "language_agnostic_notes": [
     "Fixture strings are test data; runtime logic must not hardcode them.",

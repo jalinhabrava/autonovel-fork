@@ -146,6 +146,60 @@ class TextifAIDescriptorGenericityPolicyTests(unittest.TestCase):
         )
         self.assertEqual(_review_item_by_source(first, "the youth") is None, _review_item_by_source(second, "joven guardián") is None)
 
+    def test_review_state_candidate_emits_descriptor_signal_without_primary_promotion(self):
+        queue = build_review_queue(
+            obsidian_import={
+                "entities": [
+                    {
+                        "canonical_name": "Atlas Vey",
+                        "preferred_slug": "atlas_vey",
+                        "entity_kind": "character",
+                        "aliases": ["silent heir"],
+                        "source_mentions": ["Atlas Vey", "silent heir"],
+                        "review_state": "review",
+                        "note_role": "review",
+                        "chapter_refs": ["ch_001", "ch_002"],
+                        "key_facts": ["Stable cluster in review.", "Carries map memory."],
+                        "relationships": [],
+                        "confidence": 0.77,
+                        "naming_quality": "descriptor",
+                        "surface_type": "named_entity_like",
+                        "semantic_value": "durable_entity",
+                    }
+                ]
+            },
+            retention_context={
+                "global_entities": [
+                    {
+                        "canonical_name": "silent heir",
+                        "canonical_candidate": "Atlas Vey",
+                        "entity_kind": "character",
+                        "preferred_slug": "silent_heir",
+                        "source_mentions": ["silent heir", "silent heir"],
+                        "key_facts": ["Knows the hidden passage under the archive.", "Protects map oath details."],
+                        "chapter_refs": ["ch_002"],
+                        "relationships": [{"target": "Atlas Vey", "type": "related_to"}],
+                        "confidence": 0.79,
+                        "review_state": "review",
+                        "naming_quality": "descriptor",
+                        "surface_type": "descriptor_like",
+                        "language_hint": "en",
+                        "semantic_value": "descriptor",
+                        "descriptor_category": "epithet_descriptor",
+                    }
+                ]
+            },
+        )
+        item = _review_item_by_source(queue, "silent heir")
+        self.assertIsNotNone(item)
+        self.assertEqual(item.get("suggested_action"), "review_enrich_existing_entity")
+        metadata = item.get("metadata") or {}
+        self.assertEqual(metadata.get("candidate_review_state"), "review")
+        self.assertFalse(metadata.get("candidate_is_primary"))
+        self.assertTrue(metadata.get("candidate_requires_review"))
+        self.assertTrue(metadata.get("do_not_auto_merge"))
+        self.assertTrue(metadata.get("do_not_auto_promote"))
+
     def test_antihardcode_static_guard(self):
         runtime_source = Path("textifai/vaerl/review_queue.py").read_text(encoding="utf-8")
         for term in [

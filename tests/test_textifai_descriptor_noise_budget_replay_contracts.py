@@ -60,14 +60,12 @@ class TextifAIDescriptorNoiseBudgetReplayContractsTests(unittest.TestCase):
         names = _all_entity_names(obsidian_import)
         self.assertIn("Ari Mar", names)
         self.assertIn("Luma Ser", names)
-
-        if not _is_primary_entity(obsidian_import, "Ari Mar"):
-            self.assertTrue(_drift_is_declared(expectations, "required_primary_not_retained_as_primary"))
-        if not _is_primary_entity(obsidian_import, "Luma Ser"):
-            self.assertTrue(_drift_is_declared(expectations, "secondary_canonical_not_retained_as_primary"))
+        self.assertFalse(_is_top_level_primary_entity(obsidian_import, "Ari Mar"))
+        self.assertFalse(_is_top_level_primary_entity(obsidian_import, "Luma Ser"))
 
         luma_item = _review_item_by_surface(review_queue, "Luma Ser")
         if luma_item is not None:
+            self.assertEqual(luma_item.get("suggested_action"), "review_create_primary")
             metadata = luma_item.get("metadata") or {}
             self.assertTrue(metadata.get("do_not_auto_merge"))
             self.assertIn(metadata.get("signal_tier"), {"medium", "low"})
@@ -83,12 +81,11 @@ class TextifAIDescriptorNoiseBudgetReplayContractsTests(unittest.TestCase):
             ("el protector de Luma", "review_enrich_existing_entity", "relationship_descriptor_missing_impact_signal"),
         ]:
             item = _review_item_by_surface(review_queue, surface)
-            if item is None:
-                self.assertTrue(_drift_is_declared(expectations, drift_id), drift_id)
-                continue
+            self.assertIsNotNone(item, drift_id)
             self.assertEqual(item.get("review_type"), "entity_retention_review")
             self.assertEqual(item.get("suggested_action"), action)
             self.assertTrue(_candidate_named(item, "Ari Mar"))
+            self.assertIn(drift_id, _resolved_ids(expectations))
             self._assert_modern_descriptor_metadata(item)
 
     def _assert_suppressed_cases(self, *, expectations: dict, obsidian_import: dict, review_queue: dict) -> None:
@@ -106,10 +103,18 @@ class TextifAIDescriptorNoiseBudgetReplayContractsTests(unittest.TestCase):
         descriptor_items = [_item for _item in review_queue.get("items") or [] if _is_descriptor_item(_item)]
         medium_descriptor_items = [item for item in descriptor_items if item.get("severity") == "medium"]
         self.assertLessEqual(len(descriptor_items), 6)
-        if len(medium_descriptor_items) > 4:
-            self.assertTrue(_drift_is_declared(expectations, "descriptor_queue_explosion_risk"))
-        else:
-            self.assertIn("descriptor_queue_no_explosion_observed", _resolved_ids(expectations))
+        self.assertLessEqual(len(medium_descriptor_items), 6)
+        self.assertIn("descriptor_queue_no_explosion_observed", _resolved_ids(expectations))
+        dedupe_keys = set()
+        for item in descriptor_items:
+            metadata = item.get("metadata") or {}
+            key = (
+                item.get("source_entity"),
+                metadata.get("recommended_action") or item.get("suggested_action"),
+                metadata.get("descriptor_category"),
+            )
+            self.assertNotIn(key, dedupe_keys)
+            dedupe_keys.add(key)
 
     def _assert_modern_descriptor_metadata(self, item: dict) -> None:
         metadata = item.get("metadata") or {}
@@ -117,14 +122,23 @@ class TextifAIDescriptorNoiseBudgetReplayContractsTests(unittest.TestCase):
         for key in [
             "signal_tier",
             "candidate_status",
+            "candidate_review_state",
+            "candidate_note_role",
+            "candidate_is_primary",
+            "candidate_requires_review",
             "surface_type",
             "semantic_value",
             "descriptor_category",
             "future_viewer_actions",
             "do_not_auto_merge",
+            "do_not_auto_promote",
         ]:
             self.assertIn(key, metadata)
         self.assertTrue(metadata.get("do_not_auto_merge"))
+        self.assertTrue(metadata.get("do_not_auto_promote"))
+        self.assertFalse(metadata.get("candidate_is_primary"))
+        self.assertTrue(metadata.get("candidate_requires_review"))
+        self.assertEqual(metadata.get("candidate_review_state"), "review")
 
     def _assert_drift_expectations_are_explicit(self, *, expectations: dict) -> None:
         for key in [
@@ -206,6 +220,15 @@ def _all_entity_names(obsidian_import: dict) -> set[str]:
 
 def _is_primary_entity(obsidian_import: dict, canonical_name: str) -> bool:
     for entity in _all_entities(obsidian_import):
+        if entity.get("canonical_name") != canonical_name:
+            continue
+        if str(entity.get("review_state") or "").casefold() == "canonical" or str(entity.get("note_role") or "").casefold() == "primary":
+            return True
+    return False
+
+
+def _is_top_level_primary_entity(obsidian_import: dict, canonical_name: str) -> bool:
+    for entity in obsidian_import.get("entities") or []:
         if entity.get("canonical_name") != canonical_name:
             continue
         if str(entity.get("review_state") or "").casefold() == "canonical" or str(entity.get("note_role") or "").casefold() == "primary":
