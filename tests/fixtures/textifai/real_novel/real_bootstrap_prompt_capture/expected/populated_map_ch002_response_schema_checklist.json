@@ -1,0 +1,74 @@
+{
+  "sample_id": "chatgpt_response_bootstrap_chapter_extraction_ja_ch_002_populated_map_after_sp055",
+  "source_language": "ja",
+  "chapter_id": "ch_002",
+  "prompt_source": "real_bootstrap_capture_populated_map_after_sp054",
+  "required_top_level_keys": ["work", "chapters"],
+  "required_chapter_keys": [
+    "chapter_extraction_schema_version",
+    "chapter_id",
+    "chapter_title_original",
+    "chapter_title_canonical",
+    "sequence_index",
+    "chapter_label_type",
+    "chapter_number_in_label",
+    "title_parse_signals",
+    "chapter_summary",
+    "characters",
+    "places",
+    "concepts",
+    "objects",
+    "events",
+    "relations",
+    "unresolved_mentions"
+  ],
+  "v2_contract_targets": {
+    "objects": ["object_subkind", "retention_reason", "needs_review_or_review_state"],
+    "events": ["event_importance"],
+    "relations": ["relation_category", "relation_label", "relation_summary", "evidence"],
+    "legacy_relation_type_only_forbidden": true
+  },
+  "canonical_reuse_targets": [
+    "私 -> セラ",
+    "摂政 -> アデルマン・レオフリック",
+    "母様 -> ネリス女王 (review allowed)",
+    "王城/塔/王族専用の訓練場 linkage",
+    "セラの壊れた魔力 -> セラの魔力",
+    "触媒 canonical reuse",
+    "アルモナイトの珠 retained as catalyst/object or critical event evidence"
+  ],
+  "useful_coverage_targets": [
+    "セラ",
+    "アデルマン・レオフリック|摂政",
+    "ネリス女王|母様",
+    "王城",
+    "王族専用の訓練場",
+    "セラの魔力",
+    "触媒",
+    "アルモナイトの珠",
+    "配置自覚/拒絶",
+    "孤立訓練",
+    "触媒破壊",
+    "防御壁/塔破壊",
+    "逃走開始"
+  ],
+  "review_safety_targets": [
+    "no hallucinated names outside chapter/canonical map",
+    "父様 remains unresolved/review unless explicitly named",
+    "母様->ネリス女王 may stay review",
+    "single-use catalysts should not all become hard global canon",
+    "no auto-promotion of ambiguous inheritance identity"
+  ],
+  "non_negotiable_failures": [
+    "invalid_json",
+    "wrong_chapter_id",
+    "missing_objects_key",
+    "missing_event_importance",
+    "missing_relation_two_layer_fields",
+    "missing_meaningful_sera",
+    "missing_magic_anomaly_or_catalyst_handling",
+    "unsafe_auto_promotion_ambiguous_father_identity",
+    "provider_call",
+    "write_back"
+  ]
+}

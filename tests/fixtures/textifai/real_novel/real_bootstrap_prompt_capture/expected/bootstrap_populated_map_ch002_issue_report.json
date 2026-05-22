@@ -1,0 +1,81 @@
+{
+  "sample_id": "chatgpt_response_bootstrap_chapter_extraction_ja_ch_002_populated_map_after_sp055",
+  "baseline_ch001_sample_id": "chatgpt_response_bootstrap_chapter_extraction_ja_ch_001_populated_map_after_sp054",
+  "prompt_source": "real_bootstrap_capture_populated_map_after_sp054",
+  "source_language": "ja",
+  "chapter_id": "ch_002",
+  "issues": [
+    {
+      "id": "populated_map_beyond_prologue",
+      "status": "improved_confirmed_for_ch002",
+      "severity_after_sp056": "low",
+      "evidence": "Canonical reuse and review safety remain effective in protagonist/magic/catalyst chapter profile."
+    },
+    {
+      "id": "canonical_reuse_explicit_protagonist",
+      "status": "improved_confirmed",
+      "severity_after_sp056": "low",
+      "evidence": "私 is normalized to セラ with strong chapter and map alignment."
+    },
+    {
+      "id": "catalyst_object_handling",
+      "status": "improved_confirmed",
+      "severity_after_sp056": "low_medium",
+      "evidence": "Concrete catalysts remain visible as objects and connect to global concept 触媒."
+    },
+    {
+      "id": "event_priority_outburst_escape",
+      "status": "improved_confirmed",
+      "severity_after_sp056": "low",
+      "evidence": "Outburst and escape trigger are retained as major events with priority labels."
+    },
+    {
+      "id": "relation_endpoint_normalization",
+      "status": "improved_confirmed",
+      "severity_after_sp056": "low",
+      "evidence": "Relation endpoints reuse セラ, アデルマン・レオフリック, ネリス女王, 王城, セラの魔力, 触媒 with review guardrails where needed."
+    },
+    {
+      "id": "provider_runtime_output_still_untested",
+      "status": "still_open",
+      "severity_after_sp056": "medium",
+      "evidence": "Audit still uses manual ChatGPT samples."
+    },
+    {
+      "id": "global_normalization_manual_dependency",
+      "status": "still_open",
+      "severity_after_sp056": "medium",
+      "evidence": "Populated map originates from manual global normalization sample."
+    },
+    {
+      "id": "map_scope_limited_ch001_ch003",
+      "status": "still_open",
+      "severity_after_sp056": "medium",
+      "evidence": "Canonical map evidence scope remains first three chapters."
+    },
+    {
+      "id": "ch003_populated_map_response_pending",
+      "status": "still_open",
+      "severity_after_sp056": "medium",
+      "evidence": "Chapter 3 chase/sealing populated-map response not yet audited."
+    },
+    {
+      "id": "multilingual_populated_map_pending",
+      "status": "still_open",
+      "severity_after_sp056": "medium",
+      "evidence": "Spanish and broader multilingual behavior not audited."
+    },
+    {
+      "id": "chunking_reduction_pending",
+      "status": "still_open",
+      "severity_after_sp056": "medium",
+      "evidence": "Chunking/reduction path remains out of scope and unaudited."
+    },
+    {
+      "id": "downstream_materialization_pending",
+      "status": "still_open",
+      "severity_after_sp056": "low_medium",
+      "evidence": "Downstream materialization for catalysts/objects/relations needs dedicated validation."
+    }
+  ]
+}

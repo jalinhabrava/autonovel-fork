@@ -1,0 +1,57 @@
+{
+  "baseline_ch001_sample_id": "chatgpt_response_bootstrap_chapter_extraction_ja_ch_001_populated_map_after_sp054",
+  "ch002_sample_id": "chatgpt_response_bootstrap_chapter_extraction_ja_ch_002_populated_map_after_sp055",
+  "prompt_source": "real_bootstrap_capture_populated_map_after_sp054",
+  "source_language": "ja",
+  "chapters_compared": ["ch_001", "ch_002"],
+  "overall_assessment": "populated_map_generalizes_to_ch002",
+  "what_generalized": [
+    "Populated canonical map reuse works in both chapters with different narrative profiles.",
+    "ch_001 narrator normalization (私->証人) and ch_002 protagonist normalization (私->セラ) both succeed.",
+    "Object handling remains present: ベル in ch_001 and catalyst objects in ch_002.",
+    "Relation endpoint quality remains strong with canonical endpoints and two-layer relation fields.",
+    "Event retention keeps durable structural changes without collapsing to micro-actions."
+  ],
+  "what_did_not_generalize": [
+    "Not all sublocations become stable canonical entities; some remain candidate/local to preserve operational granularity.",
+    "Some identity links stay review-gated (e.g., 母様->ネリス女王, inheritance-related terms), as expected for safety."
+  ],
+  "canonical_reuse": {
+    "assessment": "strong",
+    "ch001_examples": ["私->証人", "舌のないベル->ベル", "城->王城"],
+    "ch002_examples": ["私->セラ", "摂政->アデルマン・レオフリック", "魔力->セラの魔力", "訓練場->王城+sublocation context"]
+  },
+  "object_handling": {
+    "assessment": "improved_and_flexible",
+    "notes": "ch_002 keeps catalyst instances as objects while linking them to global concept 触媒, preserving both local scene evidence and global reuse."
+  },
+  "concept_handling": {
+    "assessment": "good",
+    "notes": "Magic anomaly is modeled as concept (セラの魔力) while catalysts remain objects/evidence, avoiding category collapse."
+  },
+  "event_retention": {
+    "assessment": "good",
+    "notes": "ch_002 captures role rejection, isolation, catalyst failure sequence, outburst destruction, and escape trigger with priority labels."
+  },
+  "relation_endpoint_quality": {
+    "assessment": "good",
+    "notes": "Canonical endpoints are reused in ch_002 for protagonist, regent, mother alias, magic anomaly, location, and catalyst links."
+  },
+  "review_state_quality": {
+    "assessment": "acceptable_with_tradeoffs",
+    "notes": "Some entries become canonical where title/map evidence is strong; uncertain lineage/parent identities remain review/local candidate."
+  },
+  "hallucination_overmerge_risk": {
+    "assessment": "controlled_but_watch",
+    "notes": "No clear hallucinated names observed, but map-driven alias reuse still requires vigilance in later chapters with denser ambiguity."
+  },
+  "downstream_risks": [
+    "Sample remains manual ChatGPT output, not provider runtime output.",
+    "Populated map source remains limited to global normalization batch ch_001-ch_003.",
+    "ch_003 populated-map response audit is still pending.",
+    "Spanish/multilingual populated-map behavior is still untested.",
+    "Chunking/reduction path remains unaudited.",
+    "Downstream rendering/materialization for catalysts and relation labels needs dedicated checks."
+  ],
+  "recommended_next_phase": "Phase 1.3.M-b5c-2d populated-map response audit for ch_003 and then chunking/reduction gate audit."
+}

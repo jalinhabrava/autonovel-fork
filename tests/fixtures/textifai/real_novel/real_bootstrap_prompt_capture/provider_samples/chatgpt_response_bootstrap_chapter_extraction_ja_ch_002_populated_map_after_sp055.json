@@ -1,0 +1,609 @@
+{
+  "work": {
+    "title": "王者の杖",
+    "language": "ja"
+  },
+  "chapters": [
+    {
+      "chapter_extraction_schema_version": "v2",
+      "chapter_id": "ch_002",
+      "chapter_title_original": "**第01話：セラの壊れた魔力と黙された継承**",
+      "chapter_title_canonical": "第01話：セラの壊れた魔力と黙された継承",
+      "sequence_index": 2,
+      "chapter_label_type": "episode",
+      "chapter_number_in_label": 1,
+      "title_parse_signals": {
+        "has_explicit_number": true,
+        "explicit_number_value": 1,
+        "has_colon": false,
+        "has_em_dash": false,
+        "primary_separator": null,
+        "prefix_segment": "**第01話：セラの壊れた魔力と黙された継承**",
+        "suffix_segment": null
+      },
+      "chapter_summary": "セラは父母の命日に、儀式で悲しむ役割を演じさせられてきたことと、自分が「均衡」「継承の印」「未来の固定」のための配置だったことを思い返す。その拒絶以後、彼女は姫ではなく厄介な問題として扱われ、魔法訓練からも実質的に孤立していた。王族専用訓練場で複数の触媒を試すが、セラの魔力は触媒を壊し続ける。最後に純度の高いアルモナイトの珠が応答し、凄まじい魔力反応によって防御壁と塔の一部が破壊される。セラは自分が王城にいられないと判断し、何も持たずに走り出す。",
+      "characters": [
+        {
+          "surface": "私",
+          "canonical": "セラ",
+          "canonical_candidate": "セラ",
+          "entity_subkind": "princess_magic_anomaly",
+          "naming_quality": "pronoun_like",
+          "gender_presentation_signal": "feminine",
+          "needs_review": false,
+          "review_reason": "",
+          "review_state": "canonical",
+          "facts": [
+            "父母の命日に儀式で悲しむ役割を演じさせられていた。",
+            "摂政の説明によって、自分が均衡と継承のための配置だったと理解した。",
+            "拒絶後、姫ではなく厄介な問題として扱われるようになった。",
+            "王族専用訓練場で触媒を破壊し、最終的に王城から逃走する決断をした。"
+          ],
+          "confidence": 0.94
+        },
+        {
+          "surface": "摂政",
+          "canonical": "アデルマン・レオフリック",
+          "canonical_candidate": "アデルマン・レオフリック",
+          "entity_subkind": "regent_political_actor",
+          "naming_quality": "title_plus_name",
+          "gender_presentation_signal": "masculine",
+          "needs_review": false,
+          "review_reason": "",
+          "review_state": "canonical",
+          "facts": [
+            "セラに対して、均衡のため、継承の印として、未来の固定のためという政治的説明をした。",
+            "セラが自分を飾りだったと認識し、拒絶する契機となった。"
+          ],
+          "confidence": 0.88
+        },
+        {
+          "surface": "母様",
+          "canonical": "ネリス女王",
+          "canonical_candidate": "ネリス女王",
+          "entity_subkind": "queen_mother",
+          "naming_quality": "title_plus_name",
+          "gender_presentation_signal": "feminine",
+          "needs_review": true,
+          "review_reason": "CANONICAL_ENTITY_MAPでは母様とネリス女王が結びついているが、セラの記憶は断片的であり、この章では母の人物像そのものは直接確認されない。",
+          "review_state": "review",
+          "facts": [
+            "セラはネリス女王に似てきたと言われることに疲れている。",
+            "セラには母の声の記憶がなく、肖像画と魔技の断片、他人の言葉だけが残っている。"
+          ],
+          "confidence": 0.82
+        },
+        {
+          "surface": "父様と母様",
+          "canonical": "父様と母様",
+          "canonical_candidate": "セラの両親",
+          "entity_subkind": "deceased_parents",
+          "naming_quality": "descriptor",
+          "gender_presentation_signal": "mixed",
+          "needs_review": true,
+          "review_reason": "母はネリス女王に対応する可能性が高いが、父の固有名や両親の正規化先はこの章だけでは不完全である。",
+          "review_state": "local_candidate",
+          "facts": [
+            "この日はセラの父母の命日である。",
+            "父母の命日はセラが公的な儀式で悲しむ役割を担わされてきた日である。"
+          ],
+          "confidence": 0.7
+        }
+      ],
+      "places": [
+        {
+          "surface": "王城",
+          "canonical": "王城",
+          "canonical_candidate": "王城",
+          "entity_subkind": "castle",
+          "naming_quality": "descriptor",
+          "gender_presentation_signal": "unknown",
+          "needs_review": false,
+          "review_reason": "",
+          "review_state": "canonical",
+          "facts": [
+            "セラが暮らし、孤立した状態で扱われている場所である。",
+            "セラは王城の中のひび割れのような存在として自分を認識している。"
+          ],
+          "confidence": 0.9
+        },
+        {
+          "surface": "塔",
+          "canonical": "王城",
+          "canonical_candidate": "王城",
+          "entity_subkind": "castle_subarea",
+          "naming_quality": "descriptor",
+          "gender_presentation_signal": "unknown",
+          "needs_review": false,
+          "review_reason": "",
+          "review_state": "canonical",
+          "facts": [
+            "セラの居住空間と王族専用訓練場につながる場所である。",
+            "セラの魔力反応により塔全体が震え、上部が崩れた。"
+          ],
+          "confidence": 0.84
+        },
+        {
+          "surface": "王族専用の訓練場",
+          "canonical": "王城",
+          "canonical_candidate": "王族専用の訓練場",
+          "entity_subkind": "training_ground",
+          "naming_quality": "descriptor",
+          "gender_presentation_signal": "unknown",
+          "needs_review": true,
+          "review_reason": "CANONICAL_ENTITY_MAPでは王城の一部として扱えるが、訓練場自体もセラの魔力異常と逃走の起点として重要である。",
+          "review_state": "candidate",
+          "facts": [
+            "もともとは守られた場所だったが、セラが一人で使うようになってから誰も来なくなった。",
+            "高等触媒が揃っており、セラの魔力暴走と逃走開始の舞台となった。"
+          ],
+          "confidence": 0.82
+        }
+      ],
+      "concepts": [
+        {
+          "surface": "セラの壊れた魔力",
+          "canonical": "セラの魔力",
+          "canonical_candidate": "セラの壊れた魔力",
+          "entity_subkind": "magic_anomaly",
+          "naming_quality": "descriptor",
+          "gender_presentation_signal": "unknown",
+          "needs_review": false,
+          "review_reason": "",
+          "review_state": "canonical",
+          "facts": [
+            "セラの魔力は強すぎたり歪んだりして、思った通りに動かない。",
+            "触媒を壊し、呪文を暴走させ、成功しても荒く見苦しいものになる。",
+            "純度の高いアルモナイトの珠に応答し、防御壁と塔の一部を破壊する規模の魔力反応を起こした。"
+          ],
+          "confidence": 0.92
+        },
+        {
+          "surface": "均衡",
+          "canonical": "均衡",
+          "canonical_candidate": "均衡",
+          "entity_subkind": "world_rule",
+          "naming_quality": "proper_name",
+          "gender_presentation_signal": "unknown",
+          "needs_review": false,
+          "review_reason": "",
+          "review_state": "canonical",
+          "facts": [
+            "セラの公的な配置や継承の説明に使われた政治的・世界原理的な語である。",
+            "セラはその説明によって、自分が悲しむ個人ではなく役割として扱われていたと理解した。"
+          ],
+          "confidence": 0.86
+        },
+        {
+          "surface": "黙された継承",
+          "canonical": "王と杖",
+          "canonical_candidate": "黙された継承",
+          "entity_subkind": "inheritance_secret",
+          "naming_quality": "descriptor",
+          "gender_presentation_signal": "unknown",
+          "needs_review": true,
+          "review_reason": "章題と摂政の言葉から継承が重要であることは明らかだが、王と杖・セラ・赤子との正確な関係はまだ確定しない。",
+          "review_state": "review",
+          "facts": [
+            "セラは継承の印として扱われていたことを知る。",
+            "継承は未来の固定や均衡と結びつけて説明される。"
+          ],
+          "confidence": 0.76
+        },
+        {
+          "surface": "触媒",
+          "canonical": "触媒",
+          "canonical_candidate": "触媒",
+          "entity_subkind": "magic_tool_system",
+          "naming_quality": "proper_name",
+          "gender_presentation_signal": "unknown",
+          "needs_review": false,
+          "review_reason": "",
+          "review_state": "canonical",
+          "facts": [
+            "王族専用訓練場には複数の高等触媒が揃っている。",
+            "セラの魔力異常は触媒との不適合として繰り返し現れる。",
+            "触媒破壊はセラが危険視され孤立する要因になっている。"
+          ],
+          "confidence": 0.88
+        }
+      ],
+      "objects": [
+        {
+          "surface": "アンバリタ入りの手甲",
+          "canonical": "触媒",
+          "canonical_candidate": "アンバリタ入りの手甲",
+          "local_candidate": "アンバリタ入りの手甲",
+          "object_subkind": "catalyst",
+          "naming_quality": "descriptor",
+          "needs_review": true,
+          "review_reason": "個別触媒として破壊されるが、長期的には触媒システムまたはセラの魔力異常の証拠として扱うのが適切である。",
+          "review_state": "local_candidate",
+          "facts": [
+            "セラが最初に試した触媒であり、魔力が捻れて爆発した。",
+            "セラの魔力が通常の触媒に収まらないことを示す。"
+          ],
+          "relationships": [
+            {
+              "to_surface": "セラ",
+              "to_canonical": "セラ",
+              "relation_category": "magic_or_system",
+              "relation_label": "fails_to_channel_magic",
+              "relation_summary": "手甲はセラの魔力を安全に受け止められず爆発した。",
+              "evidence": [
+                "魔力が捻れて、手甲が光って、震えて、——爆発した。"
+              ],
+              "facts": [
+                "手甲の破壊はセラの触媒不適合を示す。"
+              ],
+              "confidence": 0.78,
+              "needs_review": true,
+              "review_reason": "個別オブジェクトとして継続追跡すべきかは不明である。"
+            }
+          ],
+          "confidence": 0.74,
+          "retention_reason": "temporary_scene_use"
+        },
+        {
+          "surface": "黒革の小型グリモア",
+          "canonical": "触媒",
+          "canonical_candidate": "黒革の小型グリモア",
+          "local_candidate": "黒革の小型グリモア",
+          "object_subkind": "catalyst",
+          "naming_quality": "descriptor",
+          "needs_review": true,
+          "review_reason": "個別触媒としては一回限りだが、セラの魔力異常を示す連続的証拠である。",
+          "review_state": "local_candidate",
+          "facts": [
+            "セラが二つ目に試した触媒であり、魔力を流した瞬間に燃えて灰になった。"
+          ],
+          "relationships": [],
+          "confidence": 0.7,
+          "retention_reason": "temporary_scene_use"
+        },
+        {
+          "surface": "白い水晶の細い棒",
+          "canonical": "触媒",
+          "canonical_candidate": "白い水晶の細い棒",
+          "local_candidate": "白い水晶の細い棒",
+          "object_subkind": "catalyst",
+          "naming_quality": "descriptor",
+          "needs_review": true,
+          "review_reason": "個別触媒としては一回限りだが、塔全体を震わせる魔力散逸につながった。",
+          "review_state": "local_candidate",
+          "facts": [
+            "セラが三つ目に試した触媒であり、魔力が多すぎて棒が裂けた。",
+            "残りの魔力が空気中に散り、塔全体を震わせた。"
+          ],
+          "relationships": [],
+          "confidence": 0.74,
+          "retention_reason": "temporary_scene_use"
+        },
+        {
+          "surface": "純度の高いアルモナイトの珠",
+          "canonical": "触媒",
+          "canonical_candidate": "アルモナイトの珠",
+          "local_candidate": "純度の高いアルモナイトの珠",
+          "object_subkind": "catalyst",
+          "naming_quality": "descriptor",
+          "needs_review": false,
+          "review_reason": "",
+          "review_state": "candidate",
+          "facts": [
+            "セラが四つ目に試した調整済みの触媒である。",
+            "初めてセラの魔力に応えたが、魔力を受け止めきれず消えた。",
+            "防御壁と塔の一部を破壊する転換点の触媒となった。"
+          ],
+          "relationships": [
+            {
+              "to_surface": "セラの魔力",
+              "to_canonical": "セラの魔力",
+              "relation_category": "magic_or_system",
+              "relation_label": "triggers_unstable_output",
+              "relation_summary": "アルモナイトの珠はセラの魔力に応答し、大規模な破壊的出力を引き起こした。",
+              "evidence": [
+                "初めて、何かが応えた。",
+                "呪文が放たれた。",
+                "防御壁——爆風対応の石壁——が、一瞬で砕けた。"
+              ],
+              "facts": [
+                "アルモナイトの珠はセラの魔力異常を明確に外部化した。"
+              ],
+              "confidence": 0.88,
+              "needs_review": false,
+              "review_reason": ""
+            }
+          ],
+          "confidence": 0.86,
+          "retention_reason": "event_trigger"
+        }
+      ],
+      "events": [
+        {
+          "surface": "セラの配置自覚と拒絶",
+          "canonical": "セラの配置自覚と拒絶",
+          "canonical_candidate": "セラの配置自覚と拒絶",
+          "entity_subkind": "identity_rejection",
+          "local_candidate": "セラの配置自覚と拒絶",
+          "event_importance": "major",
+          "naming_quality": "descriptor",
+          "gender_presentation_signal": "unknown",
+          "needs_review": true,
+          "review_reason": "明確な転換点だが、グローバルmapには独立イベントとしてまだ存在しない。",
+          "review_state": "candidate",
+          "facts": [
+            "セラは自分が悲しむ個人ではなく、均衡と継承のための配置だったと知った。",
+            "セラはその役割を明確に拒絶した。",
+            "拒絶後、セラは姫ではなく厄介な問題として扱われるようになった。"
+          ],
+          "confidence": 0.86
+        },
+        {
+          "surface": "セラの孤立した魔法訓練",
+          "canonical": "セラの孤立した魔法訓練",
+          "canonical_candidate": "セラの孤立した魔法訓練",
+          "entity_subkind": "training_isolation",
+          "local_candidate": "セラの孤立した魔法訓練",
+          "event_importance": "supporting",
+          "naming_quality": "descriptor",
+          "gender_presentation_signal": "unknown",
+          "needs_review": true,
+          "review_reason": "長期状態として重要だが、イベントというより状態変化として扱う余地がある。",
+          "review_state": "candidate",
+          "facts": [
+            "セラは魔法の訓練について誰にも助けてもらえなくなった。",
+            "教官が消えたり転任されたりし、訓練場は実質的に孤立した空間となった。",
+            "触媒破壊は沈黙と評価の目だけで処理された。"
+          ],
+          "confidence": 0.8
+        },
+        {
+          "surface": "触媒破壊の連鎖",
+          "canonical": "触媒破壊の連鎖",
+          "canonical_candidate": "触媒破壊の連鎖",
+          "entity_subkind": "catalyst_failure_sequence",
+          "local_candidate": "触媒破壊の連鎖",
+          "event_importance": "supporting",
+          "naming_quality": "descriptor",
+          "gender_presentation_signal": "unknown",
+          "needs_review": false,
+          "review_reason": "",
+          "review_state": "candidate",
+          "facts": [
+            "セラは複数の高等触媒を試すが、手甲、グリモア、水晶棒が次々と壊れた。",
+            "触媒破壊の連鎖はセラの魔力異常と孤立を強化する証拠となる。"
+          ],
+          "confidence": 0.82
+        },
+        {
+          "surface": "アルモナイトの珠による防御壁破壊",
+          "canonical": "アルモナイトの珠による防御壁破壊",
+          "canonical_candidate": "アルモナイトの珠による防御壁破壊",
+          "entity_subkind": "magic_outburst",
+          "local_candidate": "アルモナイトの珠による防御壁破壊",
+          "event_importance": "major",
+          "naming_quality": "descriptor",
+          "gender_presentation_signal": "unknown",
+          "needs_review": false,
+          "review_reason": "",
+          "review_state": "candidate",
+          "facts": [
+            "純度の高いアルモナイトの珠が初めてセラの魔力に応答した。",
+            "凄まじい魔力が呪文として放たれ、防御壁を一瞬で砕いた。",
+            "衝撃波が塔全体を駆け抜け、上部や壁の一角が崩れた。"
+          ],
+          "confidence": 0.9
+        },
+        {
+          "surface": "セラの逃走開始",
+          "canonical": "セラの逃走",
+          "canonical_candidate": "セラの逃走",
+          "entity_subkind": "escape_and_pursuit",
+          "local_candidate": "セラの逃走開始",
+          "event_importance": "major",
+          "naming_quality": "descriptor",
+          "gender_presentation_signal": "unknown",
+          "needs_review": false,
+          "review_reason": "",
+          "review_state": "canonical",
+          "facts": [
+            "セラは防御壁と塔の破壊後、もう王城にはいられないと判断した。",
+            "何も持たず、振り返らずに走り出した。",
+            "この逃走は後続の追跡と封印未遂へつながる。"
+          ],
+          "confidence": 0.88
+        }
+      ],
+      "relations": [
+        {
+          "from_surface": "私",
+          "from_canonical": "セラ",
+          "from_canonical_candidate": "セラ",
+          "to_surface": "摂政",
+          "to_canonical": "アデルマン・レオフリック",
+          "to_canonical_candidate": "アデルマン・レオフリック",
+          "relation_category": "political",
+          "relation_label": "assigned_symbolic_role",
+          "relation_summary": "アデルマン・レオフリックはセラを均衡と継承のための配置として説明し、セラはその役割を拒絶した。",
+          "evidence": [
+            "摂政が言った。",
+            "「均衡のため」「継承の印として」「未来の固定のため」",
+            "私は、はっきり「いいえ」って言った。"
+          ],
+          "facts": [
+            "セラの公的役割は政治的・継承的な配置として扱われていた。"
+          ],
+          "confidence": 0.86,
+          "needs_review": false,
+          "review_reason": ""
+        },
+        {
+          "from_surface": "私",
+          "from_canonical": "セラ",
+          "from_canonical_candidate": "セラ",
+          "to_surface": "母様",
+          "to_canonical": "ネリス女王",
+          "to_canonical_candidate": "ネリス女王",
+          "relation_category": "familial",
+          "relation_label": "daughter_of",
+          "relation_summary": "セラは母様としてネリス女王に言及し、記憶ではなく肖像画や他人の言葉を通して母を知っている。",
+          "evidence": [
+            "似てきたって、また言われるんだろうな。母様に。ネリス女王に。",
+            "声なんか、覚えてないのに。",
+            "残ってるのは、肖像画と魔技の断片、あと他人の言葉だけ。"
+          ],
+          "facts": [
+            "セラとネリス女王は母娘関係として示されるが、セラの記憶は断片的である。"
+          ],
+          "confidence": 0.84,
+          "needs_review": true,
+          "review_reason": "母様とネリス女王の結びつきは強いが、セラ自身の直接記憶はない。"
+        },
+        {
+          "from_surface": "私",
+          "from_canonical": "セラ",
+          "from_canonical_candidate": "セラ",
+          "to_surface": "魔力",
+          "to_canonical": "セラの魔力",
+          "to_canonical_candidate": "セラの壊れた魔力",
+          "relation_category": "magic_or_system",
+          "relation_label": "struggles_to_control",
+          "relation_summary": "セラは自分の魔力を制御できず、触媒破壊や暴走を繰り返している。",
+          "evidence": [
+            "魔法は、思った通りに動いてくれなかった。",
+            "強すぎたり、歪んだり、制御できなかったり。",
+            "触媒は壊れて、呪文は暴走して"
+          ],
+          "facts": [
+            "セラの魔力異常は彼女の孤立と逃走の中心要因である。"
+          ],
+          "confidence": 0.9,
+          "needs_review": false,
+          "review_reason": ""
+        },
+        {
+          "from_surface": "セラの魔力",
+          "from_canonical": "セラの魔力",
+          "from_canonical_candidate": "セラの壊れた魔力",
+          "to_surface": "触媒",
+          "to_canonical": "触媒",
+          "to_canonical_candidate": "触媒",
+          "relation_category": "magic_or_system",
+          "relation_label": "breaks_catalysts",
+          "relation_summary": "セラの魔力は複数の触媒を破壊し、通常の触媒制御に適合しない。",
+          "evidence": [
+            "触媒は壊れて、呪文は暴走して",
+            "でも全部、私が壊した。",
+            "手甲が光って、震えて、——爆発した。"
+          ],
+          "facts": [
+            "触媒破壊はセラの魔力の異常性を示す反復証拠である。"
+          ],
+          "confidence": 0.88,
+          "needs_review": false,
+          "review_reason": ""
+        },
+        {
+          "from_surface": "私",
+          "from_canonical": "セラ",
+          "from_canonical_candidate": "セラ",
+          "to_surface": "王族専用の訓練場",
+          "to_canonical": "王城",
+          "to_canonical_candidate": "王族専用の訓練場",
+          "relation_category": "location",
+          "relation_label": "trains_in_isolation",
+          "relation_summary": "セラは王城内の王族専用訓練場で、教官や補助なしに孤立して訓練している。",
+          "evidence": [
+            "王族専用の訓練場",
+            "教官も、監督も、補助もいない。",
+            "私が一人で使うようになってから、誰も来なくなった。"
+          ],
+          "facts": [
+            "セラの訓練環境は保護ではなく隔離に近い状態になっている。"
+          ],
+          "confidence": 0.84,
+          "needs_review": false,
+          "review_reason": ""
+        },
+        {
+          "from_surface": "アルモナイトの珠",
+          "from_canonical": "触媒",
+          "from_canonical_candidate": "アルモナイトの珠",
+          "to_surface": "セラの魔力",
+          "to_canonical": "セラの魔力",
+          "to_canonical_candidate": "セラの壊れた魔力",
+          "relation_category": "magic_or_system",
+          "relation_label": "amplifies_unstable_magic",
+          "relation_summary": "アルモナイトの珠はセラの魔力に応答し、防御壁と塔を破壊する出力を引き起こした。",
+          "evidence": [
+            "初めて、何かが応えた。",
+            "魔力が流れた。凄まじく、暴れながら。",
+            "防御壁——爆風対応の石壁——が、一瞬で砕けた。"
+          ],
+          "facts": [
+            "アルモナイトの珠はセラの魔力異常を大規模な破壊として顕在化させた。"
+          ],
+          "confidence": 0.88,
+          "needs_review": false,
+          "review_reason": ""
+        },
+        {
+          "from_surface": "私",
+          "from_canonical": "セラ",
+          "from_canonical_candidate": "セラ",
+          "to_surface": "王城",
+          "to_canonical": "王城",
+          "to_canonical_candidate": "王城",
+          "relation_category": "conflict",
+          "relation_label": "leaves_after_outburst",
+          "relation_summary": "セラは魔力反応で防御壁と塔の一部を破壊した後、王城にはいられないと判断して逃走を始めた。",
+          "evidence": [
+            "——やってしまった。",
+            "決めた。もう、ここにはいられない。",
+            "——走り出した。"
+          ],
+          "facts": [
+            "セラの逃走は王城内での魔力暴走の直接的な結果である。"
+          ],
+          "confidence": 0.86,
+          "needs_review": false,
+          "review_reason": ""
+        }
+      ],
+      "unresolved_mentions": [
+        {
+          "surface": "父様",
+          "possible_kind": "character",
+          "facts": [
+            "セラの父として命日に言及されるが、CANONICAL_ENTITY_MAPに安全な確定先がなく、この章でも固有名が示されない。"
+          ],
+          "confidence": 0.62
+        },
+        {
+          "surface": "教官",
+          "possible_kind": "character",
+          "facts": [
+            "セラの魔法訓練から突然いなくなった者と辺境に転任された者がいるが、個別の固有名や継続的重要性は未確定である。"
+          ],
+          "confidence": 0.42
+        },
+        {
+          "surface": "警備の人",
+          "possible_kind": "character",
+          "facts": [
+            "訓練場入口の外に立っているが、現時点では個別ノート化するほどの継続的重要性は確認できない。"
+          ],
+          "confidence": 0.3
+        },
+        {
+          "surface": "魔技の断片",
+          "possible_kind": "concept",
+          "facts": [
+            "セラに残る母に関する手がかりの一つだが、具体的な体系や継続的概念としては未確定である。"
+          ],
+          "confidence": 0.5
+        }
+      ]
+    }
+  ]
+}

@@ -46,6 +46,16 @@ Este fixture guarda respuestas manuales de ChatGPT obtenidas a partir de prompts
   - prompt endurecido contiene `chapter_extraction_schema_version: v2`, `objects`, `CANONICAL_MAP_MODE`, `relation_category`, `relation_label`, `event_importance`
   - no contiene prompt capturado completo ni texto fuente completo
 
+- `chatgpt_response_bootstrap_chapter_extraction_ja_ch_002_populated_map_after_sp055.json`
+  - multi-chapter populated-map generalization sample para `safepoint-056`
+  - prompt real usado: captura post-`safepoint-054` con `CANONICAL_ENTITY_MAP` poblado
+  - task capturada: `bootstrap_chapter_extraction`
+  - source privada usada por el usuario: `/home/david/OnT/王者の杖.md`
+  - chapter capturado: `ch_002`
+  - title: `**第01話：セラの壊れた魔力と黙された継承**`
+  - language: `ja`
+  - no contiene prompt capturado completo ni texto fuente completo
+
 ## Política
 
 - No contiene prompt capturado completo.
