@@ -1,0 +1,98 @@
+{
+  "baseline_ch001_sample_id": "chatgpt_response_bootstrap_chapter_extraction_ja_ch_001_populated_map_after_sp054",
+  "baseline_ch002_sample_id": "chatgpt_response_bootstrap_chapter_extraction_ja_ch_002_populated_map_after_sp055",
+  "ch003_sample_id": "chatgpt_response_bootstrap_chapter_extraction_ja_ch_003_populated_map_after_sp056",
+  "prompt_source": "real_bootstrap_capture_populated_map_after_sp054",
+  "source_language": "ja",
+  "chapters_compared": [
+    "ch_001",
+    "ch_002",
+    "ch_003"
+  ],
+  "overall_assessment": "populated_map_generalizes_to_ch003",
+  "what_generalized": [
+    "Canonical reuse remains stable across narrator/prologue (ch_001), explicit protagonist anomaly (ch_002), and chase-sealing action profile (ch_003).",
+    "`セラ` stays strongly canonical in POV-driven chapters (ch_002/ch_003).",
+    "Relationship endpoints retain two-layer relation fields and reuse canonical map anchors under v2 contract.",
+    "`封印の手枷` is retained as first-class object with explicit event-link and relation-link behavior.",
+    "Ambiguous end-state phenomena (shape limit, existential rejection) remain review-gated instead of hard canonized truth."
+  ],
+  "what_did_not_generalize": [
+    "Provider runtime behavior remains unverified; all chapter samples are manual ChatGPT responses.",
+    "Global canonical normalization remains manual and limited to ch_001–ch_003.",
+    "Cross-language robustness (e.g., Spanish) is not validated yet."
+  ],
+  "canonical_reuse": {
+    "ch_001": [
+      "私 -> 証人 (review-safe)",
+      "舌のないベル -> ベル",
+      "城 -> 王城"
+    ],
+    "ch_002": [
+      "私 -> セラ",
+      "摂政 -> アデルマン・レオフリック",
+      "母様 -> ネリス女王 (review-gated)",
+      "セラの壊れた魔力 -> セラの魔力"
+    ],
+    "ch_003": [
+      "私 -> セラ",
+      "仮面の男 stays descriptor canonical without invented proper name",
+      "手枷 -> 封印の手枷",
+      "セラの逃走 reused as canonical event frame",
+      "塔 -> 王城 as sublocation-preserving place mapping"
+    ]
+  },
+  "object_handling": {
+    "status": "improved",
+    "details": [
+      "ch_001 retains ritual key object (`ベル`) with retention_reason.",
+      "ch_002 retains concrete catalysts as local objects under global `触媒` concept.",
+      "ch_003 retains chase/sealing tools (`追跡型の魔導珠`, `軽量型の魔導機`, `長い槍みたいな武器`, `封印の手枷`) without unsafe global inflation."
+    ]
+  },
+  "concept_handling": {
+    "status": "improved_with_review_gates",
+    "details": [
+      "`セラの魔力` stays concept/anomaly, not object.",
+      "`形の限界` and attraction-like inner pull are handled as review/local candidate concepts.",
+      "Ambiguous existential reading stays open pending later chapters."
+    ]
+  },
+  "event_retention": {
+    "status": "good",
+    "details": [
+      "ch_001 keeps historical collapse/rescue/lineage suppression events.",
+      "ch_002 keeps anomaly/catalyst failure/outburst/escape trigger events.",
+      "ch_003 keeps escape continuation, pursuit encirclement, sealing attempt, and rejection reaction as durable events."
+    ]
+  },
+  "relation_endpoint_quality": {
+    "status": "improved",
+    "details": [
+      "Relations consistently include relation_category/relation_label/relation_summary/evidence.",
+      "Endpoints in ch_003 preserve canonical anchors (`セラ`, `仮面の男`, `封印の手枷`, `セラの魔力`, `王城`) while keeping uncertainty where needed."
+    ]
+  },
+  "review_state_quality": {
+    "status": "acceptable",
+    "details": [
+      "Unnamed pursuer (`仮面の男`) remains review-gated.",
+      "Group pursuers and attraction phenomenon remain unresolved/local where evidence is incomplete.",
+      "Final shape-loss phenomenon is not promoted to closed truth."
+    ]
+  },
+  "hallucination_overmerge_risk": {
+    "level": "low_to_moderate",
+    "details": [
+      "No invented proper name observed for `仮面の男`.",
+      "No forced identity merge for ambiguous existential phenomenon.",
+      "Residual risk remains due to manual-sample nature and limited chapter scope."
+    ]
+  },
+  "downstream_risks": [
+    "Runtime provider outputs may diverge from manual ChatGPT sample quality.",
+    "Object/relation downstream materialization rules are not yet stress-tested on chase/sealing chapters.",
+    "Chunking/reduction may change evidence span and alter relation confidence/review behavior."
+  ],
+  "recommended_next_phase": "phase-1.3.m-b5c-3a chunking-reduction preflight gate audit"
+}

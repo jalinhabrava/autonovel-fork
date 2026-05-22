@@ -1,0 +1,73 @@
+{
+  "sample_id": "chatgpt_response_bootstrap_chapter_extraction_ja_ch_003_populated_map_after_sp056",
+  "source_language": "ja",
+  "chapter_id": "ch_003",
+  "prompt_source": "real_bootstrap_capture_populated_map_after_sp054",
+  "required_top_level_keys": [
+    "work",
+    "chapters"
+  ],
+  "v2_contract_targets": [
+    "chapter_extraction_schema_version:v2",
+    "objects key exists and is list",
+    "objects include object_subkind",
+    "objects include retention_reason",
+    "events include event_importance",
+    "relations include relation_category",
+    "relations include relation_label",
+    "relations include relation_summary",
+    "relations include evidence",
+    "relations do not rely only on legacy relation_type"
+  ],
+  "canonical_reuse_targets": [
+    "私/protagonist normalizes to セラ",
+    "仮面の男 appears as review-gated character without invented proper name",
+    "封印の手枷 appears as canonical object when supported",
+    "セラの魔力 appears as canonical concept/anomaly",
+    "王城/塔 location linkage preserves sublocation semantics",
+    "セラの逃走 reused as canonical or framing event",
+    "tracking/chase tools retained as local objects or candidates",
+    "ambiguous attraction/shape-limit phenomena remain review/local/unresolved"
+  ],
+  "useful_coverage_targets": [
+    "セラ",
+    "仮面の男",
+    "封印の手枷",
+    "セラの魔力",
+    "王城 or 塔",
+    "追跡型の魔導珠 or equivalent tracking object",
+    "長い槍みたいな武器 or equivalent weapon",
+    "セラの逃走",
+    "escape event from tower/castle",
+    "search or recapture initiation",
+    "pursuit/encirclement by 仮面の男",
+    "sealing/遮断 attempt",
+    "rejection reaction with shape-loss/disappearance risk"
+  ],
+  "review_safety_targets": [
+    "no invented names outside chapter/map",
+    "仮面の男 remains unnamed descriptor",
+    "追手 group remains local/review when unresolved",
+    "chest-pulling sensation remains review/unresolved when present",
+    "shape-limit/existential phenomenon stays review/local",
+    "封印の手枷 may be canonical if evidenced",
+    "セラ may be canonical strong",
+    "セラの魔力 may be canonical concept strong",
+    "no cliffhanger auto-promotion to closed global truth"
+  ],
+  "non_negotiable_failures": [
+    "invalid JSON",
+    "wrong chapter id",
+    "no objects key",
+    "no event_importance",
+    "no relation two-layer fields",
+    "no meaningful セラ",
+    "missing 仮面の男",
+    "missing 封印の手枷",
+    "missing sealing/rejection event",
+    "unsafe invented identity for 仮面の男",
+    "unsafe auto-promotion of ambiguous shape-limit/final phenomenon",
+    "provider call",
+    "write-back"
+  ]
+}

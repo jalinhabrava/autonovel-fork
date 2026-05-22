@@ -1,0 +1,81 @@
+{
+  "report_id": "bootstrap_populated_map_ch003_issue_report_after_sp056",
+  "source_language": "ja",
+  "chapter_scope": [
+    "ch_001",
+    "ch_002",
+    "ch_003"
+  ],
+  "status_date": "2026-05-22",
+  "potentially_improved_or_confirmed": [
+    {
+      "issue": "populated_map_generalization_across_three_chapter_profiles",
+      "status": "improved",
+      "notes": "Manual samples support stable populated-map behavior on prologue, protagonist-anomaly, and chase-sealing chapters."
+    },
+    {
+      "issue": "canonical_reuse_for_explicit_protagonist_sera",
+      "status": "improved",
+      "notes": "`私` consistently maps to `セラ` in ch_002 and ch_003."
+    },
+    {
+      "issue": "review_safe_handling_of_unnamed_enemy",
+      "status": "improved",
+      "notes": "`仮面の男` retained without invented proper name and stays review-gated."
+    },
+    {
+      "issue": "first_class_handling_of_sealing_artifact",
+      "status": "improved",
+      "notes": "`封印の手枷` modeled as durable object with sealing and rejection relations/events."
+    },
+    {
+      "issue": "event_priority_for_chase_sealing_rejection",
+      "status": "improved",
+      "notes": "Major events preserve pursuit, sealing attempt, and existential rejection reaction."
+    },
+    {
+      "issue": "relation_endpoint_normalization",
+      "status": "improved",
+      "notes": "Relation endpoints align with populated map anchors while retaining uncertainty states."
+    }
+  ],
+  "still_open": [
+    {
+      "issue": "provider_runtime_output_untested",
+      "status": "open",
+      "notes": "All audits remain manual ChatGPT sample based; provider runtime still not compared in this phase."
+    },
+    {
+      "issue": "global_normalization_manual",
+      "status": "open",
+      "notes": "Canonical map is still sourced from manual global normalization sample."
+    },
+    {
+      "issue": "canonical_map_scope_limited",
+      "status": "open",
+      "notes": "Map coverage limited to ch_001–ch_003 and not full novel."
+    },
+    {
+      "issue": "spanish_multilingual_behavior_untested",
+      "status": "open",
+      "notes": "Post-hardening populated-map behavior outside Japanese remains unverified."
+    },
+    {
+      "issue": "chunking_reduction_audit_pending",
+      "status": "open",
+      "notes": "No chunking/reduction prompt path audited yet."
+    },
+    {
+      "issue": "downstream_materialization_pending",
+      "status": "open",
+      "notes": "Object/relation/event downstream materialization and viewer pipeline implications still pending."
+    }
+  ],
+  "safety_summary": {
+    "provider_calls": "none",
+    "runtime_changes": "none",
+    "write_back": "none",
+    "canon_mutation": "none",
+    "network_usage": "none"
+  }
+}

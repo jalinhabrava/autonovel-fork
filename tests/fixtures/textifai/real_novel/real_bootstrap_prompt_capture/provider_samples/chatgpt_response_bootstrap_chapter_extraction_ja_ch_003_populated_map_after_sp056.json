@@ -1,0 +1,613 @@
+{
+  "work": {
+    "title": "王者の杖",
+    "language": "ja"
+  },
+  "chapters": [
+    {
+      "chapter_extraction_schema_version": "v2",
+      "chapter_id": "ch_003",
+      "chapter_title_original": "**第02話：セラの逃げ足と形の限界**",
+      "chapter_title_canonical": "第02話：セラの逃げ足と形の限界",
+      "sequence_index": 3,
+      "chapter_label_type": "episode",
+      "chapter_number_in_label": 2,
+      "title_parse_signals": {
+        "has_explicit_number": true,
+        "explicit_number_value": 2,
+        "has_colon": false,
+        "has_em_dash": false,
+        "primary_separator": null,
+        "prefix_segment": "**第02話：セラの逃げ足と形の限界**",
+        "suffix_segment": null
+      },
+      "chapter_summary": "セラは塔の裂け目から外へ出て、王城の外縁から森へ逃げ込む。彼女は単に逃げているだけではなく、胸の奥に引かれるような感覚に従ってどこかへ近づいていると感じる。内部緊急事態の警報により捜索と再確保が始まり、追跡型の魔導珠、魔導機、仮面の男たちによって包囲される。仮面の男は蒼く光る槍のような武器と封印の手枷を使い、セラを拘束ではなく遮断しようとする。手枷が触れる瞬間、セラの魔力または存在そのものが逆流し、彼女の形が崩れて何も残らないような拒絶反応が起こる。",
+      "characters": [
+        {
+          "surface": "私",
+          "canonical": "セラ",
+          "canonical_candidate": "セラ",
+          "entity_subkind": "princess_magic_anomaly",
+          "naming_quality": "pronoun_like",
+          "gender_presentation_signal": "feminine",
+          "needs_review": false,
+          "review_reason": "",
+          "review_state": "canonical",
+          "facts": [
+            "塔の裂け目から外へ逃げ、森へ向かった。",
+            "逃走中、単なる逃避ではなく何かに引かれて近づいている感覚を覚えた。",
+            "追手に包囲され、封印の手枷で遮断されそうになった。",
+            "手枷が触れる瞬間、魔力または存在そのものが拒絶反応を起こし、形が崩れるような状態になった。"
+          ],
+          "confidence": 0.95
+        },
+        {
+          "surface": "仮面の男",
+          "canonical": "仮面の男",
+          "canonical_candidate": "仮面の男",
+          "entity_subkind": "masked_pursuer",
+          "naming_quality": "descriptor",
+          "gender_presentation_signal": "masculine",
+          "needs_review": true,
+          "review_reason": "CANONICAL_ENTITY_MAPに存在する追跡者だが、固有名はまだ提示されていないためreviewが必要である。",
+          "review_state": "review",
+          "facts": [
+            "セラの逃走中に森で現れ、仮面をつけたまま正確に着地した。",
+            "兵士とは異なり、全身が戦うためにできているように描かれる。",
+            "蒼く光る槍のような武器を持ち、周囲の空気が魔法を食うような圧力を放つ。",
+            "封印の手枷を使ってセラを拘束ではなく遮断しようとした。"
+          ],
+          "confidence": 0.86
+        },
+        {
+          "surface": "やつら",
+          "canonical": "やつら",
+          "canonical_candidate": "追手",
+          "entity_subkind": "pursuer_group",
+          "naming_quality": "descriptor",
+          "gender_presentation_signal": "unknown",
+          "needs_review": true,
+          "review_reason": "複数の追手として重要だが、個別名や所属はこの章では確定しない。",
+          "review_state": "local_candidate",
+          "facts": [
+            "セラを前方と両側から包囲した。",
+            "追跡型の魔導珠や魔導機と連携し、セラを中心へ追い込んだ。"
+          ],
+          "confidence": 0.68
+        }
+      ],
+      "places": [
+        {
+          "surface": "塔",
+          "canonical": "王城",
+          "canonical_candidate": "王城",
+          "entity_subkind": "castle_subarea",
+          "naming_quality": "descriptor",
+          "gender_presentation_signal": "unknown",
+          "needs_review": false,
+          "review_reason": "",
+          "review_state": "canonical",
+          "facts": [
+            "王城の外縁、岩盤の端に張り出すように建っている。",
+            "セラは壁に開いた裂け目から塔の外へ出て逃走を始めた。"
+          ],
+          "confidence": 0.86
+        },
+        {
+          "surface": "森",
+          "canonical": "森",
+          "canonical_candidate": "王城周辺の森",
+          "entity_subkind": "forest_barrier",
+          "naming_quality": "descriptor",
+          "gender_presentation_signal": "unknown",
+          "needs_review": true,
+          "review_reason": "逃走と包囲の重要な場所だが、CANONICAL_ENTITY_MAPには独立した場所として存在しない。",
+          "review_state": "local_candidate",
+          "facts": [
+            "王城の周囲に張りめぐらされた自然の防壁のような帯として描かれる。",
+            "セラは森へ逃げ込むが、その中で追手に包囲される。"
+          ],
+          "confidence": 0.76
+        },
+        {
+          "surface": "街を囲む森と畑",
+          "canonical": "街を囲む森と畑",
+          "canonical_candidate": "王城外縁の森と畑",
+          "entity_subkind": "outer_castle_landscape",
+          "naming_quality": "descriptor",
+          "gender_presentation_signal": "unknown",
+          "needs_review": true,
+          "review_reason": "地理的文脈として有用だが、独立した継続ノートにするかは不明である。",
+          "review_state": "local_candidate",
+          "facts": [
+            "塔の下には谷を越えて、街を囲む森と畑が広がっている。",
+            "セラの逃走経路が王城外へ向かっていることを示す。"
+          ],
+          "confidence": 0.62
+        }
+      ],
+      "concepts": [
+        {
+          "surface": "セラの魔力",
+          "canonical": "セラの魔力",
+          "canonical_candidate": "セラの壊れた魔力",
+          "entity_subkind": "magic_anomaly",
+          "naming_quality": "descriptor",
+          "gender_presentation_signal": "unknown",
+          "needs_review": false,
+          "review_reason": "",
+          "review_state": "canonical",
+          "facts": [
+            "仮面の男の周囲ではセラの魔力が内側に沈み、拒絶するように反応した。",
+            "封印の手枷に触れる瞬間、積み重ねた魔力の層が殻ごと裏返り、逆流した。",
+            "炎や光として外へ爆ぜるのではなく、セラ自身の形を崩すような反応を起こした。"
+          ],
+          "confidence": 0.92
+        },
+        {
+          "surface": "封印",
+          "canonical": "封印",
+          "canonical_candidate": "封印",
+          "entity_subkind": "magic_suppression",
+          "naming_quality": "proper_name",
+          "gender_presentation_signal": "unknown",
+          "needs_review": true,
+          "review_reason": "封印は重要な魔法的処置として描かれるが、システム上の詳細はこの章だけでは不明である。",
+          "review_state": "local_candidate",
+          "facts": [
+            "封印は拘束ではなく遮断のためのものとしてセラに理解される。",
+            "封印の手枷はセラの存在そのものに強い拒絶反応を起こさせた。"
+          ],
+          "confidence": 0.78
+        },
+        {
+          "surface": "形の限界",
+          "canonical": "形の限界",
+          "canonical_candidate": "セラの形の限界",
+          "entity_subkind": "identity_body_limit",
+          "naming_quality": "descriptor",
+          "gender_presentation_signal": "unknown",
+          "needs_review": true,
+          "review_reason": "章題と終盤の描写に強く結びつく概念だが、正確な魔法体系上の意味は未確定である。",
+          "review_state": "local_candidate",
+          "facts": [
+            "封印の瞬間、セラは腕も脚も皮膚すらもなくなり、自分という形が形でなくなっていくと感じる。",
+            "この反応はセラの魔力異常だけでなく、存在や身体の境界に関わる可能性がある。"
+          ],
+          "confidence": 0.72
+        }
+      ],
+      "objects": [
+        {
+          "surface": "追跡型の魔導珠",
+          "canonical": "追跡型の魔導珠",
+          "canonical_candidate": "追跡型の魔導珠",
+          "local_candidate": "追跡型の魔導珠",
+          "object_subkind": "tool",
+          "naming_quality": "descriptor",
+          "needs_review": true,
+          "review_reason": "追跡用装置として重要だが、CANONICAL_ENTITY_MAPにはなく、この章での使用が継続設定か一時装置かは未確定である。",
+          "review_state": "local_candidate",
+          "facts": [
+            "空を横切り、セラの頭上に固定された。",
+            "追尾印を刻み、セラの捜索と再確保を支援した。"
+          ],
+          "relationships": [
+            {
+              "to_surface": "セラ",
+              "to_canonical": "セラ",
+              "relation_category": "conflict",
+              "relation_label": "marks_for_tracking",
+              "relation_summary": "追跡型の魔導珠はセラの頭上に固定され、追尾印を刻んだ。",
+              "evidence": [
+                "追跡型の魔導珠。",
+                "私の頭上に固定され、追尾印が刻まれる。"
+              ],
+              "facts": [
+                "魔導珠はセラの逃走を追跡可能にする装置として機能する。"
+              ],
+              "confidence": 0.82,
+              "needs_review": false,
+              "review_reason": ""
+            }
+          ],
+          "confidence": 0.78,
+          "retention_reason": "event_trigger"
+        },
+        {
+          "surface": "軽量型の魔導機",
+          "canonical": "軽量型の魔導機",
+          "canonical_candidate": "軽量型の魔導機",
+          "local_candidate": "軽量型の魔導機",
+          "object_subkind": "tool",
+          "naming_quality": "descriptor",
+          "needs_review": true,
+          "review_reason": "追跡・狩猟用の魔導機として重要だが、個別機体としての継続性は未確定である。",
+          "review_state": "local_candidate",
+          "facts": [
+            "巡回ではなく、セラを狩るためのものとして描かれる。",
+            "空中からセラめがけて落ちてきた。"
+          ],
+          "relationships": [],
+          "confidence": 0.72,
+          "retention_reason": "temporary_scene_use"
+        },
+        {
+          "surface": "長い槍みたいな武器",
+          "canonical": "長い槍みたいな武器",
+          "canonical_candidate": "蒼く光る槍",
+          "local_candidate": "長い槍みたいな武器",
+          "object_subkind": "weapon",
+          "naming_quality": "descriptor",
+          "needs_review": true,
+          "review_reason": "仮面の男の武器として強い魔法抑制的特徴を持つが、正式名称や継続的な正規化先は未確定である。",
+          "review_state": "local_candidate",
+          "facts": [
+            "仮面の男が持つ長い槍のような武器である。",
+            "柄の中央に蒼い光が灯り、生きているように描かれる。",
+            "武器が地面に触れると低い金属音が喉に響き、周囲の空気が魔法を食うように感じられる。"
+          ],
+          "relationships": [
+            {
+              "to_surface": "仮面の男",
+              "to_canonical": "仮面の男",
+              "relation_category": "object_link",
+              "relation_label": "wields",
+              "relation_summary": "仮面の男は蒼く光る槍のような武器を持ち、セラの魔力を沈ませるような圧力を放つ。",
+              "evidence": [
+                "手には、長い槍みたいな武器。",
+                "あの男の周囲だけ、空気が魔法を食ってるみたいだった。"
+              ],
+              "facts": [
+                "武器は仮面の男の魔法抑制的な脅威を示す。"
+              ],
+              "confidence": 0.8,
+              "needs_review": true,
+              "review_reason": "武器そのものの能力か仮面の男の能力かは未確定である。"
+            }
+          ],
+          "confidence": 0.78,
+          "retention_reason": "plot_persistent"
+        },
+        {
+          "surface": "手枷",
+          "canonical": "封印の手枷",
+          "canonical_candidate": "封印の手枷",
+          "local_candidate": "黒く細い金属の輪",
+          "object_subkind": "persistent_artifact",
+          "naming_quality": "descriptor",
+          "needs_review": false,
+          "review_reason": "",
+          "review_state": "canonical",
+          "facts": [
+            "仮面の男が腰のベルトから取り出した黒く細い金属の輪である。",
+            "セラはそれを拘束ではなく遮断のためのものだと理解する。",
+            "手枷が肌に触れる瞬間、セラの魔力または存在が強く拒絶反応を起こした。"
+          ],
+          "relationships": [
+            {
+              "to_surface": "セラ",
+              "to_canonical": "セラ",
+              "relation_category": "conflict",
+              "relation_label": "attempts_to_seal",
+              "relation_summary": "封印の手枷はセラを拘束ではなく遮断しようとする道具として使われた。",
+              "evidence": [
+                "あれは、封印のためのもの。",
+                "拘束じゃなく、「遮断」のため。",
+                "冷たい金属が、肌に触れる——"
+              ],
+              "facts": [
+                "手枷はセラの魔力または存在を遮断する目的を持つ。"
+              ],
+              "confidence": 0.9,
+              "needs_review": false,
+              "review_reason": ""
+            },
+            {
+              "to_surface": "セラの魔力",
+              "to_canonical": "セラの魔力",
+              "relation_category": "magic_or_system",
+              "relation_label": "triggers_rejection_response",
+              "relation_summary": "封印の手枷が触れる瞬間、セラの魔力または存在は逆流し、形を失うような拒絶反応を起こした。",
+              "evidence": [
+                "その瞬間、反応した。",
+                "積み重ねた魔力の層。全部、殻ごと裏返った。",
+                "私って形が、形じゃなくなっていく。"
+              ],
+              "facts": [
+                "手枷はセラの魔力異常を通常の爆発ではなく存在的な拒絶反応として発現させた。"
+              ],
+              "confidence": 0.9,
+              "needs_review": false,
+              "review_reason": ""
+            }
+          ],
+          "confidence": 0.92,
+          "retention_reason": "event_trigger"
+        }
+      ],
+      "events": [
+        {
+          "surface": "セラの塔外脱出",
+          "canonical": "セラの逃走",
+          "canonical_candidate": "セラの逃走",
+          "entity_subkind": "escape_and_pursuit",
+          "local_candidate": "セラの塔外脱出",
+          "event_importance": "major",
+          "naming_quality": "descriptor",
+          "gender_presentation_signal": "unknown",
+          "needs_review": false,
+          "review_reason": "",
+          "review_state": "canonical",
+          "facts": [
+            "セラは壁に開いた裂け目から塔の外へ出て、斜面を転がるように下った。",
+            "王城外縁から森へ向かい、王城からの逃走を継続した。"
+          ],
+          "confidence": 0.86
+        },
+        {
+          "surface": "セラが何かに引かれて進む",
+          "canonical": "セラが何かに引かれて進む",
+          "canonical_candidate": "セラの誘引感覚",
+          "entity_subkind": "mysterious_guidance",
+          "local_candidate": "セラの誘引感覚",
+          "event_importance": "supporting",
+          "naming_quality": "descriptor",
+          "gender_presentation_signal": "unknown",
+          "needs_review": true,
+          "review_reason": "逃走と今後の目的地に関わる可能性があるが、原因や対象はこの章では不明である。",
+          "review_state": "local_candidate",
+          "facts": [
+            "セラは逃げている途中で、胸の奥を引っ張られるような感覚を覚える。",
+            "セラは自分が逃げているのではなく、何かへ近づいているように感じる。"
+          ],
+          "confidence": 0.72
+        },
+        {
+          "surface": "内部緊急事態による再確保開始",
+          "canonical": "セラの逃走",
+          "canonical_candidate": "セラの逃走",
+          "entity_subkind": "recapture_order",
+          "local_candidate": "内部緊急事態による再確保開始",
+          "event_importance": "supporting",
+          "naming_quality": "descriptor",
+          "gender_presentation_signal": "unknown",
+          "needs_review": false,
+          "review_reason": "",
+          "review_state": "candidate",
+          "facts": [
+            "警報音が内部緊急事態を知らせ、セラの捜索が始まった。",
+            "その意味は保護ではなく、強制的に確保し直すことだった。"
+          ],
+          "confidence": 0.82
+        },
+        {
+          "surface": "仮面の男による包囲",
+          "canonical": "セラの逃走",
+          "canonical_candidate": "仮面の男による包囲",
+          "entity_subkind": "pursuit_encirclement",
+          "local_candidate": "仮面の男による包囲",
+          "event_importance": "major",
+          "naming_quality": "descriptor",
+          "gender_presentation_signal": "unknown",
+          "needs_review": true,
+          "review_reason": "セラの逃走イベントに属するが、仮面の男の初登場・能力提示として独立して重要である。",
+          "review_state": "candidate",
+          "facts": [
+            "追跡型の魔導珠と魔導機がセラを追い、仮面の男が現れた。",
+            "仮面の男たちはセラの逃げ道を消し、中心に追い込んだ。",
+            "仮面の男は蒼く光る槍のような武器を構え、セラを封印の手枷へ追い込んだ。"
+          ],
+          "confidence": 0.86
+        },
+        {
+          "surface": "封印の手枷による遮断未遂",
+          "canonical": "封印の手枷による遮断未遂",
+          "canonical_candidate": "封印の手枷による遮断未遂",
+          "entity_subkind": "sealing_attempt",
+          "local_candidate": "封印の手枷による遮断未遂",
+          "event_importance": "major",
+          "naming_quality": "descriptor",
+          "gender_presentation_signal": "unknown",
+          "needs_review": false,
+          "review_reason": "",
+          "review_state": "candidate",
+          "facts": [
+            "仮面の男はセラを倒すのではなく、箱を閉じるように手枷を伸ばした。",
+            "手枷は拘束ではなく遮断のための封印具として描かれる。",
+            "手枷が触れる瞬間、セラの魔力または存在が拒絶反応を起こした。"
+          ],
+          "confidence": 0.9
+        },
+        {
+          "surface": "セラの形が崩れる拒絶反応",
+          "canonical": "セラの魔力",
+          "canonical_candidate": "セラの形が崩れる拒絶反応",
+          "entity_subkind": "existential_magic_rejection",
+          "local_candidate": "セラの形の崩壊",
+          "event_importance": "major",
+          "naming_quality": "descriptor",
+          "gender_presentation_signal": "unknown",
+          "needs_review": true,
+          "review_reason": "CANONICAL_ENTITY_MAPではセラの魔力に関連づけられるが、現象の正確な分類は後続章で確認が必要である。",
+          "review_state": "candidate",
+          "facts": [
+            "セラの積み重ねた魔力の層が殻ごと裏返り、外へ爆ぜるのではなく逆流した。",
+            "セラは自分の腕も脚も皮膚もなくなり、形が形ではなくなるように感じた。",
+            "封印される瞬間、体と魂が全力でそれを拒んだ。",
+            "その後には何も残らなかったと描かれる。"
+          ],
+          "confidence": 0.86
+        }
+      ],
+      "relations": [
+        {
+          "from_surface": "私",
+          "from_canonical": "セラ",
+          "from_canonical_candidate": "セラ",
+          "to_surface": "王城",
+          "to_canonical": "王城",
+          "to_canonical_candidate": "王城",
+          "relation_category": "location",
+          "relation_label": "escapes_from",
+          "relation_summary": "セラは塔の裂け目から王城外縁へ出て、森へ逃げ込む。",
+          "evidence": [
+            "壁に開いた裂け目から、灰色の空と、すぐ下の急な斜面が見えた。",
+            "塔は城の外縁、岩盤の端に張り出すように建っている。",
+            "その先には、森があった。"
+          ],
+          "facts": [
+            "セラの逃走は王城の塔から外部へ出る形で進行する。"
+          ],
+          "confidence": 0.86,
+          "needs_review": false,
+          "review_reason": ""
+        },
+        {
+          "from_surface": "私",
+          "from_canonical": "セラ",
+          "from_canonical_candidate": "セラ",
+          "to_surface": "仮面の男",
+          "to_canonical": "仮面の男",
+          "to_canonical_candidate": "仮面の男",
+          "relation_category": "conflict",
+          "relation_label": "pursued_by",
+          "relation_summary": "セラは仮面の男と追手に包囲され、逃げ道を失う。",
+          "evidence": [
+            "そいつ——男だってすぐわかった——は、仮面をつけたまま、寸分違わず着地した。",
+            "三人が前方、両側から二人、中央に——あの男。",
+            "逃げ道はなかった。"
+          ],
+          "facts": [
+            "仮面の男はセラの再確保に関わる主要な追跡者である。"
+          ],
+          "confidence": 0.88,
+          "needs_review": true,
+          "review_reason": "仮面の男の固有名と所属は未確定である。"
+        },
+        {
+          "from_surface": "仮面の男",
+          "from_canonical": "仮面の男",
+          "from_canonical_candidate": "仮面の男",
+          "to_surface": "手枷",
+          "to_canonical": "封印の手枷",
+          "to_canonical_candidate": "封印の手枷",
+          "relation_category": "object_link",
+          "relation_label": "uses_to_seal",
+          "relation_summary": "仮面の男は封印の手枷を取り出し、セラを遮断しようとした。",
+          "evidence": [
+            "腰のベルトから、黒く細い金属の輪を取り出す。",
+            "あれは、封印のためのもの。",
+            "拘束じゃなく、「遮断」のため。"
+          ],
+          "facts": [
+            "仮面の男は封印の手枷の使用者として描かれる。"
+          ],
+          "confidence": 0.9,
+          "needs_review": false,
+          "review_reason": ""
+        },
+        {
+          "from_surface": "封印の手枷",
+          "from_canonical": "封印の手枷",
+          "from_canonical_candidate": "封印の手枷",
+          "to_surface": "セラ",
+          "to_canonical": "セラ",
+          "to_canonical_candidate": "セラ",
+          "relation_category": "conflict",
+          "relation_label": "attempts_to_seal",
+          "relation_summary": "封印の手枷はセラを拘束ではなく遮断しようとする道具として使われる。",
+          "evidence": [
+            "あれは、封印のためのもの。",
+            "拘束じゃなく、「遮断」のため。",
+            "冷たい金属が、肌に触れる——"
+          ],
+          "facts": [
+            "封印の手枷はセラの存在または魔力を遮断するために使われた。"
+          ],
+          "confidence": 0.9,
+          "needs_review": false,
+          "review_reason": ""
+        },
+        {
+          "from_surface": "封印の手枷",
+          "from_canonical": "封印の手枷",
+          "from_canonical_candidate": "封印の手枷",
+          "to_surface": "セラの魔力",
+          "to_canonical": "セラの魔力",
+          "to_canonical_candidate": "セラの壊れた魔力",
+          "relation_category": "magic_or_system",
+          "relation_label": "triggers_rejection_response",
+          "relation_summary": "封印の手枷が触れる瞬間、セラの魔力または存在が逆流し、形を失うような拒絶反応を起こした。",
+          "evidence": [
+            "その瞬間、反応した。",
+            "積み重ねた魔力の層。全部、殻ごと裏返った。",
+            "逆流する。",
+            "私って形が、形じゃなくなっていく。"
+          ],
+          "facts": [
+            "手枷はセラの魔力異常を存在的な拒絶反応として顕在化させる。"
+          ],
+          "confidence": 0.92,
+          "needs_review": false,
+          "review_reason": ""
+        },
+        {
+          "from_surface": "私",
+          "from_canonical": "セラ",
+          "from_canonical_candidate": "セラ",
+          "to_surface": "胸の奥を引っぱってくる感覚",
+          "to_canonical": "胸の奥を引っぱってくる感覚",
+          "to_canonical_candidate": "セラの誘引感覚",
+          "relation_category": "unknown_association",
+          "relation_label": "drawn_toward_unknown",
+          "relation_summary": "セラは逃走中、何かに引かれて進んでいるような感覚を覚えるが、その対象や原因は不明である。",
+          "evidence": [
+            "なにかが、胸の奥を引っぱってくる。",
+            "もう逃げてるんじゃない。近づいてる。"
+          ],
+          "facts": [
+            "この誘引感覚は今後の目的地や魔法的結びつきにつながる可能性がある。"
+          ],
+          "confidence": 0.66,
+          "needs_review": true,
+          "review_reason": "対象・原因・システム上の意味が不明である。"
+        }
+      ],
+      "unresolved_mentions": [
+        {
+          "surface": "胸の奥を引っぱってくるもの",
+          "possible_kind": "concept",
+          "facts": [
+            "セラを逃走ではなく何かへ近づけているように感じさせるが、対象も原因も不明である。"
+          ],
+          "confidence": 0.58
+        },
+        {
+          "surface": "知らない紋章",
+          "possible_kind": "object",
+          "facts": [
+            "札が展開して現れ、セラの進路を消したが、術式や所属は不明である。"
+          ],
+          "confidence": 0.48
+        },
+        {
+          "surface": "犬みたいな鳴き声",
+          "possible_kind": "unknown",
+          "facts": [
+            "追跡開始時に聞こえるが、正体は犬ではない何かとされるだけで詳細は不明である。"
+          ],
+          "confidence": 0.36
+        },
+        {
+          "surface": "追手",
+          "possible_kind": "character",
+          "facts": [
+            "セラを再確保するための複数の存在として描かれるが、個別名や所属は未確定である。"
+          ],
+          "confidence": 0.52
+        }
+      ]
+    }
+  ]
+}
