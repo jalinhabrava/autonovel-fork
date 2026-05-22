@@ -19,7 +19,11 @@ if str(REPO_ROOT) not in sys.path:
 
 from textifai.bootstrap.source_reader import build_source_document_inventory
 from textifai.import_review.chapterizer import detect_story_chapters
-from textifai.import_review.structured_bootstrap_v1 import NovelBootstrapV1Config, run_structured_bootstrap_v1
+from textifai.import_review.structured_bootstrap_v1 import (
+    NovelBootstrapV1Config,
+    build_canonical_entity_map,
+    run_structured_bootstrap_v1,
+)
 
 
 @dataclass
@@ -53,12 +57,14 @@ class _CaptureProvider:
         source_language: str,
         chapter_lookup: dict[str, dict[str, Any]],
         captures: list[CapturedRequest],
+        global_normalization_override: dict[str, Any] | None = None,
     ):
         self._source_file = source_file
         self._source_root = source_root
         self._source_language = source_language
         self._chapter_lookup = chapter_lookup
         self._captures = captures
+        self._global_normalization_override = global_normalization_override
 
     def generate(self, request):
         chapter_id = _extract_prefixed_value(request.messages, "CHAPTER_ID:")
@@ -84,7 +90,15 @@ class _CaptureProvider:
             captured_at=datetime.now(timezone.utc).isoformat(),
         )
         self._captures.append(capture)
-        return SimpleNamespace(text=_fake_response_text(request.task, chapter_id, chapter_meta, self._source_language))
+        return SimpleNamespace(
+            text=_fake_response_text(
+                request.task,
+                chapter_id,
+                chapter_meta,
+                self._source_language,
+                global_normalization_override=self._global_normalization_override,
+            )
+        )
 
 
 def capture_bootstrap_prompts(
@@ -95,6 +109,7 @@ def capture_bootstrap_prompts(
     max_chapters: int = 3,
     source_file: str | Path | None = None,
     timestamp: str | None = None,
+    global_normalization_json: str | Path | None = None,
 ) -> Path:
     source_root = Path(source_root).expanduser().resolve()
     output_root = Path(output_root).expanduser().resolve()
@@ -110,6 +125,14 @@ def capture_bootstrap_prompts(
 
     source_doc = inventory.documents[0]
     source_path = Path(source_doc.path)
+    global_normalization_override_path = (
+        Path(global_normalization_json).expanduser().resolve() if global_normalization_json else None
+    )
+    global_normalization_override = (
+        _load_global_normalization_override(global_normalization_override_path)
+        if global_normalization_override_path is not None
+        else None
+    )
     source_text = source_path.read_text(encoding="utf-8", errors="replace")
     detected_chapters = detect_story_chapters(source_doc, source_text)
     if max_chapters:
@@ -129,6 +152,7 @@ def capture_bootstrap_prompts(
         source_language=source_doc.dominant_language or primary_language or "unknown",
         chapter_lookup=chapter_lookup,
         captures=captures,
+        global_normalization_override=global_normalization_override,
     )
 
     config = NovelBootstrapV1Config(
@@ -159,10 +183,22 @@ def capture_bootstrap_prompts(
         "request_count": len(captures),
         "provider_calls": False,
         "capture_only": True,
+        "global_normalization_override_enabled": global_normalization_override is not None,
+        "global_normalization_override_json": str(global_normalization_override_path) if global_normalization_override_path else None,
         "vault_root_used": str(vault_root),
         "result_artifacts_root": str(vault_root / "99_System"),
+        "canonical_entity_map_pipeline_path": str(result.canonical_entity_map_path),
+        "canonical_entity_map_from_override": None,
         "requests": [],
     }
+    if global_normalization_override is not None:
+        canonical_map_from_override = build_canonical_entity_map(global_normalization_override)
+        canonical_map_from_override_path = capture_dir / "canonical_entity_map_from_override.json"
+        canonical_map_from_override_path.write_text(
+            json.dumps(canonical_map_from_override, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        manifest["canonical_entity_map_from_override"] = str(canonical_map_from_override_path)
 
     for capture in captures:
         task_slug = _slugify_task(capture.task)
@@ -237,8 +273,17 @@ def _slugify_task(task: str | None) -> str:
     return "".join(ch if ch.isalnum() or ch == "_" else "_" for ch in raw).strip("_") or "unknown"
 
 
-def _fake_response_text(task: str | None, chapter_id: str | None, chapter_meta: dict[str, Any], source_language: str) -> str:
+def _fake_response_text(
+    task: str | None,
+    chapter_id: str | None,
+    chapter_meta: dict[str, Any],
+    source_language: str,
+    *,
+    global_normalization_override: dict[str, Any] | None = None,
+) -> str:
     if task == "bootstrap_global_normalization":
+        if isinstance(global_normalization_override, dict):
+            return json.dumps(global_normalization_override, ensure_ascii=False)
         return json.dumps(
             {
                 "work": {"title": "Capture Stub", "language": source_language},
@@ -275,6 +320,18 @@ def _fake_response_text(task: str | None, chapter_id: str | None, chapter_meta: 
     )
 
 
+def _load_global_normalization_override(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        raise SystemExit(f"Global normalization override file not found: {path}")
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise SystemExit("Global normalization override must be a JSON object.")
+    for key in ["work", "entities", "merge_plan"]:
+        if key not in payload:
+            raise SystemExit(f"Global normalization override missing required top-level key: {key}")
+    return payload
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Capture real TextifAI bootstrap prompts without provider calls.")
     parser.add_argument("--source-root", required=True)
@@ -282,6 +339,7 @@ def main() -> int:
     parser.add_argument("--output-root", default="/tmp/textifai_prompt_capture")
     parser.add_argument("--primary-language")
     parser.add_argument("--max-chapters", type=int, default=3)
+    parser.add_argument("--global-normalization-json")
     args = parser.parse_args()
 
     manifest_path = capture_bootstrap_prompts(
@@ -290,6 +348,7 @@ def main() -> int:
         output_root=args.output_root,
         primary_language=args.primary_language,
         max_chapters=args.max_chapters,
+        global_normalization_json=args.global_normalization_json,
     )
     print(manifest_path)
     return 0
