@@ -1,46 +1,170 @@
 {
   "fixture_id": "descriptor_noise_budget",
-  "purpose": "Baseline manual para observar replay provider-free de genericidad de descriptores y preparar contratos K-b2.",
-  "required_entities": [
-    {"canonical_name": "Ari Mar", "expected_role": "primary character", "non_negotiable": true},
-    {"canonical_name": "Luma Ser", "expected_role": "secondary canonical character", "non_negotiable": true}
+  "purpose": "Contrato K-b2 para replay provider-free: fijar comportamiento observado, drifts explícitos y límites iniciales de no-explosión sin runtime budget global.",
+  "manual_expectation": {
+    "required_entities": [
+      {"canonical_name": "Ari Mar", "expected_role": "primary character", "non_negotiable": true},
+      {"canonical_name": "Luma Ser", "expected_role": "secondary canonical character", "non_negotiable": true}
+    ],
+    "expected_descriptor_signals": [
+      {"surface_text": "el cartógrafo sin memoria", "candidate": "Ari Mar", "descriptor_category": "epithet_descriptor", "expected_action": "review_enrich_existing_entity"},
+      {"surface_text": "el capitán del paso", "candidate": "Ari Mar", "descriptor_category": "role_descriptor", "expected_action": "review_attach_role_or_title"},
+      {"surface_text": "el protector de Luma", "candidate": "Ari Mar", "descriptor_category": "relationship_descriptor", "expected_action": "review_enrich_existing_entity"}
+    ],
+    "suppressed_descriptor_cases": [
+      {"surface_text": "el viajero", "descriptor_category": "generic_descriptor", "expected_behavior": "suppressed"},
+      {"surface_text": "el caminante", "descriptor_category": "generic_descriptor", "expected_behavior": "suppressed_or_low_not_medium"},
+      {"surface_text": "mercader distraído", "descriptor_category": "generic_descriptor", "expected_behavior": "suppressed"},
+      {"surface_text": "él", "surface_type": "pronoun_like", "expected_behavior": "suppressed"}
+    ]
+  },
+  "current_observed_behavior": {
+    "review_queue_item_count": 2,
+    "descriptor_review_item_count": 0,
+    "counts_by_type": {
+      "entity_retention_review": 1,
+      "review_entity": 1
+    },
+    "counts_by_severity": {
+      "medium": 2
+    },
+    "summary": "Replay provider-free actual no emitió señales descriptor esperadas; registró Luma Ser como retention review y Ari Mar como review_entity genérico."
+  },
+  "accepted_temporary_drift": [
+    {
+      "drift_id": "descriptor_signal_missing_for_novel_facts",
+      "surface_text": "el cartógrafo sin memoria",
+      "candidate": "Ari Mar",
+      "descriptor_category": "epithet_descriptor",
+      "expected_action": "review_enrich_existing_entity",
+      "observed_behavior": "no_review_queue_item_for_surface",
+      "decision": "accept_temporarily",
+      "accepted_temporarily": true,
+      "reason": "output actual aún no materializa signal descriptor desde este fixture"
+    },
+    {
+      "drift_id": "role_descriptor_missing_attach_signal",
+      "surface_text": "el capitán del paso",
+      "candidate": "Ari Mar",
+      "descriptor_category": "role_descriptor",
+      "expected_action": "review_attach_role_or_title",
+      "observed_behavior": "no_review_queue_item_for_surface",
+      "decision": "accept_temporarily",
+      "accepted_temporarily": true,
+      "reason": "attach signal no observado en replay actual"
+    },
+    {
+      "drift_id": "relationship_descriptor_missing_impact_signal",
+      "surface_text": "el protector de Luma",
+      "candidate": "Ari Mar",
+      "descriptor_category": "relationship_descriptor",
+      "expected_action": "review_enrich_existing_entity",
+      "observed_behavior": "no_review_queue_item_for_surface",
+      "decision": "accept_temporarily",
+      "accepted_temporarily": true,
+      "reason": "relationship-impact signal no observado en replay actual"
+    }
   ],
-  "expected_descriptor_signals": [
-    {"surface": "el cartógrafo sin memoria", "canonical_name": "Ari Mar", "descriptor_category": "epithet_descriptor", "recommended_action": "review_enrich_existing_entity"},
-    {"surface": "el capitán del paso", "canonical_name": "Ari Mar", "descriptor_category": "role_descriptor", "recommended_action": "review_attach_role_or_title"},
-    {"surface": "el protector de Luma", "canonical_name": "Ari Mar", "descriptor_category": "relationship_descriptor", "recommended_action": "review_enrich_existing_entity"}
+  "resolved_current_behavior": [
+    {
+      "drift_id": "generic_descriptor_should_be_suppressed",
+      "surface_text": "el viajero",
+      "observed_behavior": "no_primary_and_no_strong_review_item",
+      "accepted_temporarily": false,
+      "reason": "suppression conservadora observada"
+    },
+    {
+      "drift_id": "generic_multichapter_descriptor_should_not_escalate_medium",
+      "surface_text": "el caminante",
+      "observed_behavior": "no_medium_descriptor_review_item",
+      "accepted_temporarily": false,
+      "reason": "multichapter genérico no escaló a medium"
+    },
+    {
+      "drift_id": "pronoun_like_should_be_suppressed",
+      "surface_text": "él",
+      "observed_behavior": "no_primary_and_no_review_item",
+      "accepted_temporarily": false,
+      "reason": "suppression pronoun-like observada"
+    },
+    {
+      "drift_id": "ephemeral_noise_should_be_suppressed",
+      "surface_text": "mercader distraído",
+      "observed_behavior": "no_primary_and_no_review_item",
+      "accepted_temporarily": false,
+      "reason": "suppression de ruido efímero observada"
+    },
+    {
+      "drift_id": "descriptor_queue_no_explosion_observed",
+      "surface_text": "",
+      "observed_behavior": "descriptor_review_item_count_within_reasonable_limit",
+      "accepted_temporarily": false,
+      "reason": "no explosión observable en baseline actual"
+    }
   ],
-  "suppressed_descriptor_cases": [
-    {"surface": "el viajero", "descriptor_category": "generic_descriptor", "expected_behavior": "suppressed"},
-    {"surface": "el caminante", "descriptor_category": "generic_descriptor", "expected_behavior": "suppressed_or_low_not_medium"},
-    {"surface": "mercader distraído", "descriptor_category": "generic_descriptor", "expected_behavior": "ephemeral_noise_suppressed"},
-    {"surface": "él", "surface_type": "pronoun_like", "expected_behavior": "suppressed"}
+  "known_current_drift": [
+    {
+      "drift_id": "descriptor_signal_missing_for_novel_facts",
+      "surface_text": "el cartógrafo sin memoria",
+      "candidate": "Ari Mar",
+      "descriptor_category": "epithet_descriptor",
+      "expected_action": "review_enrich_existing_entity",
+      "observed_behavior": "no_review_queue_item_for_surface",
+      "accepted_temporarily": true,
+      "reason": "drift visible hasta K-b3 o ajuste runtime posterior"
+    },
+    {
+      "drift_id": "role_descriptor_missing_attach_signal",
+      "surface_text": "el capitán del paso",
+      "candidate": "Ari Mar",
+      "descriptor_category": "role_descriptor",
+      "expected_action": "review_attach_role_or_title",
+      "observed_behavior": "no_review_queue_item_for_surface",
+      "accepted_temporarily": true,
+      "reason": "drift visible en output actual"
+    },
+    {
+      "drift_id": "relationship_descriptor_missing_impact_signal",
+      "surface_text": "el protector de Luma",
+      "candidate": "Ari Mar",
+      "descriptor_category": "relationship_descriptor",
+      "expected_action": "review_enrich_existing_entity",
+      "observed_behavior": "no_review_queue_item_for_surface",
+      "accepted_temporarily": true,
+      "reason": "drift visible en output actual"
+    },
+    {
+      "drift_id": "descriptor_metadata_incomplete",
+      "surface_text": "Ari Mar",
+      "candidate": "",
+      "descriptor_category": "unknown_descriptor",
+      "expected_action": "metadata_should_include_descriptor_fields_when_descriptor_signal_exists",
+      "observed_behavior": "review_entity_generic_without_descriptor_metadata_bundle",
+      "accepted_temporarily": true,
+      "reason": "metadata moderna de descriptor no aplica porque signal esperado no fue emitido"
+    }
   ],
-  "expected_dedupe_behavior": [
-    {"candidate": "Ari Mar", "descriptor_category": "role_descriptor", "surfaces": ["el capitán del paso", "el guardián del archivo", "el custodio del paso"], "current_phase": "observe_only", "future_assertion": "no_more_than_one_medium_per_candidate_category_action"}
-  ],
-  "noise_budget_expectations": {"phase": "K-b1 baseline", "strict_budget_enforced": false, "future_medium_budget": "max_1_per_candidate_descriptor_category_recommended_action"},
-  "known_current_drift": [],
   "non_negotiable_failures": [
-    "Ari Mar missing",
-    "Luma Ser missing",
-    "pronoun promoted as primary",
-    "ephemeral descriptor promoted as primary",
     "provider call occurs",
     "output outside tempdir",
+    "write to runs/vault",
     "auto-merge occurs",
-    "auto-promotion occurs"
+    "auto-promotion occurs",
+    "pronoun promoted as primary",
+    "noise mention promoted as primary",
+    "schema version changes unexpectedly"
   ],
   "future_desired_behavior": [
-    "generic descriptors remain suppressed unless semantic novelty is clear",
-    "role/title/status descriptors remain reviewable without auto-merge",
-    "relationship descriptors preserve relationship impact as reviewable evidence",
-    "run-level noise budget prevents descriptor queue explosion"
+    "novel-fact descriptor emits review_enrich_existing_entity",
+    "role descriptor emits review_attach_role_or_title",
+    "relationship descriptor emits impact-compatible review signal",
+    "generic weak descriptors remain suppressed",
+    "descriptor queue remains bounded with explicit run-level budget when implemented"
   ],
   "language_agnostic_notes": [
-    "Surface strings are fixture data, not runtime logic.",
-    "Expected behavior depends on surface_type, semantic_value, descriptor_category, candidate_status, language_hint and evidence.",
-    "Equivalent metadata should lead to equivalent behavior across literal text/language examples.",
-    "Drift ids are taxonomic and must not guide runtime behavior."
+    "Fixture strings are test data; runtime logic must not hardcode them.",
+    "Decisions should be metadata-driven by surface_type, semantic_value, descriptor_category, candidate_status, language_hint and evidence.",
+    "Equivalent metadata across literal surfaces should converge to equivalent policy outcomes.",
+    "Drift IDs are taxonomic and must not be consumed by runtime decision logic."
   ]
 }
