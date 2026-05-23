@@ -17,6 +17,7 @@ assert SPEC and SPEC.loader
 MODULE = importlib.util.module_from_spec(SPEC)
 sys.modules[SPEC.name] = MODULE
 SPEC.loader.exec_module(MODULE)
+FIXTURE_ROOT = Path("tests/fixtures/textifai/real_provider_dryrun/expected")
 
 
 class RealProviderDryRunGuardsTests(unittest.TestCase):
@@ -143,7 +144,11 @@ class RealProviderDryRunGuardsTests(unittest.TestCase):
             self.assertEqual(captured["request"].response_format, {"type": "json_object"})
             self.assertEqual(captured["request"].provider_name, "deepseek")
             self.assertEqual(captured["request"].model, "deepseek-v4-flash")
+            self.assertEqual(captured["request"].max_tokens, 8192)
 
+            manifest = json.loads((output_dir / "dryrun_manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(manifest["max_output_tokens"], 8192)
+            self.assertEqual(manifest["max_output_tokens_source"], "default")
             validation = json.loads((output_dir / "validation_report.json").read_text(encoding="utf-8"))
             self.assertTrue(validation["ok"])
             self.assertEqual(validation["details"]["chapter_id"], "ch_002")
@@ -190,6 +195,82 @@ class RealProviderDryRunGuardsTests(unittest.TestCase):
             self.assertFalse(validation["ok"])
             self.assertFalse(validation["response_parseable_json"])
 
+    def test_user_provided_max_output_tokens_reaches_request_and_manifest(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            prompt_path = Path(tmp) / "capture.md"
+            prompt_path.write_text(_sample_capture_markdown(), encoding="utf-8")
+            output_root = Path(tmp) / "out"
+            captured = {}
+
+            class Provider:
+                def generate(self, request):
+                    captured["request"] = request
+                    return TextGenerationResponse(
+                        text=json.dumps(_valid_payload(), ensure_ascii=False),
+                        raw={},
+                        provider_name="deepseek",
+                        model="deepseek-v4-flash",
+                        task="bootstrap_chapter_extraction",
+                    )
+
+            args = MODULE.build_parser().parse_args(
+                [
+                    "--prompt-file",
+                    str(prompt_path),
+                    "--provider",
+                    "deepseek",
+                    "--model",
+                    "deepseek-v4-flash",
+                    "--output-root",
+                    str(output_root),
+                    "--allow-provider-calls",
+                    "--max-provider-requests",
+                    "1",
+                    "--max-output-tokens",
+                    "8192",
+                    "--response-format-json",
+                ]
+            )
+
+            result = MODULE.run_once(args, provider_factory=lambda *_: Provider(), provider_config_error=lambda *_: None)
+
+            self.assertEqual(captured["request"].max_tokens, 8192)
+            manifest = json.loads((Path(result.output_dir) / "dryrun_manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(manifest["max_output_tokens"], 8192)
+            self.assertEqual(manifest["max_output_tokens_source"], "user_provided")
+
+    def test_zero_or_negative_max_output_tokens_aborts_before_provider_creation(self):
+        for value in ["0", "-1"]:
+            with self.subTest(value=value):
+                with tempfile.TemporaryDirectory() as tmp:
+                    prompt_path = Path(tmp) / "capture.md"
+                    prompt_path.write_text(_sample_capture_markdown(), encoding="utf-8")
+                    called = {"provider": False}
+
+                    def fail_provider(*args, **kwargs):
+                        called["provider"] = True
+                        raise AssertionError("provider should not be created")
+
+                    args = MODULE.build_parser().parse_args(
+                        [
+                            "--prompt-file",
+                            str(prompt_path),
+                            "--provider",
+                            "deepseek",
+                            "--model",
+                            "deepseek-v4-flash",
+                            "--allow-provider-calls",
+                            "--max-provider-requests",
+                            "1",
+                            "--max-output-tokens",
+                            value,
+                        ]
+                    )
+
+                    with self.assertRaises(MODULE.DryRunError):
+                        MODULE.run_once(args, provider_factory=fail_provider, provider_config_error=lambda *_: None)
+                    self.assertFalse(called["provider"])
+
     def test_run_returns_error_code_and_does_not_print_secret(self):
         stderr = io.StringIO()
         with redirect_stderr(stderr):
@@ -208,6 +289,23 @@ class RealProviderDryRunGuardsTests(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn("ERROR:", stderr.getvalue())
         self.assertNotIn("test-key", stderr.getvalue())
+
+    def test_expected_runtime_reports_are_parseable_and_do_not_embed_private_output(self):
+        for path in [
+            FIXTURE_ROOT / "deepseek_ch002_runtime_summary_after_sp059.json",
+            FIXTURE_ROOT / "deepseek_ch002_vs_sp056_baseline_report.json",
+            FIXTURE_ROOT / "deepseek_ch002_runtime_issue_report.json",
+            FIXTURE_ROOT / "provider_prompt_profiles_product_opportunity_report.json",
+        ]:
+            with self.subTest(path=path):
+                payload = json.loads(path.read_text(encoding="utf-8"))
+                blob = json.dumps(payload, ensure_ascii=False)
+                self.assertTrue(isinstance(payload, dict))
+                self.assertNotIn("provider_response_raw.txt", blob)
+                self.assertNotIn("```", blob)
+                self.assertNotIn("chapter_text", blob)
+                self.assertNotIn("OPENAI_API_KEY", blob)
+                self.assertNotIn("DEEPSEEK_API_KEY", blob)
 
 
 def _sample_capture_markdown() -> str:

@@ -1,0 +1,76 @@
+{
+  "baseline_sample_id": "chatgpt_response_bootstrap_chapter_extraction_ja_ch_002_populated_map_after_sp055",
+  "runtime_sample": "deepseek-v4-flash_real_provider_dryrun_ch002_after_sp059",
+  "overall_assessment": "runtime_json_valid_but_semantically_thin",
+  "schema_validity": {
+    "runtime_json_parseable": true,
+    "runtime_top_level_shape_ok": true,
+    "runtime_chapter_id_matches_ch002": true,
+    "runtime_event_importance_present": true,
+    "runtime_relation_category_present": true
+  },
+  "coverage_comparison": {
+    "runtime_counts": {
+      "characters": 3,
+      "places": 1,
+      "concepts": 4,
+      "objects": 2,
+      "events": 2,
+      "relations": 1,
+      "unresolved_mentions": 0
+    },
+    "baseline_counts": {
+      "characters": 4,
+      "places": 3,
+      "concepts": 4,
+      "objects": 4,
+      "events": 5,
+      "relations": 7,
+      "unresolved_mentions": 4
+    }
+  },
+  "objects_comparison": {
+    "assessment": "partial",
+    "runtime_preserves_structural_objects": true,
+    "runtime_object_recall_vs_baseline": "lower"
+  },
+  "events_comparison": {
+    "assessment": "partial",
+    "runtime_event_priority_labels_present": true,
+    "runtime_event_recall_vs_baseline": "lower"
+  },
+  "relations_comparison": {
+    "assessment": "weaker",
+    "runtime_relation_fields_valid": true,
+    "runtime_relation_recall_vs_baseline": "much_lower"
+  },
+  "canonical_reuse_comparison": {
+    "assessment": "partially_preserved",
+    "runtime_retains_core_entities": ["セラ", "摂政", "ネリス女王"],
+    "runtime_retains_core_location": ["王城"]
+  },
+  "review_safety_comparison": {
+    "assessment": "acceptable",
+    "unsafe_auto_promotion_observed": false,
+    "note": "No obvious unsafe promotion pattern observed in runtime sample, but unresolved mention coverage dropped."
+  },
+  "semantic_density_comparison": {
+    "assessment": "lower_than_baseline",
+    "likely_behavior": "deepseek_v4_flash_compacts_output_under_generic_profile",
+    "impact": "reduced extraction richness for downstream review quality"
+  },
+  "notable_losses": [
+    "Lower relation recall (1 vs 7).",
+    "Lower event recall (2 vs 5).",
+    "Lower object recall (2 vs 4).",
+    "No unresolved mentions surfaced (0 vs 4).",
+    "Reduced location granularity (1 vs 3)."
+  ],
+  "notable_strengths": [
+    "Runtime JSON is valid and parseable.",
+    "Contract v2 minimum shape is preserved.",
+    "Core protagonist and political anchors remain recognizable.",
+    "event_importance and relation_category fields are still present."
+  ],
+  "recommended_next_step": "Implement provider prompt profiles and run a second DeepSeek ch_002 dry-run with density-oriented profile plus controlled token budget."
+}

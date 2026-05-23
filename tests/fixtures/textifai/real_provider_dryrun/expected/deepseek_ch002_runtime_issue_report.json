@@ -1,0 +1,34 @@
+{
+  "report_id": "deepseek_ch002_runtime_issue_report_after_sp060",
+  "runtime_sample": "deepseek-v4-flash_real_provider_dryrun_ch002_after_sp059",
+  "first_run_empty_without_max_output_tokens": {
+    "status": "mitigated",
+    "resolution": "add output-token guard/default in real_provider_dryrun script",
+    "evidence": "runtime succeeded with max_output_tokens=8192"
+  },
+  "deepseek_runtime_json_parseability": {
+    "status": "confirmed",
+    "evidence": "response_parseable_json=true"
+  },
+  "semantic_density_vs_manual_baseline": {
+    "status": "assessed",
+    "assessment": "runtime_json_valid_but_semantically_thin"
+  },
+  "provider_wrapper_reads_content": {
+    "status": "confirmed",
+    "evidence": "provider_response.json produced with non-empty runtime content"
+  },
+  "json_mode_behavior": {
+    "status": "acceptable_with_token_budget",
+    "note": "response_format json_object behaves acceptably when max output token budget is sufficient"
+  },
+  "provider_profiles_needed": true,
+  "remaining_issues": [
+    "No automatic semantic diff scoring yet.",
+    "Only one provider/model runtime sample audited.",
+    "Only one chapter runtime sample audited.",
+    "Runtime output kept private in /tmp and not versioned.",
+    "Global normalization runtime path still untested.",
+    "Chunking/reduction runtime path still untested."
+  ]
+}

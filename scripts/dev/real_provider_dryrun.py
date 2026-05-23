@@ -26,6 +26,7 @@ from textifai.author_understanding.normalization import extract_json_payload
 
 DEFAULT_OUTPUT_ROOT = Path("/tmp/textifai_real_provider_dryrun")
 BOOTSTRAP_TASK = "bootstrap_chapter_extraction"
+DEFAULT_BOOTSTRAP_MAX_OUTPUT_TOKENS = 8192
 
 
 class DryRunError(RuntimeError):
@@ -69,7 +70,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=0,
         help="Must be exactly 1 for this dry-run.",
     )
-    parser.add_argument("--max-output-tokens", type=int, default=None)
+    parser.add_argument(
+        "--max-output-tokens",
+        type=int,
+        default=None,
+        help="Maximum output tokens. Defaults to 8192 for bootstrap_chapter_extraction dry-runs.",
+    )
     parser.add_argument("--response-format-json", action="store_true")
     parser.add_argument("--no-write-back", action="store_true", default=True)
     parser.add_argument("--save-trace", action="store_true")
@@ -174,6 +180,14 @@ def _utc_stamp() -> str:
     return datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
 
 
+def _resolve_max_output_tokens(value: int | None) -> tuple[int, str]:
+    if value is None:
+        return DEFAULT_BOOTSTRAP_MAX_OUTPUT_TOKENS, "default"
+    if value <= 0:
+        raise DryRunError("Refusing provider call: --max-output-tokens must be greater than 0.")
+    return value, "user_provided"
+
+
 def _json_dump(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
@@ -209,6 +223,7 @@ def run_once(
         raise DryRunError("Refusing provider call: --max-provider-requests must be exactly 1.")
     if not args.no_write_back:
         raise DryRunError("Refusing provider call: --no-write-back must stay enabled.")
+    max_output_tokens, max_output_tokens_source = _resolve_max_output_tokens(args.max_output_tokens)
 
     prompt_path = Path(args.prompt_file)
     captured = _read_capture_markdown(prompt_path)
@@ -229,7 +244,7 @@ def run_once(
             model=args.model,
             system=captured.system_prompt,
             messages=[TextMessage(role="user", content=captured.user_prompt)],
-            max_tokens=args.max_output_tokens,
+            max_tokens=max_output_tokens,
             temperature=0.0,
             timeout_seconds=180,
             retries=0,
@@ -271,6 +286,8 @@ def run_once(
         "task": BOOTSTRAP_TASK,
         "allow_provider_calls": args.allow_provider_calls,
         "max_provider_requests": args.max_provider_requests,
+        "max_output_tokens": max_output_tokens,
+        "max_output_tokens_source": max_output_tokens_source,
         "response_format_json": bool(args.response_format_json),
         "no_write_back": bool(args.no_write_back),
         "save_trace": bool(args.save_trace),

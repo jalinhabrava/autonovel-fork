@@ -1,0 +1,22 @@
+{
+  "product_opportunity": "provider_prompt_profiles",
+  "triggering_evidence": [
+    "DeepSeek runtime required explicit max output token budget to avoid empty output.",
+    "DeepSeek returned valid JSON but lower semantic density under generic profile.",
+    "Manual ChatGPT baseline with same contract showed richer extraction coverage."
+  ],
+  "business_value": [
+    "Lower API cost through provider-aware tuning.",
+    "Provider flexibility and reduced vendor lock-in.",
+    "Paid-tier differentiation through quality/cost optimization.",
+    "Task-specific quality control at controlled spend."
+  ],
+  "technical_value": [
+    "Profile-specific token budgets.",
+    "Profile-specific JSON reliability instructions.",
+    "Density-aware validation thresholds.",
+    "Retry/fallback policy by provider/model/task.",
+    "Model-task suitability matrix for extraction phases."
+  ],
+  "recommended_next_phase": "SP-061 provider prompt profile registry and DeepSeek extraction density profile plan/implementation"
+}
