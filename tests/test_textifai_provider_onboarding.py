@@ -183,6 +183,53 @@ class TextifAIProviderOnboardingTests(unittest.TestCase):
             self.assertTrue(readiness.provider_configured)
             self.assertEqual(readiness.provider_mode, "remote_anthropic")
 
+    def test_configure_provider_supports_deepseek_configuration(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base_dir = Path(tmp)
+
+            readiness = configure_provider(
+                base_dir=base_dir,
+                configuration=ProviderConfiguration(
+                    provider_choice="deepseek",
+                    provider_name="deepseek",
+                    api_base="https://api.deepseek.com",
+                    api_key="test-key",
+                    model="deepseek-v4-flash",
+                ),
+                test_connectivity=False,
+            )
+
+            env_text = (base_dir / ".env").read_text(encoding="utf-8")
+            self.assertIn("AUTONOVEL_TEXT_PROVIDER=deepseek", env_text)
+            self.assertIn("AUTONOVEL_WRITER_MODEL=deepseek-v4-flash", env_text)
+            self.assertIn("DEEPSEEK_API_KEY=test-key", env_text)
+            self.assertIn("AUTONOVEL_DEEPSEEK_API_BASE_URL=https://api.deepseek.com", env_text)
+            self.assertTrue(readiness.provider_configured)
+            self.assertEqual(readiness.provider_mode, "remote_openai_compatible")
+
+    def test_evaluate_provider_readiness_reports_deepseek_missing_key(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base_dir = Path(tmp)
+            (base_dir / ".env").write_text(
+                "\n".join(
+                    [
+                        "AUTONOVEL_TEXT_PROVIDER=deepseek",
+                        "AUTONOVEL_WRITER_MODEL=deepseek-v4-flash",
+                        "AUTONOVEL_DEEPSEEK_API_BASE_URL=https://api.deepseek.com",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            readiness = evaluate_provider_readiness(base_dir, run_connectivity_test=False)
+
+            self.assertTrue(readiness.provider_configured)
+            self.assertFalse(readiness.provider_reachable)
+            self.assertFalse(readiness.author_flows_available)
+            self.assertEqual(readiness.provider_mode, "remote_openai_compatible")
+            self.assertEqual(readiness.configuration_error, "DEEPSEEK_API_KEY not set in .env")
+
     def test_provider_cli_reports_json_payload(self):
         with tempfile.TemporaryDirectory() as tmp:
             base_dir = Path(tmp)

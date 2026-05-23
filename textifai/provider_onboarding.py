@@ -15,6 +15,7 @@ from textifai.runtime_config import load_runtime_environment, synchronize_runtim
 
 SUPPORTED_PROVIDER_CHOICES = (
     "anthropic",
+    "deepseek",
     "openai",
     "openai_compatible",
     "local_openai_compatible",
@@ -157,6 +158,10 @@ def _provider_env_updates(configuration: ProviderConfiguration) -> dict[str, str
         updates["ANTHROPIC_API_KEY"] = configuration.api_key or ""
         if configuration.api_base:
             updates["AUTONOVEL_API_BASE_URL"] = configuration.api_base
+    elif provider_name == "deepseek":
+        updates["DEEPSEEK_API_KEY"] = configuration.api_key or ""
+        if configuration.api_base:
+            updates["AUTONOVEL_DEEPSEEK_API_BASE_URL"] = configuration.api_base
     elif provider_name == "openai":
         updates["OPENAI_API_KEY"] = configuration.api_key or ""
         if configuration.api_base:
@@ -175,6 +180,7 @@ def _provider_env_updates(configuration: ProviderConfiguration) -> dict[str, str
 def _canonical_provider_name(provider_choice: str) -> str | None:
     mappings = {
         "anthropic": "anthropic",
+        "deepseek": "deepseek",
         "openai": "openai",
         "openai_compatible": "openai_compatible",
         "local_openai_compatible": "openai_compatible",
@@ -189,6 +195,8 @@ def _provider_mode(provider_name: str | None, *, api_base: str | None) -> str:
         return "disabled"
     if provider_name == "anthropic":
         return "remote_anthropic"
+    if provider_name == "deepseek":
+        return "remote_openai_compatible"
     if provider_name == "openai":
         return "remote_openai"
     if provider_name == "openai_compatible":
@@ -206,6 +214,8 @@ def _provider_api_base(provider_name: str | None) -> str | None:
 
     if provider_name == "anthropic":
         return os.environ.get("AUTONOVEL_API_BASE_URL", "").strip() or "https://api.anthropic.com"
+    if provider_name == "deepseek":
+        return os.environ.get("AUTONOVEL_DEEPSEEK_API_BASE_URL", "").strip() or "https://api.deepseek.com"
     if provider_name == "openai":
         return os.environ.get("AUTONOVEL_OPENAI_API_BASE_URL", "").strip() or "https://api.openai.com/v1"
     if provider_name == "openai_compatible":

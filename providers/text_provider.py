@@ -198,6 +198,7 @@ PROVIDER_ALIASES = {
     "anthropic": "anthropic",
     "anthropic_messages": "anthropic",
     "anthropic_compatible": "anthropic_compatible",
+    "deepseek": "deepseek",
     "openai": "openai",
     "openai_chat": "openai",
     "openai_responses": "openai",
@@ -228,6 +229,11 @@ PROVIDER_REGISTRY = {
         provider_name="openai_compatible",
         api_key=os.environ.get("AUTONOVEL_OPENAI_COMPATIBLE_API_KEY", ""),
         api_base=os.environ.get("AUTONOVEL_OPENAI_COMPATIBLE_API_BASE_URL", ""),
+    ),
+    "deepseek": lambda: OpenAICompatibleTextProvider(
+        provider_name="deepseek",
+        api_key=os.environ.get("DEEPSEEK_API_KEY", ""),
+        api_base=os.environ.get("AUTONOVEL_DEEPSEEK_API_BASE_URL", "https://api.deepseek.com"),
     ),
     "lmstudio": lambda: LMStudioTextProvider(
         provider_name="lmstudio",
@@ -398,8 +404,11 @@ def get_text_provider_name(task_name: str | None = None, provider_name: str | No
         raw_name = provider_name
     else:
         task_settings = get_task_text_settings(task_name)
+        provider_env_name = str(task_settings.get("provider_env") or "").strip()
+        provider_from_task_env = os.environ.get(provider_env_name, "").strip().lower() if provider_env_name else ""
         raw_name = (
-            os.environ.get("AUTONOVEL_TEXT_PROVIDER", "").strip().lower()
+            provider_from_task_env
+            or os.environ.get("AUTONOVEL_TEXT_PROVIDER", "").strip().lower()
             or str(task_settings.get("provider", "anthropic"))
         )
     canonical = PROVIDER_ALIASES.get(raw_name)
@@ -407,7 +416,7 @@ def get_text_provider_name(task_name: str | None = None, provider_name: str | No
         return canonical
     raise ValueError(
         f"Unsupported AUTONOVEL_TEXT_PROVIDER={raw_name!r}. "
-        "Supported providers: anthropic, openai, lmstudio, ollama, "
+        "Supported providers: anthropic, deepseek, openai, lmstudio, ollama, "
         "anthropic_compatible, openai_compatible."
     )
 
@@ -438,6 +447,7 @@ def get_text_provider_config_error(task_name: str | None = None, provider_name: 
     provider = get_text_provider_name(task_name, provider_name)
     requirements = {
         "anthropic": ("ANTHROPIC_API_KEY",),
+        "deepseek": ("DEEPSEEK_API_KEY",),
         "openai": ("OPENAI_API_KEY",),
         "anthropic_compatible": ("AUTONOVEL_ANTHROPIC_COMPATIBLE_API_BASE_URL",),
         "openai_compatible": ("AUTONOVEL_OPENAI_COMPATIBLE_API_BASE_URL",),

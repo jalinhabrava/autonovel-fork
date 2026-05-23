@@ -211,6 +211,85 @@ class TextProviderTests(unittest.TestCase):
         self.assertIn("max_tokens", captured["payload"])
         self.assertNotIn("max_completion_tokens", captured["payload"])
 
+    def test_deepseek_provider_uses_openai_compatible_payload_and_json_response_format(self):
+        captured = {}
+
+        def fake_post(*args, **kwargs):
+            captured["url"] = args[0]
+            captured["headers"] = kwargs["headers"]
+            captured["payload"] = kwargs["json"]
+            captured["timeout"] = kwargs["timeout"]
+            return DummyResponse({"choices": [{"message": {"content": "{\"ok\": true}"}}]})
+
+        with patch.dict(
+            "os.environ",
+            {
+                "AUTONOVEL_TEXT_PROVIDER": "deepseek",
+                "AUTONOVEL_BOOTSTRAP_MODEL": "deepseek-v4-flash",
+                "DEEPSEEK_API_KEY": "test-key",
+                "AUTONOVEL_DEEPSEEK_API_BASE_URL": "https://api.deepseek.com",
+            },
+            clear=False,
+        ):
+            fake_httpx = make_fake_httpx(fake_post)
+            with patch.dict(sys.modules, {"httpx": fake_httpx}):
+                provider = get_text_provider("bootstrap_chapter_extraction")
+                response = provider.generate(
+                    TextGenerationRequest(
+                        task="bootstrap_chapter_extraction",
+                        messages=[TextMessage(role="user", content="Return JSON")],
+                        response_format={"type": "json_object"},
+                    )
+                )
+
+        self.assertIsInstance(provider, OpenAICompatibleTextProvider)
+        self.assertEqual(provider.provider_name, "deepseek")
+        self.assertEqual(provider.api_base, "https://api.deepseek.com")
+        self.assertEqual(response.text, "{\"ok\": true}")
+        self.assertEqual(response.provider_name, "deepseek")
+        self.assertEqual(response.model, "deepseek-v4-flash")
+        self.assertEqual(captured["url"], "https://api.deepseek.com/chat/completions")
+        self.assertEqual(captured["headers"]["Authorization"], "Bearer test-key")
+        self.assertEqual(captured["payload"]["model"], "deepseek-v4-flash")
+        self.assertEqual(captured["payload"]["messages"], [{"role": "user", "content": "Return JSON"}])
+        self.assertEqual(captured["payload"]["response_format"], {"type": "json_object"})
+        self.assertIn("max_tokens", captured["payload"])
+
+    def test_deepseek_missing_api_key_reports_config_error_without_network(self):
+        with patch.dict(
+            "os.environ",
+            {
+                "AUTONOVEL_TEXT_PROVIDER": "deepseek",
+                "DEEPSEEK_API_KEY": "",
+            },
+            clear=False,
+        ):
+            self.assertEqual(
+                get_text_provider_config_error("bootstrap_chapter_extraction"),
+                "DEEPSEEK_API_KEY not set in .env",
+            )
+
+    def test_deepseek_provider_name_can_come_from_bootstrap_provider_env(self):
+        with patch.dict(
+            "os.environ",
+            {
+                "AUTONOVEL_TEXT_PROVIDER": "",
+                "AUTONOVEL_BOOTSTRAP_PROVIDER": "deepseek",
+                "AUTONOVEL_BOOTSTRAP_MODEL": "deepseek-v4-pro",
+                "DEEPSEEK_API_KEY": "test-key",
+            },
+            clear=False,
+        ):
+            resolved = resolve_text_request(
+                TextGenerationRequest(
+                    task="bootstrap_chapter_extraction",
+                    messages=[TextMessage(role="user", content="hello")],
+                )
+            )
+
+        self.assertEqual(resolved.provider_name, "deepseek")
+        self.assertEqual(resolved.model, "deepseek-v4-pro")
+
     def test_anthropic_payload_keeps_system_and_max_tokens(self):
         captured = {}
 
@@ -247,6 +326,7 @@ class TextProviderTests(unittest.TestCase):
         cases = [
             ("anthropic", AnthropicTextProvider),
             ("openai", OpenAITextProvider),
+            ("deepseek", OpenAICompatibleTextProvider),
             ("lmstudio", LMStudioTextProvider),
             ("ollama", OllamaTextProvider),
             ("openai_compatible", OpenAICompatibleTextProvider),
@@ -255,6 +335,7 @@ class TextProviderTests(unittest.TestCase):
         env = {
             "ANTHROPIC_API_KEY": "x",
             "OPENAI_API_KEY": "x",
+            "DEEPSEEK_API_KEY": "x",
             "AUTONOVEL_ANTHROPIC_COMPATIBLE_API_BASE_URL": "https://example.test",
             "AUTONOVEL_OPENAI_COMPATIBLE_API_BASE_URL": "https://example.test/v1",
         }
