@@ -1,0 +1,23 @@
+{
+  "report_id": "deepseek_provider_profile_runtime_issue_report_after_sp063",
+  "deepseek_generic_semantic_thinness": "not_retested_with_profile",
+  "provider_profile_overlay_runtime_effect": "not_evaluated",
+  "json_parseability": "not_evaluated",
+  "output_token_budget": "configured_for_8192",
+  "real_provider_call_status": "not_executed_missing_key_in_codex_environment",
+  "environment_issue": {
+    "key_present_in_codex_environment": false,
+    "prompt_recapture_attempted": false,
+    "reason": "Provider call is prohibited when key is not visible to Codex."
+  },
+  "remaining_issues": [
+    "Profiled DeepSeek runtime output does not exist in this environment.",
+    "Provider key visibility must be fixed or Codex restarted with correct environment.",
+    "One chapter only once executable.",
+    "One provider/model only once executable.",
+    "No DeepSeek Pro comparison.",
+    "No OpenAI runtime comparison.",
+    "Output private not committed by design.",
+    "No chunking yet."
+  ]
+}

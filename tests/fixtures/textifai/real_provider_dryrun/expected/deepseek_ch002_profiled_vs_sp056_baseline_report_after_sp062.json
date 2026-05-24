@@ -1,0 +1,52 @@
+{
+  "profiled_runtime_sample": "deepseek-v4-flash_profiled_real_provider_dryrun_ch002_after_sp063",
+  "manual_baseline_sample_id": "chatgpt_response_bootstrap_chapter_extraction_ja_ch_002_populated_map_after_sp055",
+  "overall_assessment": "profiled_deepseek_invalid",
+  "assessment_reason": "Profiled runtime call was not executed because provider API key was not visible in Codex environment.",
+  "schema_validity": {
+    "profiled_json_valid": null,
+    "manual_baseline_json_valid": true
+  },
+  "semantic_density": {
+    "profiled": "not_evaluated",
+    "manual_baseline": "rich_manual_reference"
+  },
+  "coverage_comparison": {
+    "profiled_counts": null,
+    "manual_baseline_counts": {
+      "characters": 4,
+      "places": 3,
+      "concepts": 4,
+      "objects": 4,
+      "events": 5,
+      "relations": 7,
+      "unresolved_mentions": 4
+    }
+  },
+  "canonical_reuse_comparison": {
+    "assessment": "not_evaluated"
+  },
+  "objects_comparison": {
+    "assessment": "not_evaluated"
+  },
+  "events_comparison": {
+    "assessment": "not_evaluated"
+  },
+  "relations_comparison": {
+    "assessment": "not_evaluated"
+  },
+  "unresolved_mentions_comparison": {
+    "assessment": "not_evaluated"
+  },
+  "review_safety_comparison": {
+    "assessment": "not_evaluated"
+  },
+  "notable_strengths": [
+    "Provider profile infrastructure remains ready for runtime use.",
+    "Safety gate correctly blocked provider call when key was not visible."
+  ],
+  "notable_losses": [
+    "No profiled runtime output was generated in this environment."
+  ],
+  "recommendation": "Make provider API key visible to Codex environment and rerun exactly one guarded profiled DeepSeek ch_002 dry-run."
+}

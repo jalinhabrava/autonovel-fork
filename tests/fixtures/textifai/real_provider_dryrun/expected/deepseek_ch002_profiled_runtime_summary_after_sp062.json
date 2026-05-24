@@ -1,0 +1,40 @@
+{
+  "runtime_sample_id": "deepseek-v4-flash_profiled_real_provider_dryrun_ch002_after_sp063",
+  "provider": "deepseek",
+  "model": "deepseek-v4-flash",
+  "provider_profile_requested": "auto",
+  "provider_profile_applied": false,
+  "provider_profile_id": "deepseek-v4-flash:bootstrap_chapter_extraction:v1",
+  "prompt_sha256": null,
+  "prompt_chars": null,
+  "response_text_chars": 0,
+  "validation_ok": false,
+  "response_parseable_json": false,
+  "chapter_id": null,
+  "chapter_count": 0,
+  "counts": {
+    "characters": 0,
+    "places": 0,
+    "concepts": 0,
+    "objects": 0,
+    "events": 0,
+    "relations": 0,
+    "unresolved_mentions": 0
+  },
+  "event_importance_present": false,
+  "relation_category_present": false,
+  "output_dir_reference": null,
+  "output_committed": false,
+  "provider_calls": 0,
+  "write_back": false,
+  "run_timestamp_utc": null,
+  "max_output_tokens": 8192,
+  "max_output_tokens_source": "intended_user_provided",
+  "real_provider_call_status": "not_executed_missing_key_in_codex_environment",
+  "environment_check": {
+    "key_present": false,
+    "key_len": 0,
+    "key_sha8_present": false
+  },
+  "prompt_recapture_status": "not_attempted_missing_key"
+}
