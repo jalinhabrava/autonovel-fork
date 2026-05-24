@@ -23,6 +23,12 @@ from providers.text_provider import (
     get_text_provider_config_error,
 )
 from textifai.author_understanding.normalization import extract_json_payload
+from textifai.import_review.provider_prompt_profiles import (
+    ProviderPromptProfile,
+    apply_provider_prompt_profile,
+    get_provider_prompt_profile,
+    list_provider_prompt_profiles,
+)
 
 DEFAULT_OUTPUT_ROOT = Path("/tmp/textifai_real_provider_dryrun")
 BOOTSTRAP_TASK = "bootstrap_chapter_extraction"
@@ -80,6 +86,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--no-write-back", action="store_true", default=True)
     parser.add_argument("--save-trace", action="store_true")
     parser.add_argument("--redact-prompts", action="store_true")
+    parser.add_argument(
+        "--provider-profile",
+        default="none",
+        help="Provider prompt profile to apply: none, auto, or explicit profile_id. Default none.",
+    )
     return parser
 
 
@@ -188,6 +199,15 @@ def _resolve_max_output_tokens(value: int | None) -> tuple[int, str]:
     return value, "user_provided"
 
 
+def _resolve_provider_profile(value: str, *, provider: str, model: str, task: str) -> ProviderPromptProfile | None:
+    requested = (value or "none").strip()
+    if requested == "none":
+        return None
+    if requested == "auto":
+        return get_provider_prompt_profile(provider, model, task)
+    return next((profile for profile in list_provider_prompt_profiles() if profile.profile_id == requested), None)
+
+
 def _json_dump(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
@@ -223,10 +243,21 @@ def run_once(
         raise DryRunError("Refusing provider call: --max-provider-requests must be exactly 1.")
     if not args.no_write_back:
         raise DryRunError("Refusing provider call: --no-write-back must stay enabled.")
-    max_output_tokens, max_output_tokens_source = _resolve_max_output_tokens(args.max_output_tokens)
+    profile = _resolve_provider_profile(args.provider_profile, provider=args.provider, model=args.model, task=BOOTSTRAP_TASK)
+    if (args.provider_profile or "none").strip() not in {"none", "auto"} and profile is None:
+        raise DryRunError(f"Provider prompt profile not found: {args.provider_profile}")
+    max_output_tokens, max_output_tokens_source = _resolve_max_output_tokens(
+        args.max_output_tokens if args.max_output_tokens is not None else (profile.default_max_output_tokens if profile else None)
+    )
+    if args.max_output_tokens is None and profile is not None:
+        max_output_tokens_source = "provider_profile"
 
     prompt_path = Path(args.prompt_file)
     captured = _read_capture_markdown(prompt_path)
+    system_prompt = captured.system_prompt
+    user_prompt = captured.user_prompt
+    if profile is not None:
+        system_prompt, user_prompt = apply_provider_prompt_profile(system_prompt, user_prompt, profile)
 
     cfg_error = provider_config_error(BOOTSTRAP_TASK, args.provider)
     if cfg_error:
@@ -242,8 +273,8 @@ def run_once(
             task=BOOTSTRAP_TASK,
             provider_name=args.provider,
             model=args.model,
-            system=captured.system_prompt,
-            messages=[TextMessage(role="user", content=captured.user_prompt)],
+            system=system_prompt,
+            messages=[TextMessage(role="user", content=user_prompt)],
             max_tokens=max_output_tokens,
             temperature=0.0,
             timeout_seconds=180,
@@ -288,6 +319,9 @@ def run_once(
         "max_provider_requests": args.max_provider_requests,
         "max_output_tokens": max_output_tokens,
         "max_output_tokens_source": max_output_tokens_source,
+        "provider_profile_requested": args.provider_profile,
+        "provider_profile_id": profile.profile_id if profile else None,
+        "provider_profile_applied": profile is not None,
         "response_format_json": bool(args.response_format_json),
         "no_write_back": bool(args.no_write_back),
         "save_trace": bool(args.save_trace),
@@ -308,6 +342,7 @@ def run_once(
         trace_payload = {
             "system_prompt": "[REDACTED]" if args.redact_prompts else captured.system_prompt,
             "user_prompt": "[REDACTED]" if args.redact_prompts else captured.user_prompt,
+            "provider_profile_id": profile.profile_id if profile else None,
         }
         _json_dump(output_dir / "prompt_trace.json", trace_payload)
 

@@ -149,6 +149,8 @@ class RealProviderDryRunGuardsTests(unittest.TestCase):
             manifest = json.loads((output_dir / "dryrun_manifest.json").read_text(encoding="utf-8"))
             self.assertEqual(manifest["max_output_tokens"], 8192)
             self.assertEqual(manifest["max_output_tokens_source"], "default")
+            self.assertEqual(manifest["provider_profile_id"], None)
+            self.assertFalse(manifest["provider_profile_applied"])
             validation = json.loads((output_dir / "validation_report.json").read_text(encoding="utf-8"))
             self.assertTrue(validation["ok"])
             self.assertEqual(validation["details"]["chapter_id"], "ch_002")
@@ -238,6 +240,52 @@ class RealProviderDryRunGuardsTests(unittest.TestCase):
             manifest = json.loads((Path(result.output_dir) / "dryrun_manifest.json").read_text(encoding="utf-8"))
             self.assertEqual(manifest["max_output_tokens"], 8192)
             self.assertEqual(manifest["max_output_tokens_source"], "user_provided")
+
+    def test_provider_profile_auto_applies_overlay_and_records_manifest(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            prompt_path = Path(tmp) / "capture.md"
+            prompt_path.write_text(_sample_capture_markdown(), encoding="utf-8")
+            output_root = Path(tmp) / "out"
+            captured = {}
+
+            class Provider:
+                def generate(self, request):
+                    captured["request"] = request
+                    return TextGenerationResponse(
+                        text=json.dumps(_valid_payload(), ensure_ascii=False),
+                        raw={},
+                        provider_name="deepseek",
+                        model="deepseek-v4-flash",
+                        task="bootstrap_chapter_extraction",
+                    )
+
+            args = MODULE.build_parser().parse_args(
+                [
+                    "--prompt-file",
+                    str(prompt_path),
+                    "--provider",
+                    "deepseek",
+                    "--model",
+                    "deepseek-v4-flash",
+                    "--output-root",
+                    str(output_root),
+                    "--allow-provider-calls",
+                    "--max-provider-requests",
+                    "1",
+                    "--provider-profile",
+                    "auto",
+                    "--response-format-json",
+                ]
+            )
+
+            result = MODULE.run_once(args, provider_factory=lambda *_: Provider(), provider_config_error=lambda *_: None)
+            self.assertIn("## Provider Profile Overlay", captured["request"].system)
+            self.assertEqual(captured["request"].max_tokens, 8192)
+            manifest = json.loads((Path(result.output_dir) / "dryrun_manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(manifest["provider_profile_requested"], "auto")
+            self.assertEqual(manifest["provider_profile_id"], "deepseek-v4-flash:bootstrap_chapter_extraction:v1")
+            self.assertTrue(manifest["provider_profile_applied"])
+            self.assertEqual(manifest["max_output_tokens_source"], "provider_profile")
 
     def test_zero_or_negative_max_output_tokens_aborts_before_provider_creation(self):
         for value in ["0", "-1"]:

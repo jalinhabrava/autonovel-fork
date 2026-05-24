@@ -1,0 +1,29 @@
+{
+  "profile_id": "deepseek-v4-flash:bootstrap_chapter_extraction:v1",
+  "provider": "deepseek",
+  "model_pattern": "deepseek-v4-flash",
+  "task": "bootstrap_chapter_extraction",
+  "json_mode": true,
+  "default_max_output_tokens": 8192,
+  "prompt_density_policy": "high_recall_concise_facts",
+  "schema_strategy": "full_v2_with_density_reminder",
+  "must_include_sections": [
+    "characters",
+    "places",
+    "concepts",
+    "objects",
+    "events",
+    "relations",
+    "unresolved_mentions"
+  ],
+  "minimum_density_targets": {
+    "objects": "include all structurally relevant artifacts, tools, catalysts, weapons, keys, persistent props, and event-triggering props.",
+    "events": "include all durable structural events, not only the final scene outcome.",
+    "relations": "include protagonist-object, protagonist-place, protagonist-concept, object-event, authority/political, and magic/system relations when supported.",
+    "unresolved_mentions": "include important unresolved actors, objects, concepts, or pronouns rather than silently dropping them.",
+    "review": "keep uncertain identities in review or local candidate instead of promoting them."
+  },
+  "review_safety_policy": "do_not_promote_uncertain_identities",
+  "validation_policy": "strict_json_and_density_check",
+  "fallback": "retry_with_density_boost_or_larger_model"
+}

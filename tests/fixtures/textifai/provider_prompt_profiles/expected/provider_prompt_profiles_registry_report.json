@@ -1,0 +1,26 @@
+{
+  "profiles_count": 1,
+  "profile_ids": [
+    "deepseek-v4-flash:bootstrap_chapter_extraction:v1"
+  ],
+  "deepseek_profile_summary": {
+    "profile_id": "deepseek-v4-flash:bootstrap_chapter_extraction:v1",
+    "provider": "deepseek",
+    "task": "bootstrap_chapter_extraction",
+    "model_pattern": "deepseek-v4-flash",
+    "json_mode": true,
+    "default_max_output_tokens": 8192,
+    "prompt_density_policy": "high_recall_concise_facts",
+    "validation_policy": "strict_json_and_density_check",
+    "review_safety_policy": "do_not_promote_uncertain_identities"
+  },
+  "supported_tasks": [
+    "bootstrap_chapter_extraction"
+  ],
+  "limitations": [
+    "Single profile only in SP-061 foundation.",
+    "Not yet wired into production ingestion pipeline.",
+    "Density validation is heuristic and provider-free."
+  ],
+  "next_phase": "Phase 1.3.M-b5c-3f — Optimized DeepSeek ch_002 Dry-run with Provider Profile"
+}
