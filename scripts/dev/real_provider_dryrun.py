@@ -91,6 +91,11 @@ def build_parser() -> argparse.ArgumentParser:
         default="none",
         help="Provider prompt profile to apply: none, auto, or explicit profile_id. Default none.",
     )
+    parser.add_argument(
+        "--prompt-overlay-file",
+        default=None,
+        help="Optional dev-only overlay text file appended to system prompt after provider profile overlay.",
+    )
     return parser
 
 
@@ -212,6 +217,18 @@ def _json_dump(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+def _read_prompt_overlay_file(path: str | None) -> tuple[str | None, str | None]:
+    if not path:
+        return None, None
+    overlay_path = Path(path)
+    if not overlay_path.exists():
+        raise DryRunError(f"Prompt overlay file does not exist: {overlay_path}")
+    overlay_text = overlay_path.read_text(encoding="utf-8").strip()
+    if not overlay_text:
+        raise DryRunError(f"Prompt overlay file is empty: {overlay_path}")
+    return str(overlay_path), overlay_text
+
+
 def run(
     argv: list[str] | None = None,
     *,
@@ -258,6 +275,13 @@ def run_once(
     user_prompt = captured.user_prompt
     if profile is not None:
         system_prompt, user_prompt = apply_provider_prompt_profile(system_prompt, user_prompt, profile)
+
+    overlay_path, overlay_text = _read_prompt_overlay_file(args.prompt_overlay_file)
+    if overlay_text is not None:
+        overlay_header = "## Dev Prompt Overlay"
+        if overlay_header not in system_prompt:
+            separator = "\n\n" if system_prompt.strip() else ""
+            system_prompt = f"{system_prompt.rstrip()}{separator}{overlay_header}\n\n{overlay_text}".strip()
 
     cfg_error = provider_config_error(BOOTSTRAP_TASK, args.provider)
     if cfg_error:
@@ -322,6 +346,8 @@ def run_once(
         "provider_profile_requested": args.provider_profile,
         "provider_profile_id": profile.profile_id if profile else None,
         "provider_profile_applied": profile is not None,
+        "prompt_overlay_file": overlay_path,
+        "prompt_overlay_applied": overlay_text is not None,
         "response_format_json": bool(args.response_format_json),
         "no_write_back": bool(args.no_write_back),
         "save_trace": bool(args.save_trace),

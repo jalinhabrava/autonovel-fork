@@ -17,6 +17,12 @@ assert SPEC and SPEC.loader
 MODULE = importlib.util.module_from_spec(SPEC)
 sys.modules[SPEC.name] = MODULE
 SPEC.loader.exec_module(MODULE)
+MATRIX_MODULE_PATH = Path("scripts/dev/deepseek_prompt_matrix.py").resolve()
+MATRIX_SPEC = importlib.util.spec_from_file_location("deepseek_prompt_matrix", MATRIX_MODULE_PATH)
+assert MATRIX_SPEC and MATRIX_SPEC.loader
+MATRIX_MODULE = importlib.util.module_from_spec(MATRIX_SPEC)
+sys.modules[MATRIX_SPEC.name] = MATRIX_MODULE
+MATRIX_SPEC.loader.exec_module(MATRIX_MODULE)
 FIXTURE_ROOT = Path("tests/fixtures/textifai/real_provider_dryrun/expected")
 
 
@@ -287,6 +293,88 @@ class RealProviderDryRunGuardsTests(unittest.TestCase):
             self.assertTrue(manifest["provider_profile_applied"])
             self.assertEqual(manifest["max_output_tokens_source"], "provider_profile")
 
+    def test_prompt_overlay_file_appends_dev_overlay_and_records_manifest(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            prompt_path = Path(tmp) / "capture.md"
+            prompt_path.write_text(_sample_capture_markdown(), encoding="utf-8")
+            overlay_path = Path(tmp) / "overlay.md"
+            overlay_path.write_text("Return exactly one valid JSON object. Do not use markdown.", encoding="utf-8")
+            output_root = Path(tmp) / "out"
+            captured = {}
+
+            class Provider:
+                def generate(self, request):
+                    captured["request"] = request
+                    return TextGenerationResponse(
+                        text=json.dumps(_valid_payload(), ensure_ascii=False),
+                        raw={},
+                        provider_name="deepseek",
+                        model="deepseek-v4-flash",
+                        task="bootstrap_chapter_extraction",
+                    )
+
+            args = MODULE.build_parser().parse_args(
+                [
+                    "--prompt-file",
+                    str(prompt_path),
+                    "--provider",
+                    "deepseek",
+                    "--model",
+                    "deepseek-v4-flash",
+                    "--output-root",
+                    str(output_root),
+                    "--allow-provider-calls",
+                    "--max-provider-requests",
+                    "1",
+                    "--response-format-json",
+                    "--prompt-overlay-file",
+                    str(overlay_path),
+                ]
+            )
+
+            result = MODULE.run_once(args, provider_factory=lambda *_: Provider(), provider_config_error=lambda *_: None)
+            manifest = json.loads((Path(result.output_dir) / "dryrun_manifest.json").read_text(encoding="utf-8"))
+
+            self.assertIn("## Dev Prompt Overlay", captured["request"].system)
+            self.assertIn("Do not use markdown", captured["request"].system)
+            self.assertTrue(manifest["prompt_overlay_applied"])
+            self.assertEqual(manifest["prompt_overlay_file"], str(overlay_path))
+
+    def test_prompt_matrix_variant_definitions_are_work_agnostic_and_scoring_prefers_density(self):
+        blob = json.dumps(MATRIX_MODULE.variant_definitions(), ensure_ascii=False)
+        self.assertNotIn("セラ", blob)
+        self.assertNotIn("王者の杖", blob)
+        self.assertNotIn("アデルマン", blob)
+        self.assertNotIn("ティセイア", blob)
+        self.assertNotIn("ベル", blob)
+        self.assertEqual(len(MATRIX_MODULE.VARIANTS), 6)
+
+        low = MATRIX_MODULE.score_variant(
+            parseable_json=True,
+            validation_ok=True,
+            counts={"characters": 1, "places": 1, "concepts": 1, "objects": 1, "events": 1, "relations": 1, "unresolved_mentions": 0},
+            event_importance_present=True,
+            relation_category_present=True,
+        )
+        high = MATRIX_MODULE.score_variant(
+            parseable_json=True,
+            validation_ok=True,
+            counts={"characters": 2, "places": 2, "concepts": 2, "objects": 3, "events": 4, "relations": 5, "unresolved_mentions": 1},
+            event_importance_present=True,
+            relation_category_present=True,
+        )
+        self.assertGreater(high, low)
+        self.assertEqual(
+            MATRIX_MODULE.score_variant(
+                parseable_json=False,
+                validation_ok=False,
+                counts={},
+                event_importance_present=False,
+                relation_category_present=False,
+            ),
+            0.0,
+        )
+
     def test_zero_or_negative_max_output_tokens_aborts_before_provider_creation(self):
         for value in ["0", "-1"]:
             with self.subTest(value=value):
@@ -357,6 +445,9 @@ class RealProviderDryRunGuardsTests(unittest.TestCase):
             FIXTURE_ROOT / "deepseek_ch002_compact_profile_vs_failed_profile_report_after_sp064.json",
             FIXTURE_ROOT / "deepseek_ch002_compact_profile_vs_sp056_baseline_report_after_sp064.json",
             FIXTURE_ROOT / "deepseek_compact_profile_runtime_issue_report_after_sp064.json",
+            FIXTURE_ROOT / "deepseek_ch002_prompt_matrix_summary_after_sp065.json",
+            FIXTURE_ROOT / "deepseek_ch002_prompt_matrix_variant_report_after_sp065.json",
+            FIXTURE_ROOT / "deepseek_ch002_prompt_matrix_decision_after_sp065.json",
         ]:
             with self.subTest(path=path):
                 payload = json.loads(path.read_text(encoding="utf-8"))
@@ -385,6 +476,18 @@ class RealProviderDryRunGuardsTests(unittest.TestCase):
         self.assertEqual(failed["overall_assessment"], "compact_profile_restored_json_but_still_thin")
         self.assertEqual(baseline["overall_assessment"], "compact_profile_improved_but_below_manual")
         self.assertEqual(issues["real_provider_call_status"], "executed_one_call_compact_profile_valid_json")
+
+    def test_prompt_matrix_reports_record_candidate_found_without_private_payloads(self):
+        summary = json.loads((FIXTURE_ROOT / "deepseek_ch002_prompt_matrix_summary_after_sp065.json").read_text(encoding="utf-8"))
+        variants = json.loads((FIXTURE_ROOT / "deepseek_ch002_prompt_matrix_variant_report_after_sp065.json").read_text(encoding="utf-8"))
+        decision = json.loads((FIXTURE_ROOT / "deepseek_ch002_prompt_matrix_decision_after_sp065.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(summary["assessment"], "flash_profile_candidate_found")
+        self.assertEqual(summary["provider_calls_executed"], 4)
+        self.assertIn("variant_04_section_targets", summary["json_invalid_variants"])
+        self.assertEqual(decision["best_variant"]["variant_id"], "variant_03_dense_explicit")
+        self.assertEqual(decision["comparison_vs_sp056_manual"]["assessment"], "still_below_manual_density")
+        self.assertEqual(len(variants["variants"]), 6)
 
     def test_profiled_runtime_reports_record_safe_not_executed_state(self):
         summary = json.loads((FIXTURE_ROOT / "deepseek_ch002_profiled_runtime_summary_after_sp061.json").read_text(encoding="utf-8"))

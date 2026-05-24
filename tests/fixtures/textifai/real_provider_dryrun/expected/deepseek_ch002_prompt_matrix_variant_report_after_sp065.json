@@ -1,0 +1,179 @@
+{
+  "matrix_id": "deepseek_ch002_prompt_matrix_after_sp066",
+  "scoring_formula": {
+    "base": "characters + places + concepts + objects*1.5 + events*1.5 + relations*2 + unresolved_mentions",
+    "penalties": [
+      "-2 if missing event_importance",
+      "-2 if missing relation_category",
+      "disqualify if invalid JSON"
+    ]
+  },
+  "variants": [
+    {
+      "variant_id": "variant_01_generic_reference",
+      "label": "generic_reference_sp060",
+      "executed": false,
+      "source": "reference_fixture",
+      "provider_profile": "none",
+      "parseable_json": true,
+      "validation_ok": true,
+      "chapter_id": "ch_002",
+      "response_text_chars": 5551,
+      "counts": {
+        "characters": 3,
+        "places": 1,
+        "concepts": 4,
+        "objects": 2,
+        "events": 2,
+        "relations": 1,
+        "unresolved_mentions": 0
+      },
+      "event_importance_present": true,
+      "relation_category_present": true,
+      "score": 16.0,
+      "output_dir_reference": "/tmp/textifai_real_provider_dryrun/20260523T104411Z"
+    },
+    {
+      "variant_id": "variant_02_compact_json_first",
+      "label": "compact_json_first_sp065",
+      "executed": false,
+      "source": "reference_fixture",
+      "provider_profile": "auto",
+      "parseable_json": true,
+      "validation_ok": true,
+      "chapter_id": "ch_002",
+      "response_text_chars": 6968,
+      "counts": {
+        "characters": 1,
+        "places": 2,
+        "concepts": 3,
+        "objects": 1,
+        "events": 2,
+        "relations": 2,
+        "unresolved_mentions": 0
+      },
+      "event_importance_present": true,
+      "relation_category_present": true,
+      "score": 14.5,
+      "output_dir_reference": "/tmp/textifai_real_provider_dryrun_profiled_compact/20260524T085508Z"
+    },
+    {
+      "variant_id": "variant_03_dense_explicit",
+      "label": "dense_explicit",
+      "executed": true,
+      "source": "executed_runtime",
+      "provider_profile": "none",
+      "parseable_json": true,
+      "validation_ok": true,
+      "chapter_id": "ch_002",
+      "response_text_chars": 7877,
+      "counts": {
+        "characters": 4,
+        "places": 1,
+        "concepts": 3,
+        "objects": 1,
+        "events": 1,
+        "relations": 3,
+        "unresolved_mentions": 0
+      },
+      "event_importance_present": true,
+      "relation_category_present": true,
+      "score": 17.0,
+      "output_dir_reference": "/tmp/textifai_deepseek_prompt_matrix_ch002/runs/variant_03_dense_explicit/20260524T091503Z"
+    },
+    {
+      "variant_id": "variant_04_section_targets",
+      "label": "section_targets",
+      "executed": true,
+      "source": "executed_runtime",
+      "provider_profile": "none",
+      "parseable_json": false,
+      "validation_ok": false,
+      "chapter_id": null,
+      "response_text_chars": 10748,
+      "counts": {
+        "characters": 0,
+        "places": 0,
+        "concepts": 0,
+        "objects": 0,
+        "events": 0,
+        "relations": 0,
+        "unresolved_mentions": 0
+      },
+      "event_importance_present": false,
+      "relation_category_present": false,
+      "score": 0.0,
+      "output_dir_reference": "/tmp/textifai_deepseek_prompt_matrix_ch002/runs/variant_04_section_targets/20260524T091559Z"
+    },
+    {
+      "variant_id": "variant_05_internal_coverage_check",
+      "label": "internal_coverage_check",
+      "executed": true,
+      "source": "executed_runtime",
+      "provider_profile": "none",
+      "parseable_json": true,
+      "validation_ok": true,
+      "chapter_id": "ch_002",
+      "response_text_chars": 4634,
+      "counts": {
+        "characters": 3,
+        "places": 1,
+        "concepts": 4,
+        "objects": 0,
+        "events": 1,
+        "relations": 2,
+        "unresolved_mentions": 3
+      },
+      "event_importance_present": true,
+      "relation_category_present": true,
+      "score": 16.5,
+      "output_dir_reference": "/tmp/textifai_deepseek_prompt_matrix_ch002/runs/variant_05_internal_coverage_check/20260524T091706Z"
+    },
+    {
+      "variant_id": "variant_06_json_skeleton_reinforcement",
+      "label": "json_skeleton_reinforcement",
+      "executed": true,
+      "source": "executed_runtime",
+      "provider_profile": "none",
+      "parseable_json": true,
+      "validation_ok": true,
+      "chapter_id": "ch_002",
+      "response_text_chars": 3291,
+      "counts": {
+        "characters": 2,
+        "places": 1,
+        "concepts": 1,
+        "objects": 1,
+        "events": 1,
+        "relations": 1,
+        "unresolved_mentions": 0
+      },
+      "event_importance_present": true,
+      "relation_category_present": true,
+      "score": 9.0,
+      "output_dir_reference": "/tmp/textifai_deepseek_prompt_matrix_ch002/runs/variant_06_json_skeleton_reinforcement/20260524T091802Z"
+    }
+  ],
+  "ranked_valid_variants": [
+    {
+      "variant_id": "variant_03_dense_explicit",
+      "score": 17.0
+    },
+    {
+      "variant_id": "variant_05_internal_coverage_check",
+      "score": 16.5
+    },
+    {
+      "variant_id": "variant_01_generic_reference",
+      "score": 16.0
+    },
+    {
+      "variant_id": "variant_02_compact_json_first",
+      "score": 14.5
+    },
+    {
+      "variant_id": "variant_06_json_skeleton_reinforcement",
+      "score": 9.0
+    }
+  ]
+}

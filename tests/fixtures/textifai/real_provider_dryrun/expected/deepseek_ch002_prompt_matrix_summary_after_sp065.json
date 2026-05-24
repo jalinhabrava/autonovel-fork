@@ -1,0 +1,41 @@
+{
+  "matrix_id": "deepseek_ch002_prompt_matrix_after_sp066",
+  "assessment": "flash_profile_candidate_found",
+  "provider": "deepseek",
+  "model": "deepseek-v4-flash",
+  "prompt_sha256": "74c437e8ed878d16eb7b7a2636b5cff6a51353ee632cd0c188f210e8c6ff677d",
+  "max_output_tokens": 8192,
+  "response_format_json": true,
+  "write_back": false,
+  "provider_calls_executed": 4,
+  "variants_total": 6,
+  "variants_executed_runtime": [
+    "variant_03_dense_explicit",
+    "variant_04_section_targets",
+    "variant_05_internal_coverage_check",
+    "variant_06_json_skeleton_reinforcement"
+  ],
+  "variants_reference_only": [
+    "variant_01_generic_reference",
+    "variant_02_compact_json_first"
+  ],
+  "json_valid_variants": [
+    "variant_01_generic_reference",
+    "variant_02_compact_json_first",
+    "variant_03_dense_explicit",
+    "variant_05_internal_coverage_check",
+    "variant_06_json_skeleton_reinforcement"
+  ],
+  "json_invalid_variants": [
+    "variant_04_section_targets"
+  ],
+  "best_variant": {
+    "variant_id": "variant_03_dense_explicit",
+    "score": 17.0
+  },
+  "notes": [
+    "variant_04_section_targets produced invalid JSON and was disqualified.",
+    "variant_03_dense_explicit scored highest among valid variants.",
+    "variant_05_internal_coverage_check recovered unresolved_mentions but lost objects."
+  ]
+}
