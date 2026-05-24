@@ -1,0 +1,18 @@
+{
+  "failed_profile": "deepseek-v4-flash_profiled_real_provider_dryrun_ch002_after_sp063",
+  "compact_profile": "deepseek-v4-flash_compact_profile_real_provider_dryrun_ch002_after_sp065",
+  "overall_assessment": "compact_profile_restored_json_but_still_thin",
+  "failed_profile_status": "executed_one_call_profiled_json_invalid",
+  "compact_profile_status": "executed_one_call_compact_profile_valid_json",
+  "key_differences": [
+    "Compact overlay restored parseable JSON.",
+    "Compact overlay passed minimum v2 validation.",
+    "Compact overlay preserved provider profile application without repeating prior parse failure."
+  ],
+  "remaining_gaps": [
+    "Density remains below manual baseline.",
+    "Unresolved mentions stayed empty.",
+    "Objects/events/relations remain limited compared with SP-056."
+  ],
+  "recommended_next_step": "Keep compact JSON-first direction; decide between one more mild density iteration or stronger fallback model based on cost tolerance."
+}

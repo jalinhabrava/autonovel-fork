@@ -1,0 +1,62 @@
+{
+  "compact_profile_runtime_sample": "deepseek-v4-flash_compact_profile_real_provider_dryrun_ch002_after_sp065",
+  "manual_baseline_sample_id": "chatgpt_response_bootstrap_chapter_extraction_ja_ch_002_populated_map_after_sp055",
+  "overall_assessment": "compact_profile_improved_but_below_manual",
+  "schema_validity": {
+    "compact_profile_json_valid": true,
+    "manual_baseline_json_valid": true
+  },
+  "semantic_density": {
+    "compact_profile": "usable_but_thin",
+    "manual_baseline": "rich_manual_reference"
+  },
+  "coverage_comparison": {
+    "compact_profile_counts": {
+      "characters": 1,
+      "places": 2,
+      "concepts": 3,
+      "objects": 1,
+      "events": 2,
+      "relations": 2,
+      "unresolved_mentions": 0
+    },
+    "manual_baseline_counts": {
+      "characters": 4,
+      "places": 3,
+      "concepts": 4,
+      "objects": 4,
+      "events": 5,
+      "relations": 7,
+      "unresolved_mentions": 4
+    }
+  },
+  "canonical_reuse_comparison": {
+    "assessment": "not_deeply_audited_runtime_summary_only"
+  },
+  "objects_comparison": {
+    "assessment": "below_manual"
+  },
+  "events_comparison": {
+    "assessment": "below_manual"
+  },
+  "relations_comparison": {
+    "assessment": "below_manual_but_not_empty"
+  },
+  "unresolved_mentions_comparison": {
+    "assessment": "below_manual_empty_vs_nonempty"
+  },
+  "review_safety_comparison": {
+    "assessment": "acceptable_minimum_shape_preserved"
+  },
+  "notable_strengths": [
+    "Compact overlay restored valid JSON.",
+    "Minimum v2 contract validated successfully.",
+    "Relations count improved over generic runtime."
+  ],
+  "notable_losses": [
+    "Still much thinner than manual baseline across all major counts.",
+    "Unresolved mentions remained absent.",
+    "Objects coverage remained weak."
+  ],
+  "recommendation": "Do not treat compact overlay as final quality target; it is a safer runtime baseline that still needs either another mild density iteration or fallback policy for harder coverage."
+}

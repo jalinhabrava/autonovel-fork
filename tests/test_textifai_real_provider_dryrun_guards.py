@@ -352,6 +352,11 @@ class RealProviderDryRunGuardsTests(unittest.TestCase):
             FIXTURE_ROOT / "deepseek_ch002_profiled_vs_generic_report_after_sp062.json",
             FIXTURE_ROOT / "deepseek_ch002_profiled_vs_sp056_baseline_report_after_sp062.json",
             FIXTURE_ROOT / "deepseek_provider_profile_runtime_issue_report_after_sp062.json",
+            FIXTURE_ROOT / "deepseek_ch002_compact_profile_runtime_summary_after_sp064.json",
+            FIXTURE_ROOT / "deepseek_ch002_compact_profile_vs_generic_report_after_sp064.json",
+            FIXTURE_ROOT / "deepseek_ch002_compact_profile_vs_failed_profile_report_after_sp064.json",
+            FIXTURE_ROOT / "deepseek_ch002_compact_profile_vs_sp056_baseline_report_after_sp064.json",
+            FIXTURE_ROOT / "deepseek_compact_profile_runtime_issue_report_after_sp064.json",
         ]:
             with self.subTest(path=path):
                 payload = json.loads(path.read_text(encoding="utf-8"))
@@ -362,6 +367,24 @@ class RealProviderDryRunGuardsTests(unittest.TestCase):
                 self.assertNotIn("chapter_text", blob)
                 self.assertNotIn("OPENAI_API_KEY", blob)
                 self.assertNotIn("DEEPSEEK_API_KEY", blob)
+
+    def test_compact_profile_runtime_reports_record_executed_valid_json_state(self):
+        summary = json.loads((FIXTURE_ROOT / "deepseek_ch002_compact_profile_runtime_summary_after_sp064.json").read_text(encoding="utf-8"))
+        generic = json.loads((FIXTURE_ROOT / "deepseek_ch002_compact_profile_vs_generic_report_after_sp064.json").read_text(encoding="utf-8"))
+        failed = json.loads((FIXTURE_ROOT / "deepseek_ch002_compact_profile_vs_failed_profile_report_after_sp064.json").read_text(encoding="utf-8"))
+        baseline = json.loads((FIXTURE_ROOT / "deepseek_ch002_compact_profile_vs_sp056_baseline_report_after_sp064.json").read_text(encoding="utf-8"))
+        issues = json.loads((FIXTURE_ROOT / "deepseek_compact_profile_runtime_issue_report_after_sp064.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(summary["real_provider_call_status"], "executed_one_call_compact_profile_valid_json")
+        self.assertEqual(summary["provider_calls"], 1)
+        self.assertTrue(summary["provider_profile_applied"])
+        self.assertTrue(summary["response_parseable_json"])
+        self.assertTrue(summary["validation_ok"])
+        self.assertEqual(summary["chapter_id"], "ch_002")
+        self.assertEqual(generic["overall_assessment"], "compact_profile_restored_json_but_still_thin")
+        self.assertEqual(failed["overall_assessment"], "compact_profile_restored_json_but_still_thin")
+        self.assertEqual(baseline["overall_assessment"], "compact_profile_improved_but_below_manual")
+        self.assertEqual(issues["real_provider_call_status"], "executed_one_call_compact_profile_valid_json")
 
     def test_profiled_runtime_reports_record_safe_not_executed_state(self):
         summary = json.loads((FIXTURE_ROOT / "deepseek_ch002_profiled_runtime_summary_after_sp061.json").read_text(encoding="utf-8"))

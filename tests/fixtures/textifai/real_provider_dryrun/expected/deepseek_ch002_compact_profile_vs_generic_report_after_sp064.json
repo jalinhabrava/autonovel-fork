@@ -1,0 +1,55 @@
+{
+  "generic": "deepseek-v4-flash_real_provider_dryrun_ch002_after_sp059",
+  "compact_profile": "deepseek-v4-flash_compact_profile_real_provider_dryrun_ch002_after_sp065",
+  "overall_assessment": "compact_profile_restored_json_but_still_thin",
+  "call_status": "executed_one_call_compact_profile_valid_json",
+  "count_comparison": {
+    "generic_counts": {
+      "characters": 3,
+      "places": 1,
+      "concepts": 4,
+      "objects": 2,
+      "events": 2,
+      "relations": 1,
+      "unresolved_mentions": 0
+    },
+    "compact_profile_counts": {
+      "characters": 1,
+      "places": 2,
+      "concepts": 3,
+      "objects": 1,
+      "events": 2,
+      "relations": 2,
+      "unresolved_mentions": 0
+    }
+  },
+  "density_improvements": [
+    "Compact profile restored valid JSON after SP-063 invalid profiled output.",
+    "Relations count improved from 1 to 2.",
+    "Places count improved from 1 to 2."
+  ],
+  "density_regressions": [
+    "Characters count dropped from 3 to 1.",
+    "Concepts count dropped from 4 to 3.",
+    "Objects count dropped from 2 to 1.",
+    "Unresolved mentions remained empty."
+  ],
+  "schema_validity": {
+    "generic_json_valid": true,
+    "compact_profile_json_valid": true
+  },
+  "objects_comparison": {
+    "assessment": "slightly_worse_than_generic"
+  },
+  "events_comparison": {
+    "assessment": "roughly_same_as_generic"
+  },
+  "relations_comparison": {
+    "assessment": "better_than_generic"
+  },
+  "unresolved_mentions_comparison": {
+    "assessment": "still_empty"
+  },
+  "review_safety_notes": "Compact profile preserved JSON validity and kept review-safety-compatible shape, but still did not surface unresolved mentions.",
+  "recommended_next_step": "Compact overlay is safer than prior profiled overlay; inspect whether one smaller density iteration can recover objects/characters or move to stronger model/fallback policy."
+}

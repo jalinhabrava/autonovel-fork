@@ -1,0 +1,22 @@
+{
+  "report_id": "deepseek_compact_profile_runtime_issue_report_after_sp065",
+  "compact_overlay_runtime_effect": "restored_json_parseability",
+  "deepseek_generic_semantic_thinness": "still_present",
+  "json_parseability": "confirmed",
+  "output_token_budget": "confirmed_8192",
+  "real_provider_call_status": "executed_one_call_compact_profile_valid_json",
+  "environment_issue": {
+    "key_present_in_codex_environment": true,
+    "prompt_recapture_attempted": false,
+    "reason": null
+  },
+  "remaining_issues": [
+    "One chapter only.",
+    "One provider/model only.",
+    "No DeepSeek Pro comparison.",
+    "No OpenAI runtime comparison.",
+    "Output private not committed by design.",
+    "Unresolved mentions still empty.",
+    "Semantic density remains below SP-056 manual baseline."
+  ]
+}

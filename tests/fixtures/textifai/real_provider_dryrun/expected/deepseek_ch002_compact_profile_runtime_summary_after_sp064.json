@@ -1,0 +1,40 @@
+{
+  "runtime_sample_id": "deepseek-v4-flash_compact_profile_real_provider_dryrun_ch002_after_sp065",
+  "provider": "deepseek",
+  "model": "deepseek-v4-flash",
+  "provider_profile_requested": "auto",
+  "provider_profile_applied": true,
+  "provider_profile_id": "deepseek-v4-flash:bootstrap_chapter_extraction:v1",
+  "prompt_sha256": "74c437e8ed878d16eb7b7a2636b5cff6a51353ee632cd0c188f210e8c6ff677d",
+  "prompt_chars": 25607,
+  "response_text_chars": 6968,
+  "validation_ok": true,
+  "response_parseable_json": true,
+  "chapter_id": "ch_002",
+  "chapter_count": 1,
+  "counts": {
+    "characters": 1,
+    "places": 2,
+    "concepts": 3,
+    "objects": 1,
+    "events": 2,
+    "relations": 2,
+    "unresolved_mentions": 0
+  },
+  "event_importance_present": true,
+  "relation_category_present": true,
+  "output_dir_reference": "/tmp/textifai_real_provider_dryrun_profiled_compact/20260524T085508Z",
+  "output_committed": false,
+  "provider_calls": 1,
+  "write_back": false,
+  "run_timestamp_utc": "20260524T085612Z",
+  "max_output_tokens": 8192,
+  "max_output_tokens_source": "user_provided",
+  "real_provider_call_status": "executed_one_call_compact_profile_valid_json",
+  "environment_check": {
+    "key_present": true,
+    "key_len": 35,
+    "key_sha8_present": true
+  },
+  "prompt_recapture_status": "used_existing_prompt_capture"
+}
