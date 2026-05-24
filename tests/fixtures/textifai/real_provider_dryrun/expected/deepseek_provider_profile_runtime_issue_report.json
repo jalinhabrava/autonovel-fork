@@ -1,0 +1,17 @@
+{
+  "report_id": "deepseek_provider_profile_runtime_issue_report_after_sp062",
+  "deepseek_generic_semantic_thinness": "not_retested_with_profile",
+  "provider_profile_overlay_runtime_effect": "failed",
+  "json_parseability": "not_evaluated",
+  "output_token_budget": "configured_for_8192",
+  "real_provider_call_status": "not_executed_missing_key_and_prompt",
+  "remaining_issues": [
+    "Profiled DeepSeek runtime output does not exist in this environment.",
+    "One chapter only once executable.",
+    "One provider/model only once executable.",
+    "No DeepSeek Pro comparison.",
+    "No OpenAI runtime comparison.",
+    "Output private not committed by design.",
+    "No chunking yet."
+  ]
+}

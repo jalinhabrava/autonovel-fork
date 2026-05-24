@@ -344,6 +344,10 @@ class RealProviderDryRunGuardsTests(unittest.TestCase):
             FIXTURE_ROOT / "deepseek_ch002_vs_sp056_baseline_report.json",
             FIXTURE_ROOT / "deepseek_ch002_runtime_issue_report.json",
             FIXTURE_ROOT / "provider_prompt_profiles_product_opportunity_report.json",
+            FIXTURE_ROOT / "deepseek_ch002_profiled_runtime_summary_after_sp061.json",
+            FIXTURE_ROOT / "deepseek_ch002_profiled_vs_generic_report.json",
+            FIXTURE_ROOT / "deepseek_ch002_profiled_vs_sp056_baseline_report.json",
+            FIXTURE_ROOT / "deepseek_provider_profile_runtime_issue_report.json",
         ]:
             with self.subTest(path=path):
                 payload = json.loads(path.read_text(encoding="utf-8"))
@@ -354,6 +358,19 @@ class RealProviderDryRunGuardsTests(unittest.TestCase):
                 self.assertNotIn("chapter_text", blob)
                 self.assertNotIn("OPENAI_API_KEY", blob)
                 self.assertNotIn("DEEPSEEK_API_KEY", blob)
+
+    def test_profiled_runtime_reports_record_safe_not_executed_state(self):
+        summary = json.loads((FIXTURE_ROOT / "deepseek_ch002_profiled_runtime_summary_after_sp061.json").read_text(encoding="utf-8"))
+        generic = json.loads((FIXTURE_ROOT / "deepseek_ch002_profiled_vs_generic_report.json").read_text(encoding="utf-8"))
+        baseline = json.loads((FIXTURE_ROOT / "deepseek_ch002_profiled_vs_sp056_baseline_report.json").read_text(encoding="utf-8"))
+        issues = json.loads((FIXTURE_ROOT / "deepseek_provider_profile_runtime_issue_report.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(summary["real_provider_call_status"], "not_executed_missing_key_and_prompt")
+        self.assertEqual(summary["provider_calls"], 0)
+        self.assertFalse(summary["output_committed"])
+        self.assertEqual(generic["overall_assessment"], "profile_call_failed")
+        self.assertEqual(baseline["overall_assessment"], "profiled_deepseek_invalid")
+        self.assertEqual(issues["provider_profile_overlay_runtime_effect"], "failed")
 
 
 def _sample_capture_markdown() -> str:
