@@ -10,7 +10,9 @@
     "model_pattern": "deepseek-v4-flash",
     "json_mode": true,
     "default_max_output_tokens": 8192,
-    "prompt_density_policy": "high_recall_concise_facts",
+    "json_reliability_policy": "json_first_no_markdown_single_object",
+    "prompt_density_policy": "compact_high_recall",
+    "overlay_style": "compact_json_first",
     "validation_policy": "strict_json_and_density_check",
     "review_safety_policy": "do_not_promote_uncertain_identities"
   },
@@ -18,9 +20,10 @@
     "bootstrap_chapter_extraction"
   ],
   "limitations": [
-    "Single profile only in SP-061 foundation.",
+    "Single profile only in SP-064 compact overlay revision.",
     "Not yet wired into production ingestion pipeline.",
-    "Density validation is heuristic and provider-free."
+    "Density validation is heuristic and provider-free.",
+    "Retry/fallback policy still lives outside prompt overlay."
   ],
-  "next_phase": "Phase 1.3.M-b5c-3f — Optimized DeepSeek ch_002 Dry-run with Provider Profile"
+  "next_phase": "Phase 1.3.M-b5c-3i — Second Profiled DeepSeek ch_002 Dry-run with Compact Overlay"
 }

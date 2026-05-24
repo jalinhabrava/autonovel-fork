@@ -2,41 +2,41 @@
 
 ## Product Value
 
-TextifAI no solo llama modelos. TextifAI optimiza cómo pedir extracción por `provider+model+task`.
+TextifAI no solo llama LLMs. TextifAI optimiza extracción por `provider + model + task`.
 
 Valor producto:
 
-- mejor calidad por token;
-- menor coste total;
-- JSON reliability más estable;
-- mejor review safety;
-- flexibilidad multivendor sin lock-in fuerte.
-
-Esto puede formar parte directa de propuesta de valor de planes de pago: extracción usable con menor coste y controles de calidad explícitos.
+- mejor calidad/coste;
+- mayor fiabilidad JSON;
+- densidad semántica calibrada;
+- review safety estable;
+- menor lock-in de vendor.
 
 ## Problem Observed
 
-Con mismo contrato y mismo prompt capturado:
+- `SP-060`: DeepSeek V4 Flash con prompt genérico devolvió JSON válido pero semánticamente fino.
+- `SP-061`: se añadió registry + overlay de densidad provider-free.
+- `SP-063`: ejecución real con `--provider-profile auto` aplicó profile, pero salida quedó no parseable JSON.
 
-- baseline manual ChatGPT (`SP-056`) mantiene mayor densidad semántica;
-- DeepSeek V4 Flash runtime devuelve JSON válido pero más comprimido;
-- sin output-token budget suficiente, puede devolver salida vacía.
+Conclusión: profile mecánico funciona; overlay previo era demasiado agresivo/discursivo para JSON reliability.
 
-Conclusión: no basta “prompt genérico único para todos”. Se necesita perfil por provider/modelo.
+## SP-064 Compact Revision
 
-## Implementation Status
+Objetivo de revisión:
 
-`SP-061` añade base provider-free:
+1. JSON validity first.
+2. Density second.
+3. Overlay corto e imperativo.
+4. Cero contenido de obra específica.
 
-- registry simple de perfiles;
-- resolución por `provider + model + task`;
-- overlay de prompt solo en `system_prompt`;
-- validación heurística de densidad;
-- integración dev-only opcional con `real_provider_dryrun.py` vía `--provider-profile`.
+Se mantiene perfil `deepseek-v4-flash:bootstrap_chapter_extraction:v1` con políticas explícitas:
 
-Todavía no se cablea al pipeline productivo de ingestion.
+- `json_reliability_policy = json_first_no_markdown_single_object`
+- `prompt_density_policy = compact_high_recall`
+- `overlay_style = compact_json_first`
+- `default_max_output_tokens = 8192`
 
-## Proposed Profile Shape
+## Profile Shape (current)
 
 ```json
 {
@@ -46,76 +46,92 @@ Todavía no se cablea al pipeline productivo de ingestion.
   "task": "bootstrap_chapter_extraction",
   "json_mode": true,
   "default_max_output_tokens": 8192,
-  "prompt_density_policy": "high_recall_concise_facts",
+  "json_reliability_policy": "json_first_no_markdown_single_object",
+  "prompt_density_policy": "compact_high_recall",
+  "overlay_style": "compact_json_first",
   "schema_strategy": "full_v2_with_density_reminder",
-  "must_include_sections": [
-    "characters",
-    "places",
-    "concepts",
-    "objects",
-    "events",
-    "relations",
-    "unresolved_mentions"
-  ],
-  "minimum_density_targets": {
-    "objects": "include all structurally relevant artifacts, tools, catalysts, weapons, keys, persistent props, and event-triggering props.",
-    "events": "include all durable structural events, not only the final scene outcome.",
-    "relations": "include protagonist-object, protagonist-place, protagonist-concept, object-event, authority/political, and magic/system relations when supported.",
-    "unresolved_mentions": "include important unresolved actors, objects, concepts, or pronouns rather than silently dropping them.",
-    "review": "keep uncertain identities in review or local candidate instead of promoting them."
-  },
   "review_safety_policy": "do_not_promote_uncertain_identities",
   "validation_policy": "strict_json_and_density_check",
   "fallback": "retry_with_density_boost_or_larger_model"
 }
 ```
 
-## Current DeepSeek V4 Flash Profile
+## Compact Overlay (current)
 
-Perfil inicial implementado para:
+```text
+DeepSeek V4 Flash JSON reliability and extraction density:
 
-- `provider = deepseek`
-- `model_pattern = deepseek-v4-flash`
-- `task = bootstrap_chapter_extraction`
-- `default_max_output_tokens = 8192`
-- `prompt_density_policy = high_recall_concise_facts`
-- `validation_policy = strict_json_and_density_check`
+Return exactly one valid JSON object. Do not use markdown.
 
-Overlay actual fuerza:
+Keep every required schema key:
+work, chapters, characters, places, concepts, objects, events, relations, unresolved_mentions.
 
-- no comprimir extracción al resumen principal;
-- no omitir secciones del schema;
-- no omitir objetos/eventos/relaciones estructuralmente relevantes;
-- usar `unresolved_mentions` en vez de borrar referencias inciertas;
-- mantener review safety.
+Do not compress the extraction into only the summary.
 
-## Provider-specific Examples
+Include structurally relevant:
+- objects/tools/artifacts/catalysts/weapons;
+- durable events;
+- evidence-backed relations;
+- important unresolved mentions.
 
-- `openai/gpt-*`: baseline fuerte, extracción rica, coste mayor.
-- `deepseek-v4-flash`: barato, necesita budget y densidad explícita.
-- `deepseek-v4-pro`: candidato más fuerte para capítulos difíciles, coste mayor que Flash.
-- `lmstudio/local`: útil para privacidad/offline, requiere validación estricta y/o chunks más pequeños.
+Keep facts concise.
+Keep uncertain identities in review/local candidate.
+Do not invent names.
+```
+
+## JSON Reliability vs Density Policy
+
+Separación explícita:
+
+- `json_reliability_policy`: obliga formato (`single JSON object`, `no markdown`).
+- `prompt_density_policy`: empuja cobertura (`objects/events/relations/unresolved`) sin rehacer schema completo.
+
+Regla producto: nunca sacrificar parseabilidad por densidad.
+
+## Density Validation Role
+
+El profile no “garantiza” densidad por sí solo. Flujo recomendado:
+
+1. Prompt profile pide cobertura compacta.
+2. Validación provider-free detecta salida fina o inválida.
+3. Retry/fallback decide:
+   - retry con overlay compacto;
+   - retry con overlay más fuerte y JSON-safe;
+   - subir a `deepseek-v4-pro`;
+   - fallback a OpenAI;
+   - o ajustar split/reduction.
 
 ## Non-goals
 
-- No hardcodear contenido narrativo de una obra.
-- No crear reglas ad-hoc por novela.
-- No aceptar salida semánticamente pobre solo por coste.
-- No duplicar prompts completos por provider sin necesidad.
+- no hardcode narrativo por obra;
+- no cambios a schema productivo global;
+- no chunking en esta fase;
+- no llamadas provider en `SP-064`.
+
+## Next Runtime Command (for SP-065)
+
+```bash
+uv run python scripts/dev/real_provider_dryrun.py \
+  --prompt-file "$PROMPT_FILE" \
+  --provider deepseek \
+  --model deepseek-v4-flash \
+  --output-root "/tmp/textifai_real_provider_dryrun_profiled" \
+  --allow-provider-calls \
+  --max-provider-requests 1 \
+  --max-output-tokens 8192 \
+  --response-format-json \
+  --provider-profile auto \
+  --no-write-back
+```
 
 ## Future Implementation Plan
 
-- `SP-062`: usar registry para un segundo dry-run optimizado DeepSeek `ch_002`.
-- `SP-063`: comparar DeepSeek genérico vs DeepSeek perfilado.
-- `SP-064`: evaluar fallback `deepseek-v4-pro` u OpenAI para capítulos difíciles.
-
-Comparaciones objetivo:
-
-- DeepSeek genérico vs DeepSeek optimizado.
-- DeepSeek optimizado vs baseline manual ChatGPT.
-
-Decisión posterior:
-
-- usar DeepSeek Flash para extracción barata estándar;
-- usar DeepSeek Pro/OpenAI para retries o capítulos complejos;
-- aplicar fallback policy por calidad/coste.
+- `SP-065`: segunda llamada real única con overlay compacto.
+- Comparar contra:
+  - DeepSeek genérico `SP-060`;
+  - DeepSeek perfilado previo `SP-063`;
+  - baseline manual `SP-056`.
+- Decidir:
+  - mantener Flash con overlay compacto;
+  - iterar profile;
+  - o fallback a modelo más fuerte.

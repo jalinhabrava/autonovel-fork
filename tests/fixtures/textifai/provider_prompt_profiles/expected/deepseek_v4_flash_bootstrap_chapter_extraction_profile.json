@@ -5,7 +5,9 @@
   "task": "bootstrap_chapter_extraction",
   "json_mode": true,
   "default_max_output_tokens": 8192,
-  "prompt_density_policy": "high_recall_concise_facts",
+  "json_reliability_policy": "json_first_no_markdown_single_object",
+  "prompt_density_policy": "compact_high_recall",
+  "overlay_style": "compact_json_first",
   "schema_strategy": "full_v2_with_density_reminder",
   "must_include_sections": [
     "characters",

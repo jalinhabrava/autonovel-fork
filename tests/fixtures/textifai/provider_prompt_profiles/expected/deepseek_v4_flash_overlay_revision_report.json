@@ -1,0 +1,20 @@
+{
+  "previous_runtime_result": "profile_regressed_json_parseability",
+  "revision_reason": "profile_overlay_too_aggressive_or_too_verbose",
+  "new_overlay_strategy": "compact_json_first_density_overlay",
+  "expected_effect": [
+    "restore JSON validity",
+    "preserve some density pressure",
+    "reduce instruction collision"
+  ],
+  "next_runtime_test": {
+    "provider": "deepseek",
+    "model": "deepseek-v4-flash",
+    "chapter_id": "ch_002",
+    "provider_profile": "auto",
+    "compare_against": [
+      "generic DeepSeek SP-060",
+      "manual SP-056"
+    ]
+  }
+}

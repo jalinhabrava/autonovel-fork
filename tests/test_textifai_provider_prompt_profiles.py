@@ -42,14 +42,24 @@ class ProviderPromptProfilesTests(unittest.TestCase):
         self.assertTrue(required.issubset(set(profile.must_include_sections)))
 
         overlay = profile.prompt_overlay
+        self.assertIn("valid JSON object", overlay)
+        self.assertIn("Do not use markdown", overlay)
         self.assertIn("Do not compress the extraction", overlay)
-        self.assertIn("Do not omit structurally relevant objects", overlay)
-        self.assertIn("Do not omit durable events", overlay)
-        self.assertIn("Do not omit key relations", overlay)
-        self.assertIn("Use unresolved_mentions", overlay)
+        self.assertIn("objects/tools/artifacts/catalysts/weapons", overlay)
+        self.assertIn("durable events", overlay)
+        self.assertIn("evidence-backed relations", overlay)
+        self.assertIn("unresolved mentions", overlay)
         self.assertIn("Keep uncertain identities in review", overlay)
+        self.assertLess(len(overlay), 1200)
         self.assertNotIn("セラ", overlay)
-        self.assertNotIn("触媒", overlay)
+        self.assertNotIn("王者の杖", overlay)
+        self.assertNotIn("アデルマン", overlay)
+        self.assertNotIn("ティセイア", overlay)
+        self.assertNotIn("ベル", overlay)
+
+        self.assertEqual(profile.json_reliability_policy, "json_first_no_markdown_single_object")
+        self.assertEqual(profile.prompt_density_policy, "compact_high_recall")
+        self.assertEqual(profile.overlay_style, "compact_json_first")
 
     def test_apply_profile_augments_system_prompt_and_is_idempotent(self):
         profile = get_provider_prompt_profile("deepseek", "deepseek-v4-flash", "bootstrap_chapter_extraction")
@@ -70,6 +80,9 @@ class ProviderPromptProfilesTests(unittest.TestCase):
         summary = summarize_provider_prompt_profile(profile)
         self.assertIn("profile_id", summary)
         self.assertIn("prompt_overlay_preview", summary)
+        self.assertEqual(summary["json_reliability_policy"], "json_first_no_markdown_single_object")
+        self.assertEqual(summary["prompt_density_policy"], "compact_high_recall")
+        self.assertEqual(summary["overlay_style"], "compact_json_first")
         self.assertNotIn("prompt_overlay", summary)
 
     def test_validate_density_warns_on_thin_payload(self):
@@ -99,11 +112,18 @@ class ProviderPromptProfilesTests(unittest.TestCase):
     def test_expected_reports_parse(self):
         profile = json.loads((FIXTURE_ROOT / "deepseek_v4_flash_bootstrap_chapter_extraction_profile.json").read_text(encoding="utf-8"))
         overlay = (FIXTURE_ROOT / "deepseek_v4_flash_density_prompt_overlay.md").read_text(encoding="utf-8")
+        compact_overlay = (FIXTURE_ROOT / "deepseek_v4_flash_compact_json_first_overlay.md").read_text(encoding="utf-8")
         registry = json.loads((FIXTURE_ROOT / "provider_prompt_profiles_registry_report.json").read_text(encoding="utf-8"))
+        overlay_revision = json.loads((FIXTURE_ROOT / "deepseek_v4_flash_overlay_revision_report.json").read_text(encoding="utf-8"))
 
         self.assertEqual(profile["profile_id"], "deepseek-v4-flash:bootstrap_chapter_extraction:v1")
-        self.assertIn("Do not compress the extraction", overlay)
+        self.assertEqual(profile["json_reliability_policy"], "json_first_no_markdown_single_object")
+        self.assertEqual(profile["prompt_density_policy"], "compact_high_recall")
+        self.assertIn("valid JSON object", overlay)
+        self.assertIn("Do not use markdown", compact_overlay)
+        self.assertLess(len(compact_overlay), 1200)
         self.assertEqual(registry["profiles_count"], 1)
+        self.assertEqual(overlay_revision["new_overlay_strategy"], "compact_json_first_density_overlay")
 
 
 if __name__ == "__main__":

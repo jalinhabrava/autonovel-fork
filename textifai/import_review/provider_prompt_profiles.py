@@ -13,7 +13,9 @@ class ProviderPromptProfile:
     task: str
     json_mode: bool
     default_max_output_tokens: int
+    json_reliability_policy: str
     prompt_density_policy: str
+    overlay_style: str
     schema_strategy: str
     must_include_sections: list[str]
     minimum_density_targets: dict[str, str]
@@ -23,17 +25,24 @@ class ProviderPromptProfile:
     prompt_overlay: str
 
 
-_DEEPSEEK_V4_FLASH_BOOTSTRAP_CHAPTER_EXTRACTION_OVERLAY = """Provider-specific extraction density instructions for DeepSeek V4 Flash:
+_DEEPSEEK_V4_FLASH_BOOTSTRAP_CHAPTER_EXTRACTION_OVERLAY = """DeepSeek V4 Flash JSON reliability and extraction density:
 
-- Do not compress the extraction into only the main summary.
-- Return all schema sections, even when some are short.
-- Do not omit structurally relevant objects, tools, catalysts, weapons, artifacts, keys, or persistent props.
-- Do not omit durable events that change state, identity, location, threat, relationship, or magic/system status.
-- Do not omit key relations when evidence supports them.
-- Keep facts concise, but preserve coverage.
-- Use unresolved_mentions for important unresolved references instead of dropping them.
-- Keep uncertain identities in review; do not auto-promote.
-- Return one valid JSON object only."""
+Return exactly one valid JSON object. Do not use markdown.
+
+Keep every required schema key:
+work, chapters, characters, places, concepts, objects, events, relations, unresolved_mentions.
+
+Do not compress the extraction into only the summary.
+
+Include structurally relevant:
+- objects/tools/artifacts/catalysts/weapons;
+- durable events;
+- evidence-backed relations;
+- important unresolved mentions.
+
+Keep facts concise.
+Keep uncertain identities in review/local candidate.
+Do not invent names."""
 
 
 _PROFILES: tuple[ProviderPromptProfile, ...] = (
@@ -44,7 +53,9 @@ _PROFILES: tuple[ProviderPromptProfile, ...] = (
         task="bootstrap_chapter_extraction",
         json_mode=True,
         default_max_output_tokens=8192,
-        prompt_density_policy="high_recall_concise_facts",
+        json_reliability_policy="json_first_no_markdown_single_object",
+        prompt_density_policy="compact_high_recall",
+        overlay_style="compact_json_first",
         schema_strategy="full_v2_with_density_reminder",
         must_include_sections=[
             "characters",
