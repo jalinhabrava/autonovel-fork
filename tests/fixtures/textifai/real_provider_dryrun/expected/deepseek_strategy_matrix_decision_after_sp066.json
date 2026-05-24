@@ -1,0 +1,182 @@
+{
+  "matrix_id": "deepseek_strategy_matrix_after_sp067",
+  "assessment": "flash_valid_but_requires_retry_policy",
+  "flash_result": {
+    "valid_runs": 3,
+    "invalid_runs": 9,
+    "best_flash_variant_global": {
+      "chapter_id": "ch_003",
+      "variant_id": "variant_e_objects_events_relations_boost",
+      "score": 26.0
+    }
+  },
+  "pro_result_if_attempted": {
+    "attempted": true,
+    "valid_runs": 3,
+    "invalid_runs": 1,
+    "best_ch002": {
+      "model": "deepseek-v4-pro",
+      "tier": "pro",
+      "chapter_id": "ch_002",
+      "variant_id": "variant_b_dense_plus_check",
+      "status": "completed",
+      "executed": true,
+      "parseable_json": true,
+      "validation_ok": true,
+      "response_text_chars": 7301,
+      "counts": {
+        "characters": 3,
+        "places": 1,
+        "concepts": 2,
+        "objects": 0,
+        "events": 1,
+        "relations": 4,
+        "unresolved_mentions": 1
+      },
+      "missing_required_sections": [],
+      "event_importance_present": true,
+      "relation_category_present": true,
+      "score": 20.5,
+      "prompt_sha256": "74c437e8ed878d16eb7b7a2636b5cff6a51353ee632cd0c188f210e8c6ff677d",
+      "output_dir_reference": "/tmp/textifai_deepseek_strategy_matrix/runs/deepseek-v4-pro/ch_002/variant_b_dense_plus_check/20260524T103509Z"
+    },
+    "best_ch003": {
+      "model": "deepseek-v4-pro",
+      "tier": "pro",
+      "chapter_id": "ch_003",
+      "variant_id": "variant_b_dense_plus_check",
+      "status": "completed",
+      "executed": true,
+      "parseable_json": true,
+      "validation_ok": true,
+      "response_text_chars": 4046,
+      "counts": {
+        "characters": 0,
+        "places": 0,
+        "concepts": 2,
+        "objects": 2,
+        "events": 1,
+        "relations": 2,
+        "unresolved_mentions": 0
+      },
+      "missing_required_sections": [],
+      "event_importance_present": true,
+      "relation_category_present": true,
+      "score": 14.5,
+      "prompt_sha256": "6dda905f672bddffe6794d9d79e6850fe11e3851e654265cdc8832d793feb7c7",
+      "output_dir_reference": "/tmp/textifai_deepseek_strategy_matrix/runs/deepseek-v4-pro/ch_003/variant_b_dense_plus_check/20260524T104045Z"
+    }
+  },
+  "best_variant": {
+    "chapter_id": "ch_003",
+    "model": "deepseek-v4-flash",
+    "variant_id": "variant_e_objects_events_relations_boost",
+    "score": 26.0
+  },
+  "best_strategy": {
+    "flash_candidate": {
+      "chapter_ch002": {
+        "variant_id": "variant_b_dense_plus_check",
+        "score": 25.0
+      },
+      "chapter_ch003": {
+        "variant_id": "variant_e_objects_events_relations_boost",
+        "score": 26.0
+      }
+    },
+    "pro_candidate": {
+      "chapter_ch002": {
+        "variant_id": "variant_b_dense_plus_check",
+        "score": 20.5
+      },
+      "chapter_ch003": {
+        "variant_id": "variant_b_dense_plus_check",
+        "score": 14.5
+      }
+    }
+  },
+  "comparison_vs_sp060_generic_ch002": {
+    "generic_counts": {
+      "characters": 3,
+      "places": 1,
+      "concepts": 4,
+      "objects": 2,
+      "events": 2,
+      "relations": 1,
+      "unresolved_mentions": 0
+    },
+    "best_flash_ch002_counts": {
+      "characters": 4,
+      "places": 3,
+      "concepts": 4,
+      "objects": 1,
+      "events": 1,
+      "relations": 3,
+      "unresolved_mentions": 1
+    },
+    "delta": {
+      "characters": 1,
+      "places": 2,
+      "concepts": 0,
+      "objects": -1,
+      "events": -1,
+      "relations": 2,
+      "unresolved_mentions": 1
+    }
+  },
+  "comparison_vs_sp065_compact_ch002": {
+    "compact_counts": {
+      "characters": 1,
+      "places": 2,
+      "concepts": 3,
+      "objects": 1,
+      "events": 2,
+      "relations": 2,
+      "unresolved_mentions": 0
+    },
+    "best_flash_ch002_counts": {
+      "characters": 4,
+      "places": 3,
+      "concepts": 4,
+      "objects": 1,
+      "events": 1,
+      "relations": 3,
+      "unresolved_mentions": 1
+    },
+    "delta": {
+      "characters": 3,
+      "places": 1,
+      "concepts": 1,
+      "objects": 0,
+      "events": -1,
+      "relations": 1,
+      "unresolved_mentions": 1
+    }
+  },
+  "comparison_vs_sp066_matrix_ch002": {
+    "sp066_best_variant": "variant_03_dense_explicit",
+    "current_best_flash_variant": "variant_b_dense_plus_check"
+  },
+  "comparison_vs_manual_baselines": {
+    "ch_002_delta_best_flash_vs_manual": {
+      "characters": 0,
+      "places": 0,
+      "concepts": 0,
+      "objects": -3,
+      "events": -4,
+      "relations": -4,
+      "unresolved_mentions": -3
+    },
+    "ch_003_delta_best_flash_vs_manual": {
+      "characters": -1,
+      "places": -2,
+      "concepts": -2,
+      "objects": -2,
+      "events": -4,
+      "relations": -1,
+      "unresolved_mentions": -2
+    }
+  },
+  "recommendation": "Keep Flash as cheap primary candidate with retry policy (invalid JSON variants exist). Use Pro as fallback gate for hard chapters only if Flash candidate fails validity/density thresholds.",
+  "next_suggested_phase": "Phase 1.3.M-b5c-3l — Flash Candidate Profile Packaging + Retry/Fallback Gate Definition"
+}

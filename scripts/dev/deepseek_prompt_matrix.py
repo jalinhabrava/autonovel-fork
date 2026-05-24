@@ -3,9 +3,8 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
-import os
 import sys
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -20,40 +19,19 @@ _REAL_DRYRUN = importlib.util.module_from_spec(_SPEC)
 sys.modules[_SPEC.name] = _REAL_DRYRUN
 _SPEC.loader.exec_module(_REAL_DRYRUN)
 
-DEFAULT_OUTPUT_ROOT = Path("/tmp/textifai_deepseek_prompt_matrix_ch002")
-BASELINE_FIXTURE_ROOT = Path("tests/fixtures/textifai/real_provider_dryrun/expected")
+DEFAULT_OUTPUT_ROOT = Path("/tmp/textifai_deepseek_strategy_matrix")
+REQUIRED_SECTIONS = ["characters", "places", "concepts", "objects", "events", "relations", "unresolved_mentions"]
+
 
 @dataclass(frozen=True)
 class PromptVariant:
     variant_id: str
-    label: str
-    overlay_text: str | None
-    provider_profile: str
-    execute: bool
-    reference_fixture: str | None = None
+    overlay_text: str
+
 
 VARIANTS: tuple[PromptVariant, ...] = (
     PromptVariant(
-        variant_id="variant_01_generic_reference",
-        label="generic_reference_sp060",
-        overlay_text=None,
-        provider_profile="none",
-        execute=False,
-        reference_fixture="deepseek_ch002_runtime_summary_after_sp059.json",
-    ),
-    PromptVariant(
-        variant_id="variant_02_compact_json_first",
-        label="compact_json_first_sp065",
-        overlay_text=None,
-        provider_profile="auto",
-        execute=False,
-        reference_fixture="deepseek_ch002_compact_profile_runtime_summary_after_sp064.json",
-    ),
-    PromptVariant(
-        variant_id="variant_03_dense_explicit",
-        label="dense_explicit",
-        provider_profile="none",
-        execute=True,
+        variant_id="variant_a_dense_explicit",
         overlay_text="""Return exactly one valid JSON object. Do not use markdown.
 
 Prioritize complete extraction over brevity.
@@ -63,7 +41,7 @@ Extract all meaningful:
 - characters and role-significant unnamed actors;
 - places and subplaces;
 - concepts and magic/system states;
-- objects/tools/artifacts/catalysts/weapons;
+- objects/tools/artifacts/catalysts/weapons/restraints/keys/event-triggering props;
 - durable events;
 - evidence-backed relations;
 - unresolved but important mentions.
@@ -73,95 +51,126 @@ Use review/local_candidate for uncertainty.
 Do not invent names.""",
     ),
     PromptVariant(
-        variant_id="variant_04_section_targets",
-        label="section_targets",
-        provider_profile="none",
-        execute=True,
+        variant_id="variant_b_dense_plus_check",
+        overlay_text="""Return exactly one valid JSON object. Do not use markdown.
+
+Prioritize complete extraction over brevity.
+Do not stop after summary or final outcome.
+
+Extract all meaningful characters, places, concepts, objects, events, relations, and unresolved mentions.
+
+Before final JSON, internally check whether you omitted:
+- role-significant characters;
+- event-triggering objects;
+- durable state-change events;
+- evidence-backed relations;
+- important unresolved mentions.
+
+If supported by evidence, include it.
+If uncertain, use review/local_candidate or unresolved_mentions.
+Do not output your checklist.
+Do not invent names.""",
+    ),
+    PromptVariant(
+        variant_id="variant_c_section_targets_json_safe",
         overlay_text="""Return exactly one valid JSON object. Do not use markdown.
 
 Fill every schema section.
 
-For a non-trivial narrative chapter, prefer recall over compression:
-- characters: include named, POV, authority, family, and role-significant actors.
-- places: include relevant places/subplaces where action or status changes occur.
-- objects: include tools, artifacts, catalysts, weapons, restraints, keys, and event-triggering props.
-- events: include all durable state changes, not only the final outcome.
-- relations: include protagonist-authority, protagonist-place, protagonist-object, object-event, and magic/system relations when supported.
-- unresolved_mentions: include important unknown actors, objects, concepts, or pronouns.
+Coverage targets:
+characters = named, POV, authority, family, role-significant actors.
+places = locations/subplaces where action, status, or threat changes.
+objects = tools, artifacts, catalysts, weapons, restraints, keys, event-triggering props.
+events = durable changes in role, status, location, threat, magic/system, or decision.
+relations = evidence-backed links between protagonist, authority, places, objects, events, concepts.
+unresolved_mentions = important unknown actors, objects, concepts, or pronouns.
 
-Concise facts only.
+Keep facts concise.
 Uncertain identity stays review/local_candidate.
 No invented names.""",
     ),
     PromptVariant(
-        variant_id="variant_05_internal_coverage_check",
-        label="internal_coverage_check",
-        provider_profile="none",
-        execute=True,
+        variant_id="variant_d_schema_skeleton_plus_density",
         overlay_text="""Return exactly one valid JSON object. Do not use markdown.
 
-Before writing the final JSON, internally check whether you omitted:
+The JSON must contain all schema sections:
 characters, places, concepts, objects, events, relations, unresolved_mentions.
 
-If a relevant item is supported by evidence, include it.
-If uncertain, include it with needs_review/review_reason or unresolved_mentions.
-Do not output your checklist.
-Output only the final JSON object.""",
+Do not leave a section empty if the chapter contains evidence for it.
+
+Prefer recall over compression.
+Keep facts short.
+Use review/local_candidate for uncertain identity.
+Use unresolved_mentions for important unresolved references.
+Do not invent names.""",
     ),
     PromptVariant(
-        variant_id="variant_06_json_skeleton_reinforcement",
-        label="json_skeleton_reinforcement",
-        provider_profile="none",
-        execute=True,
+        variant_id="variant_e_objects_events_relations_boost",
         overlay_text="""Return exactly one valid JSON object. Do not use markdown.
 
-The JSON must contain:
-work
-chapters[0].characters
-chapters[0].places
-chapters[0].concepts
-chapters[0].objects
-chapters[0].events
-chapters[0].relations
-chapters[0].unresolved_mentions
+Do not compress into summary only.
 
-Do not leave a section empty if the chapter contains evidence for it.
-Use short facts, but preserve coverage.
-Do not invent names.
-Keep uncertain identities in review/local_candidate.""",
+Focus especially on:
+1. objects: include all tools, artifacts, catalysts, weapons, restraints, keys, props that trigger or explain events.
+2. events: include all durable state changes, not only the final outcome.
+3. relations: include all evidence-backed links involving protagonist, authority, places, objects, concepts, and events.
+4. unresolved_mentions: do not drop important unknown references.
+
+Also include characters, places, and concepts normally.
+Keep facts concise.
+Keep uncertainty in review/local_candidate.
+Do not invent names.""",
+    ),
+    PromptVariant(
+        variant_id="variant_f_two_stage_instruction",
+        overlay_text="""Return exactly one valid JSON object. Do not use markdown.
+
+Internally perform two steps:
+1. Identify all relevant extraction candidates for every schema section.
+2. Write the final JSON using those candidates.
+
+Do not output step 1.
+Output only the final JSON.
+
+Prioritize coverage over brevity.
+Keep facts concise.
+Use review/local_candidate for uncertainty.
+Do not invent names.""",
     ),
 )
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Run guarded DeepSeek V4 Flash prompt overlay matrix for ch_002.")
-    parser.add_argument("--prompt-file", required=True)
+    parser = argparse.ArgumentParser(description="DeepSeek extraction strategy matrix runner for ch_002/ch_003.")
+    parser.add_argument("--prompt-ch002", required=True)
+    parser.add_argument("--prompt-ch003", required=True)
     parser.add_argument("--output-root", default=str(DEFAULT_OUTPUT_ROOT))
     parser.add_argument("--allow-provider-calls", action="store_true")
-    parser.add_argument("--max-provider-requests", type=int, default=0)
+    parser.add_argument("--max-provider-requests", type=int, default=0, help="Global max calls allowed for this matrix.")
     parser.add_argument("--max-output-tokens", type=int, default=8192)
     parser.add_argument("--response-format-json", action="store_true")
     parser.add_argument("--no-write-back", action="store_true", default=True)
     parser.add_argument("--provider", default="deepseek", choices=["deepseek"])
-    parser.add_argument("--model", default="deepseek-v4-flash")
+    parser.add_argument("--flash-model", default="deepseek-v4-flash")
+    parser.add_argument("--pro-model", default="deepseek-v4-pro")
+    parser.add_argument("--attempt-pro", action="store_true")
     return parser
 
 
 def variant_definitions() -> list[dict[str, Any]]:
-    return [
-        {
-            "variant_id": item.variant_id,
-            "label": item.label,
-            "execute": item.execute,
-            "provider_profile": item.provider_profile,
-            "reference_fixture": item.reference_fixture,
-            "overlay_chars": len(item.overlay_text or ""),
-        }
-        for item in VARIANTS
-    ]
+    return [{"variant_id": item.variant_id, "overlay_chars": len(item.overlay_text)} for item in VARIANTS]
 
 
-def score_variant(*, parseable_json: bool, validation_ok: bool, counts: dict[str, int], event_importance_present: bool, relation_category_present: bool) -> float:
+def score_variant(
+    *,
+    parseable_json: bool,
+    validation_ok: bool,
+    counts: dict[str, int],
+    event_importance_present: bool,
+    relation_category_present: bool,
+    missing_required_sections: list[str],
+    response_text_chars: int,
+) -> float:
     if not parseable_json or not validation_ok:
         return 0.0
     score = 0.0
@@ -172,23 +181,63 @@ def score_variant(*, parseable_json: bool, validation_ok: bool, counts: dict[str
     score += counts.get("events", 0) * 1.5
     score += counts.get("relations", 0) * 2
     score += counts.get("unresolved_mentions", 0)
-    if not event_importance_present:
-        score -= 2
-    if not relation_category_present:
-        score -= 2
-    return max(score, 0.0)
+    if event_importance_present:
+        score += 2
+    if relation_category_present:
+        score += 2
+    if missing_required_sections:
+        score -= 5
+    if response_text_chars < 2500:
+        score -= 3
+    return round(max(score, 0.0), 2)
 
 
 def run_matrix(args: argparse.Namespace) -> dict[str, Any]:
     if not args.allow_provider_calls:
         raise SystemExit("Refusing provider calls: --allow-provider-calls is required.")
-    executed_variants = [item for item in VARIANTS if item.execute]
-    if args.max_provider_requests != len(executed_variants):
-        raise SystemExit(f"Refusing matrix: --max-provider-requests must equal {len(executed_variants)} for executable variants.")
     if not args.response_format_json:
         raise SystemExit("Refusing matrix: --response-format-json is required.")
     if not args.no_write_back:
         raise SystemExit("Refusing matrix: --no-write-back is required.")
+
+    chapters = [
+        {"chapter_id": "ch_002", "prompt_file": args.prompt_ch002},
+        {"chapter_id": "ch_003", "prompt_file": args.prompt_ch003},
+    ]
+
+    plan: list[dict[str, Any]] = []
+    for chapter in chapters:
+        for variant in VARIANTS:
+            plan.append(
+                {
+                    "chapter_id": chapter["chapter_id"],
+                    "prompt_file": chapter["prompt_file"],
+                    "model": args.flash_model,
+                    "variant": variant,
+                    "tier": "flash",
+                }
+            )
+
+    if args.attempt_pro:
+        pro_variants = [item for item in VARIANTS if item.variant_id in {"variant_a_dense_explicit", "variant_b_dense_plus_check"}]
+        for chapter in chapters:
+            for variant in pro_variants:
+                plan.append(
+                    {
+                        "chapter_id": chapter["chapter_id"],
+                        "prompt_file": chapter["prompt_file"],
+                        "model": args.pro_model,
+                        "variant": variant,
+                        "tier": "pro",
+                    }
+                )
+
+    if args.max_provider_requests <= 0:
+        raise SystemExit("Refusing matrix: --max-provider-requests must be > 0.")
+    if len(plan) > args.max_provider_requests:
+        raise SystemExit(f"Refusing matrix: planned calls {len(plan)} exceed --max-provider-requests={args.max_provider_requests}.")
+    if len(plan) > 16:
+        raise SystemExit(f"Refusing matrix: planned calls {len(plan)} exceed hard cap 16.")
 
     output_root = Path(args.output_root)
     overlays_dir = output_root / "overlays"
@@ -197,25 +246,46 @@ def run_matrix(args: argparse.Namespace) -> dict[str, Any]:
     runs_dir.mkdir(parents=True, exist_ok=True)
 
     results: list[dict[str, Any]] = []
-    for variant in VARIANTS:
-        if not variant.execute:
-            reference = _load_reference_summary(variant.reference_fixture) if variant.reference_fixture else {}
-            results.append(_summarize_reference_variant(variant, reference))
+    pro_blocked = False
+    pro_block_reason: str | None = None
+
+    for item in plan:
+        chapter_id = item["chapter_id"]
+        prompt_file = item["prompt_file"]
+        model = item["model"]
+        variant: PromptVariant = item["variant"]
+        tier = item["tier"]
+
+        if tier == "pro" and pro_blocked:
+            results.append(
+                {
+                    "model": model,
+                    "tier": tier,
+                    "chapter_id": chapter_id,
+                    "variant_id": variant.variant_id,
+                    "status": "skipped_pro_model_unavailable_or_failed",
+                    "error": pro_block_reason,
+                    "executed": False,
+                }
+            )
             continue
 
-        overlay_file = overlays_dir / f"{variant.variant_id}.md"
-        overlay_file.write_text(variant.overlay_text or "", encoding="utf-8")
+        overlay_file = overlays_dir / f"{model}_{chapter_id}_{variant.variant_id}.md"
+        overlay_file.write_text(variant.overlay_text, encoding="utf-8")
+
         parser = _REAL_DRYRUN.build_parser()
         dryrun_args = parser.parse_args(
             [
                 "--prompt-file",
-                args.prompt_file,
+                prompt_file,
+                "--expected-chapter-id",
+                chapter_id,
                 "--provider",
                 args.provider,
                 "--model",
-                args.model,
+                model,
                 "--output-root",
-                str(runs_dir / variant.variant_id),
+                str(runs_dir / model / chapter_id / variant.variant_id),
                 "--allow-provider-calls",
                 "--max-provider-requests",
                 "1",
@@ -223,111 +293,117 @@ def run_matrix(args: argparse.Namespace) -> dict[str, Any]:
                 str(args.max_output_tokens),
                 "--response-format-json",
                 "--provider-profile",
-                variant.provider_profile,
+                "none",
                 "--prompt-overlay-file",
                 str(overlay_file),
                 "--no-write-back",
             ]
         )
-        result = _REAL_DRYRUN.run_once(
-            dryrun_args,
-            provider_factory=_REAL_DRYRUN.get_text_provider,
-            provider_config_error=_REAL_DRYRUN.get_text_provider_config_error,
-        )
-        results.append(_summarize_executed_variant(variant, result))
+
+        try:
+            dryrun_result = _REAL_DRYRUN.run_once(
+                dryrun_args,
+                provider_factory=_REAL_DRYRUN.get_text_provider,
+                provider_config_error=_REAL_DRYRUN.get_text_provider_config_error,
+            )
+            results.append(_summarize_executed(dryrun_result=dryrun_result, model=model, chapter_id=chapter_id, tier=tier, variant_id=variant.variant_id))
+        except Exception as exc:  # noqa: BLE001
+            error_message = str(exc)
+            results.append(
+                {
+                    "model": model,
+                    "tier": tier,
+                    "chapter_id": chapter_id,
+                    "variant_id": variant.variant_id,
+                    "status": "failed_exception",
+                    "error": error_message,
+                    "executed": True,
+                }
+            )
+            if tier == "pro":
+                pro_blocked = True
+                pro_block_reason = error_message
 
     summary = {
         "provider": args.provider,
-        "model": args.model,
-        "prompt_file_sha256": _read_manifest(results).get("prompt_file_sha256"),
+        "models_attempted": sorted({item["model"] for item in plan}),
+        "attempt_pro": bool(args.attempt_pro),
+        "pro_block_reason": pro_block_reason,
         "max_output_tokens": args.max_output_tokens,
-        "variants": results,
-        "executed_provider_calls": len(executed_variants),
-        "best_variant": _best_variant(results),
+        "planned_provider_calls": len(plan),
+        "executed_provider_calls": len([item for item in results if item.get("executed")]),
+        "results": results,
     }
-    summary_path = output_root / "matrix_summary.json"
+    summary_path = output_root / "strategy_matrix_summary.json"
     summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
     return summary
 
 
-def _load_reference_summary(name: str | None) -> dict[str, Any]:
-    if not name:
-        return {}
-    path = BASELINE_FIXTURE_ROOT / name
-    if not path.exists():
-        return {"missing_reference_fixture": name}
-    return json.loads(path.read_text(encoding="utf-8"))
-
-
-def _summarize_reference_variant(variant: PromptVariant, reference: dict[str, Any]) -> dict[str, Any]:
-    counts = reference.get("counts")
-    if not isinstance(counts, dict):
-        counts = (
-            reference.get("coverage_comparison", {}).get("runtime_counts")
-            if isinstance(reference.get("coverage_comparison"), dict)
-            else {}
-        )
-    parseable = bool(
-        reference.get("response_parseable_json", reference.get("schema_validity", {}).get("runtime_json_parseable", False))
-    )
-    validation_ok = bool(
-        reference.get("validation_ok", reference.get("schema_validity", {}).get("runtime_top_level_shape_ok", False))
-    )
-    event_flag = bool(reference.get("event_importance_present", False))
-    rel_flag = bool(reference.get("relation_category_present", False))
-    return {
-        "variant_id": variant.variant_id,
-        "label": variant.label,
-        "source": "reference_fixture",
-        "executed": False,
-        "reference_fixture": variant.reference_fixture,
-        "provider_profile": variant.provider_profile,
-        "parseable_json": parseable,
-        "validation_ok": validation_ok,
-        "chapter_id": reference.get("chapter_id"),
-        "response_text_chars": reference.get("response_text_chars"),
-        "counts": counts,
-        "event_importance_present": event_flag,
-        "relation_category_present": rel_flag,
-        "score": score_variant(parseable_json=parseable, validation_ok=validation_ok, counts=counts, event_importance_present=event_flag, relation_category_present=rel_flag),
-        "output_dir_reference": reference.get("output_dir_reference"),
-    }
-
-
-def _summarize_executed_variant(variant: PromptVariant, result: Any) -> dict[str, Any]:
-    output_dir = Path(result.output_dir)
+def _summarize_executed(*, dryrun_result: Any, model: str, chapter_id: str, tier: str, variant_id: str) -> dict[str, Any]:
+    output_dir = Path(dryrun_result.output_dir)
     manifest = json.loads((output_dir / "dryrun_manifest.json").read_text(encoding="utf-8"))
     validation = json.loads((output_dir / "validation_report.json").read_text(encoding="utf-8"))
+
     payload = {}
-    response_path = output_dir / "provider_response.json"
-    if response_path.exists():
-        payload = json.loads(response_path.read_text(encoding="utf-8"))
-    counts = _counts(payload)
-    event_flag, rel_flag = _flags(payload)
+    response_json_path = output_dir / "provider_response.json"
+    if response_json_path.exists():
+        payload = json.loads(response_json_path.read_text(encoding="utf-8"))
+
+    counts, missing_sections = _counts_and_missing_sections(payload)
+    event_importance_present, relation_category_present = _flags(payload)
     parseable = bool(validation.get("response_parseable_json"))
     validation_ok = bool(validation.get("ok"))
+    response_text_chars = int(manifest.get("response_text_chars") or 0)
+
+    score = score_variant(
+        parseable_json=parseable,
+        validation_ok=validation_ok,
+        counts=counts,
+        event_importance_present=event_importance_present,
+        relation_category_present=relation_category_present,
+        missing_required_sections=missing_sections,
+        response_text_chars=response_text_chars,
+    )
+
     return {
-        "variant_id": variant.variant_id,
-        "label": variant.label,
-        "source": "executed_runtime",
+        "model": model,
+        "tier": tier,
+        "chapter_id": chapter_id,
+        "variant_id": variant_id,
+        "status": "completed",
         "executed": True,
-        "provider_profile": variant.provider_profile,
-        "prompt_overlay_applied": bool(manifest.get("prompt_overlay_applied")),
         "parseable_json": parseable,
         "validation_ok": validation_ok,
-        "chapter_id": validation.get("details", {}).get("chapter_id"),
-        "response_text_chars": manifest.get("response_text_chars"),
+        "response_text_chars": response_text_chars,
         "counts": counts,
-        "event_importance_present": event_flag,
-        "relation_category_present": rel_flag,
-        "score": score_variant(parseable_json=parseable, validation_ok=validation_ok, counts=counts, event_importance_present=event_flag, relation_category_present=rel_flag),
+        "missing_required_sections": missing_sections,
+        "event_importance_present": event_importance_present,
+        "relation_category_present": relation_category_present,
+        "score": score,
+        "prompt_sha256": manifest.get("prompt_file_sha256"),
         "output_dir_reference": str(output_dir),
     }
 
 
-def _counts(payload: dict[str, Any]) -> dict[str, int]:
+def _chapter(payload: dict[str, Any]) -> dict[str, Any]:
+    chapters = payload.get("chapters") if isinstance(payload, dict) else None
+    if isinstance(chapters, list) and chapters and isinstance(chapters[0], dict):
+        return chapters[0]
+    return {}
+
+
+def _counts_and_missing_sections(payload: dict[str, Any]) -> tuple[dict[str, int], list[str]]:
     chapter = _chapter(payload)
-    return {key: len(chapter.get(key) or []) if isinstance(chapter.get(key), list) else 0 for key in ["characters", "places", "concepts", "objects", "events", "relations", "unresolved_mentions"]}
+    counts: dict[str, int] = {}
+    missing: list[str] = []
+    for key in REQUIRED_SECTIONS:
+        if key not in chapter:
+            missing.append(key)
+            counts[key] = 0
+            continue
+        value = chapter.get(key)
+        counts[key] = len(value) if isinstance(value, list) else 0
+    return counts, missing
 
 
 def _flags(payload: dict[str, Any]) -> tuple[bool, bool]:
@@ -340,34 +416,20 @@ def _flags(payload: dict[str, Any]) -> tuple[bool, bool]:
     )
 
 
-def _chapter(payload: dict[str, Any]) -> dict[str, Any]:
-    chapters = payload.get("chapters") if isinstance(payload, dict) else None
-    if isinstance(chapters, list) and chapters and isinstance(chapters[0], dict):
-        return chapters[0]
-    return {}
-
-
-def _best_variant(results: list[dict[str, Any]]) -> dict[str, Any] | None:
-    valid = [item for item in results if item.get("parseable_json") and item.get("validation_ok")]
-    if not valid:
-        return None
-    best = max(valid, key=lambda item: item.get("score", 0))
-    return {"variant_id": best["variant_id"], "label": best["label"], "score": best["score"]}
-
-
-def _read_manifest(results: list[dict[str, Any]]) -> dict[str, Any]:
-    for item in results:
-        if item.get("executed") and item.get("output_dir_reference"):
-            path = Path(item["output_dir_reference"]) / "dryrun_manifest.json"
-            if path.exists():
-                return json.loads(path.read_text(encoding="utf-8"))
-    return {}
-
-
 def main() -> int:
     args = build_parser().parse_args()
     summary = run_matrix(args)
-    print(json.dumps({"status": "completed", "summary_path": str(Path(args.output_root) / "matrix_summary.json"), "best_variant": summary.get("best_variant")}, ensure_ascii=False))
+    print(
+        json.dumps(
+            {
+                "status": "completed",
+                "summary_path": str(Path(args.output_root) / "strategy_matrix_summary.json"),
+                "executed_provider_calls": summary.get("executed_provider_calls"),
+                "models_attempted": summary.get("models_attempted"),
+            },
+            ensure_ascii=False,
+        )
+    )
     return 0
 
 

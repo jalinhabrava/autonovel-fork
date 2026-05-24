@@ -1,0 +1,45 @@
+{
+  "matrix_id": "deepseek_strategy_matrix_after_sp067",
+  "assessment": "flash_valid_but_requires_retry_policy",
+  "provider": "deepseek",
+  "models_attempted": [
+    "deepseek-v4-flash",
+    "deepseek-v4-pro"
+  ],
+  "provider_calls_count": 16,
+  "planned_provider_calls": 16,
+  "max_output_tokens": 8192,
+  "variants_defined": [
+    "variant_a_dense_explicit",
+    "variant_b_dense_plus_check",
+    "variant_c_section_targets_json_safe",
+    "variant_d_schema_skeleton_plus_density",
+    "variant_e_objects_events_relations_boost",
+    "variant_f_two_stage_instruction"
+  ],
+  "chapters": {
+    "ch_002": {
+      "prompt_sha256": "74c437e8ed878d16eb7b7a2636b5cff6a51353ee632cd0c188f210e8c6ff677d"
+    },
+    "ch_003": {
+      "prompt_sha256": "6dda905f672bddffe6794d9d79e6850fe11e3851e654265cdc8832d793feb7c7"
+    }
+  },
+  "flash_valid_runs": 3,
+  "flash_invalid_runs": 9,
+  "pro_valid_runs": 3,
+  "pro_invalid_runs": 1,
+  "best_global_variant": {
+    "chapter_id": "ch_003",
+    "model": "deepseek-v4-flash",
+    "variant_id": "variant_e_objects_events_relations_boost",
+    "score": 26.0
+  },
+  "comparison_refs": {
+    "sp060_generic_ch002": "deepseek_ch002_runtime_summary_after_sp059.json",
+    "sp065_compact_ch002": "deepseek_ch002_compact_profile_runtime_summary_after_sp064.json",
+    "sp066_matrix_ch002": "deepseek_ch002_prompt_matrix_decision_after_sp065.json",
+    "sp056_manual_ch002": "chatgpt_response_bootstrap_chapter_extraction_ja_ch_002_populated_map_after_sp055.json",
+    "sp057_manual_ch003": "chatgpt_response_bootstrap_chapter_extraction_ja_ch_003_populated_map_after_sp056.json"
+  }
+}

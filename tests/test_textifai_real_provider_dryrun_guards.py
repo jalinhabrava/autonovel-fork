@@ -355,6 +355,8 @@ class RealProviderDryRunGuardsTests(unittest.TestCase):
             counts={"characters": 1, "places": 1, "concepts": 1, "objects": 1, "events": 1, "relations": 1, "unresolved_mentions": 0},
             event_importance_present=True,
             relation_category_present=True,
+            missing_required_sections=[],
+            response_text_chars=3000,
         )
         high = MATRIX_MODULE.score_variant(
             parseable_json=True,
@@ -362,6 +364,8 @@ class RealProviderDryRunGuardsTests(unittest.TestCase):
             counts={"characters": 2, "places": 2, "concepts": 2, "objects": 3, "events": 4, "relations": 5, "unresolved_mentions": 1},
             event_importance_present=True,
             relation_category_present=True,
+            missing_required_sections=[],
+            response_text_chars=4000,
         )
         self.assertGreater(high, low)
         self.assertEqual(
@@ -371,6 +375,8 @@ class RealProviderDryRunGuardsTests(unittest.TestCase):
                 counts={},
                 event_importance_present=False,
                 relation_category_present=False,
+                missing_required_sections=["characters"],
+                response_text_chars=1000,
             ),
             0.0,
         )
@@ -448,6 +454,11 @@ class RealProviderDryRunGuardsTests(unittest.TestCase):
             FIXTURE_ROOT / "deepseek_ch002_prompt_matrix_summary_after_sp065.json",
             FIXTURE_ROOT / "deepseek_ch002_prompt_matrix_variant_report_after_sp065.json",
             FIXTURE_ROOT / "deepseek_ch002_prompt_matrix_decision_after_sp065.json",
+            FIXTURE_ROOT / "deepseek_strategy_matrix_summary_after_sp066.json",
+            FIXTURE_ROOT / "deepseek_strategy_matrix_variants_after_sp066.json",
+            FIXTURE_ROOT / "deepseek_strategy_matrix_ch002_report_after_sp066.json",
+            FIXTURE_ROOT / "deepseek_strategy_matrix_ch003_report_after_sp066.json",
+            FIXTURE_ROOT / "deepseek_strategy_matrix_decision_after_sp066.json",
         ]:
             with self.subTest(path=path):
                 payload = json.loads(path.read_text(encoding="utf-8"))
@@ -488,6 +499,23 @@ class RealProviderDryRunGuardsTests(unittest.TestCase):
         self.assertEqual(decision["best_variant"]["variant_id"], "variant_03_dense_explicit")
         self.assertEqual(decision["comparison_vs_sp056_manual"]["assessment"], "still_below_manual_density")
         self.assertEqual(len(variants["variants"]), 6)
+
+    def test_strategy_matrix_reports_parse_and_use_valid_decision_enum(self):
+        summary = json.loads((FIXTURE_ROOT / "deepseek_strategy_matrix_summary_after_sp066.json").read_text(encoding="utf-8"))
+        decision = json.loads((FIXTURE_ROOT / "deepseek_strategy_matrix_decision_after_sp066.json").read_text(encoding="utf-8"))
+        valid_enum = {
+            "flash_profile_candidate_confirmed",
+            "flash_valid_but_requires_retry_policy",
+            "flash_not_suitable_for_primary_but_useful_for_draft",
+            "pro_candidate_better_if_available",
+            "deepseek_strategy_requires_openai_fallback",
+            "experiment_blocked",
+        }
+
+        self.assertIn(summary["assessment"], valid_enum)
+        self.assertIn(decision["assessment"], valid_enum)
+        self.assertLessEqual(summary["provider_calls_count"], 16)
+        self.assertIn("deepseek-v4-flash", summary["models_attempted"])
 
     def test_profiled_runtime_reports_record_safe_not_executed_state(self):
         summary = json.loads((FIXTURE_ROOT / "deepseek_ch002_profiled_runtime_summary_after_sp061.json").read_text(encoding="utf-8"))

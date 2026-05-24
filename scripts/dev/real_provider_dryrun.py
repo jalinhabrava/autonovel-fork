@@ -66,6 +66,7 @@ class DryRunResult:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run one guarded real-provider dry-run from captured prompt markdown.")
     parser.add_argument("--prompt-file", required=True, help="Path to captured prompt markdown file.")
+    parser.add_argument("--expected-chapter-id", default="ch_002", help="Expected first chapter_id in JSON output. Default ch_002.")
     parser.add_argument("--provider", required=True, choices=["deepseek", "openai", "openai_compatible"])
     parser.add_argument("--model", required=True, help="Model name used in TextGenerationRequest.")
     parser.add_argument("--output-root", default=str(DEFAULT_OUTPUT_ROOT), help="Root output directory. Default /tmp path.")
@@ -144,7 +145,7 @@ def _extract_fenced_section(markdown: str, heading: str) -> str:
     return fence.group(1)
 
 
-def _validate_contract_v2_for_ch002(payload: dict[str, Any]) -> ValidationResult:
+def _validate_contract_v2(payload: dict[str, Any], *, expected_chapter_id: str) -> ValidationResult:
     errors: list[str] = []
     details: dict[str, Any] = {}
 
@@ -161,8 +162,8 @@ def _validate_contract_v2_for_ch002(payload: dict[str, Any]) -> ValidationResult
     first = chapters[0] if chapters and isinstance(chapters[0], dict) else {}
     chapter_id = first.get("chapter_id")
     details["chapter_id"] = chapter_id
-    if chapter_id != "ch_002":
-        errors.append("first_chapter_id_not_ch_002")
+    if chapter_id != expected_chapter_id:
+        errors.append(f"first_chapter_id_not_{expected_chapter_id}")
 
     if "objects" not in first:
         errors.append("missing_objects")
@@ -181,6 +182,7 @@ def _validate_contract_v2_for_ch002(payload: dict[str, Any]) -> ValidationResult
 
     details.update(
         {
+            "expected_chapter_id": expected_chapter_id,
             "top_level_keys": sorted(payload.keys()) if isinstance(payload, dict) else [],
             "chapter_count": len(chapters),
             "events_count": len(events),
@@ -324,7 +326,7 @@ def run_once(
         response_json_path = output_dir / "provider_response.json"
         _json_dump(response_json_path, parsed)
 
-    validation = _validate_contract_v2_for_ch002(parsed if isinstance(parsed, dict) else {})
+    validation = _validate_contract_v2(parsed if isinstance(parsed, dict) else {}, expected_chapter_id=args.expected_chapter_id)
     validation_payload = {
         "ok": validation.ok,
         "errors": validation.errors,
@@ -339,6 +341,7 @@ def run_once(
         "provider": args.provider,
         "model": args.model,
         "task": BOOTSTRAP_TASK,
+        "expected_chapter_id": args.expected_chapter_id,
         "allow_provider_calls": args.allow_provider_calls,
         "max_provider_requests": args.max_provider_requests,
         "max_output_tokens": max_output_tokens,

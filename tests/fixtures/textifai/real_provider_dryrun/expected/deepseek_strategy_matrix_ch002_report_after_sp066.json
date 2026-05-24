@@ -1,0 +1,122 @@
+{
+  "chapter_id": "ch_002",
+  "runs_total": 8,
+  "runs_valid": 4,
+  "runs_invalid": 4,
+  "best_variant": {
+    "model": "deepseek-v4-flash",
+    "variant_id": "variant_b_dense_plus_check",
+    "score": 25.0,
+    "counts": {
+      "characters": 4,
+      "places": 3,
+      "concepts": 4,
+      "objects": 1,
+      "events": 1,
+      "relations": 3,
+      "unresolved_mentions": 1
+    }
+  },
+  "best_flash": {
+    "variant_id": "variant_b_dense_plus_check",
+    "score": 25.0,
+    "counts": {
+      "characters": 4,
+      "places": 3,
+      "concepts": 4,
+      "objects": 1,
+      "events": 1,
+      "relations": 3,
+      "unresolved_mentions": 1
+    }
+  },
+  "best_pro": {
+    "variant_id": "variant_b_dense_plus_check",
+    "score": 20.5,
+    "counts": {
+      "characters": 3,
+      "places": 1,
+      "concepts": 2,
+      "objects": 0,
+      "events": 1,
+      "relations": 4,
+      "unresolved_mentions": 1
+    }
+  },
+  "manual_baseline_counts": {
+    "characters": 4,
+    "places": 3,
+    "concepts": 4,
+    "objects": 4,
+    "events": 5,
+    "relations": 7,
+    "unresolved_mentions": 4
+  },
+  "delta_best_vs_manual": {
+    "characters": 0,
+    "places": 0,
+    "concepts": 0,
+    "objects": -3,
+    "events": -4,
+    "relations": -4,
+    "unresolved_mentions": -3
+  },
+  "variants_ranked": [
+    {
+      "model": "deepseek-v4-flash",
+      "variant_id": "variant_b_dense_plus_check",
+      "score": 25.0,
+      "parseable_json": true,
+      "validation_ok": true
+    },
+    {
+      "model": "deepseek-v4-flash",
+      "variant_id": "variant_f_two_stage_instruction",
+      "score": 21.5,
+      "parseable_json": true,
+      "validation_ok": true
+    },
+    {
+      "model": "deepseek-v4-pro",
+      "variant_id": "variant_b_dense_plus_check",
+      "score": 20.5,
+      "parseable_json": true,
+      "validation_ok": true
+    },
+    {
+      "model": "deepseek-v4-pro",
+      "variant_id": "variant_a_dense_explicit",
+      "score": 18.5,
+      "parseable_json": true,
+      "validation_ok": true
+    },
+    {
+      "model": "deepseek-v4-flash",
+      "variant_id": "variant_a_dense_explicit",
+      "score": 0.0,
+      "parseable_json": false,
+      "validation_ok": false
+    },
+    {
+      "model": "deepseek-v4-flash",
+      "variant_id": "variant_c_section_targets_json_safe",
+      "score": 0.0,
+      "parseable_json": false,
+      "validation_ok": false
+    },
+    {
+      "model": "deepseek-v4-flash",
+      "variant_id": "variant_d_schema_skeleton_plus_density",
+      "score": 0.0,
+      "parseable_json": true,
+      "validation_ok": false
+    },
+    {
+      "model": "deepseek-v4-flash",
+      "variant_id": "variant_e_objects_events_relations_boost",
+      "score": 0.0,
+      "parseable_json": false,
+      "validation_ok": false
+    }
+  ]
+}
