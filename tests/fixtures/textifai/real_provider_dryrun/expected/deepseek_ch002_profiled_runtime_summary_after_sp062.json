@@ -3,11 +3,11 @@
   "provider": "deepseek",
   "model": "deepseek-v4-flash",
   "provider_profile_requested": "auto",
-  "provider_profile_applied": false,
+  "provider_profile_applied": true,
   "provider_profile_id": "deepseek-v4-flash:bootstrap_chapter_extraction:v1",
-  "prompt_sha256": null,
-  "prompt_chars": null,
-  "response_text_chars": 0,
+  "prompt_sha256": "74c437e8ed878d16eb7b7a2636b5cff6a51353ee632cd0c188f210e8c6ff677d",
+  "prompt_chars": 25607,
+  "response_text_chars": 1939,
   "validation_ok": false,
   "response_parseable_json": false,
   "chapter_id": null,
@@ -23,18 +23,18 @@
   },
   "event_importance_present": false,
   "relation_category_present": false,
-  "output_dir_reference": null,
+  "output_dir_reference": "/tmp/textifai_real_provider_dryrun_profiled/20260524T082222Z",
   "output_committed": false,
-  "provider_calls": 0,
+  "provider_calls": 1,
   "write_back": false,
-  "run_timestamp_utc": null,
+  "run_timestamp_utc": "20260524T082335Z",
   "max_output_tokens": 8192,
-  "max_output_tokens_source": "intended_user_provided",
-  "real_provider_call_status": "not_executed_missing_key_in_codex_environment",
+  "max_output_tokens_source": "user_provided",
+  "real_provider_call_status": "executed_one_call_profiled_json_invalid",
   "environment_check": {
-    "key_present": false,
-    "key_len": 0,
-    "key_sha8_present": false
+    "key_present": true,
+    "key_len": 35,
+    "key_sha8_present": true
   },
-  "prompt_recapture_status": "not_attempted_missing_key"
+  "prompt_recapture_status": "recaptured_prompt_to_tmp"
 }

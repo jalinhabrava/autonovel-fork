@@ -1,8 +1,8 @@
 {
   "generic": "deepseek-v4-flash_real_provider_dryrun_ch002_after_sp059",
   "profiled": "deepseek-v4-flash_profiled_real_provider_dryrun_ch002_after_sp063",
-  "overall_assessment": "profile_call_failed",
-  "call_status": "not_executed_missing_key_in_codex_environment",
+  "overall_assessment": "profile_regressed",
+  "call_status": "executed_one_call_profiled_json_invalid",
   "count_comparison": {
     "generic_counts": {
       "characters": 3,
@@ -13,27 +13,38 @@
       "relations": 1,
       "unresolved_mentions": 0
     },
-    "profiled_counts": null
+    "profiled_counts": {
+      "characters": 0,
+      "places": 0,
+      "concepts": 0,
+      "objects": 0,
+      "events": 0,
+      "relations": 0,
+      "unresolved_mentions": 0
+    }
   },
   "density_improvements": [],
-  "density_regressions": [],
+  "density_regressions": [
+    "Profiled output failed JSON parsing, while generic SP-060 output parsed successfully.",
+    "No contract sections could be validated in profiled output."
+  ],
   "schema_validity": {
     "generic_json_valid": true,
-    "profiled_json_valid": null,
-    "profiled_not_evaluated_reason": "Provider API key was not visible in Codex environment"
+    "profiled_json_valid": false,
+    "profiled_not_evaluated_reason": null
   },
   "objects_comparison": {
-    "assessment": "not_evaluated"
+    "assessment": "regressed_not_parseable"
   },
   "events_comparison": {
-    "assessment": "not_evaluated"
+    "assessment": "regressed_not_parseable"
   },
   "relations_comparison": {
-    "assessment": "not_evaluated"
+    "assessment": "regressed_not_parseable"
   },
   "unresolved_mentions_comparison": {
-    "assessment": "not_evaluated"
+    "assessment": "regressed_not_parseable"
   },
-  "review_safety_notes": "Not evaluated because profiled runtime call was not executed.",
-  "recommended_next_step": "Restart or reconfigure Codex environment so provider API key is visible, then run exactly one profiled DeepSeek ch_002 dry-run."
+  "review_safety_notes": "Not evaluable because profiled output was not parseable JSON.",
+  "recommended_next_step": "Do not accept this overlay as-is; inspect prompt/profile interaction privately, then either reduce overlay complexity or move density instruction into a more compact JSON-safe form before another single-call test."
 }

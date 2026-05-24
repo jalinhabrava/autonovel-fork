@@ -1,20 +1,19 @@
 {
   "report_id": "deepseek_provider_profile_runtime_issue_report_after_sp063",
-  "deepseek_generic_semantic_thinness": "not_retested_with_profile",
-  "provider_profile_overlay_runtime_effect": "not_evaluated",
-  "json_parseability": "not_evaluated",
-  "output_token_budget": "configured_for_8192",
-  "real_provider_call_status": "not_executed_missing_key_in_codex_environment",
+  "deepseek_generic_semantic_thinness": "not_improved",
+  "provider_profile_overlay_runtime_effect": "regressed_json_parseability",
+  "json_parseability": "failed",
+  "output_token_budget": "confirmed_8192",
+  "real_provider_call_status": "executed_one_call_profiled_json_invalid",
   "environment_issue": {
-    "key_present_in_codex_environment": false,
-    "prompt_recapture_attempted": false,
-    "reason": "Provider call is prohibited when key is not visible to Codex."
+    "key_present_in_codex_environment": true,
+    "prompt_recapture_attempted": true,
+    "reason": null
   },
   "remaining_issues": [
-    "Profiled DeepSeek runtime output does not exist in this environment.",
-    "Provider key visibility must be fixed or Codex restarted with correct environment.",
-    "One chapter only once executable.",
-    "One provider/model only once executable.",
+    "Profiled overlay likely interacts poorly with DeepSeek V4 Flash JSON reliability.",
+    "No valid profiled JSON exists for density comparison.",
+    "One provider/model only.",
     "No DeepSeek Pro comparison.",
     "No OpenAI runtime comparison.",
     "Output private not committed by design.",

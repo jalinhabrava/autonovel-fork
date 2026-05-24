@@ -2,17 +2,25 @@
   "profiled_runtime_sample": "deepseek-v4-flash_profiled_real_provider_dryrun_ch002_after_sp063",
   "manual_baseline_sample_id": "chatgpt_response_bootstrap_chapter_extraction_ja_ch_002_populated_map_after_sp055",
   "overall_assessment": "profiled_deepseek_invalid",
-  "assessment_reason": "Profiled runtime call was not executed because provider API key was not visible in Codex environment.",
+  "assessment_reason": "Profiled DeepSeek runtime output was non-parseable, so semantic density cannot be compared to SP-056.",
   "schema_validity": {
-    "profiled_json_valid": null,
+    "profiled_json_valid": false,
     "manual_baseline_json_valid": true
   },
   "semantic_density": {
-    "profiled": "not_evaluated",
+    "profiled": "not_evaluable_invalid_json",
     "manual_baseline": "rich_manual_reference"
   },
   "coverage_comparison": {
-    "profiled_counts": null,
+    "profiled_counts": {
+      "characters": 0,
+      "places": 0,
+      "concepts": 0,
+      "objects": 0,
+      "events": 0,
+      "relations": 0,
+      "unresolved_mentions": 0
+    },
     "manual_baseline_counts": {
       "characters": 4,
       "places": 3,
@@ -24,29 +32,30 @@
     }
   },
   "canonical_reuse_comparison": {
-    "assessment": "not_evaluated"
+    "assessment": "not_evaluable_invalid_json"
   },
   "objects_comparison": {
-    "assessment": "not_evaluated"
+    "assessment": "not_evaluable_invalid_json"
   },
   "events_comparison": {
-    "assessment": "not_evaluated"
+    "assessment": "not_evaluable_invalid_json"
   },
   "relations_comparison": {
-    "assessment": "not_evaluated"
+    "assessment": "not_evaluable_invalid_json"
   },
   "unresolved_mentions_comparison": {
-    "assessment": "not_evaluated"
+    "assessment": "not_evaluable_invalid_json"
   },
   "review_safety_comparison": {
-    "assessment": "not_evaluated"
+    "assessment": "not_evaluable_invalid_json"
   },
   "notable_strengths": [
-    "Provider profile infrastructure remains ready for runtime use.",
-    "Safety gate correctly blocked provider call when key was not visible."
+    "Provider profile was applied and recorded in manifest.",
+    "Safety guards limited execution to one call and no write-back."
   ],
   "notable_losses": [
-    "No profiled runtime output was generated in this environment."
+    "Profiled output was non-parseable JSON.",
+    "No semantic density comparison could be performed."
   ],
-  "recommendation": "Make provider API key visible to Codex environment and rerun exactly one guarded profiled DeepSeek ch_002 dry-run."
+  "recommendation": "Do not proceed to chunking based on profiled DeepSeek result; revise provider profile overlay/prompt strategy before a follow-up single-call test."
 }

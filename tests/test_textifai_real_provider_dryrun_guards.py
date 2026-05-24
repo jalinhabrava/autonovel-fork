@@ -376,18 +376,20 @@ class RealProviderDryRunGuardsTests(unittest.TestCase):
         self.assertEqual(baseline["overall_assessment"], "profiled_deepseek_invalid")
         self.assertEqual(issues["provider_profile_overlay_runtime_effect"], "failed")
 
-    def test_profiled_runtime_reports_record_missing_key_in_codex_environment(self):
+    def test_profiled_runtime_reports_record_executed_profiled_json_invalid_state(self):
         summary = json.loads((FIXTURE_ROOT / "deepseek_ch002_profiled_runtime_summary_after_sp062.json").read_text(encoding="utf-8"))
         generic = json.loads((FIXTURE_ROOT / "deepseek_ch002_profiled_vs_generic_report_after_sp062.json").read_text(encoding="utf-8"))
         baseline = json.loads((FIXTURE_ROOT / "deepseek_ch002_profiled_vs_sp056_baseline_report_after_sp062.json").read_text(encoding="utf-8"))
         issues = json.loads((FIXTURE_ROOT / "deepseek_provider_profile_runtime_issue_report_after_sp062.json").read_text(encoding="utf-8"))
 
-        self.assertEqual(summary["real_provider_call_status"], "not_executed_missing_key_in_codex_environment")
-        self.assertEqual(summary["provider_calls"], 0)
-        self.assertFalse(summary["environment_check"]["key_present"])
-        self.assertEqual(generic["overall_assessment"], "profile_call_failed")
+        self.assertEqual(summary["real_provider_call_status"], "executed_one_call_profiled_json_invalid")
+        self.assertEqual(summary["provider_calls"], 1)
+        self.assertTrue(summary["environment_check"]["key_present"])
+        self.assertTrue(summary["provider_profile_applied"])
+        self.assertFalse(summary["response_parseable_json"])
+        self.assertEqual(generic["overall_assessment"], "profile_regressed")
         self.assertEqual(baseline["overall_assessment"], "profiled_deepseek_invalid")
-        self.assertEqual(issues["real_provider_call_status"], "not_executed_missing_key_in_codex_environment")
+        self.assertEqual(issues["real_provider_call_status"], "executed_one_call_profiled_json_invalid")
 
 
 def _sample_capture_markdown() -> str:
