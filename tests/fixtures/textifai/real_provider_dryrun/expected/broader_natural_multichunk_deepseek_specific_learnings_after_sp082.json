@@ -1,0 +1,20 @@
+{
+  "assessment": "broader_natural_multichunk_passed_with_review_warnings",
+  "deepseek_specific_learnings": {
+    "flash_profile_behavior": "Flash handled all selected natural multi-chunk chapters with valid reductions; one partial warning pattern repeated but final reductions remained valid.",
+    "pro_profile_behavior": "Pro produced valid reductions but showed recurring reasoning budget pressure and lower scores on ch_106/ch_115.",
+    "compact_reduction_used": true,
+    "deepseek_specific_failure_modes": [
+      "valid_json_wrong_chapter"
+    ],
+    "wrong_chapter_continuation_outputs_rejected": true
+  },
+  "what_should_stay_provider_specific": [
+    "DeepSeek Flash/Pro profile ids",
+    "DeepSeek chunking preference suggestions",
+    "Pro compact reduction policy",
+    "reasoning_tokens pressure heuristic",
+    "DeepSeek-specific truncation/recovery warning taxonomy"
+  ],
+  "private_packet_root": "/tmp/textifai_private_provider_runs/sp083_broader_natural_multichunk/20260525T170226Z"
+}

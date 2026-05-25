@@ -1158,6 +1158,108 @@ class RealProviderDryRunGuardsTests(unittest.TestCase):
         self.assertIn("what_should_be_abstracted", general)
         self.assertIn("what_should_stay_provider_specific", deepseek)
 
+    def test_broader_natural_multichunk_reports_parse_and_writer_outcome_stays_simple(self):
+        plan = json.loads((FIXTURE_ROOT / "broader_natural_multichunk_execution_plan_after_sp082.json").read_text(encoding="utf-8"))
+        summary = json.loads((FIXTURE_ROOT / "broader_natural_multichunk_summary_after_sp082.json").read_text(encoding="utf-8"))
+        chunks = json.loads((FIXTURE_ROOT / "broader_natural_multichunk_chunk_results_after_sp082.json").read_text(encoding="utf-8"))
+        reduction = json.loads((FIXTURE_ROOT / "broader_natural_multichunk_reduction_summary_after_sp082.json").read_text(encoding="utf-8"))
+        source_refs = json.loads((FIXTURE_ROOT / "broader_natural_multichunk_source_ref_audit_after_sp082.json").read_text(encoding="utf-8"))
+        truncation = json.loads((FIXTURE_ROOT / "broader_natural_multichunk_truncation_audit_after_sp082.json").read_text(encoding="utf-8"))
+        patch_validation = json.loads((FIXTURE_ROOT / "broader_natural_multichunk_patch_validation_after_sp082.json").read_text(encoding="utf-8"))
+        thin = json.loads((FIXTURE_ROOT / "broader_natural_multichunk_thin_diagnostics_after_sp082.json").read_text(encoding="utf-8"))
+        rerun = json.loads((FIXTURE_ROOT / "broader_natural_multichunk_internal_fail_rerun_plan_after_sp082.json").read_text(encoding="utf-8"))
+        outcome = json.loads((FIXTURE_ROOT / "broader_natural_multichunk_user_ingestion_outcome_after_sp082.json").read_text(encoding="utf-8"))
+        decision = json.loads((FIXTURE_ROOT / "broader_natural_multichunk_decision_after_sp082.json").read_text(encoding="utf-8"))
+        general = json.loads((FIXTURE_ROOT / "broader_natural_multichunk_general_pipeline_learnings_after_sp082.json").read_text(encoding="utf-8"))
+        deepseek = json.loads((FIXTURE_ROOT / "broader_natural_multichunk_deepseek_specific_learnings_after_sp082.json").read_text(encoding="utf-8"))
+
+        valid_enum = {
+            "broader_natural_multichunk_passed_ready_for_full_source_dryrun",
+            "broader_natural_multichunk_passed_with_review_warnings",
+            "broader_natural_multichunk_partial_needs_patch",
+            "broader_natural_multichunk_failed_but_debuggable",
+            "broader_natural_multichunk_blocked",
+            "pro_compact_reduction_recovery_ready",
+        }
+        continuation_statuses = {
+            "not_triggered",
+            "executed",
+            "executed_replaced_primary",
+            "executed_but_not_parseable",
+            "skipped_cap_reached",
+            "patch_merged",
+            None,
+        }
+
+        for payload in (plan, summary, chunks, reduction, source_refs, truncation, patch_validation, thin, rerun, outcome, decision, general, deepseek):
+            text = json.dumps(payload, ensure_ascii=False)
+            self.assertNotIn("sk-", text)
+            self.assertNotIn("Authorization: Bearer", text)
+            self.assertNotIn("CHUNK_TEXT:", text)
+
+        self.assertIn(summary["assessment"], valid_enum)
+        self.assertIn(decision["assessment"], valid_enum)
+        self.assertLessEqual(summary["provider_call_count"], 48)
+        self.assertLessEqual(plan["planned_provider_call_count_with_continuation_reserve"], 48)
+        self.assertTrue(any(len(run.get("chunks", [])) > 1 for run in plan["planned_runs"]))
+        self.assertEqual(plan["natural_vs_forced_multichunk"], "natural")
+        self.assertFalse(any(run.get("forced_multichunk") for run in plan["planned_runs"]))
+        self.assertTrue(all(row.get("split_reason") for row in chunks["chunks"]))
+        self.assertTrue(all(event.get("continuation_status") in continuation_statuses for event in truncation["events"]))
+        self.assertIn("wrong_chapter_patch_count", patch_validation)
+        self.assertEqual(patch_validation["wrong_chapter_patch_merge_count"], 0)
+        self.assertIn("valid_reduction_no_items_count", thin)
+        self.assertGreaterEqual(source_refs["item_level_source_ref_coverage_ratio"], 0.0)
+        self.assertLessEqual(source_refs["item_level_source_ref_coverage_ratio"], 1.0)
+        self.assertTrue(summary["private_packet_root"].startswith("/tmp/textifai_private_provider_runs/"))
+        self.assertIn("what_should_be_abstracted", general)
+        self.assertIn("what_should_stay_provider_specific", deepseek)
+
+        retryable_chapters = set(rerun["retryable_chapters"])
+        self.assertTrue(rerun["safe_to_rerun_without_full_ingestion"])
+        self.assertEqual(rerun["rerun_scope"], "affected_chapters_only")
+        self.assertLessEqual(rerun["cap_check"]["expected_total_calls_for_retry"], rerun["cap_check"]["cap"])
+        self.assertFalse(retryable_chapters.intersection(set(rerun["successful_chapters"])))
+        for unit in rerun["retryable_units_internal"]:
+            self.assertIn(unit["chapter_id"], retryable_chapters)
+            self.assertTrue(unit["run_id"])
+            self.assertTrue(unit["technical_unit_type"])
+
+        writer = outcome["user_ingestion_outcome"]
+        writer_text = json.dumps(outcome, ensure_ascii=False)
+        for forbidden in (
+            "chunk",
+            "reduction",
+            "parseable",
+            "source_ref",
+            "provider",
+            "finish_reason",
+            "JSON",
+            "continuation",
+            "patch",
+            "model",
+            "profile",
+            "token",
+            "API",
+        ):
+            self.assertNotIn(forbidden, writer_text)
+        self.assertEqual(writer["primary_action"]["action_id"], "retry_pending_chapters")
+        self.assertEqual(writer["primary_action"]["scope"], "affected_chapters_only")
+        for chapter in writer["affected_chapters"]:
+            self.assertTrue(chapter["chapter_id"])
+            self.assertTrue(chapter["chapter_label"])
+            self.assertIn(chapter["status"], {"needs_retry", "needs_review", "failed", "ready_with_warnings"})
+            self.assertIn(
+                chapter["reason_label"],
+                {
+                    "analysis_incomplete",
+                    "temporary_model_error",
+                    "chapter_needs_second_pass",
+                    "chapter_processed_with_warnings",
+                    "manual_review_recommended",
+                },
+            )
+
     def test_profiled_runtime_reports_record_safe_not_executed_state(self):
         summary = json.loads((FIXTURE_ROOT / "deepseek_ch002_profiled_runtime_summary_after_sp061.json").read_text(encoding="utf-8"))
         generic = json.loads((FIXTURE_ROOT / "deepseek_ch002_profiled_vs_generic_report.json").read_text(encoding="utf-8"))

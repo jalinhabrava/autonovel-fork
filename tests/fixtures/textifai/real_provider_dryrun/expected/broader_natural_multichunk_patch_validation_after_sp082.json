@@ -1,0 +1,194 @@
+{
+  "assessment": "broader_natural_multichunk_passed_with_review_warnings",
+  "runs": [
+    {
+      "run_id": "ch_097__deepseek_v4_flash",
+      "chapter_id": "ch_097",
+      "model": "deepseek-v4-flash",
+      "profile_id": "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+      "continuation_mode": "patch_based",
+      "continuation_status": "patch_merged",
+      "patch_validation": {
+        "valid": true,
+        "failure_mode": null,
+        "expected_chapter_id": "ch_097",
+        "chapter_ids_seen": [],
+        "chunk_ids_seen": [],
+        "metadata_chapter_id": null,
+        "continuation_for_chapter_id": null
+      },
+      "failure_mode": null
+    },
+    {
+      "run_id": "ch_097__deepseek_v4_pro",
+      "chapter_id": "ch_097",
+      "model": "deepseek-v4-pro",
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "continuation_mode": "patch_based",
+      "continuation_status": "patch_merged",
+      "patch_validation": {
+        "valid": true,
+        "failure_mode": null,
+        "expected_chapter_id": "ch_097",
+        "chapter_ids_seen": [],
+        "chunk_ids_seen": [],
+        "metadata_chapter_id": null,
+        "continuation_for_chapter_id": null
+      },
+      "failure_mode": null
+    },
+    {
+      "run_id": "ch_106__deepseek_v4_pro",
+      "chapter_id": "ch_106",
+      "model": "deepseek-v4-pro",
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "continuation_mode": "patch_based",
+      "continuation_status": "patch_merged",
+      "patch_validation": {
+        "valid": true,
+        "failure_mode": null,
+        "expected_chapter_id": "ch_106",
+        "chapter_ids_seen": [],
+        "chunk_ids_seen": [],
+        "metadata_chapter_id": null,
+        "continuation_for_chapter_id": null
+      },
+      "failure_mode": null
+    },
+    {
+      "run_id": "ch_114__deepseek_v4_pro",
+      "chapter_id": "ch_114",
+      "model": "deepseek-v4-pro",
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "continuation_mode": "patch_based",
+      "continuation_status": "patch_merged",
+      "patch_validation": {
+        "valid": true,
+        "failure_mode": null,
+        "expected_chapter_id": "ch_114",
+        "chapter_ids_seen": [],
+        "chunk_ids_seen": [],
+        "metadata_chapter_id": null,
+        "continuation_for_chapter_id": null
+      },
+      "failure_mode": null
+    },
+    {
+      "run_id": "ch_115__deepseek_v4_flash",
+      "chapter_id": "ch_115",
+      "model": "deepseek-v4-flash",
+      "profile_id": "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+      "continuation_mode": "patch_based",
+      "continuation_status": "patch_merged",
+      "patch_validation": {
+        "valid": true,
+        "failure_mode": null,
+        "expected_chapter_id": "ch_115",
+        "chapter_ids_seen": [],
+        "chunk_ids_seen": [],
+        "metadata_chapter_id": null,
+        "continuation_for_chapter_id": null
+      },
+      "failure_mode": null
+    },
+    {
+      "run_id": "ch_115__deepseek_v4_pro",
+      "chapter_id": "ch_115",
+      "model": "deepseek-v4-pro",
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "continuation_mode": "patch_based",
+      "continuation_status": "patch_merged",
+      "patch_validation": {
+        "valid": true,
+        "failure_mode": null,
+        "expected_chapter_id": "ch_115",
+        "chapter_ids_seen": [],
+        "chunk_ids_seen": [],
+        "metadata_chapter_id": null,
+        "continuation_for_chapter_id": null
+      },
+      "failure_mode": null
+    },
+    {
+      "run_id": "ch_097__deepseek_v4_pro",
+      "chapter_id": "ch_097",
+      "model": "deepseek-v4-pro",
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "technical_unit_type": "partial_extraction",
+      "chunk_id": "source_f1e650917c_ch_097_chunk_002__continuation",
+      "continuation_status": "executed_replaced_primary",
+      "patch_validation": {
+        "valid": false,
+        "failure_mode": "valid_json_wrong_chapter",
+        "expected_chapter_id": "ch_097"
+      },
+      "failure_mode": "valid_json_wrong_chapter"
+    },
+    {
+      "run_id": "ch_106__deepseek_v4_flash",
+      "chapter_id": "ch_106",
+      "model": "deepseek-v4-flash",
+      "profile_id": "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+      "technical_unit_type": "partial_extraction",
+      "chunk_id": "source_f1e650917c_ch_106_chunk_002__continuation",
+      "continuation_status": "executed_replaced_primary",
+      "patch_validation": {
+        "valid": false,
+        "failure_mode": "valid_json_wrong_chapter",
+        "expected_chapter_id": "ch_106"
+      },
+      "failure_mode": "valid_json_wrong_chapter"
+    },
+    {
+      "run_id": "ch_106__deepseek_v4_pro",
+      "chapter_id": "ch_106",
+      "model": "deepseek-v4-pro",
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "technical_unit_type": "partial_extraction",
+      "chunk_id": "source_f1e650917c_ch_106_chunk_001__continuation",
+      "continuation_status": "executed_replaced_primary",
+      "patch_validation": {
+        "valid": false,
+        "failure_mode": "valid_json_wrong_chapter",
+        "expected_chapter_id": "ch_106"
+      },
+      "failure_mode": "valid_json_wrong_chapter"
+    },
+    {
+      "run_id": "ch_106__deepseek_v4_pro",
+      "chapter_id": "ch_106",
+      "model": "deepseek-v4-pro",
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "technical_unit_type": "partial_extraction",
+      "chunk_id": "source_f1e650917c_ch_106_chunk_002__continuation",
+      "continuation_status": "executed_replaced_primary",
+      "patch_validation": {
+        "valid": false,
+        "failure_mode": "valid_json_wrong_chapter",
+        "expected_chapter_id": "ch_106"
+      },
+      "failure_mode": "valid_json_wrong_chapter"
+    },
+    {
+      "run_id": "ch_115__deepseek_v4_pro",
+      "chapter_id": "ch_115",
+      "model": "deepseek-v4-pro",
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "technical_unit_type": "partial_extraction",
+      "chunk_id": "source_f1e650917c_ch_115_chunk_001__continuation",
+      "continuation_status": "executed_replaced_primary",
+      "patch_validation": {
+        "valid": false,
+        "failure_mode": "valid_json_wrong_chapter",
+        "expected_chapter_id": "ch_115"
+      },
+      "failure_mode": "valid_json_wrong_chapter"
+    }
+  ],
+  "wrong_chapter_patch_count": 5,
+  "wrong_chapter_patch_merge_count": 0,
+  "merged_patch_count": 6,
+  "rejected_patch_count": 5,
+  "valid_json_wrong_chapter_rejected_before_merge": true,
+  "private_packet_root": "/tmp/textifai_private_provider_runs/sp083_broader_natural_multichunk/20260525T170226Z"
+}

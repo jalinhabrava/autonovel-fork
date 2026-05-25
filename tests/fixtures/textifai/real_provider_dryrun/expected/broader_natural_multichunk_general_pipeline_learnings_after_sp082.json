@@ -1,0 +1,31 @@
+{
+  "assessment": "broader_natural_multichunk_passed_with_review_warnings",
+  "general_pipeline_learnings": {
+    "calibrated_natural_chunking_scaled": true,
+    "soft_quality_split_observed_across_chapters": true,
+    "chunk_metadata_and_source_spans_preserved": true,
+    "item_level_source_refs_preserved": true,
+    "partial_extraction_plus_reduction_stable_enough_for_broader_dryrun": true,
+    "patch_chapter_validation_prevented_wrong_chapter_merge": true,
+    "thin_no_item_diagnostics_identified_warning_reductions": true,
+    "internal_fail_only_rerun_plan_created": true,
+    "writer_facing_outcome_mapping_created": true
+  },
+  "what_should_be_abstracted": [
+    "natural chunking policy and split reasons",
+    "source-span-preserving chunk metadata",
+    "item-level source_ref carry-forward",
+    "patch chapter validation",
+    "thin/no-item diagnostics",
+    "usage and finish_reason telemetry normalization",
+    "fail-only rerun planning",
+    "writer-facing chapter status mapping"
+  ],
+  "provider_adapter_implications": [
+    "provider adapters should expose normalized telemetry without owning core chapter status mapping",
+    "provider adapters may suggest chunking preferences but core planner owns split decisions",
+    "retry planning should target affected chapters and technical units only"
+  ],
+  "private_packet_root": "/tmp/textifai_private_provider_runs/sp083_broader_natural_multichunk/20260525T170226Z",
+  "retryable_chapter_count": 2
+}

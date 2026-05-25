@@ -1,0 +1,38 @@
+{
+  "user_ingestion_outcome": {
+    "status": "success_with_retry_available",
+    "total_chapters": 4,
+    "chapters_ready": 2,
+    "chapters_needing_retry": 2,
+    "chapters_needing_review": 0,
+    "chapters_failed": 0,
+    "affected_chapters": [
+      {
+        "chapter_id": "ch_106",
+        "chapter_label": "Chapter 106",
+        "status": "needs_retry",
+        "reason_label": "chapter_needs_second_pass",
+        "user_message": "This chapter needs a second pass to complete the analysis."
+      },
+      {
+        "chapter_id": "ch_115",
+        "chapter_label": "Chapter 115",
+        "status": "needs_retry",
+        "reason_label": "chapter_needs_second_pass",
+        "user_message": "This chapter needs a second pass to complete the analysis."
+      }
+    ],
+    "primary_action": {
+      "label": "Retry pending chapters",
+      "action_id": "retry_pending_chapters",
+      "scope": "affected_chapters_only"
+    },
+    "secondary_action": {
+      "label": "Later",
+      "action_id": "dismiss"
+    },
+    "user_summary": "2 of 4 chapters are ready. 2 chapters need a second pass.",
+    "details_hidden_by_default": true,
+    "retry_safe_without_restarting_book": true
+  }
+}

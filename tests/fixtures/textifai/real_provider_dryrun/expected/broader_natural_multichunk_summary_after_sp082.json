@@ -1,0 +1,62 @@
+{
+  "assessment": "broader_natural_multichunk_passed_with_review_warnings",
+  "provider": "deepseek",
+  "models": [
+    "deepseek-v4-flash",
+    "deepseek-v4-pro"
+  ],
+  "chapters": [
+    "ch_097",
+    "ch_106",
+    "ch_114",
+    "ch_115"
+  ],
+  "provider_call_count": 43,
+  "provider_call_cap": 48,
+  "compact_mode_used": true,
+  "patch_continuation_mode": true,
+  "valid_reduction_count": 8,
+  "total_reduction_count": 8,
+  "triggered_continuation_count": 12,
+  "private_packet_root": "/tmp/textifai_private_provider_runs/sp083_broader_natural_multichunk/20260525T170226Z",
+  "recommended_files_to_upload_to_chatgpt": [
+    "README.md",
+    "execution_plan_private.md",
+    "matrix_summary_private.md",
+    "decision_notes_private.md",
+    "source_ref_audit_private.md",
+    "truncation_recovery_audit_private.md",
+    "reduction_trace_private.md"
+  ],
+  "comparison_vs_sp075": {
+    "sp075_assessment": "real_deepseek_e2e_dryrun_partial_success",
+    "sp075_best_reduction_score": 57.5,
+    "sp077_best_reduction_score": 115.0,
+    "source_ref_item_level_improved": true,
+    "continuation_or_truncation_issue_remaining": false
+  },
+  "write_back": false,
+  "product_decision": "broader_natural_multichunk_passed_with_review_warnings",
+  "sp083_product_assessment": "broader_natural_multichunk_passed_with_review_warnings",
+  "natural_multichunk_chapters": [
+    "ch_097",
+    "ch_106",
+    "ch_114",
+    "ch_115"
+  ],
+  "natural_vs_forced_multichunk": "natural",
+  "force_max_chunk_tokens_used": false,
+  "planned_provider_call_count_with_continuation_reserve": 47,
+  "actual_provider_call_count": 43,
+  "comparison_vs_sp082": {
+    "sp082_chapters_validated": 1,
+    "sp082_provider_calls": 10,
+    "sp082_valid_reductions": "2/2",
+    "this_phase_chapters_validated": 4,
+    "this_phase_provider_calls": 43,
+    "this_phase_valid_reductions": "8/8",
+    "natural_multichunk_scaled_from_one_to_four_chapters": true
+  },
+  "writer_facing_outcome_report": "broader_natural_multichunk_user_ingestion_outcome_after_sp082.json",
+  "internal_fail_rerun_plan_report": "broader_natural_multichunk_internal_fail_rerun_plan_after_sp082.json"
+}

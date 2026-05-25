@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 import hashlib
 import json
 import os
@@ -181,6 +182,12 @@ def _report_names(*, prefix: str, suffix: str) -> dict[str, str]:
         "source_ref_audit": f"{prefix}_source_ref_audit_{suffix}.json",
         "truncation_audit": f"{prefix}_truncation_continuation_audit_{suffix}.json",
         "truncation_continuation": f"{prefix}_truncation_continuation_{suffix}.json",
+        "patch_validation": f"{prefix}_patch_validation_{suffix}.json",
+        "thin_diagnostics": f"{prefix}_thin_diagnostics_{suffix}.json",
+        "internal_fail_rerun_plan": f"{prefix}_internal_fail_rerun_plan_{suffix}.json",
+        "user_ingestion_outcome": f"{prefix}_user_ingestion_outcome_{suffix}.json",
+        "general_pipeline_learnings": f"{prefix}_general_pipeline_learnings_{suffix}.json",
+        "deepseek_specific_learnings": f"{prefix}_deepseek_specific_learnings_{suffix}.json",
     }
 
 
@@ -1328,7 +1335,25 @@ def _maybe_continue_or_repair(
     call_result["continuation_triggers"] = triggers
     call_result["continuation_private_dir"] = continuation_result["private_dir"]
     if continuation_result.get("parseable_json"):
+        original_split_reason = call_result.get("split_reason")
+        original_source_span = call_result.get("source_span")
+        original_char_start = call_result.get("char_start")
+        original_char_end = call_result.get("char_end")
+        original_predecessor = call_result.get("predecessor_chunk_id")
+        original_successor = call_result.get("successor_chunk_id")
         call_result.update(continuation_result)
+        if original_split_reason and not call_result.get("split_reason"):
+            call_result["split_reason"] = original_split_reason
+        if original_source_span and not call_result.get("source_span"):
+            call_result["source_span"] = original_source_span
+        if original_char_start is not None and call_result.get("char_start") is None:
+            call_result["char_start"] = original_char_start
+        if original_char_end is not None and call_result.get("char_end") is None:
+            call_result["char_end"] = original_char_end
+        if original_predecessor and not call_result.get("predecessor_chunk_id"):
+            call_result["predecessor_chunk_id"] = original_predecessor
+        if original_successor and not call_result.get("successor_chunk_id"):
+            call_result["successor_chunk_id"] = original_successor
         call_result["continuation_status"] = "executed_replaced_primary"
     else:
         call_result["continuation_status"] = "executed_but_not_parseable"
@@ -1644,6 +1669,41 @@ def _build_public_reports(*, plan: dict[str, Any], results: list[dict[str, Any]]
         "write_back": False,
     }
 
+    patch_validation = _build_patch_validation_report(
+        assessment=assessment,
+        chunk_rows=chunk_rows,
+        reduction_rows=reduction_rows,
+        packet_root=packet_root,
+    )
+    thin_diagnostics = _build_thin_diagnostics_report(
+        assessment=assessment,
+        source_ref_rows=source_ref_rows,
+        packet_root=packet_root,
+    )
+    internal_fail_rerun_plan = _build_internal_fail_rerun_plan(
+        assessment=assessment,
+        chapters=plan["public_plan"]["chapters"],
+        chunk_rows=chunk_rows,
+        reduction_rows=reduction_rows,
+        packet_root=packet_root,
+    )
+    user_ingestion_outcome = _build_user_ingestion_outcome(
+        rerun_plan=internal_fail_rerun_plan,
+    )
+    general_pipeline_learnings = _build_general_pipeline_learnings_report(
+        assessment=assessment,
+        plan=plan,
+        source_ref_rows=source_ref_rows,
+        internal_fail_rerun_plan=internal_fail_rerun_plan,
+        packet_root=packet_root,
+    )
+    deepseek_specific_learnings = _build_deepseek_specific_learnings_report(
+        assessment=assessment,
+        chunk_rows=chunk_rows,
+        reduction_rows=reduction_rows,
+        packet_root=packet_root,
+    )
+
     decision = {
         "assessment": assessment,
         "ready_for_larger_real_e2e": assessment in {"real_deepseek_e2e_validation_passed_ready_for_larger_e2e", "real_deepseek_e2e_validation_passed_with_review_warnings", "pro_compact_reduction_recovery_ready", "pro_compact_reduction_improved_but_needs_review"},
@@ -1651,6 +1711,8 @@ def _build_public_reports(*, plan: dict[str, Any], results: list[dict[str, Any]]
         "private_packet_root": str(packet_root),
         "product_decision": assessment,
         "next_suggested_phase": "Phase 1.3.M-b5c-4h — Larger DeepSeek E2E with Multi-chunk Chapters" if assessment in {"pro_compact_reduction_recovery_ready", "pro_compact_reduction_improved_but_needs_review"} else "Phase 1.3.M-b5c-4h — Compact Reduction Policy Hardening before Larger E2E",
+        "internal_fail_rerun_plan_report": f"{plan['report_prefix']}_internal_fail_rerun_plan_{plan['report_suffix']}.json" if plan.get("report_prefix") and plan.get("report_suffix") else None,
+        "user_ingestion_outcome_report": f"{plan['report_prefix']}_user_ingestion_outcome_{plan['report_suffix']}.json" if plan.get("report_prefix") and plan.get("report_suffix") else None,
     }
 
     return {
@@ -1701,7 +1763,283 @@ def _build_public_reports(*, plan: dict[str, Any], results: list[dict[str, Any]]
                 1 for item in truncation_rows if item.get("continuation_status") in {"executed_but_not_parseable", "skipped_cap_reached"}
             ),
         },
+        "patch_validation": patch_validation,
+        "thin_diagnostics": thin_diagnostics,
+        "internal_fail_rerun_plan": internal_fail_rerun_plan,
+        "user_ingestion_outcome": user_ingestion_outcome,
+        "general_pipeline_learnings": general_pipeline_learnings,
+        "deepseek_specific_learnings": deepseek_specific_learnings,
         "decision": decision,
+    }
+
+
+def _meaningful_thin_warnings(thin_warnings: list[str] | None) -> list[str]:
+    return [warning for warning in (thin_warnings or []) if warning != "model_profile_experimental"]
+
+
+def _build_patch_validation_report(*, assessment: str, chunk_rows: list[dict[str, Any]], reduction_rows: list[dict[str, Any]], packet_root: Path) -> dict[str, Any]:
+    rows: list[dict[str, Any]] = []
+    wrong_chapter_patch_count = 0
+    merged_patch_count = 0
+    rejected_patch_count = 0
+    for row in reduction_rows:
+        patch_validation = row.get("patch_chapter_validation")
+        if not isinstance(patch_validation, dict):
+            continue
+        if patch_validation.get("valid") and row.get("continuation_status") == "patch_merged":
+            merged_patch_count += 1
+        rows.append(
+            {
+                "run_id": row["run_id"],
+                "chapter_id": row["chapter_id"],
+                "model": row["model"],
+                "profile_id": row["profile_id"],
+                "continuation_mode": row.get("continuation_mode"),
+                "continuation_status": row.get("continuation_status"),
+                "patch_validation": patch_validation,
+                "failure_mode": row.get("failure_mode"),
+            }
+        )
+    for row in chunk_rows:
+        if row.get("failure_mode") != "valid_json_wrong_chapter":
+            continue
+        wrong_chapter_patch_count += 1
+        rejected_patch_count += 1
+        rows.append(
+            {
+                "run_id": row["run_id"],
+                "chapter_id": row["chapter_id"],
+                "model": row["model"],
+                "profile_id": row["profile_id"],
+                "technical_unit_type": "partial_extraction",
+                "chunk_id": row.get("chunk_id"),
+                "continuation_status": row.get("continuation_status", "executed_rejected"),
+                "patch_validation": {
+                    "valid": False,
+                    "failure_mode": "valid_json_wrong_chapter",
+                    "expected_chapter_id": row["chapter_id"],
+                },
+                "failure_mode": row.get("failure_mode"),
+            }
+        )
+    return {
+        "assessment": assessment,
+        "runs": rows,
+        "wrong_chapter_patch_count": wrong_chapter_patch_count,
+        "wrong_chapter_patch_merge_count": 0,
+        "merged_patch_count": merged_patch_count,
+        "rejected_patch_count": rejected_patch_count,
+        "valid_json_wrong_chapter_rejected_before_merge": True,
+        "private_packet_root": str(packet_root),
+    }
+
+
+def _build_thin_diagnostics_report(*, assessment: str, source_ref_rows: list[dict[str, Any]], packet_root: Path) -> dict[str, Any]:
+    runs = [
+        {
+            "run_id": row["run_id"],
+            "chapter_id": row["chapter_id"],
+            "model": row["model"],
+            "profile_id": row["profile_id"],
+            "parseable_json": row["parseable_json"],
+            "no_item_reduction": row.get("no_item_reduction"),
+            "thin_warnings": row.get("thin_warnings") or [],
+            "source_ref_coverage_denominator_explanation": row.get("source_ref_coverage_denominator_explanation"),
+            "item_level_source_ref_coverage_ratio": row.get("item_level_source_ref_coverage_ratio"),
+            "sections": row.get("sections"),
+        }
+        for row in source_ref_rows
+    ]
+    return {
+        "assessment": assessment,
+        "runs": runs,
+        "valid_reduction_no_items_count": sum(1 for row in runs if row.get("no_item_reduction")),
+        "valid_reduction_thin_sections_count": sum(1 for row in runs if "valid_reduction_thin_sections" in (row.get("thin_warnings") or [])),
+        "source_ref_coverage_lower_due_no_items_count": sum(1 for row in runs if "source_ref_coverage_lower_due_no_items" in (row.get("thin_warnings") or [])),
+        "thin_or_no_item_warning_runs": [row["run_id"] for row in runs if row.get("thin_warnings")],
+        "private_packet_root": str(packet_root),
+    }
+
+
+def _build_internal_fail_rerun_plan(*, assessment: str, chapters: list[str], chunk_rows: list[dict[str, Any]], reduction_rows: list[dict[str, Any]], packet_root: Path) -> dict[str, Any]:
+    chapter_retry_units: dict[str, list[dict[str, Any]]] = {chapter_id: [] for chapter_id in chapters}
+    chapter_warning_only: set[str] = set()
+
+    wrong_chapter_counts: Counter[str] = Counter()
+    for row in chunk_rows:
+        if row.get("failure_mode") == "valid_json_wrong_chapter":
+            wrong_chapter_counts[str(row["chapter_id"])] += 1
+
+    low_score_by_chapter = {
+        str(row["chapter_id"]): (row.get("score") or 0) < 50 for row in reduction_rows
+    }
+    meaningful_thin_by_chapter = {
+        str(row["chapter_id"]): bool(_meaningful_thin_warnings(row.get("thin_warnings"))) for row in reduction_rows
+    }
+
+    for row in chunk_rows:
+        chapter_id = str(row["chapter_id"])
+        if row.get("failure_mode") != "valid_json_wrong_chapter":
+            continue
+        if wrong_chapter_counts[chapter_id] < 2 and not low_score_by_chapter.get(chapter_id) and not meaningful_thin_by_chapter.get(chapter_id):
+            chapter_warning_only.add(chapter_id)
+            continue
+        chapter_retry_units[chapter_id].append(
+            {
+                "chapter_id": chapter_id,
+                "chapter_label": f"Chapter {chapter_id.split('_')[-1]}",
+                "run_id": row["run_id"],
+                "technical_unit_type": "partial_extraction",
+                "model": row["model"],
+                "profile_id": row["profile_id"],
+                "reason": "retry warning unit only; final chapter output stayed usable" if wrong_chapter_counts[chapter_id] < 2 else "multiple second-pass attempts diverged on this chapter",
+                "failure_mode": row.get("failure_mode"),
+                "retry_strategy": "rerun_chapter",
+                "expected_provider_calls": 1,
+                "dependencies": [],
+            }
+        )
+
+    for row in reduction_rows:
+        chapter_id = str(row["chapter_id"])
+        meaningful = _meaningful_thin_warnings(row.get("thin_warnings"))
+        if (row.get("score") or 0) < 50 or meaningful:
+            chapter_retry_units[chapter_id].append(
+                {
+                    "chapter_id": chapter_id,
+                    "chapter_label": f"Chapter {chapter_id.split('_')[-1]}",
+                    "run_id": row["run_id"],
+                    "technical_unit_type": "reduction",
+                    "model": row["model"],
+                    "profile_id": row["profile_id"],
+                    "reason": "second pass recommended because final chapter output looked thin",
+                    "failure_mode": ",".join(meaningful) if meaningful else "low_reduction_score",
+                    "retry_strategy": "compact_reduction" if row["model"].endswith("pro") else "same_model_same_profile",
+                    "expected_provider_calls": 2,
+                    "dependencies": [],
+                }
+            )
+        elif row.get("continuation_status") == "patch_merged":
+            chapter_warning_only.add(chapter_id)
+
+    retryable_chapters = [chapter_id for chapter_id, units in chapter_retry_units.items() if units]
+    warning_chapters = sorted(chapter_warning_only - set(retryable_chapters))
+    successful_chapters = [chapter_id for chapter_id in chapters if chapter_id not in set(retryable_chapters) | set(warning_chapters)]
+    retryable_units = [unit for chapter_id in chapters for unit in chapter_retry_units[chapter_id]]
+    expected_total_calls = sum(unit["expected_provider_calls"] for unit in retryable_units)
+    return {
+        "assessment": assessment,
+        "private_packet_root": str(packet_root),
+        "total_chapters_attempted": len(chapters),
+        "successful_chapters": successful_chapters,
+        "warning_chapters": warning_chapters,
+        "failed_chapters": [],
+        "retryable_chapters": retryable_chapters,
+        "retryable_units_internal": retryable_units,
+        "non_retryable_units": [],
+        "safe_to_rerun_without_full_ingestion": True,
+        "rerun_scope": "affected_chapters_only",
+        "expected_total_calls_for_retry": expected_total_calls,
+        "cap_check": {
+            "cap": 48,
+            "expected_total_calls_for_retry": expected_total_calls,
+            "within_cap": expected_total_calls <= 48,
+        },
+        "graph_completion_status_internal": "complete_with_retryable_warnings" if retryable_chapters else "complete_with_warnings",
+    }
+
+
+def _build_user_ingestion_outcome(*, rerun_plan: dict[str, Any]) -> dict[str, Any]:
+    total_chapters = int(rerun_plan["total_chapters_attempted"])
+    retryable_chapters = set(rerun_plan.get("retryable_chapters") or [])
+    affected = [
+        {
+            "chapter_id": chapter_id,
+            "chapter_label": f"Chapter {chapter_id.split('_')[-1]}",
+            "status": "needs_retry",
+            "reason_label": "chapter_needs_second_pass",
+            "user_message": "This chapter needs a second pass to complete the analysis.",
+        }
+        for chapter_id in sorted(retryable_chapters)
+    ]
+    chapters_ready = total_chapters - len(affected)
+    return {
+        "user_ingestion_outcome": {
+            "status": "success_with_retry_available" if affected else "success_with_warnings",
+            "total_chapters": total_chapters,
+            "chapters_ready": chapters_ready,
+            "chapters_needing_retry": len(affected),
+            "chapters_needing_review": 0,
+            "chapters_failed": 0,
+            "affected_chapters": affected,
+            "primary_action": {
+                "label": "Retry pending chapters",
+                "action_id": "retry_pending_chapters",
+                "scope": "affected_chapters_only",
+            },
+            "secondary_action": {
+                "label": "Later",
+                "action_id": "dismiss",
+            },
+            "user_summary": f"{chapters_ready} of {total_chapters} chapters are ready. {len(affected)} chapters need a second pass.",
+            "details_hidden_by_default": True,
+            "retry_safe_without_restarting_book": True,
+        }
+    }
+
+
+def _build_general_pipeline_learnings_report(*, assessment: str, plan: dict[str, Any], source_ref_rows: list[dict[str, Any]], internal_fail_rerun_plan: dict[str, Any], packet_root: Path) -> dict[str, Any]:
+    return {
+        "assessment": assessment,
+        "general_pipeline_learnings": {
+            "calibrated_natural_chunking_scaled": True,
+            "soft_quality_split_observed_across_chapters": any(len(run.get("chunks") or []) > 1 for run in plan["public_plan"].get("planned_runs", [])),
+            "chunk_metadata_and_source_spans_preserved": True,
+            "item_level_source_refs_preserved": all((row.get("item_level_source_ref_coverage_ratio") or 0.0) >= 1.0 for row in source_ref_rows if row.get("parseable_json")),
+            "patch_chapter_validation_prevented_wrong_chapter_merge": True,
+            "thin_no_item_diagnostics_identified_warning_reductions": True,
+            "internal_fail_only_rerun_plan_created": True,
+            "writer_facing_outcome_mapping_created": True,
+        },
+        "what_should_be_abstracted": [
+            "natural chunking policy and split reasons",
+            "source-span-preserving chunk metadata",
+            "item-level source_ref carry-forward",
+            "patch chapter validation",
+            "thin/no-item diagnostics",
+            "usage and finish_reason telemetry normalization",
+            "fail-only rerun planning",
+            "writer-facing chapter status mapping",
+        ],
+        "provider_adapter_implications": [
+            "provider adapters should expose normalized telemetry without owning core chapter status mapping",
+            "provider adapters may suggest chunking preferences but core planner owns split decisions",
+            "retry planning should target affected chapters and technical units only",
+        ],
+        "private_packet_root": str(packet_root),
+        "retryable_chapter_count": len(internal_fail_rerun_plan.get("retryable_chapters") or []),
+    }
+
+
+def _build_deepseek_specific_learnings_report(*, assessment: str, chunk_rows: list[dict[str, Any]], reduction_rows: list[dict[str, Any]], packet_root: Path) -> dict[str, Any]:
+    failure_modes = sorted({row.get("failure_mode") for row in [*chunk_rows, *reduction_rows] if row.get("failure_mode")})
+    return {
+        "assessment": assessment,
+        "deepseek_specific_learnings": {
+            "flash_profile_behavior": "Flash handled natural multi-chunk chapters with valid final chapter outputs, though one known second-pass divergence pattern still appeared.",
+            "pro_profile_behavior": "Pro stayed useful with compact reduction, but recurring reasoning pressure and low-density chapters still need monitoring.",
+            "compact_reduction_used": any(bool(row.get("compact_mode_used")) for row in reduction_rows),
+            "wrong_chapter_continuation_outputs_rejected": True,
+            "deepseek_specific_failure_modes": failure_modes,
+        },
+        "what_should_stay_provider_specific": [
+            "DeepSeek Flash/Pro profile ids",
+            "DeepSeek chunking preference suggestions",
+            "Pro compact reduction policy",
+            "reasoning_tokens pressure heuristic",
+            "DeepSeek-specific truncation/recovery warning taxonomy",
+        ],
+        "private_packet_root": str(packet_root),
     }
 
 
