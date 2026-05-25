@@ -1,0 +1,39 @@
+{
+  "matrix_id": "deepseek_family_harness_matrix_after_sp069",
+  "assessment": "deepseek_family_harness_candidate_found",
+  "provider": "deepseek",
+  "models_available": [
+    "deepseek-v4-flash",
+    "deepseek-v4-pro"
+  ],
+  "models_tested": [
+    "deepseek-v4-flash",
+    "deepseek-v4-pro"
+  ],
+  "variants_executed": [
+    "family_variant_1_broad_recall",
+    "family_variant_2_oer_focus",
+    "family_variant_3_balanced_kb",
+    "family_variant_4_ch002_gap_attack"
+  ],
+  "provider_calls_count": 14,
+  "planned_provider_calls": 14,
+  "prompt_sha256": {
+    "ch_002": "74c437e8ed878d16eb7b7a2636b5cff6a51353ee632cd0c188f210e8c6ff677d",
+    "ch_003": "6dda905f672bddffe6794d9d79e6850fe11e3851e654265cdc8832d793feb7c7"
+  },
+  "valid_runs": 7,
+  "invalid_runs": 7,
+  "best_model_variant_per_chapter": {
+    "ch_002": {
+      "model": "deepseek-v4-flash",
+      "variant_id": "family_variant_2_oer_focus",
+      "score": 26.5
+    },
+    "ch_003": {
+      "model": "deepseek-v4-pro",
+      "variant_id": "family_variant_3_balanced_kb",
+      "score": 25.0
+    }
+  }
+}

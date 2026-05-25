@@ -1,0 +1,31 @@
+{
+  "report_id": "deepseek_family_model_discovery_after_sp069",
+  "status": "completed",
+  "timestamp_utc": "20260525T073402Z",
+  "api_base_url": "https://api.deepseek.com",
+  "visible_model_count": 2,
+  "visible_model_ids": [
+    "deepseek-v4-flash",
+    "deepseek-v4-pro"
+  ],
+  "aliases": {
+    "flash": [
+      "deepseek-v4-flash"
+    ],
+    "pro": [
+      "deepseek-v4-pro"
+    ],
+    "reasoner": [],
+    "chat": []
+  },
+  "family_harness_models": {
+    "flash": [
+      "deepseek-v4-flash"
+    ],
+    "pro": [
+      "deepseek-v4-pro"
+    ],
+    "reasoner_or_thinking": [],
+    "chat_alias": []
+  }
+}

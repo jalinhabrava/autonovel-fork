@@ -1,0 +1,143 @@
+{
+  "chapter_id": "ch_003",
+  "runs_total": 6,
+  "runs_valid": 3,
+  "runs_invalid": 3,
+  "best_variant": {
+    "model": "deepseek-v4-pro",
+    "variant_id": "family_variant_3_balanced_kb",
+    "score": 25.0,
+    "counts": {
+      "characters": 2,
+      "places": 2,
+      "concepts": 3,
+      "objects": 3,
+      "events": 1,
+      "relations": 4,
+      "unresolved_mentions": 0
+    },
+    "response_text_chars": 9564
+  },
+  "manual_baseline_counts": {
+    "characters": 3,
+    "places": 3,
+    "concepts": 3,
+    "objects": 4,
+    "events": 6,
+    "relations": 6,
+    "unresolved_mentions": 4
+  },
+  "delta_best_vs_manual": {
+    "characters": -1,
+    "places": -1,
+    "concepts": 0,
+    "objects": -1,
+    "events": -5,
+    "relations": -2,
+    "unresolved_mentions": -4
+  },
+  "model_breakdown": {
+    "deepseek-v4-flash": {
+      "valid_runs": 2,
+      "best_variant": {
+        "model": "deepseek-v4-flash",
+        "chapter_id": "ch_003",
+        "variant_id": "family_variant_2_oer_focus",
+        "status": "completed",
+        "executed": true,
+        "parseable_json": true,
+        "validation_ok": true,
+        "chapter_id_ok": true,
+        "response_text_chars": 7039,
+        "counts": {
+          "characters": 2,
+          "places": 1,
+          "concepts": 1,
+          "objects": 2,
+          "events": 1,
+          "relations": 3,
+          "unresolved_mentions": 1
+        },
+        "missing_required_sections": [],
+        "event_importance_present": true,
+        "relation_category_present": true,
+        "score": 19.5,
+        "prompt_sha256": "6dda905f672bddffe6794d9d79e6850fe11e3851e654265cdc8832d793feb7c7",
+        "output_dir_reference": "/tmp/textifai_deepseek_family_harness_matrix/runs/deepseek-v4-flash/ch_003/family_variant_2_oer_focus/20260525T074147Z"
+      }
+    },
+    "deepseek-v4-pro": {
+      "valid_runs": 1,
+      "best_variant": {
+        "model": "deepseek-v4-pro",
+        "chapter_id": "ch_003",
+        "variant_id": "family_variant_3_balanced_kb",
+        "status": "completed",
+        "executed": true,
+        "parseable_json": true,
+        "validation_ok": true,
+        "chapter_id_ok": true,
+        "response_text_chars": 9564,
+        "counts": {
+          "characters": 2,
+          "places": 2,
+          "concepts": 3,
+          "objects": 3,
+          "events": 1,
+          "relations": 4,
+          "unresolved_mentions": 0
+        },
+        "missing_required_sections": [],
+        "event_importance_present": true,
+        "relation_category_present": true,
+        "score": 25.0,
+        "prompt_sha256": "6dda905f672bddffe6794d9d79e6850fe11e3851e654265cdc8832d793feb7c7",
+        "output_dir_reference": "/tmp/textifai_deepseek_family_harness_matrix/runs/deepseek-v4-pro/ch_003/family_variant_3_balanced_kb/20260525T080530Z"
+      }
+    }
+  },
+  "ranked": [
+    {
+      "model": "deepseek-v4-pro",
+      "variant_id": "family_variant_3_balanced_kb",
+      "score": 25.0,
+      "parseable_json": true,
+      "validation_ok": true
+    },
+    {
+      "model": "deepseek-v4-flash",
+      "variant_id": "family_variant_2_oer_focus",
+      "score": 19.5,
+      "parseable_json": true,
+      "validation_ok": true
+    },
+    {
+      "model": "deepseek-v4-flash",
+      "variant_id": "family_variant_1_broad_recall",
+      "score": 14.5,
+      "parseable_json": true,
+      "validation_ok": true
+    },
+    {
+      "model": "deepseek-v4-flash",
+      "variant_id": "family_variant_3_balanced_kb",
+      "score": 0.0,
+      "parseable_json": false,
+      "validation_ok": false
+    },
+    {
+      "model": "deepseek-v4-pro",
+      "variant_id": "family_variant_1_broad_recall",
+      "score": 0.0,
+      "parseable_json": false,
+      "validation_ok": false
+    },
+    {
+      "model": "deepseek-v4-pro",
+      "variant_id": "family_variant_2_oer_focus",
+      "score": 0.0,
+      "parseable_json": false,
+      "validation_ok": false
+    }
+  ]
+}

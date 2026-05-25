@@ -23,6 +23,12 @@ assert MATRIX_SPEC and MATRIX_SPEC.loader
 MATRIX_MODULE = importlib.util.module_from_spec(MATRIX_SPEC)
 sys.modules[MATRIX_SPEC.name] = MATRIX_MODULE
 MATRIX_SPEC.loader.exec_module(MATRIX_MODULE)
+FAMILY_MODULE_PATH = Path("scripts/dev/deepseek_family_harness_matrix.py").resolve()
+FAMILY_SPEC = importlib.util.spec_from_file_location("deepseek_family_harness_matrix", FAMILY_MODULE_PATH)
+assert FAMILY_SPEC and FAMILY_SPEC.loader
+FAMILY_MODULE = importlib.util.module_from_spec(FAMILY_SPEC)
+sys.modules[FAMILY_SPEC.name] = FAMILY_MODULE
+FAMILY_SPEC.loader.exec_module(FAMILY_MODULE)
 FIXTURE_ROOT = Path("tests/fixtures/textifai/real_provider_dryrun/expected")
 
 
@@ -357,6 +363,14 @@ class RealProviderDryRunGuardsTests(unittest.TestCase):
         self.assertNotIn("ベル", round2_blob)
         self.assertEqual(len(MATRIX_MODULE.variant_definitions("round2")), 6)
 
+        family_blob = json.dumps(FAMILY_MODULE.variant_definitions(), ensure_ascii=False)
+        self.assertNotIn("セラ", family_blob)
+        self.assertNotIn("王者の杖", family_blob)
+        self.assertNotIn("アデルマン", family_blob)
+        self.assertNotIn("ティセイア", family_blob)
+        self.assertNotIn("ベル", family_blob)
+        self.assertEqual(len(FAMILY_MODULE.variant_definitions()), 4)
+
         low = MATRIX_MODULE.score_variant(
             parseable_json=True,
             validation_ok=True,
@@ -472,6 +486,12 @@ class RealProviderDryRunGuardsTests(unittest.TestCase):
             FIXTURE_ROOT / "deepseek_flash_harness_round2_ch002_report_after_sp067.json",
             FIXTURE_ROOT / "deepseek_flash_harness_round2_ch003_report_after_sp067.json",
             FIXTURE_ROOT / "deepseek_flash_harness_round2_decision_after_sp067.json",
+            FIXTURE_ROOT / "deepseek_family_model_discovery_after_sp068.json",
+            FIXTURE_ROOT / "deepseek_family_harness_matrix_summary_after_sp068.json",
+            FIXTURE_ROOT / "deepseek_family_harness_matrix_variants_after_sp068.json",
+            FIXTURE_ROOT / "deepseek_family_harness_ch002_report_after_sp068.json",
+            FIXTURE_ROOT / "deepseek_family_harness_ch003_report_after_sp068.json",
+            FIXTURE_ROOT / "deepseek_family_harness_decision_after_sp068.json",
         ]:
             with self.subTest(path=path):
                 payload = json.loads(path.read_text(encoding="utf-8"))
@@ -546,6 +566,24 @@ class RealProviderDryRunGuardsTests(unittest.TestCase):
         self.assertEqual(summary["provider"], "deepseek")
         self.assertEqual(summary["model"], "deepseek-v4-flash")
         self.assertLessEqual(summary["provider_calls_count"], 12)
+
+    def test_deepseek_family_reports_parse_and_use_valid_decision_enum(self):
+        discovery = json.loads((FIXTURE_ROOT / "deepseek_family_model_discovery_after_sp068.json").read_text(encoding="utf-8"))
+        summary = json.loads((FIXTURE_ROOT / "deepseek_family_harness_matrix_summary_after_sp068.json").read_text(encoding="utf-8"))
+        decision = json.loads((FIXTURE_ROOT / "deepseek_family_harness_decision_after_sp068.json").read_text(encoding="utf-8"))
+        valid_enum = {
+            "deepseek_family_harness_candidate_found",
+            "deepseek_family_harness_needs_more_iteration",
+            "deepseek_flash_usable_but_ch002_weak",
+            "deepseek_pro_or_reasoner_promising",
+            "deepseek_family_experiment_blocked",
+        }
+
+        self.assertEqual(discovery["status"], "completed")
+        self.assertIn("deepseek-v4-flash", discovery["visible_model_ids"])
+        self.assertIn(summary["assessment"], valid_enum)
+        self.assertIn(decision["assessment"], valid_enum)
+        self.assertLessEqual(summary["provider_calls_count"], 24)
 
     def test_profiled_runtime_reports_record_safe_not_executed_state(self):
         summary = json.loads((FIXTURE_ROOT / "deepseek_ch002_profiled_runtime_summary_after_sp061.json").read_text(encoding="utf-8"))

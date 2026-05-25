@@ -1,0 +1,157 @@
+{
+  "chapter_id": "ch_002",
+  "runs_total": 8,
+  "runs_valid": 4,
+  "runs_invalid": 4,
+  "best_variant": {
+    "model": "deepseek-v4-flash",
+    "variant_id": "family_variant_2_oer_focus",
+    "score": 26.5,
+    "counts": {
+      "characters": 3,
+      "places": 2,
+      "concepts": 4,
+      "objects": 4,
+      "events": 1,
+      "relations": 3,
+      "unresolved_mentions": 0
+    },
+    "response_text_chars": 9565
+  },
+  "manual_baseline_counts": {
+    "characters": 4,
+    "places": 3,
+    "concepts": 4,
+    "objects": 4,
+    "events": 5,
+    "relations": 7,
+    "unresolved_mentions": 4
+  },
+  "delta_best_vs_manual": {
+    "characters": -1,
+    "places": -1,
+    "concepts": 0,
+    "objects": 0,
+    "events": -4,
+    "relations": -4,
+    "unresolved_mentions": -4
+  },
+  "model_breakdown": {
+    "deepseek-v4-flash": {
+      "valid_runs": 3,
+      "best_variant": {
+        "model": "deepseek-v4-flash",
+        "chapter_id": "ch_002",
+        "variant_id": "family_variant_2_oer_focus",
+        "status": "completed",
+        "executed": true,
+        "parseable_json": true,
+        "validation_ok": true,
+        "chapter_id_ok": true,
+        "response_text_chars": 9565,
+        "counts": {
+          "characters": 3,
+          "places": 2,
+          "concepts": 4,
+          "objects": 4,
+          "events": 1,
+          "relations": 3,
+          "unresolved_mentions": 0
+        },
+        "missing_required_sections": [],
+        "event_importance_present": true,
+        "relation_category_present": true,
+        "score": 26.5,
+        "prompt_sha256": "74c437e8ed878d16eb7b7a2636b5cff6a51353ee632cd0c188f210e8c6ff677d",
+        "output_dir_reference": "/tmp/textifai_deepseek_family_harness_matrix/runs/deepseek-v4-flash/ch_002/family_variant_2_oer_focus/20260525T073652Z"
+      }
+    },
+    "deepseek-v4-pro": {
+      "valid_runs": 1,
+      "best_variant": {
+        "model": "deepseek-v4-pro",
+        "chapter_id": "ch_002",
+        "variant_id": "family_variant_3_balanced_kb",
+        "status": "completed",
+        "executed": true,
+        "parseable_json": true,
+        "validation_ok": true,
+        "chapter_id_ok": true,
+        "response_text_chars": 6096,
+        "counts": {
+          "characters": 2,
+          "places": 1,
+          "concepts": 1,
+          "objects": 1,
+          "events": 1,
+          "relations": 3,
+          "unresolved_mentions": 0
+        },
+        "missing_required_sections": [],
+        "event_importance_present": true,
+        "relation_category_present": true,
+        "score": 17.0,
+        "prompt_sha256": "74c437e8ed878d16eb7b7a2636b5cff6a51353ee632cd0c188f210e8c6ff677d",
+        "output_dir_reference": "/tmp/textifai_deepseek_family_harness_matrix/runs/deepseek-v4-pro/ch_002/family_variant_3_balanced_kb/20260525T075248Z"
+      }
+    }
+  },
+  "ranked": [
+    {
+      "model": "deepseek-v4-flash",
+      "variant_id": "family_variant_2_oer_focus",
+      "score": 26.5,
+      "parseable_json": true,
+      "validation_ok": true
+    },
+    {
+      "model": "deepseek-v4-flash",
+      "variant_id": "family_variant_4_ch002_gap_attack",
+      "score": 25.0,
+      "parseable_json": true,
+      "validation_ok": true
+    },
+    {
+      "model": "deepseek-v4-flash",
+      "variant_id": "family_variant_1_broad_recall",
+      "score": 19.0,
+      "parseable_json": true,
+      "validation_ok": true
+    },
+    {
+      "model": "deepseek-v4-pro",
+      "variant_id": "family_variant_3_balanced_kb",
+      "score": 17.0,
+      "parseable_json": true,
+      "validation_ok": true
+    },
+    {
+      "model": "deepseek-v4-flash",
+      "variant_id": "family_variant_3_balanced_kb",
+      "score": 0.0,
+      "parseable_json": false,
+      "validation_ok": false
+    },
+    {
+      "model": "deepseek-v4-pro",
+      "variant_id": "family_variant_1_broad_recall",
+      "score": 0.0,
+      "parseable_json": false,
+      "validation_ok": false
+    },
+    {
+      "model": "deepseek-v4-pro",
+      "variant_id": "family_variant_2_oer_focus",
+      "score": 0.0,
+      "parseable_json": false,
+      "validation_ok": false
+    },
+    {
+      "model": "deepseek-v4-pro",
+      "variant_id": "family_variant_4_ch002_gap_attack",
+      "score": 0.0,
+      "parseable_json": false,
+      "validation_ok": false
+    }
+  ]
+}

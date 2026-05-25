@@ -1,0 +1,173 @@
+{
+  "matrix_id": "deepseek_family_harness_matrix_after_sp069",
+  "assessment": "deepseek_family_harness_candidate_found",
+  "best_model_variant": {
+    "chapter_id": "ch_002",
+    "model": "deepseek-v4-flash",
+    "variant_id": "family_variant_2_oer_focus",
+    "score": 26.5
+  },
+  "common_family_harness_viability": {
+    "viable": false,
+    "reason": "Best chapter candidates differ by model/variant."
+  },
+  "per_model_profile_needs": {
+    "deepseek-v4-flash": {
+      "needed": true,
+      "best_ch002_variant": {
+        "model": "deepseek-v4-flash",
+        "chapter_id": "ch_002",
+        "variant_id": "family_variant_2_oer_focus",
+        "status": "completed",
+        "executed": true,
+        "parseable_json": true,
+        "validation_ok": true,
+        "chapter_id_ok": true,
+        "response_text_chars": 9565,
+        "counts": {
+          "characters": 3,
+          "places": 2,
+          "concepts": 4,
+          "objects": 4,
+          "events": 1,
+          "relations": 3,
+          "unresolved_mentions": 0
+        },
+        "missing_required_sections": [],
+        "event_importance_present": true,
+        "relation_category_present": true,
+        "score": 26.5,
+        "prompt_sha256": "74c437e8ed878d16eb7b7a2636b5cff6a51353ee632cd0c188f210e8c6ff677d",
+        "output_dir_reference": "/tmp/textifai_deepseek_family_harness_matrix/runs/deepseek-v4-flash/ch_002/family_variant_2_oer_focus/20260525T073652Z"
+      },
+      "best_ch003_variant": {
+        "model": "deepseek-v4-flash",
+        "chapter_id": "ch_003",
+        "variant_id": "family_variant_2_oer_focus",
+        "status": "completed",
+        "executed": true,
+        "parseable_json": true,
+        "validation_ok": true,
+        "chapter_id_ok": true,
+        "response_text_chars": 7039,
+        "counts": {
+          "characters": 2,
+          "places": 1,
+          "concepts": 1,
+          "objects": 2,
+          "events": 1,
+          "relations": 3,
+          "unresolved_mentions": 1
+        },
+        "missing_required_sections": [],
+        "event_importance_present": true,
+        "relation_category_present": true,
+        "score": 19.5,
+        "prompt_sha256": "6dda905f672bddffe6794d9d79e6850fe11e3851e654265cdc8832d793feb7c7",
+        "output_dir_reference": "/tmp/textifai_deepseek_family_harness_matrix/runs/deepseek-v4-flash/ch_003/family_variant_2_oer_focus/20260525T074147Z"
+      }
+    },
+    "deepseek-v4-pro": {
+      "needed": true,
+      "best_ch002_variant": {
+        "model": "deepseek-v4-pro",
+        "chapter_id": "ch_002",
+        "variant_id": "family_variant_3_balanced_kb",
+        "status": "completed",
+        "executed": true,
+        "parseable_json": true,
+        "validation_ok": true,
+        "chapter_id_ok": true,
+        "response_text_chars": 6096,
+        "counts": {
+          "characters": 2,
+          "places": 1,
+          "concepts": 1,
+          "objects": 1,
+          "events": 1,
+          "relations": 3,
+          "unresolved_mentions": 0
+        },
+        "missing_required_sections": [],
+        "event_importance_present": true,
+        "relation_category_present": true,
+        "score": 17.0,
+        "prompt_sha256": "74c437e8ed878d16eb7b7a2636b5cff6a51353ee632cd0c188f210e8c6ff677d",
+        "output_dir_reference": "/tmp/textifai_deepseek_family_harness_matrix/runs/deepseek-v4-pro/ch_002/family_variant_3_balanced_kb/20260525T075248Z"
+      },
+      "best_ch003_variant": {
+        "model": "deepseek-v4-pro",
+        "chapter_id": "ch_003",
+        "variant_id": "family_variant_3_balanced_kb",
+        "status": "completed",
+        "executed": true,
+        "parseable_json": true,
+        "validation_ok": true,
+        "chapter_id_ok": true,
+        "response_text_chars": 9564,
+        "counts": {
+          "characters": 2,
+          "places": 2,
+          "concepts": 3,
+          "objects": 3,
+          "events": 1,
+          "relations": 4,
+          "unresolved_mentions": 0
+        },
+        "missing_required_sections": [],
+        "event_importance_present": true,
+        "relation_category_present": true,
+        "score": 25.0,
+        "prompt_sha256": "6dda905f672bddffe6794d9d79e6850fe11e3851e654265cdc8832d793feb7c7",
+        "output_dir_reference": "/tmp/textifai_deepseek_family_harness_matrix/runs/deepseek-v4-pro/ch_003/family_variant_3_balanced_kb/20260525T080530Z"
+      }
+    }
+  },
+  "comparison_vs_sp068_round2": {
+    "sp068_best_harness_candidate": {
+      "ch_002_variant": "variant_l_balanced_final_candidate",
+      "ch_003_variant": "variant_g_combined_best",
+      "byok_note": "TextifAI optimizes harness for user-selected model only; no provider auto-switching policy is applied."
+    },
+    "sp069_best_model_variant": {
+      "ch_002": {
+        "model": "deepseek-v4-flash",
+        "variant_id": "family_variant_2_oer_focus",
+        "score": 26.5
+      },
+      "ch_003": {
+        "model": "deepseek-v4-pro",
+        "variant_id": "family_variant_3_balanced_kb",
+        "score": 25.0
+      }
+    }
+  },
+  "comparison_vs_manual_baselines": {
+    "ch_002_delta_best_vs_manual": {
+      "characters": -1,
+      "places": -1,
+      "concepts": 0,
+      "objects": 0,
+      "events": -4,
+      "relations": -4,
+      "unresolved_mentions": -4
+    },
+    "ch_003_delta_best_vs_manual": {
+      "characters": -1,
+      "places": -1,
+      "concepts": 0,
+      "objects": -1,
+      "events": -5,
+      "relations": -2,
+      "unresolved_mentions": -4
+    }
+  },
+  "thin_output_warnings": [
+    "When score < 20 or objects/events/relations are sparse, mark output as thin for author review.",
+    "When unresolved_mentions is zero on ambiguity-heavy chapters, warn and suggest rerun variant/model within DeepSeek family.",
+    "When JSON invalid, disqualify run and suggest rerun with safer family variant."
+  ],
+  "byok_interpretation": "User-selected DeepSeek models are optimized with per-model harnesses and warnings; no global provider auto-routing is introduced.",
+  "recommendation": "Use Flash family_variant_2_oer_focus as primary DeepSeek Flash candidate for ch_002-class chapters, and Pro family_variant_3_balanced_kb as optional BYOK-selected quality profile for harder chapters like ch_003.",
+  "next_suggested_phase": "Phase 1.3.M-b5c-3n — DeepSeek Family Profile Packaging + In-Model Rerun Guidance"
+}
