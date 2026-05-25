@@ -1,0 +1,30 @@
+{
+  "round2_id": "deepseek_flash_harness_round2_after_sp068",
+  "assessment": "deepseek_flash_harness_needs_more_iteration",
+  "provider": "deepseek",
+  "model": "deepseek-v4-flash",
+  "variant_set": "round2",
+  "provider_calls_count": 12,
+  "planned_provider_calls": 12,
+  "prompt_sha256": {
+    "ch_002": "74c437e8ed878d16eb7b7a2636b5cff6a51353ee632cd0c188f210e8c6ff677d",
+    "ch_003": "6dda905f672bddffe6794d9d79e6850fe11e3851e654265cdc8832d793feb7c7"
+  },
+  "valid_runs": 9,
+  "invalid_or_failed_runs": 3,
+  "best_variant_per_chapter": {
+    "ch_002": {
+      "variant_id": "variant_l_balanced_final_candidate",
+      "score": 21.5
+    },
+    "ch_003": {
+      "variant_id": "variant_g_combined_best",
+      "score": 26.5
+    }
+  },
+  "best_global_candidate": {
+    "chapter_id": "ch_003",
+    "variant_id": "variant_g_combined_best",
+    "score": 26.5
+  }
+}

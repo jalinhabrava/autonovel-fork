@@ -1,0 +1,62 @@
+{
+  "round2_id": "deepseek_flash_harness_round2_after_sp068",
+  "assessment": "deepseek_flash_harness_needs_more_iteration",
+  "best_variant": {
+    "chapter_id": "ch_003",
+    "variant_id": "variant_g_combined_best",
+    "score": 26.5
+  },
+  "best_harness_candidate": {
+    "ch_002_variant": "variant_l_balanced_final_candidate",
+    "ch_003_variant": "variant_g_combined_best",
+    "byok_note": "TextifAI optimizes harness for user-selected model only; no provider auto-switching policy is applied."
+  },
+  "comparison_vs_previous_matrix_sp067": {
+    "sp067_best_flash": {
+      "ch_002": {
+        "variant_id": "variant_b_dense_plus_check",
+        "score": 25.0
+      },
+      "ch_003": {
+        "variant_id": "variant_e_objects_events_relations_boost",
+        "score": 26.0
+      }
+    },
+    "round2_best_flash": {
+      "ch_002": {
+        "variant_id": "variant_l_balanced_final_candidate",
+        "score": 21.5
+      },
+      "ch_003": {
+        "variant_id": "variant_g_combined_best",
+        "score": 26.5
+      }
+    },
+    "score_delta": {
+      "ch_002": -3.5,
+      "ch_003": 0.5
+    }
+  },
+  "comparison_vs_manual_baselines": {
+    "ch_002_delta_best_vs_manual": {
+      "characters": -1,
+      "places": -2,
+      "concepts": 0,
+      "objects": -4,
+      "events": -4,
+      "relations": -3,
+      "unresolved_mentions": -4
+    },
+    "ch_003_delta_best_vs_manual": {
+      "characters": -1,
+      "places": 0,
+      "concepts": -1,
+      "objects": -2,
+      "events": -3,
+      "relations": -3,
+      "unresolved_mentions": -2
+    }
+  },
+  "recommendation": "Keep Flash harness work in BYOK mode: package chapter-aware candidate overlays, add rerun guidance and density warnings for same selected model, and iterate ch_002 stability before e2e rollout.",
+  "next_suggested_phase": "Phase 1.3.M-b5c-3m — DeepSeek Flash Harness Candidate Packaging + Stability Re-check"
+}

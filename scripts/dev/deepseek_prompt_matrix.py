@@ -29,7 +29,7 @@ class PromptVariant:
     overlay_text: str
 
 
-VARIANTS: tuple[PromptVariant, ...] = (
+SP067_VARIANTS: tuple[PromptVariant, ...] = (
     PromptVariant(
         variant_id="variant_a_dense_explicit",
         overlay_text="""Return exactly one valid JSON object. Do not use markdown.
@@ -140,13 +140,137 @@ Do not invent names.""",
 )
 
 
+ROUND2_VARIANTS: tuple[PromptVariant, ...] = (
+    PromptVariant(
+        variant_id="variant_g_combined_best",
+        overlay_text="""Return exactly one valid JSON object. Do not use markdown.
+
+Prioritize complete extraction over brevity.
+Do not stop after summary or final outcome.
+
+Extract all meaningful characters, places, concepts, objects, events, relations, and unresolved mentions.
+
+Pay special attention to:
+- role-significant unnamed actors;
+- subplaces where action, status, or threat changes;
+- objects/tools/artifacts/catalysts/weapons/restraints/keys/event-triggering props;
+- durable state-change events;
+- evidence-backed relations involving protagonist, authority, places, objects, concepts, and events;
+- important unresolved mentions.
+
+Before final JSON, internally check whether any schema section is missing useful evidence.
+If uncertain, use review/local_candidate or unresolved_mentions.
+Do not output your checklist.
+Keep facts concise.
+Do not invent names.""",
+    ),
+    PromptVariant(
+        variant_id="variant_h_counts_targeted",
+        overlay_text="""Return exactly one valid JSON object. Do not use markdown.
+
+This is not a summary task. It is structured extraction.
+
+For a non-trivial narrative chapter, aim to include:
+- multiple characters when multiple actors/roles are present;
+- multiple events when the chapter has more than one state change;
+- multiple relations when entities interact or depend on each other;
+- all event-triggering objects/tools/artifacts;
+- unresolved_mentions for important unclear references.
+
+Do not invent items to satisfy counts.
+Only include evidence-supported items.
+Keep facts concise.
+Keep uncertainty in review/local_candidate.""",
+    ),
+    PromptVariant(
+        variant_id="variant_i_schema_section_completion",
+        overlay_text="""Return exactly one valid JSON object. Do not use markdown.
+
+Complete every schema section using evidence from the chapter.
+
+For each section:
+characters: named or role-significant actors.
+places: locations and sublocations.
+concepts: magic/system/status concepts.
+objects: physical or magical tools, artifacts, catalysts, weapons, restraints, keys, props.
+events: durable changes, decisions, threats, discoveries, movements, magic/system changes.
+relations: evidence-backed links between extracted items.
+unresolved_mentions: important unclear actors, objects, concepts, pronouns, or references.
+
+Empty sections are allowed only when no evidence exists.
+Concise facts.
+No invented names.
+Uncertainty stays review/local_candidate.""",
+    ),
+    PromptVariant(
+        variant_id="variant_j_review_and_unresolved_boost",
+        overlay_text="""Return exactly one valid JSON object. Do not use markdown.
+
+Prioritize useful extraction for author review.
+
+Do not drop ambiguous but important references.
+If an actor, object, concept, pronoun, relation, or identity is important but uncertain:
+- include it in unresolved_mentions; or
+- keep it as local_candidate/review with review_reason.
+
+Also extract evidence-supported characters, places, concepts, objects, events, and relations.
+Do not compress the chapter into summary only.
+Keep facts concise.
+Do not invent names.""",
+    ),
+    PromptVariant(
+        variant_id="variant_k_objects_events_relations_v2",
+        overlay_text="""Return exactly one valid JSON object. Do not use markdown.
+
+After identifying the summary, continue extracting structural data.
+
+Focus on three high-value groups:
+1. Objects: tools, artifacts, catalysts, weapons, restraints, keys, props that trigger, explain, block, enable, or symbolize events.
+2. Events: every durable change in identity, role, status, place, threat, decision, or magic/system state.
+3. Relations: evidence-backed links between people, places, objects, concepts, and events.
+
+Also include characters, places, concepts, and unresolved_mentions when supported.
+Use review/local_candidate for uncertainty.
+Keep facts concise.
+Do not invent names.""",
+    ),
+    PromptVariant(
+        variant_id="variant_l_balanced_final_candidate",
+        overlay_text="""Return exactly one valid JSON object. Do not use markdown.
+
+Extract for a story knowledge base, not for a short summary.
+
+Include evidence-supported:
+- characters and important unnamed roles;
+- places and subplaces;
+- concepts and magic/system states;
+- objects, tools, artifacts, catalysts, weapons, restraints, keys, and event-triggering props;
+- durable events;
+- relations between extracted items;
+- unresolved important mentions.
+
+Prefer coverage over brevity, but keep each fact concise.
+Use review/local_candidate when identity or canonical merge is uncertain.
+Use unresolved_mentions instead of dropping unclear but important references.
+Do not invent names.""",
+    ),
+)
+
+
+VARIANT_SETS: dict[str, tuple[PromptVariant, ...]] = {
+    "sp067": SP067_VARIANTS,
+    "round2": ROUND2_VARIANTS,
+}
+VARIANTS = SP067_VARIANTS
+
+
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="DeepSeek extraction strategy matrix runner for ch_002/ch_003.")
+    parser = argparse.ArgumentParser(description="DeepSeek extraction matrix runner.")
     parser.add_argument("--prompt-ch002", required=True)
     parser.add_argument("--prompt-ch003", required=True)
     parser.add_argument("--output-root", default=str(DEFAULT_OUTPUT_ROOT))
     parser.add_argument("--allow-provider-calls", action="store_true")
-    parser.add_argument("--max-provider-requests", type=int, default=0, help="Global max calls allowed for this matrix.")
+    parser.add_argument("--max-provider-requests", type=int, default=0, help="Global max calls allowed.")
     parser.add_argument("--max-output-tokens", type=int, default=8192)
     parser.add_argument("--response-format-json", action="store_true")
     parser.add_argument("--no-write-back", action="store_true", default=True)
@@ -154,11 +278,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--flash-model", default="deepseek-v4-flash")
     parser.add_argument("--pro-model", default="deepseek-v4-pro")
     parser.add_argument("--attempt-pro", action="store_true")
+    parser.add_argument("--variant-set", default="sp067", choices=sorted(VARIANT_SETS.keys()))
     return parser
 
 
-def variant_definitions() -> list[dict[str, Any]]:
-    return [{"variant_id": item.variant_id, "overlay_chars": len(item.overlay_text)} for item in VARIANTS]
+def variant_definitions(variant_set: str = "sp067") -> list[dict[str, Any]]:
+    variants = VARIANT_SETS[variant_set]
+    return [{"variant_id": item.variant_id, "overlay_chars": len(item.overlay_text)} for item in variants]
 
 
 def score_variant(
@@ -200,6 +326,7 @@ def run_matrix(args: argparse.Namespace) -> dict[str, Any]:
     if not args.no_write_back:
         raise SystemExit("Refusing matrix: --no-write-back is required.")
 
+    variants = VARIANT_SETS[args.variant_set]
     chapters = [
         {"chapter_id": "ch_002", "prompt_file": args.prompt_ch002},
         {"chapter_id": "ch_003", "prompt_file": args.prompt_ch003},
@@ -207,7 +334,7 @@ def run_matrix(args: argparse.Namespace) -> dict[str, Any]:
 
     plan: list[dict[str, Any]] = []
     for chapter in chapters:
-        for variant in VARIANTS:
+        for variant in variants:
             plan.append(
                 {
                     "chapter_id": chapter["chapter_id"],
@@ -219,7 +346,7 @@ def run_matrix(args: argparse.Namespace) -> dict[str, Any]:
             )
 
     if args.attempt_pro:
-        pro_variants = [item for item in VARIANTS if item.variant_id in {"variant_a_dense_explicit", "variant_b_dense_plus_check"}]
+        pro_variants = [item for item in variants if item.variant_id in {"variant_a_dense_explicit", "variant_b_dense_plus_check"}]
         for chapter in chapters:
             for variant in pro_variants:
                 plan.append(
@@ -306,7 +433,15 @@ def run_matrix(args: argparse.Namespace) -> dict[str, Any]:
                 provider_factory=_REAL_DRYRUN.get_text_provider,
                 provider_config_error=_REAL_DRYRUN.get_text_provider_config_error,
             )
-            results.append(_summarize_executed(dryrun_result=dryrun_result, model=model, chapter_id=chapter_id, tier=tier, variant_id=variant.variant_id))
+            results.append(
+                _summarize_executed(
+                    dryrun_result=dryrun_result,
+                    model=model,
+                    chapter_id=chapter_id,
+                    tier=tier,
+                    variant_id=variant.variant_id,
+                )
+            )
         except Exception as exc:  # noqa: BLE001
             error_message = str(exc)
             results.append(
@@ -326,6 +461,7 @@ def run_matrix(args: argparse.Namespace) -> dict[str, Any]:
 
     summary = {
         "provider": args.provider,
+        "variant_set": args.variant_set,
         "models_attempted": sorted({item["model"] for item in plan}),
         "attempt_pro": bool(args.attempt_pro),
         "pro_block_reason": pro_block_reason,
@@ -426,6 +562,7 @@ def main() -> int:
                 "summary_path": str(Path(args.output_root) / "strategy_matrix_summary.json"),
                 "executed_provider_calls": summary.get("executed_provider_calls"),
                 "models_attempted": summary.get("models_attempted"),
+                "variant_set": summary.get("variant_set"),
             },
             ensure_ascii=False,
         )

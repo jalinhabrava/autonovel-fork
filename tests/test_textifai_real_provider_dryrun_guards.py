@@ -349,6 +349,14 @@ class RealProviderDryRunGuardsTests(unittest.TestCase):
         self.assertNotIn("ベル", blob)
         self.assertEqual(len(MATRIX_MODULE.VARIANTS), 6)
 
+        round2_blob = json.dumps(MATRIX_MODULE.variant_definitions("round2"), ensure_ascii=False)
+        self.assertNotIn("セラ", round2_blob)
+        self.assertNotIn("王者の杖", round2_blob)
+        self.assertNotIn("アデルマン", round2_blob)
+        self.assertNotIn("ティセイア", round2_blob)
+        self.assertNotIn("ベル", round2_blob)
+        self.assertEqual(len(MATRIX_MODULE.variant_definitions("round2")), 6)
+
         low = MATRIX_MODULE.score_variant(
             parseable_json=True,
             validation_ok=True,
@@ -459,6 +467,11 @@ class RealProviderDryRunGuardsTests(unittest.TestCase):
             FIXTURE_ROOT / "deepseek_strategy_matrix_ch002_report_after_sp066.json",
             FIXTURE_ROOT / "deepseek_strategy_matrix_ch003_report_after_sp066.json",
             FIXTURE_ROOT / "deepseek_strategy_matrix_decision_after_sp066.json",
+            FIXTURE_ROOT / "deepseek_flash_harness_round2_summary_after_sp067.json",
+            FIXTURE_ROOT / "deepseek_flash_harness_round2_variants_after_sp067.json",
+            FIXTURE_ROOT / "deepseek_flash_harness_round2_ch002_report_after_sp067.json",
+            FIXTURE_ROOT / "deepseek_flash_harness_round2_ch003_report_after_sp067.json",
+            FIXTURE_ROOT / "deepseek_flash_harness_round2_decision_after_sp067.json",
         ]:
             with self.subTest(path=path):
                 payload = json.loads(path.read_text(encoding="utf-8"))
@@ -516,6 +529,23 @@ class RealProviderDryRunGuardsTests(unittest.TestCase):
         self.assertIn(decision["assessment"], valid_enum)
         self.assertLessEqual(summary["provider_calls_count"], 16)
         self.assertIn("deepseek-v4-flash", summary["models_attempted"])
+
+    def test_flash_harness_round2_reports_parse_and_use_valid_decision_enum(self):
+        summary = json.loads((FIXTURE_ROOT / "deepseek_flash_harness_round2_summary_after_sp067.json").read_text(encoding="utf-8"))
+        decision = json.loads((FIXTURE_ROOT / "deepseek_flash_harness_round2_decision_after_sp067.json").read_text(encoding="utf-8"))
+        valid_enum = {
+            "deepseek_flash_harness_candidate_found",
+            "deepseek_flash_harness_needs_more_iteration",
+            "deepseek_flash_outputs_valid_but_too_thin",
+            "deepseek_flash_unstable_even_with_harness",
+            "experiment_blocked",
+        }
+
+        self.assertIn(summary["assessment"], valid_enum)
+        self.assertIn(decision["assessment"], valid_enum)
+        self.assertEqual(summary["provider"], "deepseek")
+        self.assertEqual(summary["model"], "deepseek-v4-flash")
+        self.assertLessEqual(summary["provider_calls_count"], 12)
 
     def test_profiled_runtime_reports_record_safe_not_executed_state(self):
         summary = json.loads((FIXTURE_ROOT / "deepseek_ch002_profiled_runtime_summary_after_sp061.json").read_text(encoding="utf-8"))

@@ -1,0 +1,132 @@
+{
+  "chapter_id": "ch_003",
+  "provider": "deepseek",
+  "model": "deepseek-v4-flash",
+  "runs_total": 6,
+  "runs_valid": 6,
+  "runs_invalid_or_failed": 0,
+  "best_variant": {
+    "variant_id": "variant_g_combined_best",
+    "score": 26.5,
+    "counts": {
+      "characters": 2,
+      "places": 3,
+      "concepts": 2,
+      "objects": 2,
+      "events": 3,
+      "relations": 3,
+      "unresolved_mentions": 2
+    },
+    "response_text_chars": 10341
+  },
+  "manual_baseline_counts": {
+    "characters": 3,
+    "places": 3,
+    "concepts": 3,
+    "objects": 4,
+    "events": 6,
+    "relations": 6,
+    "unresolved_mentions": 4
+  },
+  "delta_best_vs_manual": {
+    "characters": -1,
+    "places": 0,
+    "concepts": -1,
+    "objects": -2,
+    "events": -3,
+    "relations": -3,
+    "unresolved_mentions": -2
+  },
+  "ranked_variants": [
+    {
+      "variant_id": "variant_g_combined_best",
+      "score": 26.5,
+      "parseable_json": true,
+      "validation_ok": true,
+      "counts": {
+        "characters": 2,
+        "places": 3,
+        "concepts": 2,
+        "objects": 2,
+        "events": 3,
+        "relations": 3,
+        "unresolved_mentions": 2
+      }
+    },
+    {
+      "variant_id": "variant_i_schema_section_completion",
+      "score": 25.5,
+      "parseable_json": true,
+      "validation_ok": true,
+      "counts": {
+        "characters": 2,
+        "places": 2,
+        "concepts": 3,
+        "objects": 3,
+        "events": 2,
+        "relations": 3,
+        "unresolved_mentions": 1
+      }
+    },
+    {
+      "variant_id": "variant_k_objects_events_relations_v2",
+      "score": 20.5,
+      "parseable_json": true,
+      "validation_ok": true,
+      "counts": {
+        "characters": 2,
+        "places": 1,
+        "concepts": 2,
+        "objects": 2,
+        "events": 1,
+        "relations": 3,
+        "unresolved_mentions": 1
+      }
+    },
+    {
+      "variant_id": "variant_l_balanced_final_candidate",
+      "score": 19.5,
+      "parseable_json": true,
+      "validation_ok": true,
+      "counts": {
+        "characters": 2,
+        "places": 1,
+        "concepts": 1,
+        "objects": 2,
+        "events": 1,
+        "relations": 3,
+        "unresolved_mentions": 1
+      }
+    },
+    {
+      "variant_id": "variant_h_counts_targeted",
+      "score": 19.0,
+      "parseable_json": true,
+      "validation_ok": true,
+      "counts": {
+        "characters": 2,
+        "places": 1,
+        "concepts": 1,
+        "objects": 3,
+        "events": 1,
+        "relations": 2,
+        "unresolved_mentions": 1
+      }
+    },
+    {
+      "variant_id": "variant_j_review_and_unresolved_boost",
+      "score": 15.0,
+      "parseable_json": true,
+      "validation_ok": true,
+      "counts": {
+        "characters": 2,
+        "places": 0,
+        "concepts": 0,
+        "objects": 2,
+        "events": 2,
+        "relations": 1,
+        "unresolved_mentions": 1
+      }
+    }
+  ]
+}
