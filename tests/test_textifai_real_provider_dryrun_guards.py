@@ -796,6 +796,57 @@ class RealProviderDryRunGuardsTests(unittest.TestCase):
         self.assertTrue(any(event.get("continuation_status") in {"patch_merged", "executed", "not_triggered"} for event in truncation["events"]))
         self.assertIn("item_level_source_ref_coverage_ratio", source_refs)
 
+    def test_larger_deepseek_multichunk_reports_parse_and_stay_private_safe(self):
+        plan = json.loads((FIXTURE_ROOT / "larger_deepseek_multichunk_execution_plan_after_sp078.json").read_text(encoding="utf-8"))
+        summary = json.loads((FIXTURE_ROOT / "larger_deepseek_multichunk_summary_after_sp078.json").read_text(encoding="utf-8"))
+        chunks = json.loads((FIXTURE_ROOT / "larger_deepseek_multichunk_chunk_results_after_sp078.json").read_text(encoding="utf-8"))
+        reduction = json.loads((FIXTURE_ROOT / "larger_deepseek_multichunk_reduction_summary_after_sp078.json").read_text(encoding="utf-8"))
+        budget_usage = json.loads((FIXTURE_ROOT / "larger_deepseek_multichunk_budget_usage_after_sp078.json").read_text(encoding="utf-8"))
+        chunk_audit = json.loads((FIXTURE_ROOT / "larger_deepseek_multichunk_chunk_audit_after_sp078.json").read_text(encoding="utf-8"))
+        source_refs = json.loads((FIXTURE_ROOT / "larger_deepseek_multichunk_source_ref_audit_after_sp078.json").read_text(encoding="utf-8"))
+        truncation = json.loads((FIXTURE_ROOT / "larger_deepseek_multichunk_truncation_continuation_after_sp078.json").read_text(encoding="utf-8"))
+        decision = json.loads((FIXTURE_ROOT / "larger_deepseek_multichunk_decision_after_sp078.json").read_text(encoding="utf-8"))
+
+        valid_enum = {
+            "larger_deepseek_e2e_multichunk_passed_ready_for_broader_e2e",
+            "larger_deepseek_e2e_multichunk_passed_with_review_warnings",
+            "larger_deepseek_e2e_multichunk_partial_success_needs_patch",
+            "larger_deepseek_e2e_multichunk_failed_but_debuggable",
+            "larger_deepseek_e2e_multichunk_blocked",
+        }
+        continuation_statuses = {
+            "not_triggered",
+            "executed",
+            "executed_replaced_primary",
+            "executed_but_not_parseable",
+            "skipped_cap_reached",
+            "patch_merged",
+        }
+
+        for payload in (plan, summary, chunks, reduction, budget_usage, chunk_audit, source_refs, truncation, decision):
+            text = json.dumps(payload, ensure_ascii=False)
+            self.assertNotIn("sk-", text)
+            self.assertNotIn("Authorization: Bearer", text)
+            self.assertNotIn("CHUNK_TEXT:", text)
+            self.assertNotIn("provider_response_raw.txt\n", text)
+
+        self.assertIn(summary["assessment"], valid_enum)
+        self.assertIn(decision["assessment"], valid_enum)
+        self.assertIn(decision["product_decision"], valid_enum)
+        self.assertLessEqual(plan["planned_provider_call_count_with_continuation_reserve"], 48)
+        self.assertLessEqual(summary["provider_call_count"], 48)
+        self.assertTrue(summary["private_packet_root"].startswith("/tmp/textifai_private_provider_runs/"))
+        self.assertEqual(plan["natural_vs_forced_multichunk"], "forced_budget_preflight")
+        self.assertTrue(chunk_audit["has_multichunk_run"])
+        self.assertTrue(any(row["number_of_chunks"] > 1 for row in chunk_audit["runs"]))
+        self.assertGreaterEqual(source_refs["item_level_source_ref_coverage_ratio"], 0.0)
+        self.assertLessEqual(source_refs["item_level_source_ref_coverage_ratio"], 1.0)
+        self.assertTrue(all("effective_max_output_tokens" in row for row in budget_usage["runs"]))
+        self.assertTrue(all(event.get("continuation_status") in continuation_statuses for event in truncation["events"]))
+        self.assertTrue(all(row.get("chunk_id") for row in chunks["chunks"]))
+        self.assertTrue(all(row.get("source_span") for row in chunks["chunks"]))
+        self.assertTrue(all(row.get("parseable_json") for row in reduction["reductions"]))
+
     def test_patch_merge_preserves_source_refs_provider_free(self):
         chunk = E2E_MODULE.StructuredSourceChunk(
             source_id="src",

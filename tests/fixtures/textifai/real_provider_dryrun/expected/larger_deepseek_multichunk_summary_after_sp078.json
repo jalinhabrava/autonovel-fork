@@ -1,0 +1,50 @@
+{
+  "assessment": "larger_deepseek_e2e_multichunk_passed_with_review_warnings",
+  "provider": "deepseek",
+  "models": [
+    "deepseek-v4-flash",
+    "deepseek-v4-pro"
+  ],
+  "chapters": [
+    "ch_001",
+    "ch_002",
+    "ch_003",
+    "ch_005"
+  ],
+  "provider_call_count": 29,
+  "provider_call_cap": 48,
+  "compact_mode_used": true,
+  "patch_continuation_mode": true,
+  "valid_reduction_count": 8,
+  "total_reduction_count": 8,
+  "triggered_continuation_count": 3,
+  "private_packet_root": "/tmp/textifai_private_provider_runs/sp079_larger_deepseek_multichunk/20260525T140227Z",
+  "recommended_files_to_upload_to_chatgpt": [
+    "README.md",
+    "execution_plan_private.md",
+    "matrix_summary_private.md",
+    "decision_notes_private.md",
+    "source_ref_audit_private.md",
+    "truncation_recovery_audit_private.md",
+    "reduction_trace_private.md"
+  ],
+  "comparison_vs_sp075": {
+    "sp075_assessment": "real_deepseek_e2e_dryrun_partial_success",
+    "sp075_best_reduction_score": 57.5,
+    "sp077_best_reduction_score": 86.0,
+    "source_ref_item_level_improved": true,
+    "continuation_or_truncation_issue_remaining": true
+  },
+  "write_back": false,
+  "natural_vs_forced_multichunk": "forced_budget_preflight",
+  "planned_provider_call_count": 26,
+  "planned_provider_call_count_with_continuation_reserve": 34,
+  "comparison_vs_sp077_and_sp075": {
+    "sp075_best_reduction_score": 57.5,
+    "sp077_best_reduction_score": 59.0,
+    "sp079_best_reduction_score": 86.0,
+    "sp079_provider_call_count": 29,
+    "sp077_provider_call_count": 13,
+    "sp079_source_ref_coverage_ratio": 1.0
+  }
+}

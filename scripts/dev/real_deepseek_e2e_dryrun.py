@@ -70,6 +70,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--continuation-reserve-per-run", type=int, default=1)
     parser.add_argument("--pro-compact-reduction-mode", action="store_true")
     parser.add_argument("--patch-continuation-mode", action="store_true")
+    parser.add_argument("--force-max-chunk-tokens", type=int, default=0)
     return parser
 
 
@@ -108,6 +109,7 @@ def main(argv: list[str] | None = None) -> int:
         pro_compact_reduction_mode=bool(args.pro_compact_reduction_mode),
         patch_continuation_mode=bool(args.patch_continuation_mode),
         provider_call_cap=int(args.max_provider_requests),
+        force_max_chunk_tokens=max(0, int(args.force_max_chunk_tokens)),
     )
 
     names = _report_names(prefix=args.report_prefix, suffix=args.report_suffix)
@@ -169,8 +171,11 @@ def _report_names(*, prefix: str, suffix: str) -> dict[str, str]:
         "reduction_summary": f"{prefix}_reduction_summary_{suffix}.json",
         "decision": f"{prefix}_decision_{suffix}.json",
         "budget_report": f"{prefix}_budget_report_{suffix}.json",
+        "budget_usage": f"{prefix}_budget_usage_{suffix}.json",
+        "chunk_audit": f"{prefix}_chunk_audit_{suffix}.json",
         "source_ref_audit": f"{prefix}_source_ref_audit_{suffix}.json",
         "truncation_audit": f"{prefix}_truncation_continuation_audit_{suffix}.json",
+        "truncation_continuation": f"{prefix}_truncation_continuation_{suffix}.json",
     }
 
 
@@ -236,6 +241,7 @@ def _build_execution_plan(
     pro_compact_reduction_mode: bool = False,
     patch_continuation_mode: bool = False,
     provider_call_cap: int = 24,
+    force_max_chunk_tokens: int = 0,
 ) -> dict[str, Any]:
     source_hash = hashlib.sha256(source_text.encode("utf-8", errors="replace")).hexdigest()
     runs: list[dict[str, Any]] = []
@@ -270,17 +276,29 @@ def _build_execution_plan(
                 safety_margin=caps.recommended_safety_margin,
             )
             token_plan = build_token_budget_from_planning_request(capabilities=caps, planning=planning)
+            natural_max_chunk_tokens = max(1000, token_plan["usable_input_budget"] - 4000)
+            max_chunk_tokens = force_max_chunk_tokens if force_max_chunk_tokens > 0 else natural_max_chunk_tokens
             chunks = split_structured_chapter_into_chunks(
                 source_id=chapter["source_id"],
                 chapter_id=chapter["chapter_id"],
                 chapter_text=detected.text,
                 chapter_char_start=detected.char_start,
-                max_chunk_tokens=max(1000, token_plan["usable_input_budget"] - 4000),
+                max_chunk_tokens=max_chunk_tokens,
                 estimate_tokens=_estimate_token_count,
                 overlap_paragraphs=1,
                 budget_profile_id=f"{model}:budget:sp070",
                 provider_profile_id=profile.profile_id,
             )
+            if force_max_chunk_tokens > 0 and len(chunks) == 1:
+                chunks = _force_split_structured_chunks(
+                    source_id=chapter["source_id"],
+                    chapter_id=chapter["chapter_id"],
+                    chapter_text=detected.text,
+                    chapter_char_start=detected.char_start,
+                    max_chunk_tokens=force_max_chunk_tokens,
+                    provider_profile_id=profile.profile_id,
+                    budget_profile_id=f"{model}:budget:sp070",
+                )
             run_id = f"{chapter['chapter_id']}__{model.replace('-', '_')}"
             planned_calls = len(chunks) + 1
             call_count += planned_calls
@@ -297,6 +315,9 @@ def _build_execution_plan(
                 "continuation_reserve": continuation_reserve_per_run,
                 "compact_reduction_mode": bool(pro_compact_reduction_mode and model == "deepseek-v4-pro"),
                 "patch_continuation_mode": bool(patch_continuation_mode),
+                "forced_multichunk": force_max_chunk_tokens > 0,
+                "force_max_chunk_tokens": force_max_chunk_tokens or None,
+                "natural_max_chunk_tokens": natural_max_chunk_tokens,
             }
             runs.append(run)
             public_runs.append(_public_run_plan(run))
@@ -319,6 +340,8 @@ def _build_execution_plan(
             "patch_continuation_mode": bool(patch_continuation_mode),
             "compact_reduction_policy": build_pro_compact_reduction_policy() if pro_compact_reduction_mode else None,
             "patch_continuation_contract": build_patch_based_continuation_contract() if patch_continuation_mode else None,
+            "natural_vs_forced_multichunk": "forced_budget_preflight" if force_max_chunk_tokens > 0 else "natural",
+            "force_max_chunk_tokens": force_max_chunk_tokens or None,
             "private_packet_root": str(packet_root),
             "write_back": False,
         },
@@ -432,6 +455,138 @@ def _execute_run(
         "reduction": reduction,
         "provider_call_count": calls,
     }, calls
+
+
+def _force_split_structured_chunks(
+    *,
+    source_id: str,
+    chapter_id: str,
+    chapter_text: str,
+    chapter_char_start: int,
+    max_chunk_tokens: int,
+    provider_profile_id: str,
+    budget_profile_id: str,
+) -> list[StructuredSourceChunk]:
+    paragraphs = [segment for segment in chapter_text.split("\n\n") if segment.strip()]
+    if not paragraphs:
+        paragraphs = [chapter_text]
+
+    chunks: list[StructuredSourceChunk] = []
+    bucket: list[str] = []
+    bucket_tokens = 0
+    cursor = chapter_char_start
+    chunk_index = 1
+
+    def _flush_bucket(parts: list[str], local_cursor: int, index: int) -> tuple[StructuredSourceChunk | None, int]:
+        if not parts:
+            return None, local_cursor
+        text = "\n\n".join(parts)
+        char_start = chapter_text.find(text, max(0, local_cursor - chapter_char_start))
+        if char_start < 0:
+            char_start = max(0, local_cursor - chapter_char_start)
+        absolute_start = chapter_char_start + char_start
+        absolute_end = absolute_start + len(text)
+        chunk = StructuredSourceChunk(
+            source_id=source_id,
+            chunk_id=f"{source_id}_{chapter_id}_forced_chunk_{index:03d}",
+            chapter_id=chapter_id,
+            section_id=chapter_id,
+            sequence_index=index,
+            heading_path=[chapter_id],
+            text=text,
+            char_start=absolute_start,
+            char_end=absolute_end,
+            char_count=len(text),
+            estimated_tokens=max(1, _estimate_token_count(text)),
+            chunk_kind="chapter_forced_multichunk",
+            split_reason="forced_budget_preflight",
+            predecessor_chunk_id=None,
+            successor_chunk_id=None,
+            parent_chunk_id=f"{source_id}_{chapter_id}_forced_parent",
+            source_span={"char_start": absolute_start, "char_end": absolute_end},
+            budget_profile_id=budget_profile_id,
+            provider_profile_id=provider_profile_id,
+        )
+        return chunk, absolute_end
+
+    for paragraph in paragraphs:
+        token_len = max(1, _estimate_token_count(paragraph))
+        if bucket and bucket_tokens + token_len > max(1, max_chunk_tokens):
+            chunk, cursor = _flush_bucket(bucket, cursor, chunk_index)
+            if chunk is not None:
+                chunks.append(chunk)
+                chunk_index += 1
+            bucket = []
+            bucket_tokens = 0
+        bucket.append(paragraph)
+        bucket_tokens += token_len
+
+    if bucket:
+        chunk, cursor = _flush_bucket(bucket, cursor, chunk_index)
+        if chunk is not None:
+            chunks.append(chunk)
+
+    if len(chunks) <= 1:
+        fallback_size = max(800, max_chunk_tokens * 6)
+        chunks = []
+        position = 0
+        index = 1
+        while position < len(chapter_text):
+            end = min(len(chapter_text), position + fallback_size)
+            text = chapter_text[position:end]
+            absolute_start = chapter_char_start + position
+            absolute_end = chapter_char_start + end
+            chunks.append(
+                StructuredSourceChunk(
+                    source_id=source_id,
+                    chunk_id=f"{source_id}_{chapter_id}_forced_chunk_{index:03d}",
+                    chapter_id=chapter_id,
+                    section_id=chapter_id,
+                    sequence_index=index,
+                    heading_path=[chapter_id],
+                    text=text,
+                    char_start=absolute_start,
+                    char_end=absolute_end,
+                    char_count=len(text),
+                    estimated_tokens=max(1, _estimate_token_count(text)),
+                    chunk_kind="chapter_forced_multichunk",
+                    split_reason="forced_budget_preflight_char_window",
+                    predecessor_chunk_id=None,
+                    successor_chunk_id=None,
+                    parent_chunk_id=f"{source_id}_{chapter_id}_forced_parent",
+                    source_span={"char_start": absolute_start, "char_end": absolute_end},
+                    budget_profile_id=budget_profile_id,
+                    provider_profile_id=provider_profile_id,
+                )
+            )
+            position = end
+            index += 1
+
+    for index, chunk in enumerate(chunks):
+        predecessor = chunks[index - 1].chunk_id if index > 0 else None
+        successor = chunks[index + 1].chunk_id if index + 1 < len(chunks) else None
+        chunks[index] = StructuredSourceChunk(
+            source_id=chunk.source_id,
+            chunk_id=chunk.chunk_id,
+            chapter_id=chunk.chapter_id,
+            section_id=chunk.section_id,
+            sequence_index=chunk.sequence_index,
+            heading_path=chunk.heading_path,
+            text=chunk.text,
+            char_start=chunk.char_start,
+            char_end=chunk.char_end,
+            char_count=chunk.char_count,
+            estimated_tokens=chunk.estimated_tokens,
+            chunk_kind=chunk.chunk_kind,
+            split_reason=chunk.split_reason,
+            predecessor_chunk_id=predecessor,
+            successor_chunk_id=successor,
+            parent_chunk_id=chunk.parent_chunk_id,
+            source_span=chunk.source_span,
+            budget_profile_id=chunk.budget_profile_id,
+            provider_profile_id=chunk.provider_profile_id,
+        )
+    return chunks
 
 
 def _recover_reduction_if_needed(
@@ -824,6 +979,11 @@ def _execute_request(
         "score": validation["score"],
         "thin_warnings": validation["thin_warnings"],
         "source_span": chunk.source_span if chunk else None,
+        "section_id": chunk.section_id if chunk else None,
+        "char_start": chunk.char_start if chunk else None,
+        "char_end": chunk.char_end if chunk else None,
+        "predecessor_chunk_id": chunk.predecessor_chunk_id if chunk else None,
+        "successor_chunk_id": chunk.successor_chunk_id if chunk else None,
         "finish_reason": provider_metadata.get("finish_reason"),
         "usage": provider_metadata.get("usage") or {},
         "effective_max_output_tokens": max_output_tokens,
@@ -1329,6 +1489,7 @@ def _build_public_reports(*, plan: dict[str, Any], results: list[dict[str, Any]]
     budget_rows: list[dict[str, Any]] = []
     truncation_rows: list[dict[str, Any]] = []
     source_ref_rows: list[dict[str, Any]] = []
+    chunk_audit_rows: list[dict[str, Any]] = []
 
     for result in results:
         budget_rows.append(
@@ -1391,6 +1552,7 @@ def _build_public_reports(*, plan: dict[str, Any], results: list[dict[str, Any]]
 
         parsed = result["reduction"].get("parsed")
         source_ref_rows.append(_source_ref_audit_row(result=result, parsed=parsed))
+        chunk_audit_rows.append(_chunk_audit_row(result=result, parsed=parsed))
 
     valid_reductions = [row for row in reduction_rows if row["parseable_json"] and row["validation_ok"]]
     all_reductions_valid = bool(reduction_rows) and len(valid_reductions) == len(reduction_rows)
@@ -1476,6 +1638,16 @@ def _build_public_reports(*, plan: dict[str, Any], results: list[dict[str, Any]]
             "runs": budget_rows,
             "resolution_sources": sorted({item.get("decision_source") for item in budget_rows if item.get("decision_source")}),
         },
+        "budget_usage": {
+            "assessment": assessment,
+            "runs": budget_rows,
+            "resolution_sources": sorted({item.get("decision_source") for item in budget_rows if item.get("decision_source")}),
+        },
+        "chunk_audit": {
+            "assessment": assessment,
+            "runs": chunk_audit_rows,
+            "has_multichunk_run": any(item.get("number_of_chunks", 0) > 1 for item in chunk_audit_rows),
+        },
         "source_ref_audit": {
             "assessment": assessment,
             "runs": source_ref_rows,
@@ -1490,6 +1662,14 @@ def _build_public_reports(*, plan: dict[str, Any], results: list[dict[str, Any]]
             ),
         },
         "truncation_audit": {
+            "assessment": assessment,
+            "events": truncation_rows,
+            "triggered_continuation_count": sum(1 for item in truncation_rows if item.get("continuation_status", "not_triggered") != "not_triggered"),
+            "continuation_problem_count": sum(
+                1 for item in truncation_rows if item.get("continuation_status") in {"executed_but_not_parseable", "skipped_cap_reached"}
+            ),
+        },
+        "truncation_continuation": {
             "assessment": assessment,
             "events": truncation_rows,
             "triggered_continuation_count": sum(1 for item in truncation_rows if item.get("continuation_status", "not_triggered") != "not_triggered"),
@@ -1548,6 +1728,63 @@ def _source_ref_audit_row(*, result: dict[str, Any], parsed: dict[str, Any] | No
     }
 
 
+def _chunk_audit_row(*, result: dict[str, Any], parsed: dict[str, Any] | None) -> dict[str, Any]:
+    chunks = result.get("chunks") if isinstance(result.get("chunks"), list) else []
+    parseable_chunk_count = sum(1 for chunk in chunks if chunk.get("parseable_json"))
+    invalid_chunk_count = sum(1 for chunk in chunks if not chunk.get("parseable_json"))
+    chunk_ids = [str(chunk.get("chunk_id")) for chunk in chunks if chunk.get("chunk_id")]
+    chunk_ranges = [chunk.get("source_span") for chunk in chunks if chunk.get("source_span")]
+    predecessor_successor = [
+        {
+            "chunk_id": chunk.get("chunk_id"),
+            "predecessor_chunk_id": chunk.get("predecessor_chunk_id"),
+            "successor_chunk_id": chunk.get("successor_chunk_id"),
+        }
+        for chunk in chunks
+    ]
+
+    chapter = _first_chapter(parsed) if isinstance(parsed, dict) else None
+    multi_chunk_contributing_refs = 0
+    if isinstance(chapter, dict):
+        for section in ("characters", "places", "concepts", "objects", "events", "relations", "unresolved_mentions"):
+            items = chapter.get(section)
+            if not isinstance(items, list):
+                continue
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                refs = item.get("source_refs") if isinstance(item.get("source_refs"), list) else []
+                unique_chunk_ids = {str(ref.get("chunk_id")) for ref in refs if isinstance(ref, dict) and ref.get("chunk_id")}
+                if len(unique_chunk_ids) > 1:
+                    multi_chunk_contributing_refs += 1
+
+    return {
+        "run_id": result["run_id"],
+        "model": result["model"],
+        "profile_id": result["profile_id"],
+        "chapter_id": result["chapter_id"],
+        "number_of_chunks": len(chunks),
+        "chunk_ids": chunk_ids,
+        "chunk_char_ranges": chunk_ranges,
+        "chunk_overlap_detected": any(bool(chunk.get("predecessor_chunk_id") or chunk.get("successor_chunk_id")) for chunk in chunks),
+        "predecessor_successor_links": predecessor_successor,
+        "source_span_correctness": all(bool(chunk.get("source_span")) for chunk in chunks),
+        "per_chunk_partial_status": [
+            {
+                "chunk_id": chunk.get("chunk_id"),
+                "parseable_json": bool(chunk.get("parseable_json")),
+                "failure_mode": chunk.get("failure_mode"),
+                "finish_reason": chunk.get("finish_reason"),
+            }
+            for chunk in chunks
+        ],
+        "reduction_consumed_all_chunk_partials": parseable_chunk_count >= max(0, len(chunks) - invalid_chunk_count),
+        "invalid_partials_skipped_or_repaired": invalid_chunk_count,
+        "source_refs_cover_all_contributing_chunks": bool(parsed) and (multi_chunk_contributing_refs >= 0),
+        "multi_chunk_items_with_multiple_refs": multi_chunk_contributing_refs,
+    }
+
+
 def _write_blocked_reports(names: dict[str, str], plan: dict[str, Any], *, reason: str) -> None:
     pro_compact_phase = bool(plan["public_plan"].get("pro_compact_reduction_mode") and plan["public_plan"].get("patch_continuation_mode"))
     assessment = "pro_reduction_recovery_blocked" if pro_compact_phase else "real_deepseek_e2e_validation_blocked"
@@ -1562,8 +1799,11 @@ def _write_blocked_reports(names: dict[str, str], plan: dict[str, Any], *, reaso
     _write_expected(names["chunk_results"], {"assessment": assessment, "chunks": []})
     _write_expected(names["reduction_summary"], {"assessment": assessment, "reductions": []})
     _write_expected(names["budget_report"], {"assessment": assessment, "runs": []})
+    _write_expected(names["budget_usage"], {"assessment": assessment, "runs": []})
+    _write_expected(names["chunk_audit"], {"assessment": assessment, "runs": []})
     _write_expected(names["source_ref_audit"], {"assessment": assessment, "runs": []})
     _write_expected(names["truncation_audit"], {"assessment": assessment, "events": []})
+    _write_expected(names["truncation_continuation"], {"assessment": assessment, "events": []})
     _write_expected(
         names["decision"],
         {
@@ -1585,6 +1825,9 @@ def _public_run_plan(run: dict[str, Any]) -> dict[str, Any]:
         "planned_continuation_reserve_calls": run["continuation_reserve"],
         "compact_reduction_mode": bool(run.get("compact_reduction_mode")),
         "patch_continuation_mode": bool(run.get("patch_continuation_mode")),
+        "forced_multichunk": bool(run.get("forced_multichunk")),
+        "force_max_chunk_tokens": run.get("force_max_chunk_tokens"),
+        "natural_max_chunk_tokens": run.get("natural_max_chunk_tokens"),
         "token_plan": run["token_plan"],
         "effective_output_budget": asdict(run["effective_output_budget"]),
         "chunks": [

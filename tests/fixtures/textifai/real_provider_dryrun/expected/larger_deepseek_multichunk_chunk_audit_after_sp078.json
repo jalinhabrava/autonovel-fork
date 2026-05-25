@@ -1,0 +1,462 @@
+{
+  "assessment": "larger_deepseek_e2e_multichunk_passed_with_review_warnings",
+  "runs": [
+    {
+      "run_id": "ch_001__deepseek_v4_flash",
+      "model": "deepseek-v4-flash",
+      "profile_id": "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+      "chapter_id": "ch_001",
+      "number_of_chunks": 3,
+      "chunk_ids": [
+        "source_f1e650917c_ch_001_forced_chunk_001",
+        "source_f1e650917c_ch_001_forced_chunk_002",
+        "source_f1e650917c_ch_001_forced_chunk_003"
+      ],
+      "chunk_char_ranges": [
+        {
+          "char_start": 0,
+          "char_end": 1082
+        },
+        {
+          "char_start": 1084,
+          "char_end": 2211
+        },
+        {
+          "char_start": 2213,
+          "char_end": 2307
+        }
+      ],
+      "chunk_overlap_detected": true,
+      "predecessor_successor_links": [
+        {
+          "chunk_id": "source_f1e650917c_ch_001_forced_chunk_001",
+          "predecessor_chunk_id": null,
+          "successor_chunk_id": "source_f1e650917c_ch_001_forced_chunk_002"
+        },
+        {
+          "chunk_id": "source_f1e650917c_ch_001_forced_chunk_002",
+          "predecessor_chunk_id": "source_f1e650917c_ch_001_forced_chunk_001",
+          "successor_chunk_id": "source_f1e650917c_ch_001_forced_chunk_003"
+        },
+        {
+          "chunk_id": "source_f1e650917c_ch_001_forced_chunk_003",
+          "predecessor_chunk_id": "source_f1e650917c_ch_001_forced_chunk_002",
+          "successor_chunk_id": null
+        }
+      ],
+      "source_span_correctness": true,
+      "per_chunk_partial_status": [
+        {
+          "chunk_id": "source_f1e650917c_ch_001_forced_chunk_001",
+          "parseable_json": true,
+          "failure_mode": null,
+          "finish_reason": "stop"
+        },
+        {
+          "chunk_id": "source_f1e650917c_ch_001_forced_chunk_002",
+          "parseable_json": true,
+          "failure_mode": null,
+          "finish_reason": "stop"
+        },
+        {
+          "chunk_id": "source_f1e650917c_ch_001_forced_chunk_003",
+          "parseable_json": true,
+          "failure_mode": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "reduction_consumed_all_chunk_partials": true,
+      "invalid_partials_skipped_or_repaired": 0,
+      "source_refs_cover_all_contributing_chunks": true,
+      "multi_chunk_items_with_multiple_refs": 63
+    },
+    {
+      "run_id": "ch_001__deepseek_v4_pro",
+      "model": "deepseek-v4-pro",
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "chapter_id": "ch_001",
+      "number_of_chunks": 3,
+      "chunk_ids": [
+        "source_f1e650917c_ch_001_forced_chunk_001",
+        "source_f1e650917c_ch_001_forced_chunk_002",
+        "source_f1e650917c_ch_001_forced_chunk_003"
+      ],
+      "chunk_char_ranges": [
+        {
+          "char_start": 0,
+          "char_end": 1082
+        },
+        {
+          "char_start": 1084,
+          "char_end": 2211
+        },
+        {
+          "char_start": 2213,
+          "char_end": 2307
+        }
+      ],
+      "chunk_overlap_detected": true,
+      "predecessor_successor_links": [
+        {
+          "chunk_id": "source_f1e650917c_ch_001_forced_chunk_001",
+          "predecessor_chunk_id": null,
+          "successor_chunk_id": "source_f1e650917c_ch_001_forced_chunk_002"
+        },
+        {
+          "chunk_id": "source_f1e650917c_ch_001_forced_chunk_002",
+          "predecessor_chunk_id": "source_f1e650917c_ch_001_forced_chunk_001",
+          "successor_chunk_id": "source_f1e650917c_ch_001_forced_chunk_003"
+        },
+        {
+          "chunk_id": "source_f1e650917c_ch_001_forced_chunk_003",
+          "predecessor_chunk_id": "source_f1e650917c_ch_001_forced_chunk_002",
+          "successor_chunk_id": null
+        }
+      ],
+      "source_span_correctness": true,
+      "per_chunk_partial_status": [
+        {
+          "chunk_id": "source_f1e650917c_ch_001_forced_chunk_001",
+          "parseable_json": true,
+          "failure_mode": null,
+          "finish_reason": "stop"
+        },
+        {
+          "chunk_id": "source_f1e650917c_ch_001_forced_chunk_002",
+          "parseable_json": true,
+          "failure_mode": null,
+          "finish_reason": "stop"
+        },
+        {
+          "chunk_id": "source_f1e650917c_ch_001_forced_chunk_003",
+          "parseable_json": true,
+          "failure_mode": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "reduction_consumed_all_chunk_partials": true,
+      "invalid_partials_skipped_or_repaired": 0,
+      "source_refs_cover_all_contributing_chunks": true,
+      "multi_chunk_items_with_multiple_refs": 62
+    },
+    {
+      "run_id": "ch_002__deepseek_v4_flash",
+      "model": "deepseek-v4-flash",
+      "profile_id": "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+      "chapter_id": "ch_002",
+      "number_of_chunks": 2,
+      "chunk_ids": [
+        "source_f1e650917c_ch_002_forced_chunk_001",
+        "source_f1e650917c_ch_002_forced_chunk_002"
+      ],
+      "chunk_char_ranges": [
+        {
+          "char_start": 2309,
+          "char_end": 2336
+        },
+        {
+          "char_start": 2338,
+          "char_end": 5013
+        }
+      ],
+      "chunk_overlap_detected": true,
+      "predecessor_successor_links": [
+        {
+          "chunk_id": "source_f1e650917c_ch_002_forced_chunk_001",
+          "predecessor_chunk_id": null,
+          "successor_chunk_id": "source_f1e650917c_ch_002_forced_chunk_002"
+        },
+        {
+          "chunk_id": "source_f1e650917c_ch_002_forced_chunk_002",
+          "predecessor_chunk_id": "source_f1e650917c_ch_002_forced_chunk_001",
+          "successor_chunk_id": null
+        }
+      ],
+      "source_span_correctness": true,
+      "per_chunk_partial_status": [
+        {
+          "chunk_id": "source_f1e650917c_ch_002_forced_chunk_001",
+          "parseable_json": true,
+          "failure_mode": null,
+          "finish_reason": "stop"
+        },
+        {
+          "chunk_id": "source_f1e650917c_ch_002_forced_chunk_002",
+          "parseable_json": true,
+          "failure_mode": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "reduction_consumed_all_chunk_partials": true,
+      "invalid_partials_skipped_or_repaired": 0,
+      "source_refs_cover_all_contributing_chunks": true,
+      "multi_chunk_items_with_multiple_refs": 36
+    },
+    {
+      "run_id": "ch_002__deepseek_v4_pro",
+      "model": "deepseek-v4-pro",
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "chapter_id": "ch_002",
+      "number_of_chunks": 2,
+      "chunk_ids": [
+        "source_f1e650917c_ch_002_forced_chunk_001",
+        "source_f1e650917c_ch_002_forced_chunk_002"
+      ],
+      "chunk_char_ranges": [
+        {
+          "char_start": 2309,
+          "char_end": 2336
+        },
+        {
+          "char_start": 2338,
+          "char_end": 5013
+        }
+      ],
+      "chunk_overlap_detected": true,
+      "predecessor_successor_links": [
+        {
+          "chunk_id": "source_f1e650917c_ch_002_forced_chunk_001",
+          "predecessor_chunk_id": null,
+          "successor_chunk_id": "source_f1e650917c_ch_002_forced_chunk_002"
+        },
+        {
+          "chunk_id": "source_f1e650917c_ch_002_forced_chunk_002",
+          "predecessor_chunk_id": "source_f1e650917c_ch_002_forced_chunk_001",
+          "successor_chunk_id": null
+        }
+      ],
+      "source_span_correctness": true,
+      "per_chunk_partial_status": [
+        {
+          "chunk_id": "source_f1e650917c_ch_002_forced_chunk_001",
+          "parseable_json": true,
+          "failure_mode": null,
+          "finish_reason": "stop"
+        },
+        {
+          "chunk_id": "source_f1e650917c_ch_002_forced_chunk_002",
+          "parseable_json": false,
+          "failure_mode": "pro_reasoning_budget_exhaustion",
+          "finish_reason": "length"
+        }
+      ],
+      "reduction_consumed_all_chunk_partials": true,
+      "invalid_partials_skipped_or_repaired": 1,
+      "source_refs_cover_all_contributing_chunks": true,
+      "multi_chunk_items_with_multiple_refs": 30
+    },
+    {
+      "run_id": "ch_003__deepseek_v4_flash",
+      "model": "deepseek-v4-flash",
+      "profile_id": "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+      "chapter_id": "ch_003",
+      "number_of_chunks": 2,
+      "chunk_ids": [
+        "source_f1e650917c_ch_003_forced_chunk_001",
+        "source_f1e650917c_ch_003_forced_chunk_002"
+      ],
+      "chunk_char_ranges": [
+        {
+          "char_start": 5015,
+          "char_end": 5037
+        },
+        {
+          "char_start": 5039,
+          "char_end": 7290
+        }
+      ],
+      "chunk_overlap_detected": true,
+      "predecessor_successor_links": [
+        {
+          "chunk_id": "source_f1e650917c_ch_003_forced_chunk_001",
+          "predecessor_chunk_id": null,
+          "successor_chunk_id": "source_f1e650917c_ch_003_forced_chunk_002"
+        },
+        {
+          "chunk_id": "source_f1e650917c_ch_003_forced_chunk_002",
+          "predecessor_chunk_id": "source_f1e650917c_ch_003_forced_chunk_001",
+          "successor_chunk_id": null
+        }
+      ],
+      "source_span_correctness": true,
+      "per_chunk_partial_status": [
+        {
+          "chunk_id": "source_f1e650917c_ch_003_forced_chunk_001",
+          "parseable_json": true,
+          "failure_mode": null,
+          "finish_reason": "stop"
+        },
+        {
+          "chunk_id": "source_f1e650917c_ch_003_forced_chunk_002",
+          "parseable_json": true,
+          "failure_mode": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "reduction_consumed_all_chunk_partials": true,
+      "invalid_partials_skipped_or_repaired": 0,
+      "source_refs_cover_all_contributing_chunks": true,
+      "multi_chunk_items_with_multiple_refs": 30
+    },
+    {
+      "run_id": "ch_003__deepseek_v4_pro",
+      "model": "deepseek-v4-pro",
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "chapter_id": "ch_003",
+      "number_of_chunks": 2,
+      "chunk_ids": [
+        "source_f1e650917c_ch_003_forced_chunk_001",
+        "source_f1e650917c_ch_003_forced_chunk_002"
+      ],
+      "chunk_char_ranges": [
+        {
+          "char_start": 5015,
+          "char_end": 5037
+        },
+        {
+          "char_start": 5039,
+          "char_end": 7290
+        }
+      ],
+      "chunk_overlap_detected": true,
+      "predecessor_successor_links": [
+        {
+          "chunk_id": "source_f1e650917c_ch_003_forced_chunk_001",
+          "predecessor_chunk_id": null,
+          "successor_chunk_id": "source_f1e650917c_ch_003_forced_chunk_002"
+        },
+        {
+          "chunk_id": "source_f1e650917c_ch_003_forced_chunk_002",
+          "predecessor_chunk_id": "source_f1e650917c_ch_003_forced_chunk_001",
+          "successor_chunk_id": null
+        }
+      ],
+      "source_span_correctness": true,
+      "per_chunk_partial_status": [
+        {
+          "chunk_id": "source_f1e650917c_ch_003_forced_chunk_001",
+          "parseable_json": true,
+          "failure_mode": null,
+          "finish_reason": "stop"
+        },
+        {
+          "chunk_id": "source_f1e650917c_ch_003_forced_chunk_002",
+          "parseable_json": true,
+          "failure_mode": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "reduction_consumed_all_chunk_partials": true,
+      "invalid_partials_skipped_or_repaired": 0,
+      "source_refs_cover_all_contributing_chunks": true,
+      "multi_chunk_items_with_multiple_refs": 28
+    },
+    {
+      "run_id": "ch_005__deepseek_v4_flash",
+      "model": "deepseek-v4-flash",
+      "profile_id": "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+      "chapter_id": "ch_005",
+      "number_of_chunks": 2,
+      "chunk_ids": [
+        "source_f1e650917c_ch_005_forced_chunk_001",
+        "source_f1e650917c_ch_005_forced_chunk_002"
+      ],
+      "chunk_char_ranges": [
+        {
+          "char_start": 8695,
+          "char_end": 8716
+        },
+        {
+          "char_start": 8718,
+          "char_end": 10367
+        }
+      ],
+      "chunk_overlap_detected": true,
+      "predecessor_successor_links": [
+        {
+          "chunk_id": "source_f1e650917c_ch_005_forced_chunk_001",
+          "predecessor_chunk_id": null,
+          "successor_chunk_id": "source_f1e650917c_ch_005_forced_chunk_002"
+        },
+        {
+          "chunk_id": "source_f1e650917c_ch_005_forced_chunk_002",
+          "predecessor_chunk_id": "source_f1e650917c_ch_005_forced_chunk_001",
+          "successor_chunk_id": null
+        }
+      ],
+      "source_span_correctness": true,
+      "per_chunk_partial_status": [
+        {
+          "chunk_id": "source_f1e650917c_ch_005_forced_chunk_001",
+          "parseable_json": true,
+          "failure_mode": null,
+          "finish_reason": "stop"
+        },
+        {
+          "chunk_id": "source_f1e650917c_ch_005_forced_chunk_002",
+          "parseable_json": true,
+          "failure_mode": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "reduction_consumed_all_chunk_partials": true,
+      "invalid_partials_skipped_or_repaired": 0,
+      "source_refs_cover_all_contributing_chunks": true,
+      "multi_chunk_items_with_multiple_refs": 24
+    },
+    {
+      "run_id": "ch_005__deepseek_v4_pro",
+      "model": "deepseek-v4-pro",
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "chapter_id": "ch_005",
+      "number_of_chunks": 2,
+      "chunk_ids": [
+        "source_f1e650917c_ch_005_forced_chunk_001",
+        "source_f1e650917c_ch_005_forced_chunk_002"
+      ],
+      "chunk_char_ranges": [
+        {
+          "char_start": 8695,
+          "char_end": 8716
+        },
+        {
+          "char_start": 8718,
+          "char_end": 10367
+        }
+      ],
+      "chunk_overlap_detected": true,
+      "predecessor_successor_links": [
+        {
+          "chunk_id": "source_f1e650917c_ch_005_forced_chunk_001",
+          "predecessor_chunk_id": null,
+          "successor_chunk_id": "source_f1e650917c_ch_005_forced_chunk_002"
+        },
+        {
+          "chunk_id": "source_f1e650917c_ch_005_forced_chunk_002",
+          "predecessor_chunk_id": "source_f1e650917c_ch_005_forced_chunk_001",
+          "successor_chunk_id": null
+        }
+      ],
+      "source_span_correctness": true,
+      "per_chunk_partial_status": [
+        {
+          "chunk_id": "source_f1e650917c_ch_005_forced_chunk_001",
+          "parseable_json": true,
+          "failure_mode": null,
+          "finish_reason": "stop"
+        },
+        {
+          "chunk_id": "source_f1e650917c_ch_005_forced_chunk_002",
+          "parseable_json": true,
+          "failure_mode": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "reduction_consumed_all_chunk_partials": true,
+      "invalid_partials_skipped_or_repaired": 0,
+      "source_refs_cover_all_contributing_chunks": true,
+      "multi_chunk_items_with_multiple_refs": 24
+    }
+  ],
+  "has_multichunk_run": true
+}
