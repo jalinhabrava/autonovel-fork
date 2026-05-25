@@ -1106,6 +1106,58 @@ class RealProviderDryRunGuardsTests(unittest.TestCase):
         self.assertIn("what_should_be_abstracted", general)
         self.assertIn("what_should_not_be_generalized_blindly", provider_specific)
 
+    def test_calibrated_natural_multichunk_reports_parse_and_stay_private_safe(self):
+        plan = json.loads((FIXTURE_ROOT / "calibrated_natural_multichunk_execution_plan_after_sp081.json").read_text(encoding="utf-8"))
+        summary = json.loads((FIXTURE_ROOT / "calibrated_natural_multichunk_summary_after_sp081.json").read_text(encoding="utf-8"))
+        chunks = json.loads((FIXTURE_ROOT / "calibrated_natural_multichunk_chunk_results_after_sp081.json").read_text(encoding="utf-8"))
+        reduction = json.loads((FIXTURE_ROOT / "calibrated_natural_multichunk_reduction_summary_after_sp081.json").read_text(encoding="utf-8"))
+        source_refs = json.loads((FIXTURE_ROOT / "calibrated_natural_multichunk_source_ref_audit_after_sp081.json").read_text(encoding="utf-8"))
+        truncation = json.loads((FIXTURE_ROOT / "calibrated_natural_multichunk_truncation_audit_after_sp081.json").read_text(encoding="utf-8"))
+        patch_validation = json.loads((FIXTURE_ROOT / "calibrated_natural_multichunk_patch_validation_after_sp081.json").read_text(encoding="utf-8"))
+        thin = json.loads((FIXTURE_ROOT / "calibrated_natural_multichunk_thin_diagnostics_after_sp081.json").read_text(encoding="utf-8"))
+        decision = json.loads((FIXTURE_ROOT / "calibrated_natural_multichunk_decision_after_sp081.json").read_text(encoding="utf-8"))
+        general = json.loads((FIXTURE_ROOT / "calibrated_natural_multichunk_general_pipeline_learnings_after_sp081.json").read_text(encoding="utf-8"))
+        deepseek = json.loads((FIXTURE_ROOT / "calibrated_natural_multichunk_deepseek_specific_learnings_after_sp081.json").read_text(encoding="utf-8"))
+
+        valid_enum = {
+            "calibrated_natural_multichunk_validation_passed",
+            "calibrated_natural_multichunk_validation_passed_with_review_warnings",
+            "calibrated_natural_multichunk_partial_needs_patch",
+            "calibrated_natural_multichunk_failed_but_debuggable",
+            "calibrated_natural_multichunk_blocked",
+        }
+        continuation_statuses = {
+            "not_triggered",
+            "executed",
+            "executed_replaced_primary",
+            "executed_but_not_parseable",
+            "skipped_cap_reached",
+            "patch_merged",
+        }
+
+        for payload in (plan, summary, chunks, reduction, source_refs, truncation, patch_validation, thin, decision, general, deepseek):
+            text = json.dumps(payload, ensure_ascii=False)
+            self.assertNotIn("sk-", text)
+            self.assertNotIn("Authorization: Bearer", text)
+            self.assertNotIn("CHUNK_TEXT:", text)
+
+        self.assertEqual(plan["assessment"], "calibrated_natural_multichunk_execution_plan_ready")
+        self.assertIn(summary["assessment"], valid_enum)
+        self.assertIn(decision["assessment"], valid_enum)
+        self.assertLessEqual(summary["provider_call_count"], 16)
+        self.assertLessEqual(plan["planned_provider_call_count_with_continuation_reserve"], 16)
+        self.assertTrue(any(len(run.get("chunks", [])) > 1 for run in plan["planned_runs"]))
+        self.assertEqual(plan["natural_vs_forced_multichunk"], "natural")
+        self.assertTrue(all(row.get("split_reason") for row in chunks["chunks"]))
+        self.assertTrue(all(event.get("continuation_status") in continuation_statuses for event in truncation["events"]))
+        self.assertIn("wrong_chapter_patch_count", patch_validation)
+        self.assertIn("valid_reduction_no_items_count", thin)
+        self.assertGreaterEqual(source_refs["item_level_source_ref_coverage_ratio"], 0.0)
+        self.assertLessEqual(source_refs["item_level_source_ref_coverage_ratio"], 1.0)
+        self.assertTrue(summary["private_packet_root"].startswith("/tmp/textifai_private_provider_runs/"))
+        self.assertIn("what_should_be_abstracted", general)
+        self.assertIn("what_should_stay_provider_specific", deepseek)
+
     def test_profiled_runtime_reports_record_safe_not_executed_state(self):
         summary = json.loads((FIXTURE_ROOT / "deepseek_ch002_profiled_runtime_summary_after_sp061.json").read_text(encoding="utf-8"))
         generic = json.loads((FIXTURE_ROOT / "deepseek_ch002_profiled_vs_generic_report.json").read_text(encoding="utf-8"))

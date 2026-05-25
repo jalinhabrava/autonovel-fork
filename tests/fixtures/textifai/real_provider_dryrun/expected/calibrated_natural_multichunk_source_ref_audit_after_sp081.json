@@ -1,0 +1,92 @@
+{
+  "assessment": "calibrated_natural_multichunk_validation_passed_with_review_warnings",
+  "runs": [
+    {
+      "run_id": "ch_097__deepseek_v4_flash",
+      "model": "deepseek-v4-flash",
+      "profile_id": "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+      "chapter_id": "ch_097",
+      "parseable_json": true,
+      "item_level_source_ref_coverage_ratio": 1.0,
+      "sections": {
+        "characters": {
+          "items": 10,
+          "with_source_refs": 10
+        },
+        "places": {
+          "items": 3,
+          "with_source_refs": 3
+        },
+        "concepts": {
+          "items": 5,
+          "with_source_refs": 5
+        },
+        "objects": {
+          "items": 5,
+          "with_source_refs": 5
+        },
+        "events": {
+          "items": 8,
+          "with_source_refs": 8
+        },
+        "relations": {
+          "items": 9,
+          "with_source_refs": 9
+        },
+        "unresolved_mentions": {
+          "items": 3,
+          "with_source_refs": 3
+        }
+      },
+      "missing_examples": [],
+      "no_item_reduction": false,
+      "thin_warnings": [],
+      "source_ref_coverage_denominator_explanation": "coverage ratio uses extracted item count; no-item reductions lower coverage without proving missing refs"
+    },
+    {
+      "run_id": "ch_097__deepseek_v4_pro",
+      "model": "deepseek-v4-pro",
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "chapter_id": "ch_097",
+      "parseable_json": true,
+      "item_level_source_ref_coverage_ratio": 1.0,
+      "sections": {
+        "characters": {
+          "items": 11,
+          "with_source_refs": 11
+        },
+        "places": {
+          "items": 5,
+          "with_source_refs": 5
+        },
+        "concepts": {
+          "items": 7,
+          "with_source_refs": 7
+        },
+        "objects": {
+          "items": 5,
+          "with_source_refs": 5
+        },
+        "events": {
+          "items": 7,
+          "with_source_refs": 7
+        },
+        "relations": {
+          "items": 10,
+          "with_source_refs": 10
+        },
+        "unresolved_mentions": {
+          "items": 5,
+          "with_source_refs": 5
+        }
+      },
+      "missing_examples": [],
+      "no_item_reduction": false,
+      "thin_warnings": [],
+      "source_ref_coverage_denominator_explanation": "coverage ratio uses extracted item count; no-item reductions lower coverage without proving missing refs"
+    }
+  ],
+  "item_level_source_ref_coverage_ratio": 1.0,
+  "parseable_reduction_runs": 2,
+  "missing_source_ref_runs": 0
+}

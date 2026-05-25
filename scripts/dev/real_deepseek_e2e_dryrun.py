@@ -18,7 +18,11 @@ if str(REPO_ROOT) not in sys.path:
 from providers.text_provider import TextGenerationRequest, TextMessage, get_text_provider, get_text_provider_config_error
 from textifai.author_understanding.normalization import extract_json_payload
 from textifai.bootstrap.contracts import SourceDocumentRecord
-from textifai.import_review.batch_planner import StructuredSourceChunk, split_structured_chapter_into_chunks
+from textifai.import_review.batch_planner import (
+    StructuredSourceChunk,
+    build_default_natural_chunking_threshold_policy,
+    split_structured_chapter_into_chunks,
+)
 from textifai.import_review.chapterizer import detect_story_chapters
 from textifai.import_review.chunking_reduction_preflight import build_thin_reduction_diagnostics, validate_patch_continuation_chapter
 from textifai.import_review.deepseek_family_profiles import (
@@ -279,6 +283,12 @@ def _build_execution_plan(
             token_plan = build_token_budget_from_planning_request(capabilities=caps, planning=planning)
             natural_max_chunk_tokens = max(1000, token_plan["usable_input_budget"] - 4000)
             max_chunk_tokens = force_max_chunk_tokens if force_max_chunk_tokens > 0 else natural_max_chunk_tokens
+            threshold_policy = None
+            if force_max_chunk_tokens <= 0:
+                threshold_policy = build_default_natural_chunking_threshold_policy(
+                    hard_max_source_tokens=max_chunk_tokens,
+                    provider_chunking_preferences=profile.chunking_preferences,
+                )
             chunks = split_structured_chapter_into_chunks(
                 source_id=chapter["source_id"],
                 chapter_id=chapter["chapter_id"],
@@ -289,6 +299,7 @@ def _build_execution_plan(
                 overlap_paragraphs=1,
                 budget_profile_id=f"{model}:budget:sp070",
                 provider_profile_id=profile.profile_id,
+                threshold_policy=threshold_policy,
             )
             if force_max_chunk_tokens > 0 and len(chunks) == 1:
                 chunks = _force_split_structured_chunks(
@@ -319,6 +330,7 @@ def _build_execution_plan(
                 "forced_multichunk": force_max_chunk_tokens > 0,
                 "force_max_chunk_tokens": force_max_chunk_tokens or None,
                 "natural_max_chunk_tokens": natural_max_chunk_tokens,
+                "natural_chunking_threshold_policy": threshold_policy.to_dict() if threshold_policy is not None else None,
             }
             runs.append(run)
             public_runs.append(_public_run_plan(run))
@@ -980,6 +992,7 @@ def _execute_request(
         "score": validation["score"],
         "thin_warnings": validation["thin_warnings"],
         "source_span": chunk.source_span if chunk else None,
+        "split_reason": chunk.split_reason if chunk else None,
         "section_id": chunk.section_id if chunk else None,
         "char_start": chunk.char_start if chunk else None,
         "char_end": chunk.char_end if chunk else None,
@@ -1845,6 +1858,7 @@ def _public_run_plan(run: dict[str, Any]) -> dict[str, Any]:
         "forced_multichunk": bool(run.get("forced_multichunk")),
         "force_max_chunk_tokens": run.get("force_max_chunk_tokens"),
         "natural_max_chunk_tokens": run.get("natural_max_chunk_tokens"),
+        "natural_chunking_threshold_policy": run.get("natural_chunking_threshold_policy"),
         "token_plan": run["token_plan"],
         "effective_output_budget": asdict(run["effective_output_budget"]),
         "chunks": [

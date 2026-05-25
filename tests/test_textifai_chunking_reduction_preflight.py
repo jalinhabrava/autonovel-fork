@@ -332,6 +332,22 @@ class ChunkingReductionPreflightTests(unittest.TestCase):
         self.assertGreater(len(chunks), 1)
         self.assertEqual(chunks[0].split_reason, "soft_quality_split")
 
+        single_section = "。".join(["長い文" for _ in range(180)])
+        oversized = split_structured_chapter_into_chunks(
+            source_id="src",
+            chapter_id="ch_202",
+            chapter_text=single_section,
+            chapter_char_start=0,
+            max_chunk_tokens=6000,
+            estimate_tokens=lambda value: max(1, len(value) // 4),
+            threshold_policy=build_default_natural_chunking_threshold_policy(
+                hard_max_source_tokens=6000,
+                provider_chunking_preferences={"soft_chunk_target_tokens": 80, "soft_chunk_max_tokens": 120, "min_chunk_tokens": 30},
+            ),
+        )
+        self.assertGreater(len(oversized), 1)
+        self.assertTrue(all(chunk.char_start < chunk.char_end for chunk in oversized))
+
     def test_min_chunk_tokens_avoids_tiny_chunks(self):
         text = "\n\n".join(["uno dos tres cuatro cinco seis"] * 5 + ["coda corta"])
         chunks = split_structured_chapter_into_chunks(

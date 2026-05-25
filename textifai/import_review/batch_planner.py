@@ -184,13 +184,33 @@ def split_markdown_semantically(
     current_parts: list[str] = []
 
     for section in sections:
+        if not current_parts and estimate_tokens(section) > max_chunk_tokens:
+            chunks.extend(
+                _split_oversized_section(
+                    section,
+                    max_chunk_tokens=max_chunk_tokens,
+                    estimate_tokens=estimate_tokens,
+                )
+            )
+            continue
         candidate = "\n\n".join([*current_parts, section]).strip()
         if current_parts and estimate_tokens(candidate) > max_chunk_tokens:
             chunk = "\n\n".join(current_parts).strip()
             if chunk:
                 chunks.append(chunk)
             carry = _tail_paragraphs(chunk, count=overlap_paragraphs)
-            current_parts = [carry, section] if carry else [section]
+            if estimate_tokens(section) > max_chunk_tokens:
+                if carry:
+                    current_parts = [carry]
+                chunks.extend(
+                    _split_oversized_section(
+                        section,
+                        max_chunk_tokens=max_chunk_tokens,
+                        estimate_tokens=estimate_tokens,
+                    )
+                )
+            else:
+                current_parts = [carry, section] if carry else [section]
         else:
             current_parts.append(section)
 
@@ -198,6 +218,48 @@ def split_markdown_semantically(
     if final_chunk:
         chunks.append(final_chunk)
     return chunks
+
+def _split_oversized_section(
+    section: str,
+    *,
+    max_chunk_tokens: int,
+    estimate_tokens: Callable[[str], int],
+) -> list[str]:
+    text = str(section or "").strip()
+    if not text:
+        return []
+    paragraphs = [part.strip() for part in re.split(r"\n\s*\n", text) if part.strip()]
+    if len(paragraphs) > 1:
+        out: list[str] = []
+        current: list[str] = []
+        for paragraph in paragraphs:
+            candidate = "\n\n".join([*current, paragraph]).strip()
+            if current and estimate_tokens(candidate) > max_chunk_tokens:
+                out.append("\n\n".join(current).strip())
+                current = [paragraph]
+            else:
+                current.append(paragraph)
+        if current:
+            out.append("\n\n".join(current).strip())
+        return out
+
+    token_count = max(1, estimate_tokens(text))
+    chunk_count = max(2, -(-token_count // max(1, max_chunk_tokens)))
+    chars_per_chunk = max(1, -(-len(text) // chunk_count))
+    slices: list[str] = []
+    start = 0
+    while start < len(text):
+        end = min(len(text), start + chars_per_chunk)
+        if end < len(text):
+            boundary_candidates = [text.rfind(mark, start, end) for mark in ("。", "！", "？", "\n")]
+            boundary = max(boundary_candidates)
+            if boundary > start + max(20, chars_per_chunk // 3):
+                end = boundary + 1
+        chunk = text[start:end].strip()
+        if chunk:
+            slices.append(chunk)
+        start = end
+    return slices
 
 def split_structured_chapter_into_chunks(
     *,
