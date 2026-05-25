@@ -8,6 +8,7 @@ import tempfile
 import unittest
 from contextlib import redirect_stderr
 from pathlib import Path
+from types import SimpleNamespace
 
 from providers.text_provider import TextGenerationResponse
 
@@ -754,6 +755,115 @@ class RealProviderDryRunGuardsTests(unittest.TestCase):
         self.assertTrue(all(event.get("continuation_status") in continuation_statuses for event in truncation["events"]))
         self.assertIn("triggered_continuation_count", truncation)
         self.assertIn("source_ref_preservation", reduction)
+
+    def test_pro_compact_reduction_and_patch_reports_parse_and_stay_private_safe(self):
+        compact_policy = json.loads((FIXTURE_ROOT / "pro_compact_reduction_policy_after_sp077.json").read_text(encoding="utf-8"))
+        patch_contract = json.loads((FIXTURE_ROOT / "patch_based_continuation_contract_after_sp077.json").read_text(encoding="utf-8"))
+        finish_strategy = json.loads((FIXTURE_ROOT / "finish_reason_length_strategy_after_sp077.json").read_text(encoding="utf-8"))
+        response_policy = json.loads((FIXTURE_ROOT / "response_control_runtime_policy_after_sp077.json").read_text(encoding="utf-8"))
+        plan = json.loads((FIXTURE_ROOT / "pro_compact_reduction_recheck_execution_plan_after_sp077.json").read_text(encoding="utf-8"))
+        summary = json.loads((FIXTURE_ROOT / "pro_compact_reduction_recheck_summary_after_sp077.json").read_text(encoding="utf-8"))
+        truncation = json.loads((FIXTURE_ROOT / "pro_compact_reduction_recheck_truncation_audit_after_sp077.json").read_text(encoding="utf-8"))
+        source_refs = json.loads((FIXTURE_ROOT / "pro_compact_reduction_recheck_source_ref_audit_after_sp077.json").read_text(encoding="utf-8"))
+        decision = json.loads((FIXTURE_ROOT / "pro_compact_reduction_recheck_decision_after_sp077.json").read_text(encoding="utf-8"))
+
+        valid_enum = {
+            "pro_compact_reduction_recovery_ready",
+            "pro_compact_reduction_improved_but_needs_review",
+            "pro_reduction_truncation_still_blocking",
+            "pro_reduction_recovery_blocked",
+        }
+
+        for payload in (compact_policy, patch_contract, finish_strategy, response_policy, plan, summary, truncation, source_refs, decision):
+            text = json.dumps(payload, ensure_ascii=False)
+            self.assertNotIn("sk-", text)
+            self.assertNotIn("Authorization: Bearer", text)
+            self.assertNotIn("CHUNK_TEXT:", text)
+
+        self.assertIn(summary["assessment"], valid_enum)
+        self.assertIn(decision["assessment"], valid_enum)
+        self.assertIn(decision["product_decision"], valid_enum)
+        self.assertLessEqual(summary["provider_call_count"], 6)
+        self.assertTrue(summary["compact_mode_used"])
+        self.assertTrue(summary["patch_continuation_mode"])
+        self.assertEqual(plan["provider_call_cap"], 6)
+        self.assertEqual(plan["models"], ["deepseek-v4-pro"])
+        self.assertEqual(plan["chapters"], ["ch_001"])
+        self.assertIn("caps", compact_policy)
+        self.assertIn("merge_rules", patch_contract)
+        self.assertEqual(finish_strategy["primary_strategy"], "retry_same_model_profile_in_compact_reduction_mode")
+        self.assertFalse(response_policy["response_control_required_for_success"])
+        self.assertTrue(any(event.get("continuation_status") in {"patch_merged", "executed", "not_triggered"} for event in truncation["events"]))
+        self.assertIn("item_level_source_ref_coverage_ratio", source_refs)
+
+    def test_patch_merge_preserves_source_refs_provider_free(self):
+        chunk = E2E_MODULE.StructuredSourceChunk(
+            source_id="src",
+            chunk_id="src_ch_001_chunk_001",
+            chapter_id="ch_001",
+            section_id="ch_001",
+            sequence_index=1,
+            heading_path=["Chapter 1"],
+            text="text",
+            char_start=10,
+            char_end=110,
+            char_count=100,
+            estimated_tokens=20,
+            chunk_kind="chapter",
+            split_reason="synthetic",
+            predecessor_chunk_id=None,
+            successor_chunk_id=None,
+            parent_chunk_id="src_ch_001",
+            source_span={"char_start": 10, "char_end": 110},
+            budget_profile_id="test",
+            provider_profile_id="deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+        )
+        run = {
+            "chapter": {"chapter_id": "ch_001"},
+            "chunks": [chunk],
+            "effective_output_budget": SimpleNamespace(effective_max_output_tokens=8192),
+        }
+        call_result = {
+            "mode": "chapter_reduction_compact",
+            "chunk_id": "reduction",
+            "parseable_json": False,
+            "finish_reason": "length",
+            "usage": {"completion_tokens": 8192, "completion_tokens_details": {"reasoning_tokens": 5000}},
+            "effective_max_output_tokens": 8192,
+            "response_control": {"completion_status": "unknown"},
+            "failure_mode": "finish_reason_length",
+        }
+        patch_result = {
+            "parsed": {
+                "continuation_patch": {
+                    "objects": [{"canonical_name": "Bastón", "surface": "杖", "source_refs": []}],
+                    "events": [{"canonical_name": "Prueba", "event_importance": "major", "source_refs": []}],
+                }
+            },
+            "finish_reason": "stop",
+            "usage": {"completion_tokens": 300},
+        }
+        partial_payloads = [
+            {
+                "partial_signals": {
+                    "objects": [{"canonical": "Bastón", "surface": "杖"}],
+                    "events": [{"canonical": "Prueba", "event_importance": "major"}],
+                }
+            }
+        ]
+
+        merged = E2E_MODULE._merge_patch_into_reduction(
+            call_result=call_result,
+            patch_result=patch_result,
+            run=run,
+            partial_payloads=partial_payloads,
+        )
+        self.assertIsNotNone(merged)
+        chapter = merged["parsed"]["chapters"][0]
+        self.assertTrue(chapter["objects"])
+        self.assertTrue(chapter["events"])
+        self.assertTrue(chapter["objects"][0].get("source_refs"))
+        self.assertTrue(chapter["events"][0].get("source_refs"))
 
     def test_profiled_runtime_reports_record_safe_not_executed_state(self):
         summary = json.loads((FIXTURE_ROOT / "deepseek_ch002_profiled_runtime_summary_after_sp061.json").read_text(encoding="utf-8"))

@@ -264,6 +264,119 @@ def build_response_control_contract() -> dict[str, Any]:
         "compatible_with": ["partial_extraction", "reduction", "continuation_output"],
     }
 
+def build_pro_compact_reduction_policy() -> dict[str, Any]:
+    caps = {
+        "max_facts_per_item": 2,
+        "max_evidence_entries_per_item": 1,
+        "max_candidate_summary_points": 0,
+        "max_unresolved_mention_note_chars": 120,
+        "max_relation_summary_chars": 140,
+        "max_event_summary_chars": 160,
+    }
+    return {
+        "mode_id": "pro_compact_reduction_v1",
+        "model_family": "deepseek-v4-pro",
+        "use_cases": ["chapter_reduction", "length_recovery_retry", "high_reasoning_budget_risk"],
+        "caps": caps,
+        "affected_sections": [
+            "characters",
+            "places",
+            "concepts",
+            "objects",
+            "events",
+            "relations",
+            "unresolved_mentions",
+        ],
+        "prompt_guidance": [
+            "Return exactly one valid JSON object.",
+            "Use compact reduction mode.",
+            "Prioritize item-level source_refs and canonical structure.",
+            "Do not produce long prose.",
+            "Do not expand candidate_summary_points.",
+            "Prefer compact complete JSON over verbose details when budget is tight.",
+        ],
+        "rationale": [
+            "DeepSeek Pro reduction can exhaust output budget before JSON closes.",
+            "Compact caps trade verbosity for parseability and source-ref preservation.",
+        ],
+        "privacy_safety_notes": {
+            "byok": True,
+            "no_auto_switch": True,
+            "no_openai": True,
+            "write_back": False,
+        },
+    }
+
+def build_patch_based_continuation_contract() -> dict[str, Any]:
+    return {
+        "request_shape": {
+            "top_level_key": "continuation_patch",
+            "sections": [
+                "characters",
+                "places",
+                "concepts",
+                "objects",
+                "events",
+                "relations",
+                "unresolved_mentions",
+            ],
+            "patch_metadata": {
+                "continues_from": "chunk_or_reduction_run_id",
+                "completion_status": "complete|partial|unknown",
+                "do_not_repeat_previous_items": True,
+            },
+        },
+        "rules": [
+            "Patch only missing or incomplete items.",
+            "Do not repeat previous items unless source_refs need completion.",
+            "Preserve source_refs.",
+            "Return empty patch with structured warning if missing scope is unknown.",
+            "Do not reconstruct full JSON object.",
+        ],
+        "merge_rules": [
+            "dedupe_by_canonical_name_or_surface",
+            "merge_source_refs_without_duplicates",
+            "preserve_review_state_and_local_candidate",
+            "do_not_auto_promote_uncertain_items",
+        ],
+        "safety_rules": {
+            "same_provider_model_profile_required": True,
+            "no_auto_switch": True,
+            "private_packet_trace_required": True,
+        },
+    }
+
+def build_finish_reason_length_strategy() -> dict[str, Any]:
+    return {
+        "trigger": "finish_reason=length",
+        "budget_exhausted_threshold": 0.95,
+        "primary_strategy": "retry_same_model_profile_in_compact_reduction_mode",
+        "secondary_strategy": "patch_based_continuation_if_compact_retry_still_incomplete",
+        "forbidden": ["open_continuation_full_reconstruction", "auto_switch_model", "openai_fallback"],
+        "signals": [
+            "finish_reason_length",
+            "output_budget_exhausted",
+            "reasoning_budget_exhaustion_optional",
+            "parseability",
+            "raw_tail_shape",
+        ],
+    }
+
+def build_response_control_runtime_policy() -> dict[str, Any]:
+    return {
+        "response_control_requested": True,
+        "response_control_required_for_success": False,
+        "primary_runtime_truth_sources": [
+            "finish_reason",
+            "usage",
+            "parseability",
+            "raw_tail_shape",
+            "output_token_ratio",
+        ],
+        "response_control_role": "advisory_only",
+        "missing_response_control_policy": "allowed_but_logged",
+    }
+
 def build_continuation_repair_contract() -> dict[str, Any]:
     return {
         "triggers": [

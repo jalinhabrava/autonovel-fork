@@ -1,0 +1,21 @@
+{
+  "assessment": "pro_compact_reduction_recovery_ready",
+  "runs": [
+    {
+      "run_id": "ch_001__deepseek_v4_pro",
+      "model": "deepseek-v4-pro",
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "provider": "deepseek",
+      "task": "bootstrap_chapter_extraction",
+      "provider_profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "effective_max_output_tokens": 8192,
+      "decision_source": "profile_default",
+      "model_registry_max_output_tokens": 8192,
+      "profile_default_max_output_tokens": 8192,
+      "override_max_output_tokens": null
+    }
+  ],
+  "resolution_sources": [
+    "profile_default"
+  ]
+}

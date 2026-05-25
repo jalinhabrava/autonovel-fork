@@ -1,0 +1,19 @@
+{
+  "trigger": "finish_reason=length",
+  "budget_exhausted_threshold": 0.95,
+  "primary_strategy": "retry_same_model_profile_in_compact_reduction_mode",
+  "secondary_strategy": "patch_based_continuation_if_compact_retry_still_incomplete",
+  "forbidden": [
+    "open_continuation_full_reconstruction",
+    "auto_switch_model",
+    "openai_fallback"
+  ],
+  "signals": [
+    "finish_reason_length",
+    "output_budget_exhausted",
+    "reasoning_budget_exhaustion_optional",
+    "parseability",
+    "raw_tail_shape"
+  ],
+  "assessment": "pro_compact_reduction_improved_but_needs_review"
+}

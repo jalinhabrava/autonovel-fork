@@ -1,0 +1,158 @@
+{
+  "assessment": "real_deepseek_e2e_execution_plan_ready",
+  "source_file_reference": "/home/david/OnT/王者の杖.md",
+  "source_sha256": "61e1bde83941ad9c8d5c4a2e016e0935b01732dfee152f7b3631d33348de96e6",
+  "source_text_committed": false,
+  "chapters": [
+    "ch_001"
+  ],
+  "models": [
+    "deepseek-v4-pro"
+  ],
+  "profiles": [
+    "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1"
+  ],
+  "planned_runs": [
+    {
+      "run_id": "ch_001__deepseek_v4_pro",
+      "chapter_id": "ch_001",
+      "model": "deepseek-v4-pro",
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "planned_provider_calls": 2,
+      "planned_continuation_reserve_calls": 2,
+      "compact_reduction_mode": true,
+      "patch_continuation_mode": true,
+      "token_plan": {
+        "provider": "deepseek",
+        "model": "deepseek-v4-pro",
+        "task": "bootstrap_chapter_extraction",
+        "provider_profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+        "context_window": 128000,
+        "max_output_tokens": 8192,
+        "reserved_output_tokens": 8192,
+        "prompt_overhead_tokens": 5000,
+        "source_text_budget_tokens": 6000,
+        "safety_margin": 8000,
+        "usable_input_budget": 111808
+      },
+      "effective_output_budget": {
+        "provider": "deepseek",
+        "model": "deepseek-v4-pro",
+        "task": "bootstrap_chapter_extraction",
+        "provider_profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+        "effective_max_output_tokens": 8192,
+        "decision_source": "profile_default",
+        "model_registry_max_output_tokens": 8192,
+        "profile_default_max_output_tokens": 8192,
+        "override_max_output_tokens": null
+      },
+      "chunks": [
+        {
+          "chunk_id": "source_f1e650917c_ch_001_chunk_001",
+          "chapter_id": "ch_001",
+          "char_start": 0,
+          "char_end": 2307,
+          "char_count": 2307,
+          "estimated_tokens": 576,
+          "chunk_kind": "structured_chapter_subchunk",
+          "split_reason": "chapter_within_budget",
+          "source_span": {
+            "source_id": "source_f1e650917c",
+            "chapter_id": "ch_001",
+            "char_start": 0,
+            "char_end": 2307
+          }
+        }
+      ]
+    }
+  ],
+  "planned_provider_call_count": 2,
+  "planned_continuation_reserve_calls": 2,
+  "planned_provider_call_count_with_continuation_reserve": 4,
+  "provider_call_cap": 6,
+  "pro_compact_reduction_mode": true,
+  "patch_continuation_mode": true,
+  "compact_reduction_policy": {
+    "mode_id": "pro_compact_reduction_v1",
+    "model_family": "deepseek-v4-pro",
+    "use_cases": [
+      "chapter_reduction",
+      "length_recovery_retry",
+      "high_reasoning_budget_risk"
+    ],
+    "caps": {
+      "max_facts_per_item": 2,
+      "max_evidence_entries_per_item": 1,
+      "max_candidate_summary_points": 0,
+      "max_unresolved_mention_note_chars": 120,
+      "max_relation_summary_chars": 140,
+      "max_event_summary_chars": 160
+    },
+    "affected_sections": [
+      "characters",
+      "places",
+      "concepts",
+      "objects",
+      "events",
+      "relations",
+      "unresolved_mentions"
+    ],
+    "prompt_guidance": [
+      "Return exactly one valid JSON object.",
+      "Use compact reduction mode.",
+      "Prioritize item-level source_refs and canonical structure.",
+      "Do not produce long prose.",
+      "Do not expand candidate_summary_points.",
+      "Prefer compact complete JSON over verbose details when budget is tight."
+    ],
+    "rationale": [
+      "DeepSeek Pro reduction can exhaust output budget before JSON closes.",
+      "Compact caps trade verbosity for parseability and source-ref preservation."
+    ],
+    "privacy_safety_notes": {
+      "byok": true,
+      "no_auto_switch": true,
+      "no_openai": true,
+      "write_back": false
+    }
+  },
+  "patch_continuation_contract": {
+    "request_shape": {
+      "top_level_key": "continuation_patch",
+      "sections": [
+        "characters",
+        "places",
+        "concepts",
+        "objects",
+        "events",
+        "relations",
+        "unresolved_mentions"
+      ],
+      "patch_metadata": {
+        "continues_from": "chunk_or_reduction_run_id",
+        "completion_status": "complete|partial|unknown",
+        "do_not_repeat_previous_items": true
+      }
+    },
+    "rules": [
+      "Patch only missing or incomplete items.",
+      "Do not repeat previous items unless source_refs need completion.",
+      "Preserve source_refs.",
+      "Return empty patch with structured warning if missing scope is unknown.",
+      "Do not reconstruct full JSON object."
+    ],
+    "merge_rules": [
+      "dedupe_by_canonical_name_or_surface",
+      "merge_source_refs_without_duplicates",
+      "preserve_review_state_and_local_candidate",
+      "do_not_auto_promote_uncertain_items"
+    ],
+    "safety_rules": {
+      "same_provider_model_profile_required": true,
+      "no_auto_switch": true,
+      "private_packet_trace_required": true
+    }
+  },
+  "private_packet_root": "/tmp/textifai_private_provider_runs/sp078_pro_compact_reduction_patch_continuation/20260525T124450Z",
+  "write_back": false
+}

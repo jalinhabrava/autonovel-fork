@@ -1,0 +1,45 @@
+{
+  "mode_id": "pro_compact_reduction_v1",
+  "model_family": "deepseek-v4-pro",
+  "use_cases": [
+    "chapter_reduction",
+    "length_recovery_retry",
+    "high_reasoning_budget_risk"
+  ],
+  "caps": {
+    "max_facts_per_item": 2,
+    "max_evidence_entries_per_item": 1,
+    "max_candidate_summary_points": 0,
+    "max_unresolved_mention_note_chars": 120,
+    "max_relation_summary_chars": 140,
+    "max_event_summary_chars": 160
+  },
+  "affected_sections": [
+    "characters",
+    "places",
+    "concepts",
+    "objects",
+    "events",
+    "relations",
+    "unresolved_mentions"
+  ],
+  "prompt_guidance": [
+    "Return exactly one valid JSON object.",
+    "Use compact reduction mode.",
+    "Prioritize item-level source_refs and canonical structure.",
+    "Do not produce long prose.",
+    "Do not expand candidate_summary_points.",
+    "Prefer compact complete JSON over verbose details when budget is tight."
+  ],
+  "rationale": [
+    "DeepSeek Pro reduction can exhaust output budget before JSON closes.",
+    "Compact caps trade verbosity for parseability and source-ref preservation."
+  ],
+  "privacy_safety_notes": {
+    "byok": true,
+    "no_auto_switch": true,
+    "no_openai": true,
+    "write_back": false
+  },
+  "assessment": "pro_compact_reduction_improved_but_needs_review"
+}

@@ -1,0 +1,35 @@
+{
+  "assessment": "pro_compact_reduction_recovery_ready",
+  "provider": "deepseek",
+  "models": [
+    "deepseek-v4-pro"
+  ],
+  "chapters": [
+    "ch_001"
+  ],
+  "provider_call_count": 3,
+  "provider_call_cap": 6,
+  "compact_mode_used": true,
+  "patch_continuation_mode": true,
+  "valid_reduction_count": 1,
+  "total_reduction_count": 1,
+  "triggered_continuation_count": 1,
+  "private_packet_root": "/tmp/textifai_private_provider_runs/sp078_pro_compact_reduction_patch_continuation/20260525T124450Z",
+  "recommended_files_to_upload_to_chatgpt": [
+    "README.md",
+    "execution_plan_private.md",
+    "matrix_summary_private.md",
+    "decision_notes_private.md",
+    "source_ref_audit_private.md",
+    "truncation_recovery_audit_private.md",
+    "reduction_trace_private.md"
+  ],
+  "comparison_vs_sp075": {
+    "sp075_assessment": "real_deepseek_e2e_dryrun_partial_success",
+    "sp075_best_reduction_score": 57.5,
+    "sp077_best_reduction_score": 30.0,
+    "source_ref_item_level_improved": true,
+    "continuation_or_truncation_issue_remaining": false
+  },
+  "write_back": false
+}

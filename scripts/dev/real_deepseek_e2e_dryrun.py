@@ -21,6 +21,10 @@ from textifai.bootstrap.contracts import SourceDocumentRecord
 from textifai.import_review.batch_planner import StructuredSourceChunk, split_structured_chapter_into_chunks
 from textifai.import_review.chapterizer import detect_story_chapters
 from textifai.import_review.deepseek_family_profiles import (
+    build_finish_reason_length_strategy,
+    build_patch_based_continuation_contract,
+    build_pro_compact_reduction_policy,
+    build_response_control_runtime_policy,
     build_continuation_repair_contract,
     build_deepseek_budget_bridge,
     build_response_control_contract,
@@ -29,7 +33,7 @@ from textifai.import_review.deepseek_family_profiles import (
 )
 from textifai.import_review.model_registry import get_model_capabilities
 from textifai.import_review.prompt_experiment_observability import classify_failure_mode
-from textifai.import_review.provider_prompt_profiles import apply_provider_prompt_profile, inject_output_budget_control
+from textifai.import_review.provider_prompt_profiles import apply_provider_prompt_profile, inject_compact_reduction_control, inject_output_budget_control
 from textifai.import_review.structured_bootstrap_v1 import (
     CHAPTER_PARTIAL_EXTRACTION_PROMPT,
     CHAPTER_REDUCTION_PROMPT,
@@ -64,6 +68,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--include-extra-chapter-longest", action="store_true")
     parser.add_argument("--extra-chapter-scan-limit", type=int, default=6)
     parser.add_argument("--continuation-reserve-per-run", type=int, default=1)
+    parser.add_argument("--pro-compact-reduction-mode", action="store_true")
+    parser.add_argument("--patch-continuation-mode", action="store_true")
     return parser
 
 
@@ -99,6 +105,9 @@ def main(argv: list[str] | None = None) -> int:
         packet_root=packet_root,
         cli_max_output_tokens=args.max_output_tokens,
         continuation_reserve_per_run=max(0, int(args.continuation_reserve_per_run)),
+        pro_compact_reduction_mode=bool(args.pro_compact_reduction_mode),
+        patch_continuation_mode=bool(args.patch_continuation_mode),
+        provider_call_cap=int(args.max_provider_requests),
     )
 
     names = _report_names(prefix=args.report_prefix, suffix=args.report_suffix)
@@ -224,6 +233,9 @@ def _build_execution_plan(
     packet_root: Path,
     cli_max_output_tokens: int | None,
     continuation_reserve_per_run: int,
+    pro_compact_reduction_mode: bool = False,
+    patch_continuation_mode: bool = False,
+    provider_call_cap: int = 24,
 ) -> dict[str, Any]:
     source_hash = hashlib.sha256(source_text.encode("utf-8", errors="replace")).hexdigest()
     runs: list[dict[str, Any]] = []
@@ -283,6 +295,8 @@ def _build_execution_plan(
                 "chunks": chunks,
                 "planned_calls": planned_calls,
                 "continuation_reserve": continuation_reserve_per_run,
+                "compact_reduction_mode": bool(pro_compact_reduction_mode and model == "deepseek-v4-pro"),
+                "patch_continuation_mode": bool(patch_continuation_mode),
             }
             runs.append(run)
             public_runs.append(_public_run_plan(run))
@@ -300,7 +314,11 @@ def _build_execution_plan(
             "planned_provider_call_count": call_count,
             "planned_continuation_reserve_calls": continuation_reserve,
             "planned_provider_call_count_with_continuation_reserve": call_count + continuation_reserve,
-            "provider_call_cap": 24,
+            "provider_call_cap": provider_call_cap,
+            "pro_compact_reduction_mode": bool(pro_compact_reduction_mode),
+            "patch_continuation_mode": bool(patch_continuation_mode),
+            "compact_reduction_policy": build_pro_compact_reduction_policy() if pro_compact_reduction_mode else None,
+            "patch_continuation_contract": build_patch_based_continuation_contract() if patch_continuation_mode else None,
             "private_packet_root": str(packet_root),
             "write_back": False,
         },
@@ -375,11 +393,14 @@ def _execute_run(
         total_calls=total_calls,
         response_format_json=response_format_json,
         progress_path=progress_path,
+        compact_mode=bool(run.get("compact_reduction_mode")),
     )
-    reduction, extra_calls = _maybe_continue_or_repair(
+    reduction["compact_mode_used"] = bool(run.get("compact_reduction_mode"))
+    reduction, extra_calls = _recover_reduction_if_needed(
         provider=provider,
         run=run,
-        call_result=reduction,
+        reduction=reduction,
+        partial_payloads=partial_payloads,
         run_dir=run_dir,
         response_format_json=response_format_json,
         progress_path=progress_path,
@@ -411,6 +432,117 @@ def _execute_run(
         "reduction": reduction,
         "provider_call_count": calls,
     }, calls
+
+
+def _recover_reduction_if_needed(
+    *,
+    provider: Any,
+    run: dict[str, Any],
+    reduction: dict[str, Any],
+    partial_payloads: list[dict[str, Any]],
+    run_dir: Path,
+    response_format_json: bool,
+    progress_path: Path,
+    call_index_start: int,
+    current_calls: int,
+    total_calls: int,
+    max_provider_requests: int,
+) -> tuple[dict[str, Any], int]:
+    extra_calls = 0
+    strategy = _finish_reason_length_recovery_signal(reduction)
+    reduction["recovery_strategy"] = strategy
+
+    need_compact_retry = (
+        "deepseek-v4-pro" in str(run.get("model") or "")
+        and strategy["should_retry_compact_mode"]
+        and not bool(run.get("compact_reduction_mode"))
+    )
+    if need_compact_retry and call_index_start + current_calls + extra_calls + 1 <= max_provider_requests:
+        retry_call_no = call_index_start + current_calls + extra_calls + 1
+        compact_retry = _call_reduction(
+            provider=provider,
+            run=run,
+            partial_payloads=partial_payloads,
+            run_dir=run_dir,
+            call_no=retry_call_no,
+            total_calls=total_calls,
+            response_format_json=response_format_json,
+            progress_path=progress_path,
+            compact_mode=True,
+            stem="reduction__compact_retry",
+        )
+        extra_calls += 1
+        compact_retry["compact_mode_used"] = True
+        compact_retry["recovery_strategy"] = strategy
+        reduction["compact_retry_private_dir"] = compact_retry.get("private_dir")
+        if compact_retry.get("parseable_json"):
+            compact_retry["recovery_status"] = "compact_retry_replaced_primary"
+            reduction = compact_retry
+        else:
+            reduction["recovery_status"] = "compact_retry_failed"
+            reduction["compact_retry_failure_mode"] = compact_retry.get("failure_mode")
+            reduction["compact_retry_finish_reason"] = compact_retry.get("finish_reason")
+            if not bool(run.get("patch_continuation_mode")):
+                return reduction, extra_calls
+
+    use_patch_continuation = bool(run.get("patch_continuation_mode")) and (
+        strategy["should_patch_continue"] or reduction.get("failure_mode") in {"invalid_json_truncated", "finish_reason_length", "output_near_max_tokens", "unterminated_string", "unterminated_array_or_object"}
+    )
+    if use_patch_continuation:
+        reduction, continuation_calls = _maybe_patch_continue_reduction(
+            provider=provider,
+            run=run,
+            call_result=reduction,
+            partial_payloads=partial_payloads,
+            run_dir=run_dir,
+            response_format_json=response_format_json,
+            progress_path=progress_path,
+            call_index_start=call_index_start,
+            current_calls=current_calls + extra_calls,
+            total_calls=total_calls,
+            max_provider_requests=max_provider_requests,
+        )
+        extra_calls += continuation_calls
+    else:
+        reduction, continuation_calls = _maybe_continue_or_repair(
+            provider=provider,
+            run=run,
+            call_result=reduction,
+            run_dir=run_dir,
+            response_format_json=response_format_json,
+            progress_path=progress_path,
+            call_index_start=call_index_start,
+            current_calls=current_calls + extra_calls,
+            total_calls=total_calls,
+            max_provider_requests=max_provider_requests,
+        )
+        extra_calls += continuation_calls
+    return reduction, extra_calls
+
+
+def _finish_reason_length_recovery_signal(result: dict[str, Any]) -> dict[str, Any]:
+    usage = result.get("usage") if isinstance(result.get("usage"), dict) else {}
+    completion_tokens = float(usage.get("completion_tokens") or 0)
+    max_output_tokens = float(result.get("effective_max_output_tokens") or 0)
+    reasoning_tokens = float(((usage.get("completion_tokens_details") or {}).get("reasoning_tokens") or 0))
+    finish_reason = str(result.get("finish_reason") or "").casefold()
+    output_budget_exhausted = bool(max_output_tokens and completion_tokens >= max_output_tokens * 0.95)
+    reasoning_tokens_present = reasoning_tokens > 0
+    reasoning_tokens_ratio = (reasoning_tokens / completion_tokens) if completion_tokens > 0 else 0.0
+    reasoning_tokens_high = reasoning_tokens_present and reasoning_tokens_ratio >= 0.5
+    return {
+        "finish_reason": finish_reason,
+        "completion_tokens": int(completion_tokens) if completion_tokens else None,
+        "effective_max_output_tokens": int(max_output_tokens) if max_output_tokens else None,
+        "output_budget_exhausted": output_budget_exhausted,
+        "reasoning_tokens_present": reasoning_tokens_present,
+        "reasoning_tokens_high": reasoning_tokens_high,
+        "reasoning_tokens_ratio": reasoning_tokens_ratio if reasoning_tokens_present else None,
+        "visible_output_too_short_for_completion": bool(not result.get("parseable_json")),
+        "pro_reasoning_budget_exhaustion": finish_reason == "length" and reasoning_tokens_high,
+        "should_retry_compact_mode": finish_reason == "length" or output_budget_exhausted,
+        "should_patch_continue": finish_reason == "length" or output_budget_exhausted,
+    }
 
 
 def _call_chunk(
@@ -473,6 +605,8 @@ def _call_reduction(
     total_calls: int,
     response_format_json: bool,
     progress_path: Path,
+    compact_mode: bool = False,
+    stem: str = "reduction",
 ) -> dict[str, Any]:
     detected = run["chapter"]["detected"]
     title_hints = _extract_title_entity_hints(detected.title)
@@ -493,19 +627,32 @@ def _call_reduction(
     )
     system, user = apply_provider_prompt_profile("Return only valid JSON for chapter reduction.", prompt, run["profile"])
     system = inject_output_budget_control(system, effective_max_output_tokens=run["effective_output_budget"].effective_max_output_tokens)
+    if compact_mode:
+        system = inject_compact_reduction_control(system, mode_label=build_pro_compact_reduction_policy()["mode_id"])
     user = (
         f"{user}\n\n"
         "SOURCE_REF_RULE: Every final item in characters, places, concepts, objects, events, relations, and unresolved_mentions "
         "must preserve source_refs from matching partial signals. If exact item spans are unavailable, use contributing chunk spans."
     )
+    if compact_mode:
+        compact_policy = build_pro_compact_reduction_policy()
+        user = (
+            f"{user}\n\n"
+            "COMPACT_REDUCTION_MODE: true\n"
+            f"COMPACT_POLICY: {json.dumps(compact_policy['caps'], ensure_ascii=False)}\n"
+            "PRIORITY: valid JSON > complete coverage > short evidence > no prose.\n"
+            "Do not expand candidate_summary_points.\n"
+            "Limit each item to short facts.\n"
+            "Keep review/local_candidate if uncertain."
+        )
     return _execute_request(
         provider=provider,
         run=run,
         run_dir=run_dir,
-        stem="reduction",
+        stem=stem,
         system=system,
         user=user,
-        mode="chapter_reduction",
+        mode="chapter_reduction_compact" if compact_mode else "chapter_reduction",
         chunk=None,
         call_no=call_no,
         total_calls=total_calls,
@@ -589,7 +736,7 @@ def _execute_request(
         _write_private(call_dir / "provider_response_raw.txt", response_text)
         parsed = extract_json_payload(response_text)
         if isinstance(parsed, dict):
-            if mode == "chapter_reduction":
+            if mode.startswith("chapter_reduction"):
                 parsed = _carry_forward_reduction_source_refs(parsed, chunks=run["chunks"])
             _write_json(call_dir / "provider_response_parsed.json", parsed)
     except Exception as exc:  # noqa: BLE001
@@ -686,6 +833,241 @@ def _execute_request(
     }
 
 
+def _maybe_patch_continue_reduction(
+    *,
+    provider: Any,
+    run: dict[str, Any],
+    call_result: dict[str, Any],
+    partial_payloads: list[dict[str, Any]],
+    run_dir: Path,
+    response_format_json: bool,
+    progress_path: Path,
+    call_index_start: int,
+    current_calls: int,
+    total_calls: int,
+    max_provider_requests: int,
+) -> tuple[dict[str, Any], int]:
+    if call_result.get("parseable_json") and call_result.get("response_control", {}).get("completion_status") != "partial":
+        call_result["continuation_status"] = call_result.get("continuation_status") or "not_triggered"
+        return call_result, 0
+
+    if call_index_start + current_calls + 1 > max_provider_requests:
+        call_result["continuation_status"] = "skipped_cap_reached"
+        call_result["continuation_mode"] = "patch_based"
+        return call_result, 0
+
+    patch_contract = build_patch_based_continuation_contract()
+    recovery_context = {
+        "chapter_id": run["chapter"]["chapter_id"],
+        "run_id": run["run_id"],
+        "failure_mode": call_result.get("failure_mode"),
+        "finish_reason": call_result.get("finish_reason"),
+        "known_partial_counts": _summarize_partial_counts(partial_payloads),
+        "known_chunk_spans": [
+            {
+                "chunk_id": chunk.chunk_id,
+                "source_id": chunk.source_id,
+                "chapter_id": chunk.chapter_id,
+                "char_start": chunk.char_start,
+                "char_end": chunk.char_end,
+            }
+            for chunk in run["chunks"]
+        ],
+    }
+    prompt = (
+        "PATCH_BASED_CONTINUATION_REQUEST\n\n"
+        "Return ONLY one valid JSON object.\n"
+        "Do NOT reconstruct the full extraction JSON.\n"
+        "Return only continuation_patch and patch_metadata.\n"
+        f"PATCH_CONTRACT: {json.dumps(patch_contract, ensure_ascii=False)}\n"
+        f"RECOVERY_CONTEXT: {json.dumps(recovery_context, ensure_ascii=False)}"
+    )
+    system = inject_output_budget_control(
+        inject_compact_reduction_control("Return valid JSON patch only.", mode_label="patch_compact_recovery_v1"),
+        effective_max_output_tokens=run["effective_output_budget"].effective_max_output_tokens,
+    )
+
+    patch_call_no = call_index_start + current_calls + 1
+    patch_result = _execute_request(
+        provider=provider,
+        run=run,
+        run_dir=run_dir,
+        stem=f"{call_result['chunk_id']}__patch_continuation",
+        system=system,
+        user=prompt,
+        mode=f"{call_result['mode']}_patch_continuation",
+        chunk=None,
+        call_no=patch_call_no,
+        total_calls=total_calls,
+        response_format_json=response_format_json,
+        progress_path=progress_path,
+    )
+
+    call_result["continuation_mode"] = "patch_based"
+    call_result["continuation_status"] = "executed"
+    call_result["continuation_private_dir"] = patch_result["private_dir"]
+
+    merged = _merge_patch_into_reduction(call_result=call_result, patch_result=patch_result, run=run, partial_payloads=partial_payloads)
+    if merged is not None:
+        merged["continuation_status"] = "patch_merged"
+        merged["continuation_mode"] = "patch_based"
+        merged["continuation_private_dir"] = patch_result["private_dir"]
+        return merged, 1
+
+    call_result["continuation_status"] = "executed_but_not_parseable"
+    return call_result, 1
+
+
+def _summarize_partial_counts(partials: list[dict[str, Any]]) -> dict[str, int]:
+    counts = {"characters": 0, "places": 0, "concepts": 0, "objects": 0, "events": 0, "relations": 0, "unresolved_mentions": 0}
+    for partial in partials:
+        signals = partial.get("partial_signals") if isinstance(partial, dict) else None
+        if not isinstance(signals, dict):
+            continue
+        for key in counts:
+            value = signals.get(key)
+            if isinstance(value, list):
+                counts[key] += len(value)
+    return counts
+
+
+def _merge_patch_into_reduction(
+    *, call_result: dict[str, Any], patch_result: dict[str, Any], run: dict[str, Any], partial_payloads: list[dict[str, Any]]
+) -> dict[str, Any] | None:
+    patch_payload = patch_result.get("parsed")
+    if not isinstance(patch_payload, dict):
+        return None
+    patch = patch_payload.get("continuation_patch")
+    if not isinstance(patch, dict):
+        return None
+
+    base_payload = call_result.get("parsed") if isinstance(call_result.get("parsed"), dict) else _build_reduction_fallback_from_partials(run, partial_payloads)
+    if not isinstance(base_payload, dict):
+        return None
+    chapter = _first_chapter(base_payload)
+    if not isinstance(chapter, dict):
+        return None
+
+    for section in ("characters", "places", "concepts", "objects", "events", "relations", "unresolved_mentions"):
+        target = chapter.get(section)
+        if not isinstance(target, list):
+            target = []
+            chapter[section] = target
+        patch_items = patch.get(section)
+        if not isinstance(patch_items, list):
+            continue
+        for item in patch_items:
+            if not isinstance(item, dict):
+                continue
+            _merge_item_into_section(target, item)
+
+    merged_payload = _carry_forward_reduction_source_refs(base_payload, chunks=run["chunks"])
+    validation = _validation_report(
+        parsed=merged_payload,
+        expected_chapter_id=run["chapter"]["chapter_id"],
+        mode="chapter_reduction_patch_merged",
+        chunk=None,
+        response_text=json.dumps(merged_payload, ensure_ascii=False),
+        error=None,
+        provider_metadata={
+            "finish_reason": patch_result.get("finish_reason"),
+            "usage": patch_result.get("usage") or {},
+        },
+        effective_max_output_tokens=run["effective_output_budget"].effective_max_output_tokens,
+    )
+    if not validation.get("parseable_json"):
+        return None
+
+    merged = dict(call_result)
+    merged.update(
+        {
+            "parseable_json": True,
+            "parsed": merged_payload,
+            "validation_ok": bool(validation.get("validation_ok")),
+            "failure_mode": _failure_mode(validation),
+            "counts": validation.get("counts") or merged.get("counts") or {},
+            "score": validation.get("score") if validation.get("score") is not None else merged.get("score"),
+            "thin_warnings": validation.get("thin_warnings") or merged.get("thin_warnings") or [],
+        }
+    )
+    return merged
+
+
+def _build_reduction_fallback_from_partials(run: dict[str, Any], partial_payloads: list[dict[str, Any]]) -> dict[str, Any]:
+    chapter = {
+        "chapter_id": run["chapter"]["chapter_id"],
+        "characters": [],
+        "places": [],
+        "concepts": [],
+        "objects": [],
+        "events": [],
+        "relations": [],
+        "unresolved_mentions": [],
+    }
+    fallback_refs = [
+        {
+            "source_id": chunk.source_id,
+            "chapter_id": chunk.chapter_id,
+            "chunk_id": chunk.chunk_id,
+            "char_start": chunk.char_start,
+            "char_end": chunk.char_end,
+        }
+        for chunk in run["chunks"]
+    ]
+    section_keys = ("characters", "places", "concepts", "objects", "events", "relations", "unresolved_mentions")
+    for payload in partial_payloads:
+        signals = payload.get("partial_signals") if isinstance(payload, dict) else None
+        if not isinstance(signals, dict):
+            continue
+        for section in section_keys:
+            raw_items = signals.get(section)
+            if not isinstance(raw_items, list):
+                continue
+            for item in raw_items:
+                if not isinstance(item, dict):
+                    continue
+                mapped = {
+                    "canonical_name": item.get("canonical") or item.get("canonical_name") or item.get("surface") or item.get("name"),
+                    "surface": item.get("surface"),
+                    "source_refs": _dedupe_source_refs(list(item.get("source_refs") or []) + fallback_refs),
+                }
+                if isinstance(item.get("facts"), list) and item.get("facts"):
+                    mapped["facts"] = item.get("facts")[:2]
+                if section == "relations":
+                    mapped["source"] = item.get("source") or mapped.get("canonical_name")
+                    mapped["target"] = item.get("target")
+                    mapped["relation_category"] = item.get("relation_category") or item.get("type")
+                if section == "events":
+                    mapped["event_importance"] = item.get("event_importance") or "minor"
+                _merge_item_into_section(chapter[section], mapped)
+    return _carry_forward_reduction_source_refs({"chapters": [chapter]}, chunks=run["chunks"])
+
+
+def _item_identity(item: dict[str, Any]) -> tuple[str, str]:
+    key = str(item.get("canonical_name") or item.get("surface") or item.get("name") or item.get("source") or item.get("target") or "unknown")
+    secondary = str(item.get("relation_category") or item.get("type") or "")
+    return key.casefold(), secondary.casefold()
+
+
+def _merge_item_into_section(target: list[dict[str, Any]], patch_item: dict[str, Any]) -> None:
+    identity = _item_identity(patch_item)
+    for existing in target:
+        if not isinstance(existing, dict):
+            continue
+        if _item_identity(existing) != identity:
+            continue
+        patch_refs = patch_item.get("source_refs") if isinstance(patch_item.get("source_refs"), list) else []
+        existing_refs = existing.get("source_refs") if isinstance(existing.get("source_refs"), list) else []
+        existing["source_refs"] = _dedupe_source_refs(existing_refs + patch_refs)
+        for key, value in patch_item.items():
+            if key == "source_refs":
+                continue
+            if key not in existing or existing.get(key) in (None, "", [], {}):
+                existing[key] = value
+        return
+    target.append(patch_item)
+
+
 def _maybe_continue_or_repair(
     *,
     provider: Any,
@@ -707,7 +1089,14 @@ def _maybe_continue_or_repair(
     if call_result.get("response_control", {}).get("completion_status") == "partial":
         should_continue = True
         triggers.append("response_control.partial")
-    if call_result.get("failure_mode") in {"invalid_json_truncated", "finish_reason_length", "output_near_max_tokens", "unterminated_string", "unterminated_array_or_object"}:
+    if call_result.get("failure_mode") in {
+        "invalid_json_truncated",
+        "finish_reason_length",
+        "output_near_max_tokens",
+        "unterminated_string",
+        "unterminated_array_or_object",
+        "pro_reasoning_budget_exhaustion",
+    }:
         should_continue = True
         triggers.append(call_result.get("failure_mode"))
 
@@ -818,9 +1207,11 @@ def _validation_report(
         "thin_warnings": thin["warnings"],
         "source_span_preserved": bool(chunk.source_span) if chunk else True,
         "finish_reason": (provider_metadata or {}).get("finish_reason"),
+        "model": (provider_metadata or {}).get("model"),
         "completion_tokens": usage.get("completion_tokens"),
         "prompt_tokens": usage.get("prompt_tokens"),
         "total_tokens": usage.get("total_tokens"),
+        "reasoning_tokens": ((usage.get("completion_tokens_details") or {}).get("reasoning_tokens") if isinstance(usage, dict) else None),
         "effective_max_output_tokens": effective_max_output_tokens,
         "response_tail": response_text[-200:],
     }
@@ -965,10 +1356,12 @@ def _build_public_reports(*, plan: dict[str, Any], results: list[dict[str, Any]]
                     "failure_mode": row.get("failure_mode"),
                     "finish_reason": row.get("finish_reason"),
                     "completion_tokens": (row.get("usage") or {}).get("completion_tokens"),
+                    "reasoning_tokens": ((row.get("usage") or {}).get("completion_tokens_details") or {}).get("reasoning_tokens"),
                     "total_tokens": (row.get("usage") or {}).get("total_tokens"),
                     "effective_max_output_tokens": row.get("effective_max_output_tokens"),
                     "response_control": row.get("response_control"),
                     "continuation_status": row.get("continuation_status", "not_triggered"),
+                    "recovery_strategy": row.get("recovery_strategy"),
                 }
             )
 
@@ -987,10 +1380,12 @@ def _build_public_reports(*, plan: dict[str, Any], results: list[dict[str, Any]]
                 "failure_mode": red.get("failure_mode"),
                 "finish_reason": red.get("finish_reason"),
                 "completion_tokens": (red.get("usage") or {}).get("completion_tokens"),
+                "reasoning_tokens": ((red.get("usage") or {}).get("completion_tokens_details") or {}).get("reasoning_tokens"),
                 "total_tokens": (red.get("usage") or {}).get("total_tokens"),
                 "effective_max_output_tokens": red.get("effective_max_output_tokens"),
                 "response_control": red.get("response_control"),
                 "continuation_status": red.get("continuation_status", "not_triggered"),
+                "recovery_strategy": red.get("recovery_strategy"),
             }
         )
 
@@ -1011,14 +1406,25 @@ def _build_public_reports(*, plan: dict[str, Any], results: list[dict[str, Any]]
         for item in truncation_rows
     )
 
-    if all_reductions_valid and source_ref_preservation and all_parseable_reductions_have_source_refs and not continuation_problem:
-        assessment = "real_deepseek_e2e_validation_passed_ready_for_larger_e2e"
-    elif valid_reductions:
-        assessment = "real_deepseek_e2e_validation_passed_with_review_warnings"
-    elif any(row["parseable_json"] for row in reduction_rows + chunk_rows):
-        assessment = "real_deepseek_e2e_validation_partial_success_needs_patch"
+    pro_compact_phase = bool(plan["public_plan"].get("pro_compact_reduction_mode") and plan["public_plan"].get("patch_continuation_mode"))
+    if pro_compact_phase:
+        if all_reductions_valid and source_ref_preservation and not continuation_problem:
+            assessment = "pro_compact_reduction_recovery_ready"
+        elif valid_reductions:
+            assessment = "pro_compact_reduction_improved_but_needs_review"
+        elif any(row["parseable_json"] for row in reduction_rows + chunk_rows):
+            assessment = "pro_compact_reduction_improved_but_needs_review"
+        else:
+            assessment = "pro_reduction_truncation_still_blocking"
     else:
-        assessment = "real_deepseek_e2e_validation_failed_but_debuggable"
+        if all_reductions_valid and source_ref_preservation and all_parseable_reductions_have_source_refs and not continuation_problem:
+            assessment = "real_deepseek_e2e_validation_passed_ready_for_larger_e2e"
+        elif valid_reductions:
+            assessment = "real_deepseek_e2e_validation_passed_with_review_warnings"
+        elif any(row["parseable_json"] for row in reduction_rows + chunk_rows):
+            assessment = "real_deepseek_e2e_validation_partial_success_needs_patch"
+        else:
+            assessment = "real_deepseek_e2e_validation_failed_but_debuggable"
 
     summary = {
         "assessment": assessment,
@@ -1027,6 +1433,8 @@ def _build_public_reports(*, plan: dict[str, Any], results: list[dict[str, Any]]
         "chapters": plan["public_plan"]["chapters"],
         "provider_call_count": sum(item["provider_call_count"] for item in results),
         "provider_call_cap": plan["public_plan"]["provider_call_cap"],
+        "compact_mode_used": bool(plan["public_plan"].get("pro_compact_reduction_mode")),
+        "patch_continuation_mode": bool(plan["public_plan"].get("patch_continuation_mode")),
         "valid_reduction_count": len(valid_reductions),
         "total_reduction_count": len(reduction_rows),
         "triggered_continuation_count": sum(1 for item in truncation_rows if item.get("continuation_status", "not_triggered") != "not_triggered"),
@@ -1052,11 +1460,11 @@ def _build_public_reports(*, plan: dict[str, Any], results: list[dict[str, Any]]
 
     decision = {
         "assessment": assessment,
-        "ready_for_larger_real_e2e": assessment in {"real_deepseek_e2e_validation_passed_ready_for_larger_e2e", "real_deepseek_e2e_validation_passed_with_review_warnings"},
-        "needs_review_warnings": assessment != "real_deepseek_e2e_validation_passed_ready_for_larger_e2e",
+        "ready_for_larger_real_e2e": assessment in {"real_deepseek_e2e_validation_passed_ready_for_larger_e2e", "real_deepseek_e2e_validation_passed_with_review_warnings", "pro_compact_reduction_recovery_ready", "pro_compact_reduction_improved_but_needs_review"},
+        "needs_review_warnings": assessment not in {"real_deepseek_e2e_validation_passed_ready_for_larger_e2e", "pro_compact_reduction_recovery_ready"},
         "private_packet_root": str(packet_root),
         "product_decision": assessment,
-        "next_suggested_phase": "Phase 1.3.M-b5c-4g — Larger DeepSeek E2E with Continuation in Multi-chunk Chapters" if assessment in {"real_deepseek_e2e_validation_passed_ready_for_larger_e2e", "real_deepseek_e2e_validation_passed_with_review_warnings"} else "Phase 1.3.M-b5c-4g — Patch Source-refs/Continuation before Larger E2E",
+        "next_suggested_phase": "Phase 1.3.M-b5c-4h — Larger DeepSeek E2E with Multi-chunk Chapters" if assessment in {"pro_compact_reduction_recovery_ready", "pro_compact_reduction_improved_but_needs_review"} else "Phase 1.3.M-b5c-4h — Compact Reduction Policy Hardening before Larger E2E",
     }
 
     return {
@@ -1141,7 +1549,8 @@ def _source_ref_audit_row(*, result: dict[str, Any], parsed: dict[str, Any] | No
 
 
 def _write_blocked_reports(names: dict[str, str], plan: dict[str, Any], *, reason: str) -> None:
-    assessment = "real_deepseek_e2e_validation_blocked"
+    pro_compact_phase = bool(plan["public_plan"].get("pro_compact_reduction_mode") and plan["public_plan"].get("patch_continuation_mode"))
+    assessment = "pro_reduction_recovery_blocked" if pro_compact_phase else "real_deepseek_e2e_validation_blocked"
     base = {
         "assessment": assessment,
         "blocked_reason": reason,
@@ -1159,7 +1568,9 @@ def _write_blocked_reports(names: dict[str, str], plan: dict[str, Any], *, reaso
         names["decision"],
         {
             **base,
-            "next_suggested_phase": "Phase 1.3.M-b5c-4f — Retry Full Real DeepSeek E2E Validation after unblock",
+            "next_suggested_phase": "Phase 1.3.M-b5c-4h — Compact Reduction Policy Hardening before Larger E2E"
+            if pro_compact_phase
+            else "Phase 1.3.M-b5c-4f — Retry Full Real DeepSeek E2E Validation after unblock",
         },
     )
 
@@ -1172,6 +1583,8 @@ def _public_run_plan(run: dict[str, Any]) -> dict[str, Any]:
         "profile_id": run["profile"].profile_id,
         "planned_provider_calls": run["planned_calls"],
         "planned_continuation_reserve_calls": run["continuation_reserve"],
+        "compact_reduction_mode": bool(run.get("compact_reduction_mode")),
+        "patch_continuation_mode": bool(run.get("patch_continuation_mode")),
         "token_plan": run["token_plan"],
         "effective_output_budget": asdict(run["effective_output_budget"]),
         "chunks": [
@@ -1227,6 +1640,8 @@ def _private_chunk_plan(plan: dict[str, Any]) -> str:
 
 def _write_private_matrix_files(*, packet_root: Path, plan: dict[str, Any], results: list[dict[str, Any]], reports: dict[str, Any]) -> None:
     _write_private(packet_root / "README.md", "Private DeepSeek full E2E validation packet. Do not commit.\n")
+    _write_private(packet_root / "compact_reduction_policy_private.md", json.dumps(build_pro_compact_reduction_policy(), ensure_ascii=False, indent=2))
+    _write_private(packet_root / "patch_continuation_trace_private.md", json.dumps(build_patch_based_continuation_contract(), ensure_ascii=False, indent=2))
     _write_private(packet_root / "matrix_summary_private.md", json.dumps(reports["summary"], ensure_ascii=False, indent=2))
     _write_private(packet_root / "matrix_comparison_private.md", json.dumps(reports["decision"], ensure_ascii=False, indent=2))
     _write_private(packet_root / "decision_notes_private.md", json.dumps(reports["decision"], ensure_ascii=False, indent=2))

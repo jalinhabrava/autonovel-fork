@@ -1,0 +1,38 @@
+{
+  "request_shape": {
+    "top_level_key": "continuation_patch",
+    "sections": [
+      "characters",
+      "places",
+      "concepts",
+      "objects",
+      "events",
+      "relations",
+      "unresolved_mentions"
+    ],
+    "patch_metadata": {
+      "continues_from": "chunk_or_reduction_run_id",
+      "completion_status": "complete|partial|unknown",
+      "do_not_repeat_previous_items": true
+    }
+  },
+  "rules": [
+    "Patch only missing or incomplete items.",
+    "Do not repeat previous items unless source_refs need completion.",
+    "Preserve source_refs.",
+    "Return empty patch with structured warning if missing scope is unknown.",
+    "Do not reconstruct full JSON object."
+  ],
+  "merge_rules": [
+    "dedupe_by_canonical_name_or_surface",
+    "merge_source_refs_without_duplicates",
+    "preserve_review_state_and_local_candidate",
+    "do_not_auto_promote_uncertain_items"
+  ],
+  "safety_rules": {
+    "same_provider_model_profile_required": true,
+    "no_auto_switch": true,
+    "private_packet_trace_required": true
+  },
+  "assessment": "pro_compact_reduction_improved_but_needs_review"
+}

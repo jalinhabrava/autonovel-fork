@@ -1,0 +1,47 @@
+{
+  "assessment": "pro_compact_reduction_recovery_ready",
+  "runs": [
+    {
+      "run_id": "ch_001__deepseek_v4_pro",
+      "model": "deepseek-v4-pro",
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "chapter_id": "ch_001",
+      "parseable_json": true,
+      "item_level_source_ref_coverage_ratio": 1.0,
+      "sections": {
+        "characters": {
+          "items": 4,
+          "with_source_refs": 4
+        },
+        "places": {
+          "items": 4,
+          "with_source_refs": 4
+        },
+        "concepts": {
+          "items": 4,
+          "with_source_refs": 4
+        },
+        "objects": {
+          "items": 2,
+          "with_source_refs": 2
+        },
+        "events": {
+          "items": 4,
+          "with_source_refs": 4
+        },
+        "relations": {
+          "items": 1,
+          "with_source_refs": 1
+        },
+        "unresolved_mentions": {
+          "items": 3,
+          "with_source_refs": 3
+        }
+      },
+      "missing_examples": []
+    }
+  ],
+  "item_level_source_ref_coverage_ratio": 1.0,
+  "parseable_reduction_runs": 1,
+  "missing_source_ref_runs": 0
+}

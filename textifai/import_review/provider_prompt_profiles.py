@@ -132,6 +132,29 @@ If you cannot complete the extraction within this budget:
     separator = "\n\n" if system_prompt.strip() else ""
     return f"{system_prompt.rstrip()}{separator}{block}".strip()
 
+def inject_compact_reduction_control(system_prompt: str, *, mode_label: str = "compact_reduction_v1") -> str:
+    header = "## Compact Reduction Control"
+    if header in system_prompt:
+        return system_prompt
+    block = f"""{header}
+
+Use compact reduction mode: {mode_label}.
+
+Prioritize:
+- valid JSON;
+- item-level source_refs;
+- canonical/entity structure;
+- objects/events/relations/unresolved_mentions;
+- short evidence only.
+
+Do not produce long prose.
+Do not repeat full source text.
+Do not expand candidate_summary_points.
+Limit each item to short facts/evidence.
+Prefer compact complete JSON over verbose details when budget is tight."""
+    separator = "\n\n" if system_prompt.strip() else ""
+    return f"{system_prompt.rstrip()}{separator}{block}".strip()
+
 
 def summarize_provider_prompt_profile(profile: ProviderPromptProfile) -> dict[str, Any]:
     data = asdict(profile)

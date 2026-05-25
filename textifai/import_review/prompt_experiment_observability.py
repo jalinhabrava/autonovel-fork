@@ -32,6 +32,7 @@ FAILURE_MODE_TAXONOMY: dict[str, str] = {
     "provider_error": "Provider call failed before usable response payload.",
     "finish_reason_length": "Provider metadata indicates output hit length limit.",
     "output_near_max_tokens": "Output token usage reached near configured max output budget.",
+    "pro_reasoning_budget_exhaustion": "Reasoning token usage likely consumed too much output budget before JSON completion.",
     "unterminated_string": "Raw response appears to end inside an unterminated JSON string.",
     "unterminated_array_or_object": "Raw response appears to end with unclosed array/object delimiters.",
     "validation_failed_missing_event_importance": "Validation failed because events lacked event_importance.",
@@ -53,6 +54,11 @@ def classify_failure_mode(result_summary: dict[str, Any]) -> str | None:
     finish_reason = str(result_summary.get("finish_reason") or "").strip().casefold()
     completion_tokens = _number(result_summary.get("completion_tokens"), result_summary.get("output_tokens"))
     max_output_tokens = _number(result_summary.get("effective_max_output_tokens"), result_summary.get("max_output_tokens"))
+    reasoning_tokens = _number(
+        result_summary.get("reasoning_tokens"),
+        ((result_summary.get("usage") or {}).get("completion_tokens_details") or {}).get("reasoning_tokens") if isinstance(result_summary.get("usage"), dict) else None,
+    )
+    model = str(result_summary.get("model") or "").strip().casefold()
     raw_tail = str(result_summary.get("response_tail") or result_summary.get("raw_response_tail") or "")
 
     if result_summary.get("provider_error"):
@@ -61,6 +67,14 @@ def classify_failure_mode(result_summary: dict[str, Any]) -> str | None:
         return "provider_empty_response"
 
     if finish_reason == "length":
+        if (
+            "deepseek-v4-pro" in model
+            and completion_tokens is not None
+            and completion_tokens > 0
+            and reasoning_tokens is not None
+            and reasoning_tokens / completion_tokens >= 0.5
+        ):
+            return "pro_reasoning_budget_exhaustion"
         return "finish_reason_length"
     if completion_tokens is not None and max_output_tokens is not None and completion_tokens >= max_output_tokens * 0.95:
         return "output_near_max_tokens"

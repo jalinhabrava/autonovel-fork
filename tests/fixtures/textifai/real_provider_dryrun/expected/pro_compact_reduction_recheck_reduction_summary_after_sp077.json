@@ -1,0 +1,72 @@
+{
+  "assessment": "pro_compact_reduction_recovery_ready",
+  "reductions": [
+    {
+      "run_id": "ch_001__deepseek_v4_pro",
+      "model": "deepseek-v4-pro",
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "chapter_id": "ch_001",
+      "mode": "chapter_reduction_compact",
+      "chunk_id": "reduction",
+      "parseable_json": true,
+      "validation_ok": true,
+      "failure_mode": null,
+      "counts": {
+        "characters": 4,
+        "places": 4,
+        "concepts": 4,
+        "objects": 2,
+        "events": 4,
+        "relations": 1,
+        "unresolved_mentions": 3
+      },
+      "score": 30.0,
+      "thin_warnings": [
+        "low_relations_count",
+        "model_profile_experimental"
+      ],
+      "source_span": null,
+      "finish_reason": "length",
+      "usage": {
+        "prompt_tokens": 6147,
+        "completion_tokens": 8192,
+        "total_tokens": 14339,
+        "prompt_tokens_details": {
+          "cached_tokens": 3456
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 7600
+        },
+        "prompt_cache_hit_tokens": 3456,
+        "prompt_cache_miss_tokens": 2691
+      },
+      "effective_max_output_tokens": 8192,
+      "response_control": {
+        "present": false,
+        "completion_status": "unknown",
+        "continuation_required": null,
+        "continuation_cursor": null,
+        "omitted_sections": []
+      },
+      "compact_mode_used": true,
+      "recovery_strategy": {
+        "finish_reason": "length",
+        "completion_tokens": 8192,
+        "effective_max_output_tokens": 8192,
+        "output_budget_exhausted": true,
+        "reasoning_tokens_present": true,
+        "reasoning_tokens_high": true,
+        "reasoning_tokens_ratio": 0.927734375,
+        "visible_output_too_short_for_completion": true,
+        "pro_reasoning_budget_exhaustion": true,
+        "should_retry_compact_mode": true,
+        "should_patch_continue": true
+      },
+      "continuation_mode": "patch_based",
+      "continuation_status": "patch_merged",
+      "continuation_private_dir": "/tmp/textifai_private_provider_runs/sp078_pro_compact_reduction_patch_continuation/20260525T124450Z/ch_001__deepseek_v4_pro/reduction__patch_continuation",
+      "private_dir": "/tmp/textifai_private_provider_runs/sp078_pro_compact_reduction_patch_continuation/20260525T124450Z/ch_001__deepseek_v4_pro/reduction"
+    }
+  ],
+  "source_ref_preservation": true
+}

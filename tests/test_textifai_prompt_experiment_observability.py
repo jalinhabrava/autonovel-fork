@@ -37,6 +37,7 @@ class PromptExperimentObservabilityTests(unittest.TestCase):
             "provider_error",
             "finish_reason_length",
             "output_near_max_tokens",
+            "pro_reasoning_budget_exhaustion",
             "unterminated_string",
             "unterminated_array_or_object",
             "validation_failed_missing_event_importance",
@@ -76,6 +77,20 @@ class PromptExperimentObservabilityTests(unittest.TestCase):
         self.assertEqual(by_tokens, "output_near_max_tokens")
         self.assertEqual(by_string, "unterminated_string")
         self.assertEqual(by_object, "unterminated_array_or_object")
+
+    def test_classifies_pro_reasoning_budget_exhaustion(self):
+        failure = classify_failure_mode(
+            {
+                "parseable_json": False,
+                "validation_ok": False,
+                "model": "deepseek-v4-pro",
+                "finish_reason": "length",
+                "completion_tokens": 8192,
+                "effective_max_output_tokens": 8192,
+                "usage": {"completion_tokens_details": {"reasoning_tokens": 5000}},
+            }
+        )
+        self.assertEqual(failure, "pro_reasoning_budget_exhaustion")
 
     def test_classifies_decisions_keep_mutate_discard(self):
         keep = classify_variant_decision(

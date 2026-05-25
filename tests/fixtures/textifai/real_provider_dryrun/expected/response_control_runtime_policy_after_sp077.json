@@ -1,0 +1,14 @@
+{
+  "response_control_requested": true,
+  "response_control_required_for_success": false,
+  "primary_runtime_truth_sources": [
+    "finish_reason",
+    "usage",
+    "parseability",
+    "raw_tail_shape",
+    "output_token_ratio"
+  ],
+  "response_control_role": "advisory_only",
+  "missing_response_control_policy": "allowed_but_logged",
+  "assessment": "pro_compact_reduction_improved_but_needs_review"
+}
