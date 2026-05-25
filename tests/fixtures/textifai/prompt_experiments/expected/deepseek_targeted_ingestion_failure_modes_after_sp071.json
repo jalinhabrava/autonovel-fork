@@ -1,0 +1,51 @@
+{
+  "assessment": "deepseek_ingestion_harness_no_clear_improvement",
+  "provider_family": "deepseek",
+  "taxonomy_source": "SP-071",
+  "observed_failure_mode_counts": {
+    "valid_json_low_objects": 4,
+    "invalid_json_unknown": 2,
+    "valid_json_low_relations": 1,
+    "valid_json_low_events": 1,
+    "valid_json_zero_unresolved": 1,
+    "provider_empty_response": 1,
+    "provider_error": 2
+  },
+  "observed_failure_modes": [
+    {
+      "code": "invalid_json_unknown",
+      "description": "Output was not parseable JSON, but exact cause is unknown from safe metadata.",
+      "count": 2
+    },
+    {
+      "code": "provider_empty_response",
+      "description": "Provider returned empty text or no usable content.",
+      "count": 1
+    },
+    {
+      "code": "provider_error",
+      "description": "Provider call failed before usable response payload.",
+      "count": 2
+    },
+    {
+      "code": "valid_json_low_events",
+      "description": "JSON parsed but event coverage stayed too low.",
+      "count": 1
+    },
+    {
+      "code": "valid_json_low_objects",
+      "description": "JSON parsed but object coverage stayed too low.",
+      "count": 4
+    },
+    {
+      "code": "valid_json_low_relations",
+      "description": "JSON parsed but relation coverage stayed too low.",
+      "count": 1
+    },
+    {
+      "code": "valid_json_zero_unresolved",
+      "description": "JSON parsed but unresolved important mentions collapsed to zero in ambiguous context.",
+      "count": 1
+    }
+  ]
+}

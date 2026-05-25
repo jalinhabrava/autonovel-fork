@@ -597,6 +597,45 @@ class RealProviderDryRunGuardsTests(unittest.TestCase):
         self.assertEqual(failure["assessment"], "prompt_experiment_observability_ready_for_chunking_preflight")
         self.assertEqual(decision["assessment"], "prompt_experiment_observability_ready_for_chunking_preflight")
 
+    def test_targeted_ingestion_reports_parse_and_use_valid_decision_enum(self):
+        summary = json.loads((FIXTURE_ROOT / "deepseek_targeted_ingestion_matrix_summary_after_sp071.json").read_text(encoding="utf-8"))
+        variants = json.loads((FIXTURE_ROOT / "deepseek_targeted_ingestion_matrix_variants_after_sp071.json").read_text(encoding="utf-8"))
+        ch002 = json.loads((FIXTURE_ROOT / "deepseek_targeted_ingestion_ch002_report_after_sp071.json").read_text(encoding="utf-8"))
+        ch003 = json.loads((FIXTURE_ROOT / "deepseek_targeted_ingestion_ch003_report_after_sp071.json").read_text(encoding="utf-8"))
+        decision = json.loads((FIXTURE_ROOT / "deepseek_targeted_ingestion_decision_after_sp071.json").read_text(encoding="utf-8"))
+        hyp = json.loads((FIXTURE_ROOT / "deepseek_targeted_ingestion_hypothesis_after_sp071.json").read_text(encoding="utf-8"))
+        targeted_diff = json.loads((Path("tests/fixtures/textifai/prompt_experiments/expected") / "deepseek_targeted_ingestion_variant_diff_after_sp071.json").read_text(encoding="utf-8"))
+        targeted_fail = json.loads((Path("tests/fixtures/textifai/prompt_experiments/expected") / "deepseek_targeted_ingestion_failure_modes_after_sp071.json").read_text(encoding="utf-8"))
+
+        valid_enum = {
+            "deepseek_ingestion_harness_improved",
+            "deepseek_ingestion_harness_improved_but_still_needs_review",
+            "deepseek_ingestion_harness_no_clear_improvement",
+            "deepseek_ingestion_experiment_blocked",
+        }
+
+        self.assertIn(summary["assessment"], valid_enum)
+        self.assertIn(decision["assessment"], valid_enum)
+        self.assertIn(decision["product_decision"], valid_enum)
+        self.assertEqual(variants["assessment"], summary["assessment"])
+        self.assertEqual(targeted_diff["assessment"], summary["assessment"])
+        self.assertEqual(targeted_fail["assessment"], summary["assessment"])
+        self.assertEqual(ch002["chapter_id"], "ch_002")
+        self.assertEqual(ch003["chapter_id"], "ch_003")
+        self.assertEqual(hyp["bottleneck_principal"]["chapter_id"], "ch_002")
+
+        text_blob = json.dumps(
+            [summary, variants, ch002, ch003, decision, hyp, targeted_diff, targeted_fail],
+            ensure_ascii=False,
+        )
+        self.assertNotIn("sk-", text_blob)
+        self.assertNotIn("provider_response_raw", text_blob)
+        self.assertNotIn("セラ", text_blob)
+        self.assertNotIn("王者の杖", text_blob)
+        self.assertNotIn("アデルマン", text_blob)
+        self.assertNotIn("ティセイア", text_blob)
+        self.assertNotIn("ベル", text_blob)
+
     def test_profiled_runtime_reports_record_safe_not_executed_state(self):
         summary = json.loads((FIXTURE_ROOT / "deepseek_ch002_profiled_runtime_summary_after_sp061.json").read_text(encoding="utf-8"))
         generic = json.loads((FIXTURE_ROOT / "deepseek_ch002_profiled_vs_generic_report.json").read_text(encoding="utf-8"))

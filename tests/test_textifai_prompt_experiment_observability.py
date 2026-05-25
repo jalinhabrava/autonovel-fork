@@ -108,6 +108,8 @@ class PromptExperimentObservabilityTests(unittest.TestCase):
             FIXTURE_ROOT / "deepseek_variant_diff_report_after_sp070.json",
             FIXTURE_ROOT / "deepseek_failure_mode_taxonomy_after_sp070.json",
             FIXTURE_ROOT / "deepseek_variant_decision_report_after_sp070.json",
+            FIXTURE_ROOT / "deepseek_targeted_ingestion_variant_diff_after_sp071.json",
+            FIXTURE_ROOT / "deepseek_targeted_ingestion_failure_modes_after_sp071.json",
         ]
         for path in files:
             data = json.loads(path.read_text(encoding="utf-8"))
@@ -129,6 +131,11 @@ class PromptExperimentObservabilityTests(unittest.TestCase):
         self.assertEqual(diff["variant_diffs"][0]["variant_id"], "family_variant_2_oer_focus")
         self.assertEqual(decision["packaged_flash_profile"], "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1")
         self.assertEqual(failure["failure_modes"][0]["code"], "invalid_json_markdown")
+
+        targeted_diff = json.loads((FIXTURE_ROOT / "deepseek_targeted_ingestion_variant_diff_after_sp071.json").read_text(encoding="utf-8"))
+        targeted_failures = json.loads((FIXTURE_ROOT / "deepseek_targeted_ingestion_failure_modes_after_sp071.json").read_text(encoding="utf-8"))
+        self.assertEqual(targeted_diff["assessment"], "deepseek_ingestion_harness_no_clear_improvement")
+        self.assertTrue(any(item["code"] in FAILURE_MODE_TAXONOMY for item in targeted_failures["observed_failure_modes"]))
 
 
 if __name__ == "__main__":

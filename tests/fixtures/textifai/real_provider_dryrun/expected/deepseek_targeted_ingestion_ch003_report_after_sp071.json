@@ -1,0 +1,360 @@
+{
+  "chapter_id": "ch_003",
+  "runs_total": 5,
+  "runs_valid": 3,
+  "runs_invalid_or_failed": 2,
+  "best_run": {
+    "model": "deepseek-v4-flash",
+    "chapter_id": "ch_003",
+    "variant_id": "targeted_variant_1_object_event_manifest",
+    "status": "completed",
+    "executed": true,
+    "parseable_json": true,
+    "validation_ok": true,
+    "chapter_id_ok": true,
+    "response_text_chars": 9073,
+    "counts": {
+      "characters": 2,
+      "places": 2,
+      "concepts": 1,
+      "objects": 3,
+      "events": 2,
+      "relations": 3,
+      "unresolved_mentions": 1
+    },
+    "missing_required_sections": [],
+    "event_importance_present": true,
+    "relation_category_present": true,
+    "score": 23.5,
+    "objects_events_relations_score": 13.5,
+    "unresolved_score": 1.0,
+    "zero_critical_sections_count": 0,
+    "json_reliability": 1.0,
+    "prompt_sha256": "6dda905f672bddffe6794d9d79e6850fe11e3851e654265cdc8832d793feb7c7",
+    "output_dir_reference": "/tmp/textifai_deepseek_targeted_ingestion_matrix/runs/deepseek-v4-flash/ch_003/targeted_variant_1_object_event_manifest/20260525T091300Z",
+    "failure_mode": null,
+    "decision_candidate": "mutate",
+    "variant_metadata": {
+      "parent_variant_id": "family_variant_2_oer_focus",
+      "hypothesis": "Manifest framing should recover objects/events while preserving JSON validity.",
+      "prompt_change_type": [
+        "json_reliability",
+        "density_boost",
+        "objects_events_relations_focus",
+        "unresolved_mentions_focus"
+      ],
+      "expected_effect": "Higher objects/events/relations on ch_002 without JSON regressions.",
+      "risk": "May overfit structural lists and still miss unresolved mentions.",
+      "chapter_focus": "ch_002_priority",
+      "overlay_chars": 700
+    },
+    "observability_entry": {
+      "experiment_id": "sp072-deepseek-v4-flash-ch_003-targeted_variant_1_object_event_manifest",
+      "provider_family": "deepseek",
+      "model": "deepseek-v4-flash",
+      "task": "bootstrap_chapter_extraction",
+      "chapter_id": "ch_003",
+      "variant_id": "targeted_variant_1_object_event_manifest",
+      "parent_variant_id": "family_variant_2_oer_focus",
+      "variant_goal": "ch_002_priority",
+      "hypothesis": "Manifest framing should recover objects/events while preserving JSON validity.",
+      "prompt_change_type": [
+        "json_reliability",
+        "density_boost",
+        "objects_events_relations_focus",
+        "unresolved_mentions_focus"
+      ],
+      "expected_effect": "Higher objects/events/relations on ch_002 without JSON regressions.",
+      "risk": "May overfit structural lists and still miss unresolved mentions.",
+      "result_summary": {
+        "parseable_json": true,
+        "validation_ok": true,
+        "score": 23.5,
+        "counts": {
+          "characters": 2,
+          "places": 2,
+          "concepts": 1,
+          "objects": 3,
+          "events": 2,
+          "relations": 3,
+          "unresolved_mentions": 1
+        },
+        "missing_required_sections": [],
+        "chapter_id_ok": true,
+        "response_text_chars": 9073,
+        "event_importance_present": true,
+        "relation_category_present": true,
+        "ambiguous_context": false
+      },
+      "failure_mode": null,
+      "decision": "mutate"
+    }
+  },
+  "ranked": [
+    {
+      "model": "deepseek-v4-flash",
+      "chapter_id": "ch_003",
+      "variant_id": "targeted_variant_1_object_event_manifest",
+      "status": "completed",
+      "executed": true,
+      "parseable_json": true,
+      "validation_ok": true,
+      "chapter_id_ok": true,
+      "response_text_chars": 9073,
+      "counts": {
+        "characters": 2,
+        "places": 2,
+        "concepts": 1,
+        "objects": 3,
+        "events": 2,
+        "relations": 3,
+        "unresolved_mentions": 1
+      },
+      "missing_required_sections": [],
+      "event_importance_present": true,
+      "relation_category_present": true,
+      "score": 23.5,
+      "objects_events_relations_score": 13.5,
+      "unresolved_score": 1.0,
+      "zero_critical_sections_count": 0,
+      "json_reliability": 1.0,
+      "prompt_sha256": "6dda905f672bddffe6794d9d79e6850fe11e3851e654265cdc8832d793feb7c7",
+      "output_dir_reference": "/tmp/textifai_deepseek_targeted_ingestion_matrix/runs/deepseek-v4-flash/ch_003/targeted_variant_1_object_event_manifest/20260525T091300Z",
+      "failure_mode": null,
+      "decision_candidate": "mutate",
+      "variant_metadata": {
+        "parent_variant_id": "family_variant_2_oer_focus",
+        "hypothesis": "Manifest framing should recover objects/events while preserving JSON validity.",
+        "prompt_change_type": [
+          "json_reliability",
+          "density_boost",
+          "objects_events_relations_focus",
+          "unresolved_mentions_focus"
+        ],
+        "expected_effect": "Higher objects/events/relations on ch_002 without JSON regressions.",
+        "risk": "May overfit structural lists and still miss unresolved mentions.",
+        "chapter_focus": "ch_002_priority",
+        "overlay_chars": 700
+      },
+      "observability_entry": {
+        "experiment_id": "sp072-deepseek-v4-flash-ch_003-targeted_variant_1_object_event_manifest",
+        "provider_family": "deepseek",
+        "model": "deepseek-v4-flash",
+        "task": "bootstrap_chapter_extraction",
+        "chapter_id": "ch_003",
+        "variant_id": "targeted_variant_1_object_event_manifest",
+        "parent_variant_id": "family_variant_2_oer_focus",
+        "variant_goal": "ch_002_priority",
+        "hypothesis": "Manifest framing should recover objects/events while preserving JSON validity.",
+        "prompt_change_type": [
+          "json_reliability",
+          "density_boost",
+          "objects_events_relations_focus",
+          "unresolved_mentions_focus"
+        ],
+        "expected_effect": "Higher objects/events/relations on ch_002 without JSON regressions.",
+        "risk": "May overfit structural lists and still miss unresolved mentions.",
+        "result_summary": {
+          "parseable_json": true,
+          "validation_ok": true,
+          "score": 23.5,
+          "counts": {
+            "characters": 2,
+            "places": 2,
+            "concepts": 1,
+            "objects": 3,
+            "events": 2,
+            "relations": 3,
+            "unresolved_mentions": 1
+          },
+          "missing_required_sections": [],
+          "chapter_id_ok": true,
+          "response_text_chars": 9073,
+          "event_importance_present": true,
+          "relation_category_present": true,
+          "ambiguous_context": false
+        },
+        "failure_mode": null,
+        "decision": "mutate"
+      }
+    },
+    {
+      "model": "deepseek-v4-flash",
+      "chapter_id": "ch_003",
+      "variant_id": "targeted_variant_5_json_shape_anchor",
+      "status": "completed",
+      "executed": true,
+      "parseable_json": true,
+      "validation_ok": true,
+      "chapter_id_ok": true,
+      "response_text_chars": 8101,
+      "counts": {
+        "characters": 2,
+        "places": 2,
+        "concepts": 2,
+        "objects": 2,
+        "events": 1,
+        "relations": 3,
+        "unresolved_mentions": 1
+      },
+      "missing_required_sections": [],
+      "event_importance_present": true,
+      "relation_category_present": true,
+      "score": 21.5,
+      "objects_events_relations_score": 10.5,
+      "unresolved_score": 1.0,
+      "zero_critical_sections_count": 0,
+      "json_reliability": 1.0,
+      "prompt_sha256": "6dda905f672bddffe6794d9d79e6850fe11e3851e654265cdc8832d793feb7c7",
+      "output_dir_reference": "/tmp/textifai_deepseek_targeted_ingestion_matrix/runs/deepseek-v4-flash/ch_003/targeted_variant_5_json_shape_anchor/20260525T091503Z",
+      "failure_mode": "valid_json_low_events",
+      "decision_candidate": "mutate",
+      "variant_metadata": {
+        "parent_variant_id": "family_variant_2_oer_focus",
+        "hypothesis": "Shape anchor improves JSON reliability under dense instructions.",
+        "prompt_change_type": [
+          "json_reliability",
+          "schema_skeleton",
+          "density_boost",
+          "objects_events_relations_focus"
+        ],
+        "expected_effect": "Higher parseability without losing OER-focused extraction.",
+        "risk": "Schema anchor may compress content if model over-prioritizes structure.",
+        "chapter_focus": "both",
+        "overlay_chars": 498
+      },
+      "observability_entry": {
+        "experiment_id": "sp072-deepseek-v4-flash-ch_003-targeted_variant_5_json_shape_anchor",
+        "provider_family": "deepseek",
+        "model": "deepseek-v4-flash",
+        "task": "bootstrap_chapter_extraction",
+        "chapter_id": "ch_003",
+        "variant_id": "targeted_variant_5_json_shape_anchor",
+        "parent_variant_id": "family_variant_2_oer_focus",
+        "variant_goal": "both",
+        "hypothesis": "Shape anchor improves JSON reliability under dense instructions.",
+        "prompt_change_type": [
+          "json_reliability",
+          "schema_skeleton",
+          "density_boost",
+          "objects_events_relations_focus"
+        ],
+        "expected_effect": "Higher parseability without losing OER-focused extraction.",
+        "risk": "Schema anchor may compress content if model over-prioritizes structure.",
+        "result_summary": {
+          "parseable_json": true,
+          "validation_ok": true,
+          "score": 21.5,
+          "counts": {
+            "characters": 2,
+            "places": 2,
+            "concepts": 2,
+            "objects": 2,
+            "events": 1,
+            "relations": 3,
+            "unresolved_mentions": 1
+          },
+          "missing_required_sections": [],
+          "chapter_id_ok": true,
+          "response_text_chars": 8101,
+          "event_importance_present": true,
+          "relation_category_present": true,
+          "ambiguous_context": false
+        },
+        "failure_mode": "valid_json_low_events",
+        "decision": "mutate"
+      }
+    },
+    {
+      "model": "deepseek-v4-flash",
+      "chapter_id": "ch_003",
+      "variant_id": "targeted_variant_2_no_zero_sections",
+      "status": "completed",
+      "executed": true,
+      "parseable_json": true,
+      "validation_ok": true,
+      "chapter_id_ok": true,
+      "response_text_chars": 5813,
+      "counts": {
+        "characters": 2,
+        "places": 0,
+        "concepts": 0,
+        "objects": 2,
+        "events": 2,
+        "relations": 1,
+        "unresolved_mentions": 1
+      },
+      "missing_required_sections": [],
+      "event_importance_present": true,
+      "relation_category_present": true,
+      "score": 15.0,
+      "objects_events_relations_score": 8.0,
+      "unresolved_score": 1.0,
+      "zero_critical_sections_count": 0,
+      "json_reliability": 1.0,
+      "prompt_sha256": "6dda905f672bddffe6794d9d79e6850fe11e3851e654265cdc8832d793feb7c7",
+      "output_dir_reference": "/tmp/textifai_deepseek_targeted_ingestion_matrix/runs/deepseek-v4-flash/ch_003/targeted_variant_2_no_zero_sections/20260525T091410Z",
+      "failure_mode": "valid_json_low_relations",
+      "decision_candidate": "mutate",
+      "variant_metadata": {
+        "parent_variant_id": "family_variant_1_broad_recall",
+        "hypothesis": "Internal zero-section check should reduce thin outputs and empty critical sections.",
+        "prompt_change_type": [
+          "json_reliability",
+          "section_completion",
+          "internal_check",
+          "density_boost"
+        ],
+        "expected_effect": "Fewer zero critical sections with valid JSON.",
+        "risk": "Checklist pressure may reintroduce invalid-json behavior.",
+        "chapter_focus": "both",
+        "overlay_chars": 542
+      },
+      "observability_entry": {
+        "experiment_id": "sp072-deepseek-v4-flash-ch_003-targeted_variant_2_no_zero_sections",
+        "provider_family": "deepseek",
+        "model": "deepseek-v4-flash",
+        "task": "bootstrap_chapter_extraction",
+        "chapter_id": "ch_003",
+        "variant_id": "targeted_variant_2_no_zero_sections",
+        "parent_variant_id": "family_variant_1_broad_recall",
+        "variant_goal": "both",
+        "hypothesis": "Internal zero-section check should reduce thin outputs and empty critical sections.",
+        "prompt_change_type": [
+          "json_reliability",
+          "section_completion",
+          "internal_check",
+          "density_boost"
+        ],
+        "expected_effect": "Fewer zero critical sections with valid JSON.",
+        "risk": "Checklist pressure may reintroduce invalid-json behavior.",
+        "result_summary": {
+          "parseable_json": true,
+          "validation_ok": true,
+          "score": 15.0,
+          "counts": {
+            "characters": 2,
+            "places": 0,
+            "concepts": 0,
+            "objects": 2,
+            "events": 2,
+            "relations": 1,
+            "unresolved_mentions": 1
+          },
+          "missing_required_sections": [],
+          "chapter_id_ok": true,
+          "response_text_chars": 5813,
+          "event_importance_present": true,
+          "relation_category_present": true,
+          "ambiguous_context": false
+        },
+        "failure_mode": "valid_json_low_relations",
+        "decision": "mutate"
+      }
+    }
+  ],
+  "failure_mode_counts": {
+    "provider_empty_response": 1,
+    "provider_error": 1
+  }
+}

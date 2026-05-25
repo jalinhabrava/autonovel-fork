@@ -1,0 +1,117 @@
+{
+  "assessment": "deepseek_ingestion_harness_no_clear_improvement",
+  "provider_family": "deepseek",
+  "variant_diff": [
+    {
+      "variant_id": "targeted_variant_1_object_event_manifest",
+      "parent_variant": "family_variant_2_oer_focus",
+      "hypothesis": "Manifest framing recovers objects/events/relations under JSON-first constraints.",
+      "prompt_change_type": [
+        "json_reliability",
+        "density_boost",
+        "objects_events_relations_focus",
+        "unresolved_mentions_focus"
+      ],
+      "observed_result": {
+        "best_model": "deepseek-v4-pro",
+        "best_chapter": "ch_002",
+        "best_score": 23.5,
+        "note": "Improved objects/events over some flash runs but below SP-069 ch_002 benchmark 26.5."
+      },
+      "failure_mode_pattern": [
+        "valid_json_low_objects",
+        "valid_json_zero_unresolved"
+      ],
+      "decision": "mutate"
+    },
+    {
+      "variant_id": "targeted_variant_2_no_zero_sections",
+      "parent_variant": "family_variant_1_broad_recall",
+      "hypothesis": "Internal zero-check reduces thin outputs and empty critical sections.",
+      "prompt_change_type": [
+        "json_reliability",
+        "section_completion",
+        "internal_check",
+        "density_boost"
+      ],
+      "observed_result": {
+        "best_model": "deepseek-v4-flash",
+        "best_chapter": "ch_002",
+        "best_score": 18.5,
+        "note": "Did not recover objects/relations enough; underperformed."
+      },
+      "failure_mode_pattern": [
+        "valid_json_low_objects",
+        "valid_json_low_relations"
+      ],
+      "decision": "discard"
+    },
+    {
+      "variant_id": "targeted_variant_3_ch002_gap_recovery",
+      "parent_variant": "family_variant_4_ch002_gap_attack",
+      "hypothesis": "Gap-specific framing recovers catalyst/object/authority/magic-state extraction on ch_002.",
+      "prompt_change_type": [
+        "json_reliability",
+        "objects_events_relations_focus",
+        "unresolved_mentions_focus",
+        "density_boost"
+      ],
+      "observed_result": {
+        "best_model": "none",
+        "best_chapter": "ch_002",
+        "best_score": 0.0,
+        "note": "Produced invalid JSON in flash; pro run stalled and was cancelled."
+      },
+      "failure_mode_pattern": [
+        "invalid_json_unknown",
+        "provider_error"
+      ],
+      "decision": "needs_repeat"
+    },
+    {
+      "variant_id": "targeted_variant_4_pro_balanced_dense",
+      "parent_variant": "family_variant_3_balanced_kb",
+      "hypothesis": "Pro may perform better with direct balanced-dense phrasing.",
+      "prompt_change_type": [
+        "json_reliability",
+        "balanced_knowledge_base",
+        "density_boost",
+        "objects_events_relations_focus"
+      ],
+      "observed_result": {
+        "best_model": "deepseek-v4-pro",
+        "best_chapter": "ch_002",
+        "best_score": 21.0,
+        "note": "Valid on ch_002 but weak objects/unresolved and invalid empty response on ch_003."
+      },
+      "failure_mode_pattern": [
+        "valid_json_low_objects",
+        "provider_empty_response"
+      ],
+      "decision": "mutate"
+    },
+    {
+      "variant_id": "targeted_variant_5_json_shape_anchor",
+      "parent_variant": "family_variant_2_oer_focus",
+      "hypothesis": "Shape anchor can improve reliability under density pressure.",
+      "prompt_change_type": [
+        "json_reliability",
+        "schema_skeleton",
+        "density_boost",
+        "objects_events_relations_focus"
+      ],
+      "observed_result": {
+        "best_model": "deepseek-v4-flash",
+        "best_chapter": "ch_003",
+        "best_score": 21.5,
+        "note": "Helped some valid outputs but not enough to beat SP-069 profile evidence."
+      },
+      "failure_mode_pattern": [
+        "invalid_json_unknown",
+        "valid_json_low_events",
+        "valid_json_low_objects"
+      ],
+      "decision": "mutate"
+    }
+  ]
+}

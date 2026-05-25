@@ -1,0 +1,144 @@
+{
+  "matrix_id": "deepseek_targeted_ingestion_matrix_after_sp071",
+  "assessment": "deepseek_ingestion_harness_no_clear_improvement",
+  "provider": "deepseek",
+  "models_planned": [
+    "deepseek-v4-flash",
+    "deepseek-v4-pro"
+  ],
+  "models_tested": [
+    "deepseek-v4-flash",
+    "deepseek-v4-pro"
+  ],
+  "chapters_tested": [
+    "ch_002",
+    "ch_003"
+  ],
+  "planned_provider_calls": 14,
+  "provider_calls_executed": 13,
+  "provider_calls_completed": 11,
+  "provider_calls_incomplete": 2,
+  "max_provider_calls_cap": 16,
+  "best_model_variant": {
+    "model": "deepseek-v4-flash",
+    "chapter_id": "ch_003",
+    "variant_id": "targeted_variant_1_object_event_manifest",
+    "status": "completed",
+    "executed": true,
+    "parseable_json": true,
+    "validation_ok": true,
+    "chapter_id_ok": true,
+    "response_text_chars": 9073,
+    "counts": {
+      "characters": 2,
+      "places": 2,
+      "concepts": 1,
+      "objects": 3,
+      "events": 2,
+      "relations": 3,
+      "unresolved_mentions": 1
+    },
+    "missing_required_sections": [],
+    "event_importance_present": true,
+    "relation_category_present": true,
+    "score": 23.5,
+    "objects_events_relations_score": 13.5,
+    "unresolved_score": 1.0,
+    "zero_critical_sections_count": 0,
+    "json_reliability": 1.0,
+    "prompt_sha256": "6dda905f672bddffe6794d9d79e6850fe11e3851e654265cdc8832d793feb7c7",
+    "output_dir_reference": "/tmp/textifai_deepseek_targeted_ingestion_matrix/runs/deepseek-v4-flash/ch_003/targeted_variant_1_object_event_manifest/20260525T091300Z",
+    "failure_mode": null,
+    "decision_candidate": "mutate",
+    "variant_metadata": {
+      "parent_variant_id": "family_variant_2_oer_focus",
+      "hypothesis": "Manifest framing should recover objects/events while preserving JSON validity.",
+      "prompt_change_type": [
+        "json_reliability",
+        "density_boost",
+        "objects_events_relations_focus",
+        "unresolved_mentions_focus"
+      ],
+      "expected_effect": "Higher objects/events/relations on ch_002 without JSON regressions.",
+      "risk": "May overfit structural lists and still miss unresolved mentions.",
+      "chapter_focus": "ch_002_priority",
+      "overlay_chars": 700
+    },
+    "observability_entry": {
+      "experiment_id": "sp072-deepseek-v4-flash-ch_003-targeted_variant_1_object_event_manifest",
+      "provider_family": "deepseek",
+      "model": "deepseek-v4-flash",
+      "task": "bootstrap_chapter_extraction",
+      "chapter_id": "ch_003",
+      "variant_id": "targeted_variant_1_object_event_manifest",
+      "parent_variant_id": "family_variant_2_oer_focus",
+      "variant_goal": "ch_002_priority",
+      "hypothesis": "Manifest framing should recover objects/events while preserving JSON validity.",
+      "prompt_change_type": [
+        "json_reliability",
+        "density_boost",
+        "objects_events_relations_focus",
+        "unresolved_mentions_focus"
+      ],
+      "expected_effect": "Higher objects/events/relations on ch_002 without JSON regressions.",
+      "risk": "May overfit structural lists and still miss unresolved mentions.",
+      "result_summary": {
+        "parseable_json": true,
+        "validation_ok": true,
+        "score": 23.5,
+        "counts": {
+          "characters": 2,
+          "places": 2,
+          "concepts": 1,
+          "objects": 3,
+          "events": 2,
+          "relations": 3,
+          "unresolved_mentions": 1
+        },
+        "missing_required_sections": [],
+        "chapter_id_ok": true,
+        "response_text_chars": 9073,
+        "event_importance_present": true,
+        "relation_category_present": true,
+        "ambiguous_context": false
+      },
+      "failure_mode": null,
+      "decision": "mutate"
+    }
+  },
+  "json_reliability_by_model": [
+    {
+      "model": "deepseek-v4-flash",
+      "runs": 7,
+      "valid_runs": 5,
+      "valid_rate": 0.714
+    },
+    {
+      "model": "deepseek-v4-pro",
+      "runs": 6,
+      "valid_runs": 3,
+      "valid_rate": 0.5
+    }
+  ],
+  "failure_mode_counts": {
+    "valid_json_low_objects": 4,
+    "invalid_json_unknown": 2,
+    "valid_json_low_relations": 1,
+    "valid_json_low_events": 1,
+    "valid_json_zero_unresolved": 1,
+    "provider_empty_response": 1,
+    "provider_error": 2
+  },
+  "comparison_vs_sp069": {
+    "sp069_best_ch002_score": 26.5,
+    "sp069_best_ch003_score": 25.0,
+    "sp072_best_ch002_score": 23.5,
+    "sp072_best_ch003_score": 23.5,
+    "improved_ch002": false,
+    "improved_ch003": false
+  },
+  "profile_update_recommendation": {
+    "update_packaged_profiles": false,
+    "reason": "No targeted variant exceeded SP-069 packaged profile evidence on ch_002 or ch_003."
+  }
+}

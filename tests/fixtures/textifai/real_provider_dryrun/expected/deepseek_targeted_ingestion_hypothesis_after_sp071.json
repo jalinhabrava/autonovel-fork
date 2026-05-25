@@ -1,0 +1,95 @@
+{
+  "assessment": "prompt_experiment_observability_ready_for_chunking_preflight",
+  "source_safepoints": [
+    "SP-067",
+    "SP-068",
+    "SP-069",
+    "SP-070",
+    "SP-071"
+  ],
+  "bottleneck_principal": {
+    "chapter_id": "ch_002",
+    "issues": [
+      "objects coverage unstable",
+      "events coverage often low",
+      "unresolved_mentions frequently zero",
+      "json validity can regress under aggressive instruction stacking"
+    ]
+  },
+  "variantes_previas_utiles": [
+    {
+      "variant_id": "family_variant_2_oer_focus",
+      "evidence": "best ch_002 in SP-069 with Flash score 26.5",
+      "status": "packaged_flash_v1"
+    },
+    {
+      "variant_id": "family_variant_3_balanced_kb",
+      "evidence": "best ch_003 in SP-069 with Pro score 25.0",
+      "status": "packaged_pro_v1"
+    },
+    {
+      "variant_id": "variant_g_combined_best",
+      "evidence": "useful signal but unstable cross-chapter",
+      "status": "keep_for_mutation"
+    },
+    {
+      "variant_id": "variant_l_balanced_final_candidate",
+      "evidence": "good parent language but thin on bottleneck runs",
+      "status": "keep_for_mutation"
+    }
+  ],
+  "variantes_previas_descartadas_o_superseded": [
+    {
+      "variant_id": "variant_03_dense_explicit",
+      "reason": "superseded by family_variant_2 packaging"
+    },
+    {
+      "variant_id": "aggressive_long_checklist_overlays",
+      "reason": "associated with json regressions in prior profiled attempts"
+    }
+  ],
+  "failure_modes_relevantes": [
+    "invalid_json_extra_text",
+    "invalid_json_unknown",
+    "valid_json_low_objects",
+    "valid_json_low_events",
+    "valid_json_low_relations",
+    "valid_json_zero_unresolved",
+    "valid_json_thin"
+  ],
+  "hipotesis_nuevas": [
+    "Object/event manifest framing can reduce object/event drop on ch_002 while keeping JSON valid.",
+    "No-zero critical sections internal check can reduce thin outputs without requiring full schema restatement.",
+    "ch_002 gap-focused authority/catalyst/magic-state framing can recover missing structural extractions.",
+    "Pro may need balanced-dense wording with lower checklist pressure than Flash.",
+    "JSON shape anchor can improve reliability when density instructions are heavy."
+  ],
+  "que_no_repetir": [
+    "No rerun of previous matrix variant sets unchanged.",
+    "No blind expansion of long checklist overlays that previously correlated with invalid JSON.",
+    "No provider/model routing policy experiment in this phase."
+  ],
+  "gaps_a_atacar": [
+    "objects",
+    "events",
+    "unresolved_mentions",
+    "json reliability under density pressure",
+    "cross-chapter stability"
+  ],
+  "targeted_plan": {
+    "models": [
+      "deepseek-v4-flash",
+      "deepseek-v4-pro"
+    ],
+    "chapters": [
+      "ch_002",
+      "ch_003"
+    ],
+    "focus_weight": {
+      "ch_002": "high",
+      "ch_003": "sanity_generalization"
+    },
+    "max_provider_calls": 16,
+    "recommended_calls": 14
+  }
+}
