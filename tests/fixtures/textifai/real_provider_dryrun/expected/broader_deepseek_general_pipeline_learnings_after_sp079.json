@@ -1,0 +1,49 @@
+{
+  "assessment": "natural_chunking_good_but_needs_threshold_tuning",
+  "general_pipeline_learnings": {
+    "structured_chunking_behavior": "planner preserved source_id/chapter_id/chunk_id/char ranges; selected natural chapters stayed single-chunk",
+    "source_span_preservation": "chunk reports include source spans and privacy-safe char ranges only",
+    "source_ref_item_level_carry_forward": {
+      "coverage_ratio": 0.8125,
+      "parseable_reduction_runs": 16,
+      "missing_source_ref_runs": 3
+    },
+    "partial_extraction_behavior": "provider-free run matrix captured parseability, failure mode, usage, finish_reason per chunk",
+    "reduction_aggregation_behavior": {
+      "valid_reduction_count": 16,
+      "total_reduction_count": 16
+    },
+    "continuation_patch_recovery_behavior": {
+      "triggered_continuation_count": 10,
+      "continuation_problem_count": 1
+    },
+    "dynamic_output_budget_abstraction": "effective_max_output_tokens and decision source recorded per provider call",
+    "usage_finish_reason_capture": "provider telemetry captured as general adapter contract",
+    "private_decision_packet_pattern": "/tmp/textifai_private_provider_runs/sp080_broader_deepseek_natural_chunking/20260525T145328Z",
+    "long_run_handling": "progress_log.jsonl records run index, duration, output size, failure mode",
+    "threshold_sensitivity": "natural budgets did not split selected chapters; calibration report records sensitivity fields without changing defaults"
+  },
+  "what_should_be_abstracted": [
+    "chunk metadata and source spans",
+    "item-level source_refs",
+    "budget resolver contract",
+    "usage/finish_reason telemetry",
+    "truncation classifier",
+    "patch continuation merge rules",
+    "private decision packet layout",
+    "long-run progress logging",
+    "natural chunking threshold calibration"
+  ],
+  "what_still_needs_provider_adapter_hooks": [
+    "provider max output token names",
+    "provider finish_reason variants",
+    "optional reasoning token telemetry",
+    "provider-specific response_format controls"
+  ],
+  "provider_adapter_implications": [
+    "adapters should expose usage/finish_reason without leaking secrets",
+    "adapters should not own core chunking/reduction semantics",
+    "provider profiles should tune wording and caps only"
+  ],
+  "private_packet_root": "/tmp/textifai_private_provider_runs/sp080_broader_deepseek_natural_chunking/20260525T145328Z"
+}

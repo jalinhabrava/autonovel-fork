@@ -1,0 +1,964 @@
+{
+  "assessment": "natural_chunking_good_but_needs_threshold_tuning",
+  "chunks": [
+    {
+      "run_id": "ch_001__deepseek_v4_flash",
+      "model": "deepseek-v4-flash",
+      "profile_id": "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+      "chapter_id": "ch_001",
+      "mode": "chapter_partial_extraction",
+      "chunk_id": "source_f1e650917c_ch_001_chunk_001",
+      "parseable_json": true,
+      "validation_ok": true,
+      "failure_mode": null,
+      "counts": {
+        "characters": 6,
+        "places": 6,
+        "concepts": 5,
+        "objects": 2,
+        "events": 5,
+        "relations": 5,
+        "unresolved_mentions": 3
+      },
+      "score": 44.5,
+      "thin_warnings": [
+        "model_profile_experimental"
+      ],
+      "source_span": {
+        "source_id": "source_f1e650917c",
+        "chapter_id": "ch_001",
+        "char_start": 0,
+        "char_end": 2307
+      },
+      "section_id": "ch_001:section_001",
+      "char_start": 0,
+      "char_end": 2307,
+      "predecessor_chunk_id": null,
+      "successor_chunk_id": null,
+      "finish_reason": "stop",
+      "usage": {
+        "prompt_tokens": 4566,
+        "completion_tokens": 3598,
+        "total_tokens": 8164,
+        "prompt_tokens_details": {
+          "cached_tokens": 4480
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 1136
+        },
+        "prompt_cache_hit_tokens": 4480,
+        "prompt_cache_miss_tokens": 86
+      },
+      "effective_max_output_tokens": 8192,
+      "response_control": {
+        "present": false,
+        "completion_status": "unknown",
+        "continuation_required": null,
+        "continuation_cursor": null,
+        "omitted_sections": []
+      },
+      "private_dir": "/tmp/textifai_private_provider_runs/sp080_broader_deepseek_natural_chunking/20260525T145328Z/ch_001__deepseek_v4_flash/source_f1e650917c_ch_001_chunk_001"
+    },
+    {
+      "run_id": "ch_001__deepseek_v4_pro",
+      "model": "deepseek-v4-pro",
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "chapter_id": "ch_001",
+      "mode": "chapter_partial_extraction_continuation",
+      "chunk_id": "source_f1e650917c_ch_001_chunk_001__continuation",
+      "parseable_json": true,
+      "validation_ok": false,
+      "failure_mode": "valid_json_wrong_chapter",
+      "counts": {
+        "characters": 0,
+        "places": 0,
+        "concepts": 0,
+        "objects": 0,
+        "events": 0,
+        "relations": 0,
+        "unresolved_mentions": 0
+      },
+      "score": -8.0,
+      "thin_warnings": [
+        "low_density_score",
+        "low_objects_count",
+        "low_events_count",
+        "low_relations_count",
+        "zero_unresolved_mentions_in_ambiguous_context",
+        "valid_json_but_thin",
+        "model_profile_experimental"
+      ],
+      "source_span": null,
+      "section_id": null,
+      "char_start": null,
+      "char_end": null,
+      "predecessor_chunk_id": null,
+      "successor_chunk_id": null,
+      "finish_reason": "stop",
+      "usage": {
+        "prompt_tokens": 2584,
+        "completion_tokens": 5171,
+        "total_tokens": 7755,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 4942
+        },
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 2584
+      },
+      "effective_max_output_tokens": 8192,
+      "response_control": {
+        "present": true,
+        "completion_status": "complete",
+        "continuation_required": false,
+        "continuation_cursor": null,
+        "omitted_sections": []
+      },
+      "continuation_status": "executed_replaced_primary",
+      "continuation_triggers": [
+        "pro_reasoning_budget_exhaustion"
+      ],
+      "continuation_private_dir": "/tmp/textifai_private_provider_runs/sp080_broader_deepseek_natural_chunking/20260525T145328Z/ch_001__deepseek_v4_pro/source_f1e650917c_ch_001_chunk_001__continuation",
+      "private_dir": "/tmp/textifai_private_provider_runs/sp080_broader_deepseek_natural_chunking/20260525T145328Z/ch_001__deepseek_v4_pro/source_f1e650917c_ch_001_chunk_001__continuation"
+    },
+    {
+      "run_id": "ch_002__deepseek_v4_flash",
+      "model": "deepseek-v4-flash",
+      "profile_id": "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+      "chapter_id": "ch_002",
+      "mode": "chapter_partial_extraction",
+      "chunk_id": "source_f1e650917c_ch_002_chunk_001",
+      "parseable_json": true,
+      "validation_ok": true,
+      "failure_mode": null,
+      "counts": {
+        "characters": 7,
+        "places": 4,
+        "concepts": 5,
+        "objects": 5,
+        "events": 5,
+        "relations": 5,
+        "unresolved_mentions": 2
+      },
+      "score": 47.0,
+      "thin_warnings": [
+        "model_profile_experimental"
+      ],
+      "source_span": {
+        "source_id": "source_f1e650917c",
+        "chapter_id": "ch_002",
+        "char_start": 2309,
+        "char_end": 5013
+      },
+      "section_id": "ch_002:01",
+      "char_start": 2309,
+      "char_end": 5013,
+      "predecessor_chunk_id": null,
+      "successor_chunk_id": null,
+      "finish_reason": "stop",
+      "usage": {
+        "prompt_tokens": 5260,
+        "completion_tokens": 3928,
+        "total_tokens": 9188,
+        "prompt_tokens_details": {
+          "cached_tokens": 5248
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 678
+        },
+        "prompt_cache_hit_tokens": 5248,
+        "prompt_cache_miss_tokens": 12
+      },
+      "effective_max_output_tokens": 8192,
+      "response_control": {
+        "present": false,
+        "completion_status": "unknown",
+        "continuation_required": null,
+        "continuation_cursor": null,
+        "omitted_sections": []
+      },
+      "private_dir": "/tmp/textifai_private_provider_runs/sp080_broader_deepseek_natural_chunking/20260525T145328Z/ch_002__deepseek_v4_flash/source_f1e650917c_ch_002_chunk_001"
+    },
+    {
+      "run_id": "ch_002__deepseek_v4_pro",
+      "model": "deepseek-v4-pro",
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "chapter_id": "ch_002",
+      "mode": "chapter_partial_extraction",
+      "chunk_id": "source_f1e650917c_ch_002_chunk_001",
+      "parseable_json": true,
+      "validation_ok": true,
+      "failure_mode": null,
+      "counts": {
+        "characters": 6,
+        "places": 5,
+        "concepts": 6,
+        "objects": 8,
+        "events": 5,
+        "relations": 6,
+        "unresolved_mentions": 2
+      },
+      "score": 54.5,
+      "thin_warnings": [
+        "model_profile_experimental"
+      ],
+      "source_span": {
+        "source_id": "source_f1e650917c",
+        "chapter_id": "ch_002",
+        "char_start": 2309,
+        "char_end": 5013
+      },
+      "section_id": "ch_002:01",
+      "char_start": 2309,
+      "char_end": 5013,
+      "predecessor_chunk_id": null,
+      "successor_chunk_id": null,
+      "finish_reason": "stop",
+      "usage": {
+        "prompt_tokens": 5261,
+        "completion_tokens": 4898,
+        "total_tokens": 10159,
+        "prompt_tokens_details": {
+          "cached_tokens": 5248
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 857
+        },
+        "prompt_cache_hit_tokens": 5248,
+        "prompt_cache_miss_tokens": 13
+      },
+      "effective_max_output_tokens": 8192,
+      "response_control": {
+        "present": false,
+        "completion_status": "unknown",
+        "continuation_required": null,
+        "continuation_cursor": null,
+        "omitted_sections": []
+      },
+      "private_dir": "/tmp/textifai_private_provider_runs/sp080_broader_deepseek_natural_chunking/20260525T145328Z/ch_002__deepseek_v4_pro/source_f1e650917c_ch_002_chunk_001"
+    },
+    {
+      "run_id": "ch_003__deepseek_v4_flash",
+      "model": "deepseek-v4-flash",
+      "profile_id": "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+      "chapter_id": "ch_003",
+      "mode": "chapter_partial_extraction",
+      "chunk_id": "source_f1e650917c_ch_003_chunk_001",
+      "parseable_json": true,
+      "validation_ok": true,
+      "failure_mode": null,
+      "counts": {
+        "characters": 2,
+        "places": 4,
+        "concepts": 6,
+        "objects": 4,
+        "events": 7,
+        "relations": 6,
+        "unresolved_mentions": 4
+      },
+      "score": 48.5,
+      "thin_warnings": [
+        "model_profile_experimental"
+      ],
+      "source_span": {
+        "source_id": "source_f1e650917c",
+        "chapter_id": "ch_003",
+        "char_start": 5015,
+        "char_end": 7290
+      },
+      "section_id": "ch_003:02",
+      "char_start": 5015,
+      "char_end": 7290,
+      "predecessor_chunk_id": null,
+      "successor_chunk_id": null,
+      "finish_reason": "stop",
+      "usage": {
+        "prompt_tokens": 4580,
+        "completion_tokens": 3202,
+        "total_tokens": 7782,
+        "prompt_tokens_details": {
+          "cached_tokens": 4480
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 498
+        },
+        "prompt_cache_hit_tokens": 4480,
+        "prompt_cache_miss_tokens": 100
+      },
+      "effective_max_output_tokens": 8192,
+      "response_control": {
+        "present": false,
+        "completion_status": "unknown",
+        "continuation_required": null,
+        "continuation_cursor": null,
+        "omitted_sections": []
+      },
+      "private_dir": "/tmp/textifai_private_provider_runs/sp080_broader_deepseek_natural_chunking/20260525T145328Z/ch_003__deepseek_v4_flash/source_f1e650917c_ch_003_chunk_001"
+    },
+    {
+      "run_id": "ch_003__deepseek_v4_pro",
+      "model": "deepseek-v4-pro",
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "chapter_id": "ch_003",
+      "mode": "chapter_partial_extraction",
+      "chunk_id": "source_f1e650917c_ch_003_chunk_001",
+      "parseable_json": true,
+      "validation_ok": true,
+      "failure_mode": null,
+      "counts": {
+        "characters": 2,
+        "places": 3,
+        "concepts": 5,
+        "objects": 2,
+        "events": 2,
+        "relations": 2,
+        "unresolved_mentions": 1
+      },
+      "score": 25.0,
+      "thin_warnings": [
+        "low_relations_count",
+        "model_profile_experimental"
+      ],
+      "source_span": {
+        "source_id": "source_f1e650917c",
+        "chapter_id": "ch_003",
+        "char_start": 5015,
+        "char_end": 7290
+      },
+      "section_id": "ch_003:02",
+      "char_start": 5015,
+      "char_end": 7290,
+      "predecessor_chunk_id": null,
+      "successor_chunk_id": null,
+      "finish_reason": "stop",
+      "usage": {
+        "prompt_tokens": 4581,
+        "completion_tokens": 4834,
+        "total_tokens": 9415,
+        "prompt_tokens_details": {
+          "cached_tokens": 4480
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 2964
+        },
+        "prompt_cache_hit_tokens": 4480,
+        "prompt_cache_miss_tokens": 101
+      },
+      "effective_max_output_tokens": 8192,
+      "response_control": {
+        "present": false,
+        "completion_status": "unknown",
+        "continuation_required": null,
+        "continuation_cursor": null,
+        "omitted_sections": []
+      },
+      "private_dir": "/tmp/textifai_private_provider_runs/sp080_broader_deepseek_natural_chunking/20260525T145328Z/ch_003__deepseek_v4_pro/source_f1e650917c_ch_003_chunk_001"
+    },
+    {
+      "run_id": "ch_005__deepseek_v4_flash",
+      "model": "deepseek-v4-flash",
+      "profile_id": "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+      "chapter_id": "ch_005",
+      "mode": "chapter_partial_extraction",
+      "chunk_id": "source_f1e650917c_ch_005_chunk_001",
+      "parseable_json": true,
+      "validation_ok": true,
+      "failure_mode": null,
+      "counts": {
+        "characters": 5,
+        "places": 4,
+        "concepts": 3,
+        "objects": 2,
+        "events": 5,
+        "relations": 4,
+        "unresolved_mentions": 3
+      },
+      "score": 37.5,
+      "thin_warnings": [
+        "model_profile_experimental"
+      ],
+      "source_span": {
+        "source_id": "source_f1e650917c",
+        "chapter_id": "ch_005",
+        "char_start": 8695,
+        "char_end": 10367
+      },
+      "section_id": "ch_005:04",
+      "char_start": 8695,
+      "char_end": 10367,
+      "predecessor_chunk_id": null,
+      "successor_chunk_id": null,
+      "finish_reason": "stop",
+      "usage": {
+        "prompt_tokens": 3666,
+        "completion_tokens": 3837,
+        "total_tokens": 7503,
+        "prompt_tokens_details": {
+          "cached_tokens": 768
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 1825
+        },
+        "prompt_cache_hit_tokens": 768,
+        "prompt_cache_miss_tokens": 2898
+      },
+      "effective_max_output_tokens": 8192,
+      "response_control": {
+        "present": false,
+        "completion_status": "unknown",
+        "continuation_required": null,
+        "continuation_cursor": null,
+        "omitted_sections": []
+      },
+      "private_dir": "/tmp/textifai_private_provider_runs/sp080_broader_deepseek_natural_chunking/20260525T145328Z/ch_005__deepseek_v4_flash/source_f1e650917c_ch_005_chunk_001"
+    },
+    {
+      "run_id": "ch_005__deepseek_v4_pro",
+      "model": "deepseek-v4-pro",
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "chapter_id": "ch_005",
+      "mode": "chapter_partial_extraction",
+      "chunk_id": "source_f1e650917c_ch_005_chunk_001",
+      "parseable_json": true,
+      "validation_ok": true,
+      "failure_mode": null,
+      "counts": {
+        "characters": 5,
+        "places": 4,
+        "concepts": 3,
+        "objects": 1,
+        "events": 3,
+        "relations": 4,
+        "unresolved_mentions": 2
+      },
+      "score": 32.0,
+      "thin_warnings": [
+        "low_objects_count",
+        "model_profile_experimental"
+      ],
+      "source_span": {
+        "source_id": "source_f1e650917c",
+        "chapter_id": "ch_005",
+        "char_start": 8695,
+        "char_end": 10367
+      },
+      "section_id": "ch_005:04",
+      "char_start": 8695,
+      "char_end": 10367,
+      "predecessor_chunk_id": null,
+      "successor_chunk_id": null,
+      "finish_reason": "stop",
+      "usage": {
+        "prompt_tokens": 3667,
+        "completion_tokens": 3578,
+        "total_tokens": 7245,
+        "prompt_tokens_details": {
+          "cached_tokens": 768
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 1706
+        },
+        "prompt_cache_hit_tokens": 768,
+        "prompt_cache_miss_tokens": 2899
+      },
+      "effective_max_output_tokens": 8192,
+      "response_control": {
+        "present": false,
+        "completion_status": "unknown",
+        "continuation_required": null,
+        "continuation_cursor": null,
+        "omitted_sections": []
+      },
+      "private_dir": "/tmp/textifai_private_provider_runs/sp080_broader_deepseek_natural_chunking/20260525T145328Z/ch_005__deepseek_v4_pro/source_f1e650917c_ch_005_chunk_001"
+    },
+    {
+      "run_id": "ch_097__deepseek_v4_flash",
+      "model": "deepseek-v4-flash",
+      "profile_id": "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+      "chapter_id": "ch_097",
+      "mode": "chapter_partial_extraction",
+      "chunk_id": "source_f1e650917c_ch_097_chunk_001",
+      "parseable_json": true,
+      "validation_ok": true,
+      "failure_mode": null,
+      "counts": {
+        "characters": 13,
+        "places": 6,
+        "concepts": 4,
+        "objects": 4,
+        "events": 9,
+        "relations": 7,
+        "unresolved_mentions": 3
+      },
+      "score": 63.5,
+      "thin_warnings": [
+        "model_profile_experimental"
+      ],
+      "source_span": {
+        "source_id": "source_f1e650917c",
+        "chapter_id": "ch_097",
+        "char_start": 238129,
+        "char_end": 249335
+      },
+      "section_id": "ch_097:89",
+      "char_start": 238129,
+      "char_end": 249335,
+      "predecessor_chunk_id": null,
+      "successor_chunk_id": null,
+      "finish_reason": "stop",
+      "usage": {
+        "prompt_tokens": 17650,
+        "completion_tokens": 7890,
+        "total_tokens": 25540,
+        "prompt_tokens_details": {
+          "cached_tokens": 768
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 3315
+        },
+        "prompt_cache_hit_tokens": 768,
+        "prompt_cache_miss_tokens": 16882
+      },
+      "effective_max_output_tokens": 8192,
+      "response_control": {
+        "present": false,
+        "completion_status": "unknown",
+        "continuation_required": null,
+        "continuation_cursor": null,
+        "omitted_sections": []
+      },
+      "private_dir": "/tmp/textifai_private_provider_runs/sp080_broader_deepseek_natural_chunking/20260525T145328Z/ch_097__deepseek_v4_flash/source_f1e650917c_ch_097_chunk_001"
+    },
+    {
+      "run_id": "ch_097__deepseek_v4_pro",
+      "model": "deepseek-v4-pro",
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "chapter_id": "ch_097",
+      "mode": "chapter_partial_extraction",
+      "chunk_id": "source_f1e650917c_ch_097_chunk_001",
+      "parseable_json": false,
+      "validation_ok": false,
+      "failure_mode": "finish_reason_length",
+      "counts": {
+        "characters": 0,
+        "places": 0,
+        "concepts": 0,
+        "objects": 0,
+        "events": 0,
+        "relations": 0,
+        "unresolved_mentions": 0
+      },
+      "score": -5.0,
+      "thin_warnings": [
+        "low_density_score",
+        "low_objects_count",
+        "low_events_count",
+        "low_relations_count",
+        "zero_unresolved_mentions_in_ambiguous_context",
+        "model_profile_experimental"
+      ],
+      "source_span": {
+        "source_id": "source_f1e650917c",
+        "chapter_id": "ch_097",
+        "char_start": 238129,
+        "char_end": 249335
+      },
+      "section_id": "ch_097:89",
+      "char_start": 238129,
+      "char_end": 249335,
+      "predecessor_chunk_id": null,
+      "successor_chunk_id": null,
+      "finish_reason": "length",
+      "usage": {
+        "prompt_tokens": 17651,
+        "completion_tokens": 8192,
+        "total_tokens": 25843,
+        "prompt_tokens_details": {
+          "cached_tokens": 768
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 3292
+        },
+        "prompt_cache_hit_tokens": 768,
+        "prompt_cache_miss_tokens": 16883
+      },
+      "effective_max_output_tokens": 8192,
+      "response_control": {
+        "present": false,
+        "completion_status": "unknown",
+        "continuation_required": null,
+        "continuation_cursor": null,
+        "omitted_sections": []
+      },
+      "continuation_status": "executed_but_not_parseable",
+      "continuation_triggers": [
+        "finish_reason_length"
+      ],
+      "continuation_private_dir": "/tmp/textifai_private_provider_runs/sp080_broader_deepseek_natural_chunking/20260525T145328Z/ch_097__deepseek_v4_pro/source_f1e650917c_ch_097_chunk_001__continuation",
+      "private_dir": "/tmp/textifai_private_provider_runs/sp080_broader_deepseek_natural_chunking/20260525T145328Z/ch_097__deepseek_v4_pro/source_f1e650917c_ch_097_chunk_001"
+    },
+    {
+      "run_id": "ch_106__deepseek_v4_flash",
+      "model": "deepseek-v4-flash",
+      "profile_id": "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+      "chapter_id": "ch_106",
+      "mode": "chapter_partial_extraction",
+      "chunk_id": "source_f1e650917c_ch_106_chunk_001",
+      "parseable_json": true,
+      "validation_ok": true,
+      "failure_mode": null,
+      "counts": {
+        "characters": 12,
+        "places": 4,
+        "concepts": 7,
+        "objects": 6,
+        "events": 8,
+        "relations": 8,
+        "unresolved_mentions": 3
+      },
+      "score": 67.0,
+      "thin_warnings": [
+        "model_profile_experimental"
+      ],
+      "source_span": {
+        "source_id": "source_f1e650917c",
+        "chapter_id": "ch_106",
+        "char_start": 284679,
+        "char_end": 294997
+      },
+      "section_id": "ch_106:96",
+      "char_start": 284679,
+      "char_end": 294997,
+      "predecessor_chunk_id": null,
+      "successor_chunk_id": null,
+      "finish_reason": "stop",
+      "usage": {
+        "prompt_tokens": 17590,
+        "completion_tokens": 4593,
+        "total_tokens": 22183,
+        "prompt_tokens_details": {
+          "cached_tokens": 768
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 645
+        },
+        "prompt_cache_hit_tokens": 768,
+        "prompt_cache_miss_tokens": 16822
+      },
+      "effective_max_output_tokens": 8192,
+      "response_control": {
+        "present": true,
+        "completion_status": "complete",
+        "continuation_required": false,
+        "continuation_cursor": null,
+        "omitted_sections": []
+      },
+      "private_dir": "/tmp/textifai_private_provider_runs/sp080_broader_deepseek_natural_chunking/20260525T145328Z/ch_106__deepseek_v4_flash/source_f1e650917c_ch_106_chunk_001"
+    },
+    {
+      "run_id": "ch_106__deepseek_v4_pro",
+      "model": "deepseek-v4-pro",
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "chapter_id": "ch_106",
+      "mode": "chapter_partial_extraction_continuation",
+      "chunk_id": "source_f1e650917c_ch_106_chunk_001__continuation",
+      "parseable_json": true,
+      "validation_ok": false,
+      "failure_mode": "valid_json_wrong_chapter",
+      "counts": {
+        "characters": 0,
+        "places": 0,
+        "concepts": 0,
+        "objects": 0,
+        "events": 0,
+        "relations": 0,
+        "unresolved_mentions": 0
+      },
+      "score": -8.0,
+      "thin_warnings": [
+        "low_density_score",
+        "low_objects_count",
+        "low_events_count",
+        "low_relations_count",
+        "zero_unresolved_mentions_in_ambiguous_context",
+        "valid_json_but_thin",
+        "model_profile_experimental"
+      ],
+      "source_span": null,
+      "section_id": null,
+      "char_start": null,
+      "char_end": null,
+      "predecessor_chunk_id": null,
+      "successor_chunk_id": null,
+      "finish_reason": "stop",
+      "usage": {
+        "prompt_tokens": 2591,
+        "completion_tokens": 7371,
+        "total_tokens": 9962,
+        "prompt_tokens_details": {
+          "cached_tokens": 256
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 7213
+        },
+        "prompt_cache_hit_tokens": 256,
+        "prompt_cache_miss_tokens": 2335
+      },
+      "effective_max_output_tokens": 8192,
+      "response_control": {
+        "present": true,
+        "completion_status": "complete",
+        "continuation_required": false,
+        "continuation_cursor": null,
+        "omitted_sections": []
+      },
+      "continuation_status": "executed_replaced_primary",
+      "continuation_triggers": [
+        "pro_reasoning_budget_exhaustion"
+      ],
+      "continuation_private_dir": "/tmp/textifai_private_provider_runs/sp080_broader_deepseek_natural_chunking/20260525T145328Z/ch_106__deepseek_v4_pro/source_f1e650917c_ch_106_chunk_001__continuation",
+      "private_dir": "/tmp/textifai_private_provider_runs/sp080_broader_deepseek_natural_chunking/20260525T145328Z/ch_106__deepseek_v4_pro/source_f1e650917c_ch_106_chunk_001__continuation"
+    },
+    {
+      "run_id": "ch_114__deepseek_v4_flash",
+      "model": "deepseek-v4-flash",
+      "profile_id": "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+      "chapter_id": "ch_114",
+      "mode": "chapter_partial_extraction",
+      "chunk_id": "source_f1e650917c_ch_114_chunk_001",
+      "parseable_json": true,
+      "validation_ok": true,
+      "failure_mode": null,
+      "counts": {
+        "characters": 10,
+        "places": 4,
+        "concepts": 5,
+        "objects": 5,
+        "events": 8,
+        "relations": 10,
+        "unresolved_mentions": 3
+      },
+      "score": 65.5,
+      "thin_warnings": [
+        "model_profile_experimental"
+      ],
+      "source_span": {
+        "source_id": "source_f1e650917c",
+        "chapter_id": "ch_114",
+        "char_start": 327034,
+        "char_end": 336624
+      },
+      "section_id": "ch_114:101",
+      "char_start": 327034,
+      "char_end": 336624,
+      "predecessor_chunk_id": null,
+      "successor_chunk_id": null,
+      "finish_reason": "stop",
+      "usage": {
+        "prompt_tokens": 15390,
+        "completion_tokens": 4741,
+        "total_tokens": 20131,
+        "prompt_tokens_details": {
+          "cached_tokens": 768
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 318
+        },
+        "prompt_cache_hit_tokens": 768,
+        "prompt_cache_miss_tokens": 14622
+      },
+      "effective_max_output_tokens": 8192,
+      "response_control": {
+        "present": false,
+        "completion_status": "unknown",
+        "continuation_required": null,
+        "continuation_cursor": null,
+        "omitted_sections": []
+      },
+      "private_dir": "/tmp/textifai_private_provider_runs/sp080_broader_deepseek_natural_chunking/20260525T145328Z/ch_114__deepseek_v4_flash/source_f1e650917c_ch_114_chunk_001"
+    },
+    {
+      "run_id": "ch_114__deepseek_v4_pro",
+      "model": "deepseek-v4-pro",
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "chapter_id": "ch_114",
+      "mode": "chapter_partial_extraction",
+      "chunk_id": "source_f1e650917c_ch_114_chunk_001",
+      "parseable_json": true,
+      "validation_ok": true,
+      "failure_mode": null,
+      "counts": {
+        "characters": 10,
+        "places": 5,
+        "concepts": 8,
+        "objects": 5,
+        "events": 9,
+        "relations": 8,
+        "unresolved_mentions": 0
+      },
+      "score": 64.0,
+      "thin_warnings": [
+        "zero_unresolved_mentions_in_ambiguous_context",
+        "model_profile_experimental"
+      ],
+      "source_span": {
+        "source_id": "source_f1e650917c",
+        "chapter_id": "ch_114",
+        "char_start": 327034,
+        "char_end": 336624
+      },
+      "section_id": "ch_114:101",
+      "char_start": 327034,
+      "char_end": 336624,
+      "predecessor_chunk_id": null,
+      "successor_chunk_id": null,
+      "finish_reason": "stop",
+      "usage": {
+        "prompt_tokens": 15391,
+        "completion_tokens": 6219,
+        "total_tokens": 21610,
+        "prompt_tokens_details": {
+          "cached_tokens": 768
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 1518
+        },
+        "prompt_cache_hit_tokens": 768,
+        "prompt_cache_miss_tokens": 14623
+      },
+      "effective_max_output_tokens": 8192,
+      "response_control": {
+        "present": false,
+        "completion_status": "unknown",
+        "continuation_required": null,
+        "continuation_cursor": null,
+        "omitted_sections": []
+      },
+      "private_dir": "/tmp/textifai_private_provider_runs/sp080_broader_deepseek_natural_chunking/20260525T145328Z/ch_114__deepseek_v4_pro/source_f1e650917c_ch_114_chunk_001"
+    },
+    {
+      "run_id": "ch_115__deepseek_v4_flash",
+      "model": "deepseek-v4-flash",
+      "profile_id": "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+      "chapter_id": "ch_115",
+      "mode": "chapter_partial_extraction",
+      "chunk_id": "source_f1e650917c_ch_115_chunk_001",
+      "parseable_json": true,
+      "validation_ok": true,
+      "failure_mode": null,
+      "counts": {
+        "characters": 10,
+        "places": 5,
+        "concepts": 6,
+        "objects": 2,
+        "events": 6,
+        "relations": 5,
+        "unresolved_mentions": 2
+      },
+      "score": 49.0,
+      "thin_warnings": [
+        "model_profile_experimental"
+      ],
+      "source_span": {
+        "source_id": "source_f1e650917c",
+        "chapter_id": "ch_115",
+        "char_start": 336626,
+        "char_end": 346064
+      },
+      "section_id": "ch_115:102",
+      "char_start": 336626,
+      "char_end": 346064,
+      "predecessor_chunk_id": null,
+      "successor_chunk_id": null,
+      "finish_reason": "stop",
+      "usage": {
+        "prompt_tokens": 14965,
+        "completion_tokens": 6742,
+        "total_tokens": 21707,
+        "prompt_tokens_details": {
+          "cached_tokens": 768
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 3322
+        },
+        "prompt_cache_hit_tokens": 768,
+        "prompt_cache_miss_tokens": 14197
+      },
+      "effective_max_output_tokens": 8192,
+      "response_control": {
+        "present": false,
+        "completion_status": "unknown",
+        "continuation_required": null,
+        "continuation_cursor": null,
+        "omitted_sections": []
+      },
+      "private_dir": "/tmp/textifai_private_provider_runs/sp080_broader_deepseek_natural_chunking/20260525T145328Z/ch_115__deepseek_v4_flash/source_f1e650917c_ch_115_chunk_001"
+    },
+    {
+      "run_id": "ch_115__deepseek_v4_pro",
+      "model": "deepseek-v4-pro",
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "chapter_id": "ch_115",
+      "mode": "chapter_partial_extraction_continuation",
+      "chunk_id": "source_f1e650917c_ch_115_chunk_001__continuation",
+      "parseable_json": true,
+      "validation_ok": false,
+      "failure_mode": "valid_json_wrong_chapter",
+      "counts": {
+        "characters": 0,
+        "places": 0,
+        "concepts": 0,
+        "objects": 0,
+        "events": 0,
+        "relations": 0,
+        "unresolved_mentions": 0
+      },
+      "score": -8.0,
+      "thin_warnings": [
+        "low_density_score",
+        "low_objects_count",
+        "low_events_count",
+        "low_relations_count",
+        "zero_unresolved_mentions_in_ambiguous_context",
+        "valid_json_but_thin",
+        "model_profile_experimental"
+      ],
+      "source_span": null,
+      "section_id": null,
+      "char_start": null,
+      "char_end": null,
+      "predecessor_chunk_id": null,
+      "successor_chunk_id": null,
+      "finish_reason": "stop",
+      "usage": {
+        "prompt_tokens": 2613,
+        "completion_tokens": 6335,
+        "total_tokens": 8948,
+        "prompt_tokens_details": {
+          "cached_tokens": 256
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 6195
+        },
+        "prompt_cache_hit_tokens": 256,
+        "prompt_cache_miss_tokens": 2357
+      },
+      "effective_max_output_tokens": 8192,
+      "response_control": {
+        "present": true,
+        "completion_status": "complete",
+        "continuation_required": false,
+        "continuation_cursor": null,
+        "omitted_sections": []
+      },
+      "continuation_status": "executed_replaced_primary",
+      "continuation_triggers": [
+        "pro_reasoning_budget_exhaustion"
+      ],
+      "continuation_private_dir": "/tmp/textifai_private_provider_runs/sp080_broader_deepseek_natural_chunking/20260525T145328Z/ch_115__deepseek_v4_pro/source_f1e650917c_ch_115_chunk_001__continuation",
+      "private_dir": "/tmp/textifai_private_provider_runs/sp080_broader_deepseek_natural_chunking/20260525T145328Z/ch_115__deepseek_v4_pro/source_f1e650917c_ch_115_chunk_001__continuation"
+    }
+  ]
+}

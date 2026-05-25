@@ -1,0 +1,64 @@
+{
+  "assessment": "natural_chunking_good_but_needs_threshold_tuning",
+  "provider": "deepseek",
+  "models": [
+    "deepseek-v4-flash",
+    "deepseek-v4-pro"
+  ],
+  "chapters": [
+    "ch_001",
+    "ch_002",
+    "ch_003",
+    "ch_005",
+    "ch_097",
+    "ch_106",
+    "ch_114",
+    "ch_115"
+  ],
+  "provider_call_count": 42,
+  "provider_call_cap": 64,
+  "compact_mode_used": true,
+  "patch_continuation_mode": true,
+  "valid_reduction_count": 16,
+  "total_reduction_count": 16,
+  "triggered_continuation_count": 10,
+  "private_packet_root": "/tmp/textifai_private_provider_runs/sp080_broader_deepseek_natural_chunking/20260525T145328Z",
+  "recommended_files_to_upload_to_chatgpt": [
+    "README.md",
+    "execution_plan_private.md",
+    "matrix_summary_private.md",
+    "decision_notes_private.md",
+    "source_ref_audit_private.md",
+    "truncation_recovery_audit_private.md",
+    "reduction_trace_private.md"
+  ],
+  "comparison_vs_sp075": {
+    "sp075_assessment": "real_deepseek_e2e_dryrun_partial_success",
+    "sp075_best_reduction_score": 57.5,
+    "sp077_best_reduction_score": 67.0,
+    "source_ref_item_level_improved": false,
+    "continuation_or_truncation_issue_remaining": true
+  },
+  "write_back": false,
+  "natural_chunking_result": "all_selected_chapters_single_chunk_under_current_productive_budget",
+  "natural_chunking_requires_default_change": false,
+  "threshold_tuning_recommended": true,
+  "general_pipeline_learnings_report": "broader_deepseek_general_pipeline_learnings_after_sp079.json",
+  "provider_specific_learnings_report": "broader_deepseek_provider_specific_learnings_after_sp079.json",
+  "product_decision": "natural_chunking_good_but_needs_threshold_tuning",
+  "comparison_vs_sp079": {
+    "sp079_provider_calls": 29,
+    "sp079_best_score": 86.0,
+    "sp079_forced_multichunk": true,
+    "sp080_provider_calls": 42,
+    "sp080_best_score": 67.0,
+    "sp080_natural_multichunk_rows": 0,
+    "interpretation": "natural budgets fit selected chapters; e2e remains parseable but Pro/continuation warnings persist"
+  },
+  "comparison_vs_sp077": {
+    "sp077_provider_calls": 13,
+    "sp077_best_score": 59.0,
+    "sp080_provider_calls": 42,
+    "sp080_valid_reductions": "16/16"
+  }
+}

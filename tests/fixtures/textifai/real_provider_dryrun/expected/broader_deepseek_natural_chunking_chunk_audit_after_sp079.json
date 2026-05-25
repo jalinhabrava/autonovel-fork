@@ -1,0 +1,609 @@
+{
+  "assessment": "natural_chunking_good_but_needs_threshold_tuning",
+  "runs": [
+    {
+      "run_id": "ch_001__deepseek_v4_flash",
+      "model": "deepseek-v4-flash",
+      "profile_id": "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+      "chapter_id": "ch_001",
+      "number_of_chunks": 1,
+      "chunk_ids": [
+        "source_f1e650917c_ch_001_chunk_001"
+      ],
+      "chunk_char_ranges": [
+        {
+          "source_id": "source_f1e650917c",
+          "chapter_id": "ch_001",
+          "char_start": 0,
+          "char_end": 2307
+        }
+      ],
+      "chunk_overlap_detected": false,
+      "predecessor_successor_links": [
+        {
+          "chunk_id": "source_f1e650917c_ch_001_chunk_001",
+          "predecessor_chunk_id": null,
+          "successor_chunk_id": null
+        }
+      ],
+      "source_span_correctness": true,
+      "per_chunk_partial_status": [
+        {
+          "chunk_id": "source_f1e650917c_ch_001_chunk_001",
+          "parseable_json": true,
+          "failure_mode": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "reduction_consumed_all_chunk_partials": true,
+      "invalid_partials_skipped_or_repaired": 0,
+      "source_refs_cover_all_contributing_chunks": true,
+      "multi_chunk_items_with_multiple_refs": 0
+    },
+    {
+      "run_id": "ch_001__deepseek_v4_pro",
+      "model": "deepseek-v4-pro",
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "chapter_id": "ch_001",
+      "number_of_chunks": 1,
+      "chunk_ids": [
+        "source_f1e650917c_ch_001_chunk_001__continuation"
+      ],
+      "chunk_char_ranges": [],
+      "chunk_overlap_detected": false,
+      "predecessor_successor_links": [
+        {
+          "chunk_id": "source_f1e650917c_ch_001_chunk_001__continuation",
+          "predecessor_chunk_id": null,
+          "successor_chunk_id": null
+        }
+      ],
+      "source_span_correctness": false,
+      "per_chunk_partial_status": [
+        {
+          "chunk_id": "source_f1e650917c_ch_001_chunk_001__continuation",
+          "parseable_json": true,
+          "failure_mode": "valid_json_wrong_chapter",
+          "finish_reason": "stop"
+        }
+      ],
+      "reduction_consumed_all_chunk_partials": true,
+      "invalid_partials_skipped_or_repaired": 0,
+      "source_refs_cover_all_contributing_chunks": true,
+      "multi_chunk_items_with_multiple_refs": 0
+    },
+    {
+      "run_id": "ch_002__deepseek_v4_flash",
+      "model": "deepseek-v4-flash",
+      "profile_id": "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+      "chapter_id": "ch_002",
+      "number_of_chunks": 1,
+      "chunk_ids": [
+        "source_f1e650917c_ch_002_chunk_001"
+      ],
+      "chunk_char_ranges": [
+        {
+          "source_id": "source_f1e650917c",
+          "chapter_id": "ch_002",
+          "char_start": 2309,
+          "char_end": 5013
+        }
+      ],
+      "chunk_overlap_detected": false,
+      "predecessor_successor_links": [
+        {
+          "chunk_id": "source_f1e650917c_ch_002_chunk_001",
+          "predecessor_chunk_id": null,
+          "successor_chunk_id": null
+        }
+      ],
+      "source_span_correctness": true,
+      "per_chunk_partial_status": [
+        {
+          "chunk_id": "source_f1e650917c_ch_002_chunk_001",
+          "parseable_json": true,
+          "failure_mode": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "reduction_consumed_all_chunk_partials": true,
+      "invalid_partials_skipped_or_repaired": 0,
+      "source_refs_cover_all_contributing_chunks": true,
+      "multi_chunk_items_with_multiple_refs": 0
+    },
+    {
+      "run_id": "ch_002__deepseek_v4_pro",
+      "model": "deepseek-v4-pro",
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "chapter_id": "ch_002",
+      "number_of_chunks": 1,
+      "chunk_ids": [
+        "source_f1e650917c_ch_002_chunk_001"
+      ],
+      "chunk_char_ranges": [
+        {
+          "source_id": "source_f1e650917c",
+          "chapter_id": "ch_002",
+          "char_start": 2309,
+          "char_end": 5013
+        }
+      ],
+      "chunk_overlap_detected": false,
+      "predecessor_successor_links": [
+        {
+          "chunk_id": "source_f1e650917c_ch_002_chunk_001",
+          "predecessor_chunk_id": null,
+          "successor_chunk_id": null
+        }
+      ],
+      "source_span_correctness": true,
+      "per_chunk_partial_status": [
+        {
+          "chunk_id": "source_f1e650917c_ch_002_chunk_001",
+          "parseable_json": true,
+          "failure_mode": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "reduction_consumed_all_chunk_partials": true,
+      "invalid_partials_skipped_or_repaired": 0,
+      "source_refs_cover_all_contributing_chunks": true,
+      "multi_chunk_items_with_multiple_refs": 0
+    },
+    {
+      "run_id": "ch_003__deepseek_v4_flash",
+      "model": "deepseek-v4-flash",
+      "profile_id": "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+      "chapter_id": "ch_003",
+      "number_of_chunks": 1,
+      "chunk_ids": [
+        "source_f1e650917c_ch_003_chunk_001"
+      ],
+      "chunk_char_ranges": [
+        {
+          "source_id": "source_f1e650917c",
+          "chapter_id": "ch_003",
+          "char_start": 5015,
+          "char_end": 7290
+        }
+      ],
+      "chunk_overlap_detected": false,
+      "predecessor_successor_links": [
+        {
+          "chunk_id": "source_f1e650917c_ch_003_chunk_001",
+          "predecessor_chunk_id": null,
+          "successor_chunk_id": null
+        }
+      ],
+      "source_span_correctness": true,
+      "per_chunk_partial_status": [
+        {
+          "chunk_id": "source_f1e650917c_ch_003_chunk_001",
+          "parseable_json": true,
+          "failure_mode": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "reduction_consumed_all_chunk_partials": true,
+      "invalid_partials_skipped_or_repaired": 0,
+      "source_refs_cover_all_contributing_chunks": true,
+      "multi_chunk_items_with_multiple_refs": 0
+    },
+    {
+      "run_id": "ch_003__deepseek_v4_pro",
+      "model": "deepseek-v4-pro",
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "chapter_id": "ch_003",
+      "number_of_chunks": 1,
+      "chunk_ids": [
+        "source_f1e650917c_ch_003_chunk_001"
+      ],
+      "chunk_char_ranges": [
+        {
+          "source_id": "source_f1e650917c",
+          "chapter_id": "ch_003",
+          "char_start": 5015,
+          "char_end": 7290
+        }
+      ],
+      "chunk_overlap_detected": false,
+      "predecessor_successor_links": [
+        {
+          "chunk_id": "source_f1e650917c_ch_003_chunk_001",
+          "predecessor_chunk_id": null,
+          "successor_chunk_id": null
+        }
+      ],
+      "source_span_correctness": true,
+      "per_chunk_partial_status": [
+        {
+          "chunk_id": "source_f1e650917c_ch_003_chunk_001",
+          "parseable_json": true,
+          "failure_mode": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "reduction_consumed_all_chunk_partials": true,
+      "invalid_partials_skipped_or_repaired": 0,
+      "source_refs_cover_all_contributing_chunks": true,
+      "multi_chunk_items_with_multiple_refs": 0
+    },
+    {
+      "run_id": "ch_005__deepseek_v4_flash",
+      "model": "deepseek-v4-flash",
+      "profile_id": "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+      "chapter_id": "ch_005",
+      "number_of_chunks": 1,
+      "chunk_ids": [
+        "source_f1e650917c_ch_005_chunk_001"
+      ],
+      "chunk_char_ranges": [
+        {
+          "source_id": "source_f1e650917c",
+          "chapter_id": "ch_005",
+          "char_start": 8695,
+          "char_end": 10367
+        }
+      ],
+      "chunk_overlap_detected": false,
+      "predecessor_successor_links": [
+        {
+          "chunk_id": "source_f1e650917c_ch_005_chunk_001",
+          "predecessor_chunk_id": null,
+          "successor_chunk_id": null
+        }
+      ],
+      "source_span_correctness": true,
+      "per_chunk_partial_status": [
+        {
+          "chunk_id": "source_f1e650917c_ch_005_chunk_001",
+          "parseable_json": true,
+          "failure_mode": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "reduction_consumed_all_chunk_partials": true,
+      "invalid_partials_skipped_or_repaired": 0,
+      "source_refs_cover_all_contributing_chunks": true,
+      "multi_chunk_items_with_multiple_refs": 0
+    },
+    {
+      "run_id": "ch_005__deepseek_v4_pro",
+      "model": "deepseek-v4-pro",
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "chapter_id": "ch_005",
+      "number_of_chunks": 1,
+      "chunk_ids": [
+        "source_f1e650917c_ch_005_chunk_001"
+      ],
+      "chunk_char_ranges": [
+        {
+          "source_id": "source_f1e650917c",
+          "chapter_id": "ch_005",
+          "char_start": 8695,
+          "char_end": 10367
+        }
+      ],
+      "chunk_overlap_detected": false,
+      "predecessor_successor_links": [
+        {
+          "chunk_id": "source_f1e650917c_ch_005_chunk_001",
+          "predecessor_chunk_id": null,
+          "successor_chunk_id": null
+        }
+      ],
+      "source_span_correctness": true,
+      "per_chunk_partial_status": [
+        {
+          "chunk_id": "source_f1e650917c_ch_005_chunk_001",
+          "parseable_json": true,
+          "failure_mode": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "reduction_consumed_all_chunk_partials": true,
+      "invalid_partials_skipped_or_repaired": 0,
+      "source_refs_cover_all_contributing_chunks": true,
+      "multi_chunk_items_with_multiple_refs": 0
+    },
+    {
+      "run_id": "ch_097__deepseek_v4_flash",
+      "model": "deepseek-v4-flash",
+      "profile_id": "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+      "chapter_id": "ch_097",
+      "number_of_chunks": 1,
+      "chunk_ids": [
+        "source_f1e650917c_ch_097_chunk_001"
+      ],
+      "chunk_char_ranges": [
+        {
+          "source_id": "source_f1e650917c",
+          "chapter_id": "ch_097",
+          "char_start": 238129,
+          "char_end": 249335
+        }
+      ],
+      "chunk_overlap_detected": false,
+      "predecessor_successor_links": [
+        {
+          "chunk_id": "source_f1e650917c_ch_097_chunk_001",
+          "predecessor_chunk_id": null,
+          "successor_chunk_id": null
+        }
+      ],
+      "source_span_correctness": true,
+      "per_chunk_partial_status": [
+        {
+          "chunk_id": "source_f1e650917c_ch_097_chunk_001",
+          "parseable_json": true,
+          "failure_mode": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "reduction_consumed_all_chunk_partials": true,
+      "invalid_partials_skipped_or_repaired": 0,
+      "source_refs_cover_all_contributing_chunks": true,
+      "multi_chunk_items_with_multiple_refs": 0
+    },
+    {
+      "run_id": "ch_097__deepseek_v4_pro",
+      "model": "deepseek-v4-pro",
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "chapter_id": "ch_097",
+      "number_of_chunks": 1,
+      "chunk_ids": [
+        "source_f1e650917c_ch_097_chunk_001"
+      ],
+      "chunk_char_ranges": [
+        {
+          "source_id": "source_f1e650917c",
+          "chapter_id": "ch_097",
+          "char_start": 238129,
+          "char_end": 249335
+        }
+      ],
+      "chunk_overlap_detected": false,
+      "predecessor_successor_links": [
+        {
+          "chunk_id": "source_f1e650917c_ch_097_chunk_001",
+          "predecessor_chunk_id": null,
+          "successor_chunk_id": null
+        }
+      ],
+      "source_span_correctness": true,
+      "per_chunk_partial_status": [
+        {
+          "chunk_id": "source_f1e650917c_ch_097_chunk_001",
+          "parseable_json": false,
+          "failure_mode": "finish_reason_length",
+          "finish_reason": "length"
+        }
+      ],
+      "reduction_consumed_all_chunk_partials": true,
+      "invalid_partials_skipped_or_repaired": 1,
+      "source_refs_cover_all_contributing_chunks": true,
+      "multi_chunk_items_with_multiple_refs": 0
+    },
+    {
+      "run_id": "ch_106__deepseek_v4_flash",
+      "model": "deepseek-v4-flash",
+      "profile_id": "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+      "chapter_id": "ch_106",
+      "number_of_chunks": 1,
+      "chunk_ids": [
+        "source_f1e650917c_ch_106_chunk_001"
+      ],
+      "chunk_char_ranges": [
+        {
+          "source_id": "source_f1e650917c",
+          "chapter_id": "ch_106",
+          "char_start": 284679,
+          "char_end": 294997
+        }
+      ],
+      "chunk_overlap_detected": false,
+      "predecessor_successor_links": [
+        {
+          "chunk_id": "source_f1e650917c_ch_106_chunk_001",
+          "predecessor_chunk_id": null,
+          "successor_chunk_id": null
+        }
+      ],
+      "source_span_correctness": true,
+      "per_chunk_partial_status": [
+        {
+          "chunk_id": "source_f1e650917c_ch_106_chunk_001",
+          "parseable_json": true,
+          "failure_mode": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "reduction_consumed_all_chunk_partials": true,
+      "invalid_partials_skipped_or_repaired": 0,
+      "source_refs_cover_all_contributing_chunks": true,
+      "multi_chunk_items_with_multiple_refs": 0
+    },
+    {
+      "run_id": "ch_106__deepseek_v4_pro",
+      "model": "deepseek-v4-pro",
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "chapter_id": "ch_106",
+      "number_of_chunks": 1,
+      "chunk_ids": [
+        "source_f1e650917c_ch_106_chunk_001__continuation"
+      ],
+      "chunk_char_ranges": [],
+      "chunk_overlap_detected": false,
+      "predecessor_successor_links": [
+        {
+          "chunk_id": "source_f1e650917c_ch_106_chunk_001__continuation",
+          "predecessor_chunk_id": null,
+          "successor_chunk_id": null
+        }
+      ],
+      "source_span_correctness": false,
+      "per_chunk_partial_status": [
+        {
+          "chunk_id": "source_f1e650917c_ch_106_chunk_001__continuation",
+          "parseable_json": true,
+          "failure_mode": "valid_json_wrong_chapter",
+          "finish_reason": "stop"
+        }
+      ],
+      "reduction_consumed_all_chunk_partials": true,
+      "invalid_partials_skipped_or_repaired": 0,
+      "source_refs_cover_all_contributing_chunks": true,
+      "multi_chunk_items_with_multiple_refs": 0
+    },
+    {
+      "run_id": "ch_114__deepseek_v4_flash",
+      "model": "deepseek-v4-flash",
+      "profile_id": "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+      "chapter_id": "ch_114",
+      "number_of_chunks": 1,
+      "chunk_ids": [
+        "source_f1e650917c_ch_114_chunk_001"
+      ],
+      "chunk_char_ranges": [
+        {
+          "source_id": "source_f1e650917c",
+          "chapter_id": "ch_114",
+          "char_start": 327034,
+          "char_end": 336624
+        }
+      ],
+      "chunk_overlap_detected": false,
+      "predecessor_successor_links": [
+        {
+          "chunk_id": "source_f1e650917c_ch_114_chunk_001",
+          "predecessor_chunk_id": null,
+          "successor_chunk_id": null
+        }
+      ],
+      "source_span_correctness": true,
+      "per_chunk_partial_status": [
+        {
+          "chunk_id": "source_f1e650917c_ch_114_chunk_001",
+          "parseable_json": true,
+          "failure_mode": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "reduction_consumed_all_chunk_partials": true,
+      "invalid_partials_skipped_or_repaired": 0,
+      "source_refs_cover_all_contributing_chunks": true,
+      "multi_chunk_items_with_multiple_refs": 0
+    },
+    {
+      "run_id": "ch_114__deepseek_v4_pro",
+      "model": "deepseek-v4-pro",
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "chapter_id": "ch_114",
+      "number_of_chunks": 1,
+      "chunk_ids": [
+        "source_f1e650917c_ch_114_chunk_001"
+      ],
+      "chunk_char_ranges": [
+        {
+          "source_id": "source_f1e650917c",
+          "chapter_id": "ch_114",
+          "char_start": 327034,
+          "char_end": 336624
+        }
+      ],
+      "chunk_overlap_detected": false,
+      "predecessor_successor_links": [
+        {
+          "chunk_id": "source_f1e650917c_ch_114_chunk_001",
+          "predecessor_chunk_id": null,
+          "successor_chunk_id": null
+        }
+      ],
+      "source_span_correctness": true,
+      "per_chunk_partial_status": [
+        {
+          "chunk_id": "source_f1e650917c_ch_114_chunk_001",
+          "parseable_json": true,
+          "failure_mode": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "reduction_consumed_all_chunk_partials": true,
+      "invalid_partials_skipped_or_repaired": 0,
+      "source_refs_cover_all_contributing_chunks": true,
+      "multi_chunk_items_with_multiple_refs": 0
+    },
+    {
+      "run_id": "ch_115__deepseek_v4_flash",
+      "model": "deepseek-v4-flash",
+      "profile_id": "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+      "chapter_id": "ch_115",
+      "number_of_chunks": 1,
+      "chunk_ids": [
+        "source_f1e650917c_ch_115_chunk_001"
+      ],
+      "chunk_char_ranges": [
+        {
+          "source_id": "source_f1e650917c",
+          "chapter_id": "ch_115",
+          "char_start": 336626,
+          "char_end": 346064
+        }
+      ],
+      "chunk_overlap_detected": false,
+      "predecessor_successor_links": [
+        {
+          "chunk_id": "source_f1e650917c_ch_115_chunk_001",
+          "predecessor_chunk_id": null,
+          "successor_chunk_id": null
+        }
+      ],
+      "source_span_correctness": true,
+      "per_chunk_partial_status": [
+        {
+          "chunk_id": "source_f1e650917c_ch_115_chunk_001",
+          "parseable_json": true,
+          "failure_mode": null,
+          "finish_reason": "stop"
+        }
+      ],
+      "reduction_consumed_all_chunk_partials": true,
+      "invalid_partials_skipped_or_repaired": 0,
+      "source_refs_cover_all_contributing_chunks": true,
+      "multi_chunk_items_with_multiple_refs": 0
+    },
+    {
+      "run_id": "ch_115__deepseek_v4_pro",
+      "model": "deepseek-v4-pro",
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "chapter_id": "ch_115",
+      "number_of_chunks": 1,
+      "chunk_ids": [
+        "source_f1e650917c_ch_115_chunk_001__continuation"
+      ],
+      "chunk_char_ranges": [],
+      "chunk_overlap_detected": false,
+      "predecessor_successor_links": [
+        {
+          "chunk_id": "source_f1e650917c_ch_115_chunk_001__continuation",
+          "predecessor_chunk_id": null,
+          "successor_chunk_id": null
+        }
+      ],
+      "source_span_correctness": false,
+      "per_chunk_partial_status": [
+        {
+          "chunk_id": "source_f1e650917c_ch_115_chunk_001__continuation",
+          "parseable_json": true,
+          "failure_mode": "valid_json_wrong_chapter",
+          "finish_reason": "stop"
+        }
+      ],
+      "reduction_consumed_all_chunk_partials": true,
+      "invalid_partials_skipped_or_repaired": 0,
+      "source_refs_cover_all_contributing_chunks": true,
+      "multi_chunk_items_with_multiple_refs": 0
+    }
+  ],
+  "has_multichunk_run": false
+}

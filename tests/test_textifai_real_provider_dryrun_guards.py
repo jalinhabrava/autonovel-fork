@@ -653,7 +653,13 @@ class RealProviderDryRunGuardsTests(unittest.TestCase):
         self.assertFalse(summary["write_back"])
         self.assertTrue(summary["private_packet_root"].startswith("/tmp/textifai_private_provider_runs/"))
         self.assertTrue(all(row.get("chunk_id") for row in chunks["chunks"]))
-        self.assertTrue(all(row.get("source_span") for row in chunks["chunks"]))
+        self.assertTrue(
+            all(
+                row.get("source_span")
+                for row in chunks["chunks"]
+                if row.get("mode") in {"chapter_partial", "chapter_partial_continuation"}
+            )
+        )
         self.assertIn("source_ref_preservation", reduction)
 
     def test_real_deepseek_e2e_script_requires_no_write_back_and_allow_flag(self):
@@ -747,7 +753,13 @@ class RealProviderDryRunGuardsTests(unittest.TestCase):
         self.assertIn("ch_002", summary["chapters"])
         self.assertIn("ch_003", summary["chapters"])
         self.assertTrue(all(row.get("chunk_id") for row in chunks["chunks"]))
-        self.assertTrue(all(row.get("source_span") for row in chunks["chunks"]))
+        self.assertTrue(
+            all(
+                row.get("source_span")
+                for row in chunks["chunks"]
+                if row.get("mode") in {"chapter_partial", "chapter_partial_continuation"}
+            )
+        )
         self.assertTrue(all("effective_max_output_tokens" in row for row in budget["runs"]))
         self.assertTrue(all(row.get("decision_source") for row in budget["runs"]))
         self.assertIn("item_level_source_ref_coverage_ratio", source_refs)
@@ -846,6 +858,77 @@ class RealProviderDryRunGuardsTests(unittest.TestCase):
         self.assertTrue(all(row.get("chunk_id") for row in chunks["chunks"]))
         self.assertTrue(all(row.get("source_span") for row in chunks["chunks"]))
         self.assertTrue(all(row.get("parseable_json") for row in reduction["reductions"]))
+
+    def test_broader_deepseek_natural_chunking_reports_parse_and_separate_general_vs_provider_specific(self):
+        natural_plan = json.loads((FIXTURE_ROOT / "natural_chunking_calibration_plan_after_sp079.json").read_text(encoding="utf-8"))
+        plan = json.loads((FIXTURE_ROOT / "broader_deepseek_natural_chunking_execution_plan_after_sp079.json").read_text(encoding="utf-8"))
+        summary = json.loads((FIXTURE_ROOT / "broader_deepseek_natural_chunking_summary_after_sp079.json").read_text(encoding="utf-8"))
+        chunks = json.loads((FIXTURE_ROOT / "broader_deepseek_natural_chunking_chunk_results_after_sp079.json").read_text(encoding="utf-8"))
+        reduction = json.loads((FIXTURE_ROOT / "broader_deepseek_natural_chunking_reduction_summary_after_sp079.json").read_text(encoding="utf-8"))
+        budget_usage = json.loads((FIXTURE_ROOT / "broader_deepseek_natural_chunking_budget_usage_after_sp079.json").read_text(encoding="utf-8"))
+        chunk_audit = json.loads((FIXTURE_ROOT / "broader_deepseek_natural_chunking_chunk_audit_after_sp079.json").read_text(encoding="utf-8"))
+        source_refs = json.loads((FIXTURE_ROOT / "broader_deepseek_natural_chunking_source_ref_audit_after_sp079.json").read_text(encoding="utf-8"))
+        truncation = json.loads((FIXTURE_ROOT / "broader_deepseek_natural_chunking_truncation_audit_after_sp079.json").read_text(encoding="utf-8"))
+        decision = json.loads((FIXTURE_ROOT / "broader_deepseek_natural_chunking_decision_after_sp079.json").read_text(encoding="utf-8"))
+        general = json.loads((FIXTURE_ROOT / "broader_deepseek_general_pipeline_learnings_after_sp079.json").read_text(encoding="utf-8"))
+        provider_specific = json.loads((FIXTURE_ROOT / "broader_deepseek_provider_specific_learnings_after_sp079.json").read_text(encoding="utf-8"))
+
+        valid_enum = {
+            "natural_chunking_calibrated_ready_for_broader_e2e",
+            "natural_chunking_good_but_needs_threshold_tuning",
+            "natural_chunking_under_splits_needs_patch",
+            "natural_chunking_e2e_failed_but_debuggable",
+            "natural_chunking_calibration_blocked",
+        }
+        continuation_statuses = {
+            "not_triggered",
+            "executed",
+            "executed_replaced_primary",
+            "executed_but_not_parseable",
+            "skipped_cap_reached",
+            "patch_merged",
+        }
+
+        for payload in (natural_plan, plan, summary, chunks, reduction, budget_usage, chunk_audit, source_refs, truncation, decision, general, provider_specific):
+            text = json.dumps(payload, ensure_ascii=False)
+            self.assertNotIn("sk-", text)
+            self.assertNotIn("Authorization: Bearer", text)
+            self.assertNotIn("CHUNK_TEXT:", text)
+            self.assertNotIn("provider_response_raw.txt\n", text)
+
+        self.assertIn(natural_plan["assessment"], valid_enum)
+        self.assertIn(summary["assessment"], valid_enum)
+        self.assertIn(decision["assessment"], valid_enum)
+        self.assertIn(decision["product_decision"], valid_enum)
+        self.assertEqual(plan["assessment"], "natural_chunking_execution_plan_ready")
+        self.assertLessEqual(plan["planned_provider_call_count_with_continuation_reserve"], 64)
+        self.assertLessEqual(summary["provider_call_count"], 64)
+        self.assertTrue(summary["private_packet_root"].startswith("/tmp/textifai_private_provider_runs/"))
+        self.assertEqual(plan["natural_vs_forced_multichunk"], "natural")
+        self.assertEqual(natural_plan["summary"]["multi_chunk_rows"], 0)
+        self.assertIn("threshold_sensitivity", natural_plan)
+        self.assertTrue(natural_plan["threshold_sensitivity"]["rows_have_threshold_fields"])
+        self.assertTrue(all("effective_max_output_tokens" in row for row in budget_usage["runs"]))
+        self.assertTrue(all(event.get("continuation_status") in continuation_statuses for event in truncation["events"]))
+        self.assertGreaterEqual(source_refs["item_level_source_ref_coverage_ratio"], 0.0)
+        self.assertLessEqual(source_refs["item_level_source_ref_coverage_ratio"], 1.0)
+        self.assertTrue(all(row.get("chunk_id") for row in chunks["chunks"]))
+        self.assertTrue(
+            all(
+                row.get("source_span")
+                for row in chunks["chunks"]
+                if row.get("mode") in {"chapter_partial", "chapter_partial_continuation"}
+            )
+        )
+        self.assertEqual(general["assessment"], summary["assessment"])
+        self.assertEqual(provider_specific["assessment"], summary["assessment"])
+        self.assertIn("what_should_be_abstracted", general)
+        self.assertIn("what_should_stay_provider_specific", provider_specific)
+        self.assertTrue(any("budget resolver" in item for item in general["what_should_be_abstracted"]))
+        self.assertTrue(any("DeepSeek concrete model ids" == item for item in provider_specific["what_should_stay_provider_specific"]))
+        self.assertFalse(any("DeepSeek concrete model ids" == item for item in general["what_should_be_abstracted"]))
+        self.assertIn("provider_adapter_implications", general)
+        self.assertIn("provider_adapter_implications", provider_specific)
 
     def test_patch_merge_preserves_source_refs_provider_free(self):
         chunk = E2E_MODULE.StructuredSourceChunk(

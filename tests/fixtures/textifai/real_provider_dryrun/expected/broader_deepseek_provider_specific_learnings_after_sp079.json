@@ -1,0 +1,42 @@
+{
+  "assessment": "natural_chunking_good_but_needs_threshold_tuning",
+  "deepseek_specific_learnings": {
+    "flash_profile_behavior": "Flash remained fast/useful; best SP-080 score came from Flash on long selected chapters",
+    "pro_profile_behavior": "Pro produced valid reductions but showed reasoning/output exhaustion on some longer selected chapters",
+    "pro_compact_reduction_behavior": "compact mode helped preserve parseability but some Pro outputs were thin or wrong-chapter patches",
+    "deepseek_reasoning_tokens_behavior": "reasoning_tokens, when present/high, map to pro_reasoning_budget_exhaustion warning rather than generic pipeline failure",
+    "deepseek_truncation_patterns": "finish_reason=length and wrong-chapter patch continuations remain DeepSeek harness warnings",
+    "deepseek_output_budget_defaults": "8192 remains DeepSeek profile/model default resolved through budget resolver",
+    "deepseek_specific_warnings": [
+      "valid_json_wrong_chapter in patch continuation",
+      "pro_reasoning_budget_exhaustion",
+      "single-chunk natural plan under current budgets"
+    ],
+    "deepseek_profile_prompt_changes": [
+      "oer_focus_v1 for Flash",
+      "balanced_kb_v1 plus compact reduction for Pro",
+      "patch continuation only, no open continuation"
+    ]
+  },
+  "what_should_stay_provider_specific": [
+    "DeepSeek concrete model ids",
+    "DeepSeek profile ids",
+    "DeepSeek overlay wording",
+    "Pro compact reduction policy",
+    "reasoning_tokens exhaustion heuristic",
+    "DeepSeek output budget defaults",
+    "DeepSeek wrong-chapter patch warning handling"
+  ],
+  "what_should_not_be_generalized_blindly": [
+    "Pro compact mode as universal reduction mode",
+    "DeepSeek reasoning_tokens thresholds",
+    "DeepSeek 8192 max output assumption",
+    "DeepSeek-specific prompt phrasing"
+  ],
+  "provider_adapter_implications": [
+    "DeepSeek adapter/profile should surface reasoning token details when available",
+    "DeepSeek profile should keep compact reduction and patch-continuation guidance",
+    "core pipeline should consume telemetry through generic fields"
+  ],
+  "private_packet_root": "/tmp/textifai_private_provider_runs/sp080_broader_deepseek_natural_chunking/20260525T145328Z"
+}
