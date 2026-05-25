@@ -1,0 +1,30 @@
+{
+  "assessment": "chunking_reduction_gaps_closed_for_provider_free_e2e",
+  "provider": "deepseek",
+  "source": "SP-070 profiles",
+  "profiles": [
+    {
+      "model_id": "deepseek-v4-flash",
+      "profile_id": "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+      "output_budget_tokens": 8192,
+      "context_window_tokens": 128000,
+      "source_budget_policy": "context_window minus output reserve and safety margin",
+      "prompt_overhead_policy": "explicit task overhead plus provider profile overlay margin",
+      "safety_margin_tokens": 8000
+    },
+    {
+      "model_id": "deepseek-v4-pro",
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "output_budget_tokens": 8192,
+      "context_window_tokens": 128000,
+      "source_budget_policy": "context_window minus output reserve and safety margin",
+      "prompt_overhead_policy": "explicit task overhead plus provider profile overlay margin",
+      "safety_margin_tokens": 8000
+    }
+  ],
+  "routing_policy": "BYOK enabled model only; no automatic provider/model switch",
+  "gaps_remaining": [
+    "prompt overhead estimate is still caller supplied",
+    "reasoner unavailable in SP-069 discovery and has no budget bridge"
+  ]
+}

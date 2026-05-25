@@ -225,6 +225,31 @@ def build_deepseek_e2e_readiness_gate() -> dict[str, Any]:
         "write_back_allowed": False,
     }
 
+def build_deepseek_budget_bridge(task: str = "bootstrap_chapter_extraction") -> dict[str, Any]:
+    profiles = [profile for profile in deepseek_family_profiles() if profile.task == task]
+    models: list[dict[str, Any]] = []
+    for profile in profiles:
+        models.append(
+            {
+                "model_id": profile.model_pattern,
+                "profile_id": profile.profile_id,
+                "task": profile.task,
+                "output_budget_tokens": profile.default_max_output_tokens,
+                "prompt_overhead_policy": "use_task_prompt_overhead_plus_profile_overlay_margin",
+                "source_budget_policy": "usable_input_budget_after_output_reserve_and_safety_margin",
+                "safety_margin_policy": "model_capabilities_or_profile_bridge_margin",
+            }
+        )
+    return {
+        "provider": "deepseek",
+        "task": task,
+        "models": models,
+        "remaining_gaps": [
+            "TokenBudget does not yet infer profile-specific prompt overhead automatically without explicit bridge input.",
+            "Reasoner remains unavailable and unbridged.",
+        ],
+    }
+
 
 def _count(metrics: dict[str, Any], section: str) -> int:
     counts = metrics.get("counts")

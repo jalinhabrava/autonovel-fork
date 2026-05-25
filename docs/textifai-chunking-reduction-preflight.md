@@ -122,3 +122,27 @@ Existing pipeline is clear enough to proceed, but missing chunk metadata/source 
 ## Next Phase
 
 `Phase 1.3.M-b5c-4c — Implement Missing Chunking/Reduction Gaps`
+
+## SP-074 Gap Implementation
+
+Closed in this phase:
+
+- structured chunk records via `StructuredSourceChunk`;
+- structured split metadata with chunk ids, spans, predecessor/successor links, and source spans;
+- auxiliary chunk `char_start` / `char_end`;
+- DeepSeek budget bridge from SP-070 profiles into provider-free token planning helpers;
+- provider-free chunk -> partial mock -> reduction fixture e2e;
+- private decision packet contract for future real runs;
+- long provider run contract for progress, stall, timeout, and cancellation handling.
+
+Remaining gaps:
+
+- runtime chunk reducer still uses production prompts rather than provider-free reducer helper;
+- prompt overhead estimation is still caller-supplied;
+- reasoner remains unavailable in current DeepSeek family discovery baseline.
+
+Readiness:
+
+- provider-free chunking/reduction fixture e2e is ready;
+- path is ready for controlled real DeepSeek dry-run with private decision packet;
+- no provider calls were made in this phase.

@@ -253,7 +253,11 @@ def _chunk_auxiliary_document(doc: dict[str, Any]) -> list[dict[str, Any]]:
     sections = _pack_auxiliary_sections(sections, max_chars=200000)
     chunks: list[dict[str, Any]] = []
     for index, section in enumerate(sections, start=1):
-        for part_index, part in enumerate(_window_text(section["text"], max_chars=200000, overlap_chars=1500), start=1):
+        section_start = int(section.get("char_start", 0) or 0)
+        for part_index, part_record in enumerate(_window_text_with_spans(section["text"], max_chars=200000, overlap_chars=1500), start=1):
+            part = part_record["text"]
+            char_start = section_start + int(part_record["char_start"])
+            char_end = section_start + int(part_record["char_end"])
             chunk_id = f"{doc['source_id']}_chunk_{index:03d}_{part_index:02d}"
             chunks.append(
                 {
@@ -267,7 +271,14 @@ def _chunk_auxiliary_document(doc: dict[str, Any]) -> list[dict[str, Any]]:
                     "heading_path": section["heading_path"],
                     "chunk_kind": section["kind"],
                     "text": part,
+                    "char_start": char_start,
+                    "char_end": char_end,
                     "char_count": len(part),
+                    "source_span": {
+                        "source_id": doc["source_id"],
+                        "char_start": char_start,
+                        "char_end": char_end,
+                    },
                 }
             )
     return chunks
@@ -332,6 +343,8 @@ def _pack_auxiliary_sections(sections: list[dict[str, Any]], *, max_chars: int) 
                 "heading_path": [item["heading_path"] for item in bucket if item.get("heading_path")],
                 "text": "\n\n".join(str(item.get("text") or "").strip() for item in bucket if str(item.get("text") or "").strip()),
                 "kind": "packed_heading_sections" if len(bucket) > 1 else bucket[0].get("kind", "heading_section"),
+                "char_start": min(int(item.get("char_start", 0) or 0) for item in bucket),
+                "char_end": max(int(item.get("char_end", 0) or 0) for item in bucket),
             }
         )
         bucket = []
@@ -355,6 +368,7 @@ def _pack_auxiliary_sections(sections: list[dict[str, Any]], *, max_chars: int) 
 
 def _split_markdown_sections(text: str) -> list[dict[str, Any]]:
     lines = text.splitlines()
+    line_starts = _line_start_offsets(text)
     heading_indices = [i for i, line in enumerate(lines) if re.match(r"^#{1,6}\s+", line)]
     if not heading_indices:
         return []
@@ -362,6 +376,8 @@ def _split_markdown_sections(text: str) -> list[dict[str, Any]]:
     current_path: list[str] = []
     for pos, start in enumerate(heading_indices):
         end = heading_indices[pos + 1] if pos + 1 < len(heading_indices) else len(lines)
+        char_start = line_starts[start]
+        char_end = line_starts[end] if end < len(line_starts) else len(text)
         heading_line = lines[start]
         level = len(heading_line) - len(heading_line.lstrip("#"))
         heading = normalize_entity_text(heading_line.lstrip("#").strip())
@@ -369,38 +385,56 @@ def _split_markdown_sections(text: str) -> list[dict[str, Any]]:
         current_path.append(heading)
         body = "\n".join(lines[start:end]).strip()
         if body:
-            sections.append({"heading_path": list(current_path), "text": body, "kind": "heading_section"})
+            sections.append({"heading_path": list(current_path), "text": body, "kind": "heading_section", "char_start": char_start, "char_end": char_end})
     return sections
 
 
 def _split_paragraph_sections(text: str) -> list[dict[str, Any]]:
-    paragraphs = [part.strip() for part in re.split(r"\n\s*\n", text) if part.strip()]
+    paragraphs = [(match.group(0).strip(), match.start(), match.end()) for match in re.finditer(r"(?s)(?:^|\n\s*\n)(.*?)(?=\n\s*\n|$)", text) if match.group(0).strip()]
     if not paragraphs:
-        return [{"heading_path": [], "text": text.strip(), "kind": "plain_text_window"}] if text.strip() else []
+        return [{"heading_path": [], "text": text.strip(), "kind": "plain_text_window", "char_start": 0, "char_end": len(text)}] if text.strip() else []
     sections: list[dict[str, Any]] = []
     bucket: list[str] = []
     size = 0
-    for paragraph in paragraphs:
+    bucket_start = 0
+    bucket_end = 0
+    for paragraph, start, end in paragraphs:
         if bucket and size + len(paragraph) > 4500:
-            sections.append({"heading_path": [], "text": "\n\n".join(bucket), "kind": "paragraph_group"})
+            sections.append({"heading_path": [], "text": "\n\n".join(bucket), "kind": "paragraph_group", "char_start": bucket_start, "char_end": bucket_end})
             bucket = []
             size = 0
+            bucket_start = start
+        if not bucket:
+            bucket_start = start
         bucket.append(paragraph)
         size += len(paragraph)
+        bucket_end = end
     if bucket:
-        sections.append({"heading_path": [], "text": "\n\n".join(bucket), "kind": "paragraph_group"})
+        sections.append({"heading_path": [], "text": "\n\n".join(bucket), "kind": "paragraph_group", "char_start": bucket_start, "char_end": bucket_end})
     return sections
+
+def _line_start_offsets(text: str) -> list[int]:
+    starts = [0]
+    for match in re.finditer("\n", text):
+        starts.append(match.end())
+    starts.append(len(text))
+    return starts
 
 
 def _window_text(text: str, *, max_chars: int, overlap_chars: int) -> list[str]:
+    return [item["text"] for item in _window_text_with_spans(text, max_chars=max_chars, overlap_chars=overlap_chars)]
+
+def _window_text_with_spans(text: str, *, max_chars: int, overlap_chars: int) -> list[dict[str, Any]]:
     text = text.strip()
     if len(text) <= max_chars:
-        return [text] if text else []
-    chunks: list[str] = []
+        return [{"text": text, "char_start": 0, "char_end": len(text)}] if text else []
+    chunks: list[dict[str, Any]] = []
     start = 0
     while start < len(text):
         end = min(start + max_chars, len(text))
-        chunks.append(text[start:end].strip())
+        part = text[start:end].strip()
+        left_trim = len(text[start:end]) - len(text[start:end].lstrip())
+        chunks.append({"text": part, "char_start": start + left_trim, "char_end": start + left_trim + len(part)})
         if end == len(text):
             break
         start = max(end - overlap_chars, start + 1)
@@ -497,6 +531,8 @@ def _source_ref(chunk: dict[str, Any]) -> dict[str, Any]:
         "chunk_id": chunk["chunk_id"],
         "filename": chunk["filename"],
         "heading_path": chunk.get("heading_path") or [],
+        "char_start": int(chunk.get("char_start", 0) or 0),
+        "char_end": int(chunk.get("char_end", 0) or 0),
         "source_origin": "auxiliary",
     }
 

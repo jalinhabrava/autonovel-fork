@@ -1,0 +1,33 @@
+{
+  "assessment": "chunking_reduction_gaps_closed_for_provider_free_e2e",
+  "root_location": "/tmp/textifai_private_provider_runs/<matrix_or_run_id>",
+  "per_run_files": [
+    "run_manifest.json",
+    "final_prompt_sent.md",
+    "system_prompt.md",
+    "user_prompt.md",
+    "provider_profile_or_overlay.md",
+    "provider_request_payload.redacted.json",
+    "provider_response_raw.txt",
+    "provider_response_parsed.json",
+    "validation_report.json",
+    "failure_mode_report.json",
+    "variant_diff_and_hypothesis.json",
+    "codex_interpretation.md"
+  ],
+  "per_matrix_files": [
+    "matrix_summary_private.md",
+    "matrix_comparison_private.md",
+    "decision_notes_private.md",
+    "README.md"
+  ],
+  "rules": {
+    "commit_allowed": false,
+    "copy_to_desktop_allowed": false,
+    "api_key_allowed": false,
+    "authorization_header": "redact",
+    "handoff_lists_root_path": true,
+    "handoff_lists_priority_files": true,
+    "handoff_summarizes_enough_to_decide_without_opening_all_files": true
+  }
+}

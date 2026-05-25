@@ -147,6 +147,30 @@ _MODEL_CAPABILITIES: dict[str, ModelCapabilities] = {
         speed_score=0.92,
         safe_default_for=("model_advisor",),
     ),
+    "deepseek-v4-flash": ModelCapabilities(
+        model="deepseek-v4-flash",
+        context_window=128000,
+        max_output_tokens=8192,
+        recommended_output_reserve=8192,
+        recommended_safety_margin=8000,
+        family="deepseek",
+        relative_cost=0.35,
+        quality_score=0.68,
+        speed_score=0.84,
+        safe_default_for=("chapter_partial_extraction",),
+    ),
+    "deepseek-v4-pro": ModelCapabilities(
+        model="deepseek-v4-pro",
+        context_window=128000,
+        max_output_tokens=8192,
+        recommended_output_reserve=8192,
+        recommended_safety_margin=8000,
+        family="deepseek",
+        relative_cost=0.7,
+        quality_score=0.78,
+        speed_score=0.7,
+        safe_default_for=("chapter_extraction", "chapter_reduction"),
+    ),
 }
 
 _DEFAULT_CAPABILITIES = ModelCapabilities(
@@ -193,6 +217,10 @@ def infer_model_capabilities(model_name: str | None) -> ModelCapabilities | None
         return _MODEL_CAPABILITIES["gpt-5-nano"]
     if normalized.startswith(("gpt-5.4", "gpt-5.2", "gpt-5")):
         return _MODEL_CAPABILITIES["gpt-5.2"]
+    if normalized.startswith("deepseek-v4-flash"):
+        return _MODEL_CAPABILITIES["deepseek-v4-flash"]
+    if normalized.startswith("deepseek-v4-pro"):
+        return _MODEL_CAPABILITIES["deepseek-v4-pro"]
     return None
 
 

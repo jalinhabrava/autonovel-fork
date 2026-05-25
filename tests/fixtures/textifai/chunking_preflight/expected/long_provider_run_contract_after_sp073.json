@@ -1,0 +1,30 @@
+{
+  "assessment": "chunking_reduction_gaps_closed_for_provider_free_e2e",
+  "progress_log_incremental": true,
+  "required_progress_fields": [
+    "run_index",
+    "run_total",
+    "started_at",
+    "last_output_activity_at",
+    "finished_at",
+    "output_file_size_bytes",
+    "status"
+  ],
+  "timeout_policy": {
+    "stall_detection": true,
+    "stall_condition": "no output activity beyond configured inactivity timeout",
+    "on_timeout": "write cancellation report before abort"
+  },
+  "cancellation_rules": {
+    "manual_cancel_supported": true,
+    "cancel_on_stall_supported": true,
+    "cancellation_report_fields": [
+      "run_index",
+      "run_total",
+      "cancelled_at",
+      "reason",
+      "last_output_activity_at",
+      "output_file_size_bytes"
+    ]
+  }
+}

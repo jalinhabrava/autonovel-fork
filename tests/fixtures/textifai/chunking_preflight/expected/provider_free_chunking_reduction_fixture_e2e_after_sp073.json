@@ -1,0 +1,22 @@
+{
+  "assessment": "chunking_reduction_gaps_closed_for_provider_free_e2e",
+  "fixture": "synthetic structured document -> structured chunks -> mock partials -> reduction",
+  "provider_calls": 0,
+  "private_text_used": false,
+  "checks": [
+    "partials preserve source_id/chunk_id",
+    "objects/events/relations aggregate across chunks",
+    "duplicate object can be marked needs_review",
+    "local_candidate/review_state is not auto-promoted",
+    "source_refs carry chunk/span metadata",
+    "invalid partial produces warning without aborting reduction"
+  ],
+  "expected_final_counts": {
+    "objects": 2,
+    "events": 2,
+    "relations": 2
+  },
+  "remaining_gaps": [
+    "mock reducer is provider-free readiness fixture, not production semantic reducer replacement"
+  ]
+}
