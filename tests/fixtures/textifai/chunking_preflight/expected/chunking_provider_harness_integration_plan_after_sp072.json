@@ -1,0 +1,38 @@
+{
+  "assessment": "chunking_reduction_preflight_ready_with_gaps",
+  "provider_profile_application": {
+    "current_mechanism": "get_provider_prompt_profile/apply_provider_prompt_profile for bootstrap_chapter_extraction",
+    "SP070_flash_profile": "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+    "SP070_pro_profile": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+    "reasoner": "not_visible_in_sp069_not_packaged"
+  },
+  "chunk_level_thin_warnings": {
+    "available_helpers": [
+      "deepseek_family_profiles.build_thin_output_warnings"
+    ],
+    "integration_status": "not wired into chunked runtime"
+  },
+  "prompt_experiment_observability": {
+    "available_helpers": [
+      "prompt_experiment_observability.classify_failure_mode",
+      "build_experiment_entry"
+    ],
+    "future_matrix_requirement": "emit diff/failure/decision reports per matrix"
+  },
+  "BYOK": {
+    "no_auto_switch_global": true,
+    "no_openai": true,
+    "enabled_models_only": true,
+    "same_model_rerun_guidance_allowed": true
+  },
+  "recommended_integration_points": [
+    "Apply SP070 profile before per-chunk extraction prompt construction.",
+    "Record per-chunk failure_mode and density warnings in chunk audit.",
+    "Carry provider_profile_id and chunk metadata into reduction prompt/audit.",
+    "Do not switch provider/model automatically during chunk retry."
+  ],
+  "gaps": [
+    "Profiles are available but chunked runtime does not yet emit SP071 observability reports per chunk.",
+    "Budget policy does not yet map DeepSeek profile output tokens into TokenBudget."
+  ]
+}

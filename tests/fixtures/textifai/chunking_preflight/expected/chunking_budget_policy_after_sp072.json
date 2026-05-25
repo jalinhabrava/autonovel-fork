@@ -1,0 +1,56 @@
+{
+  "assessment": "chunking_reduction_preflight_ready_with_gaps",
+  "budgets_currently_detected": {
+    "NovelBootstrapV1Config.global_max_tokens": 9000,
+    "NovelBootstrapV1Config.chapter_max_tokens": 3000,
+    "NovelBootstrapV1Config.chapter_reduce_max_tokens": 3000,
+    "NovelBootstrapV1Config.global_batch_input_token_budget": 6000,
+    "NovelBootstrapV1Config.global_batch_prompt_overhead_tokens": 5000,
+    "NovelBootstrapV1Config.max_global_text_chars": 350000,
+    "NovelBootstrapV1Config.chapter_chunk_overlap_paragraphs": 1,
+    "auxiliary_chunk_char_cap_observed_in_tests": 200000,
+    "SP070.DeepSeek.profile_default_max_output_tokens": 8192
+  },
+  "hardcoded_vs_configurable": {
+    "configurable": [
+      "chapter_max_tokens",
+      "chapter_reduce_max_tokens",
+      "global_batch_input_token_budget",
+      "max_global_text_chars",
+      "chapter_chunk_overlap_paragraphs"
+    ],
+    "hardcoded_or_static": [
+      "auxiliary chunk char packing behavior",
+      "model_registry DeepSeek capabilities absent",
+      "SP070 DeepSeek 8192 budget lives in provider profiles not model_registry"
+    ]
+  },
+  "provider_model_dependency": {
+    "model_registry_present": true,
+    "DeepSeek_specific_model_capabilities_present": false,
+    "provider_profiles_present": true,
+    "risk": "budget planner may not know DeepSeek-specific context/output tradeoffs unless wired from SP070 profiles or model_registry additions."
+  },
+  "prompt_overhead_budget": {
+    "global_batch_prompt_overhead_tokens": 5000,
+    "chapter_partial_extra_margin": "partial_budget = usable_input_budget - 4000"
+  },
+  "source_text_budget": {
+    "structured_chapter_chunking": "split_markdown_semantically max_chunk_tokens based on TokenBudget.usable_input_budget",
+    "global_text_char_limit": 350000
+  },
+  "expected_output_budget": {
+    "generic_chapter": 3000,
+    "chapter_reduction": 3000,
+    "DeepSeek_SP070_profiles": 8192
+  },
+  "safety_margin": {
+    "TokenBudget": "capabilities.recommended_safety_margin",
+    "default_model_margin": 8000
+  },
+  "gaps": [
+    "No direct provider-profile to TokenBudget bridge.",
+    "DeepSeek model capabilities not registered in model_registry.",
+    "No provider-free assertion for min chunk size / absurdly small chunk avoidance in structured subchunk metadata."
+  ]
+}

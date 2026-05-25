@@ -1,0 +1,38 @@
+{
+  "assessment": "chunking_reduction_preflight_ready_with_gaps",
+  "reducer_aggregator_current": {
+    "chapter_partial_reducer": "structured_bootstrap_v1._run_chapter_extraction_chunked with CHAPTER_REDUCTION_PROMPT",
+    "global_normalization_aggregation": "structured_bootstrap_v1 merge/merge_plan aggregation paths",
+    "auxiliary_aggregation": "auxiliary_ingestion._apply_auxiliary_extractions enriches or creates entities and relationships"
+  },
+  "entity_object_event_relation_merge": {
+    "entities": "global payload merge and auxiliary enrich/create flows exist",
+    "objects_events_relations": "chapter reduction prompt requests durable signals, but provider-free reducer object merge fixture is missing",
+    "duplicates": "global merge_plan and normalized key matching exist for entities; object/event dedupe less explicit in provider-free tests"
+  },
+  "review_state_local_candidate": {
+    "supported": true,
+    "notes": "prompts and normalization preserve review_state/local_candidate/needs_review and avoid auto-promote for uncertainty"
+  },
+  "evidence_source_spans": {
+    "supported": "partial",
+    "notes": "auxiliary source_refs preserve source_id/chunk_id/heading_path; structured subchunks lack char spans in chunk objects"
+  },
+  "conflict_reporting": {
+    "supported": "partial",
+    "notes": "merge_plan/conflict guidance exists; provider-free conflict aggregation fixture still needed"
+  },
+  "partial_outputs": {
+    "supported": true,
+    "notes": "partial_payloads are reduced for large chapters"
+  },
+  "invalid_chunk_outputs": {
+    "supported": "runtime",
+    "notes": "parse/schema/api failures are converted to ChapterExtractionAttemptResult; reducer preflight fixture missing"
+  },
+  "gaps": [
+    "No provider-free synthetic reducer that combines partial chunk outputs into final schema.",
+    "Source span preservation through reduction is partial.",
+    "Object/event/relation dedupe and conflict policy need explicit fixture coverage."
+  ]
+}

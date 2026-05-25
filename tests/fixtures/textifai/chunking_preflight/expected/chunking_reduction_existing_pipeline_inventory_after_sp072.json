@@ -1,0 +1,150 @@
+{
+  "assessment": "chunking_reduction_preflight_ready_with_gaps",
+  "modules_found": [
+    {
+      "path": "textifai/import_review/batch_planner.py",
+      "role": "budget packing and semantic markdown chunk splitting",
+      "runtime_scope": "product"
+    },
+    {
+      "path": "textifai/import_review/structured_bootstrap_v1.py",
+      "role": "chapter extraction, chunked partial extraction, chapter reduction, global normalization aggregation",
+      "runtime_scope": "product"
+    },
+    {
+      "path": "textifai/import_review/chapterizer.py",
+      "role": "deterministic chapter boundary detection and chapter char ranges",
+      "runtime_scope": "product"
+    },
+    {
+      "path": "textifai/import_review/auxiliary_ingestion.py",
+      "role": "author notes / auxiliary document chunking, extraction, enrichment, audit",
+      "runtime_scope": "product"
+    },
+    {
+      "path": "textifai/import_review/token_budget.py",
+      "role": "context/output/safety margin budget helper",
+      "runtime_scope": "product"
+    },
+    {
+      "path": "textifai/import_review/model_registry.py",
+      "role": "model capabilities and context windows",
+      "runtime_scope": "product"
+    },
+    {
+      "path": "textifai/bootstrap/source_reader.py",
+      "role": "source inventory and document reading",
+      "runtime_scope": "product"
+    }
+  ],
+  "scripts_found": [
+    {
+      "path": "scripts/dev/capture_bootstrap_prompts.py",
+      "role": "dev prompt capture for bootstrap phases"
+    },
+    {
+      "path": "scripts/dev/real_provider_dryrun.py",
+      "role": "guarded single prompt provider dry-run"
+    },
+    {
+      "path": "scripts/dev/deepseek_targeted_ingestion_matrix.py",
+      "role": "dev targeted matrix, not production ingestion"
+    }
+  ],
+  "tests_existing": [
+    "tests/test_textifai_structured_bootstrap_v1.py",
+    "tests/test_textifai_provider_prompt_profiles.py",
+    "tests/test_textifai_real_provider_dryrun_guards.py"
+  ],
+  "fixtures_existing": [
+    "tests/fixtures/textifai/real_provider_dryrun/expected",
+    "tests/fixtures/textifai/provider_prompt_profiles/expected",
+    "tests/fixtures/textifai/prompt_experiments/expected",
+    "tests/fixtures/textifai/real_novel/real_novel_jp_linked_power/provider_samples/prompt_packets"
+  ],
+  "entrypoints": [
+    {
+      "name": "run_structured_bootstrap_v1",
+      "path": "textifai/import_review/structured_bootstrap_v1.py"
+    },
+    {
+      "name": "detect_story_chapters",
+      "path": "textifai/import_review/chapterizer.py"
+    },
+    {
+      "name": "split_markdown_semantically",
+      "path": "textifai/import_review/batch_planner.py"
+    },
+    {
+      "name": "ingest_auxiliary_documents",
+      "path": "textifai/import_review/auxiliary_ingestion.py"
+    }
+  ],
+  "productive_vs_dev_only": {
+    "productive": [
+      "structured_bootstrap_v1",
+      "chapterizer",
+      "batch_planner",
+      "auxiliary_ingestion",
+      "token_budget",
+      "model_registry"
+    ],
+    "dev_only": [
+      "scripts/dev/* matrix and dryrun scripts"
+    ]
+  },
+  "structured_document_support": {
+    "status": "present",
+    "details": [
+      "chapterizer detects structural chapter boundaries with char_start/char_end",
+      "long chapters can route to _run_chapter_extraction_chunked",
+      "split_markdown_semantically preserves headings and overlap paragraphs"
+    ]
+  },
+  "unstructured_author_notes_support": {
+    "status": "present",
+    "details": [
+      "auxiliary_ingestion chunks heading sections into packed chunks",
+      "author_hint and title fallback are tracked",
+      "LLM extraction schema supports character_sheets/world_lore/outline/timeline/mixed_notes/unknown_auxiliary"
+    ]
+  },
+  "aggregation_reduction_support": {
+    "status": "present",
+    "details": [
+      "chapter partial payloads reduce via CHAPTER_REDUCTION_PROMPT",
+      "global normalization merge/merge_plan aggregation exists",
+      "auxiliary enrichment merges declared entities and relationships into existing entity set"
+    ]
+  },
+  "token_char_budget_support": {
+    "status": "present_with_gaps",
+    "details": [
+      "TokenBudget helper exists",
+      "NovelBootstrapV1Config has chapter/global/reduce max tokens",
+      "auxiliary chunks use char_count cap around 200000",
+      "DeepSeek SP070 profile budget 8192 exists outside model_registry capabilities"
+    ]
+  },
+  "evidence_source_spans_support": {
+    "status": "partial",
+    "details": [
+      "chapterizer has chapter char ranges",
+      "auxiliary source_refs include source_id/chunk_id/heading_path",
+      "semantic markdown subchunks are strings and do not expose char_start/char_end/chunk metadata"
+    ]
+  },
+  "gaps": [
+    "Structured subchunk metadata is not first-class: no source_id/chunk_id/char range/predecessor/successor object from split_markdown_semantically.",
+    "No provider-free fixture e2e that exercises chapter split -> partial outputs -> reduction without provider calls.",
+    "DeepSeek SP070 max output budget is not integrated into model_registry capabilities.",
+    "Auxiliary chunks have heading_path and char_count but not char_start/char_end or predecessor/successor metadata.",
+    "Invalid chunk output handling exists in runtime paths but lacks a provider-free reducer preflight fixture.",
+    "split_markdown_semantically splits at section/paragraph boundaries but does not split a single oversized heading section internally."
+  ],
+  "risks": [
+    "Real e2e on private novel before fixture preflight could hide chunking metadata regressions.",
+    "DeepSeek profiles may be applied at prompt level but budget planning may still use generic/default model capabilities.",
+    "Chunk reduction can lose source-span auditability if subchunk metadata remains string-only."
+  ]
+}

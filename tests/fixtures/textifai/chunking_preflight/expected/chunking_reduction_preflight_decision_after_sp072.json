@@ -1,0 +1,28 @@
+{
+  "assessment": "chunking_reduction_preflight_ready_with_gaps",
+  "ready_areas": [
+    "Existing production chunking/reduction code found.",
+    "Chapterizer preserves chapter char ranges.",
+    "Semantic markdown splitting and overlap exist.",
+    "Auxiliary author notes ingestion/chunking exists.",
+    "DeepSeek SP070 profiles and SP071 observability are available."
+  ],
+  "gaps": [
+    "Structured subchunk metadata is not first-class: no source_id/chunk_id/char range/predecessor/successor object from split_markdown_semantically.",
+    "No provider-free fixture e2e that exercises chapter split -> partial outputs -> reduction without provider calls.",
+    "DeepSeek SP070 max output budget is not integrated into model_registry capabilities.",
+    "Auxiliary chunks have heading_path and char_count but not char_start/char_end or predecessor/successor metadata.",
+    "Invalid chunk output handling exists in runtime paths but lacks a provider-free reducer preflight fixture.",
+    "No provider-free synthetic reducer that combines partial chunk outputs into final schema.",
+    "Source span preservation through reduction is partial.",
+    "Object/event/relation dedupe and conflict policy need explicit fixture coverage.",
+    "Profiles are available but chunked runtime does not yet emit SP071 observability reports per chunk.",
+    "Budget policy does not yet map DeepSeek profile output tokens into TokenBudget.",
+    "split_markdown_semantically splits at section/paragraph boundaries but does not split a single oversized heading section internally."
+  ],
+  "blocker": false,
+  "blocker_reason": "Pipeline exists and can be preflighted provider-free, but metadata/budget/reducer fixture gaps should be closed before private real e2e.",
+  "recommended_next_phase": "Phase 1.3.M-b5c-4c — Implement Missing Chunking/Reduction Gaps",
+  "provider_free_fixture_e2e_possible": true,
+  "real_deepseek_e2e_should_wait": true
+}
