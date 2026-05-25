@@ -1,0 +1,34 @@
+{
+  "assessment": "fail_only_retry_contract_ready_with_review_warnings",
+  "allowed_outcome_statuses": [
+    "success",
+    "success_with_warnings",
+    "success_with_retry_available",
+    "partial_failure",
+    "failed"
+  ],
+  "allowed_chapter_statuses": [
+    "ready",
+    "ready_with_warnings",
+    "needs_retry",
+    "needs_review",
+    "failed"
+  ],
+  "allowed_reason_labels": [
+    "analysis_incomplete",
+    "temporary_model_error",
+    "chapter_needs_second_pass",
+    "chapter_processed_with_warnings",
+    "manual_review_recommended"
+  ],
+  "primary_action": {
+    "label": "Retry pending chapters",
+    "action_id": "retry_pending_chapters",
+    "scope": "affected_chapters_only"
+  },
+  "secondary_action": {
+    "label": "Later",
+    "action_id": "dismiss"
+  },
+  "writer_summary_template": "X of Y chapters are ready. Z chapters need a second pass."
+}

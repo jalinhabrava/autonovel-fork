@@ -1,0 +1,55 @@
+{
+  "assessment": "fail_only_retry_contract_ready_with_review_warnings",
+  "source_sha256": "61e1bde83941ad9c8d5c4a2e016e0935b01732dfee152f7b3631d33348de96e6",
+  "estimated_chapter_count": 117,
+  "chapter_selection_strategy": "process all chapters in staged batches; prioritize longest chapters early in each batch",
+  "estimated_calls": {
+    "flash_only_with_reserve": 361,
+    "flash_plus_pro_with_reserve": 723
+  },
+  "proposed_cap": 96,
+  "continuation_reserve_policy": "reserve at least 20 percent of batch cap for continuation and patch recovery",
+  "staged_execution_proposal": [
+    {
+      "phase": "A",
+      "scope": "first 24 chapters flash-only",
+      "target_cap": 96,
+      "goal": "establish baseline chapter readiness and retry scope"
+    },
+    {
+      "phase": "B",
+      "scope": "next 24 chapters flash-only plus pro on flagged high-risk chapters",
+      "target_cap": 96,
+      "goal": "validate difficult chapters while keeping cost bounded"
+    },
+    {
+      "phase": "C",
+      "scope": "remaining chapters flash-only then fail-only retries",
+      "target_cap": 96,
+      "goal": "close graph completion without full rerun"
+    }
+  ],
+  "stop_conditions": [
+    "stop batch if planned calls exceed cap",
+    "stop batch if continuation reserve drops below 10 percent",
+    "stop before any automatic write-back"
+  ],
+  "fail_only_retry_after_each_phase": true,
+  "cost_risk_notes": [
+    "flash-only sweep is materially cheaper and faster",
+    "flash+pro on all chapters is high-cost and should remain opt-in",
+    "fail-only retry reduces repeated processing for ready chapters"
+  ],
+  "private_packet_requirements": [
+    "per-call redacted payload and response artifacts",
+    "phase summary with writer-facing outcome snapshot",
+    "internal retry plan and consolidated outcome notes"
+  ],
+  "writer_facing_outcome_at_end": "X chapters ready, Y chapters need a second pass, retry pending chapters available",
+  "full_source_execution_status": "not_executed_planning_only",
+  "recommended_first_batch": {
+    "scope": "24 chapters flash-only plus private packet and writer outcome",
+    "cap": 96,
+    "write_back": false
+  }
+}

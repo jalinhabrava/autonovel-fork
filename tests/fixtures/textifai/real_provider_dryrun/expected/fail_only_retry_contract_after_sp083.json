@@ -1,0 +1,104 @@
+{
+  "assessment": "fail_only_retry_contract_ready_with_review_warnings",
+  "ingestion_run_id": "sp083_broader_natural_multichunk_20260525T170226Z",
+  "total_chapters": 4,
+  "retryable_chapters": [
+    "ch_106",
+    "ch_115"
+  ],
+  "non_retryable_chapters": [
+    "ch_097",
+    "ch_114"
+  ],
+  "retryable_units_internal": [
+    {
+      "chapter_id": "ch_106",
+      "chapter_label": "Chapter 106",
+      "run_id": "ch_106__deepseek_v4_flash",
+      "technical_unit_type": "partial_extraction",
+      "model": "deepseek-v4-flash",
+      "profile_id": "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+      "reason": "multiple second-pass attempts diverged on this chapter",
+      "failure_mode": "valid_json_wrong_chapter",
+      "retry_strategy": "rerun_chapter",
+      "expected_provider_calls": 1,
+      "dependencies": []
+    },
+    {
+      "chapter_id": "ch_106",
+      "chapter_label": "Chapter 106",
+      "run_id": "ch_106__deepseek_v4_pro",
+      "technical_unit_type": "partial_extraction",
+      "model": "deepseek-v4-pro",
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "reason": "multiple second-pass attempts diverged on this chapter",
+      "failure_mode": "valid_json_wrong_chapter",
+      "retry_strategy": "rerun_chapter",
+      "expected_provider_calls": 1,
+      "dependencies": []
+    },
+    {
+      "chapter_id": "ch_106",
+      "chapter_label": "Chapter 106",
+      "run_id": "ch_106__deepseek_v4_pro",
+      "technical_unit_type": "reduction",
+      "model": "deepseek-v4-pro",
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "reason": "second pass recommended because final chapter output looked thin",
+      "failure_mode": "low_reduction_score",
+      "retry_strategy": "compact_reduction",
+      "expected_provider_calls": 2,
+      "dependencies": []
+    },
+    {
+      "chapter_id": "ch_115",
+      "chapter_label": "Chapter 115",
+      "run_id": "ch_115__deepseek_v4_pro",
+      "technical_unit_type": "partial_extraction",
+      "model": "deepseek-v4-pro",
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "reason": "retry warning unit only; final chapter output stayed usable",
+      "failure_mode": "valid_json_wrong_chapter",
+      "retry_strategy": "rerun_chapter",
+      "expected_provider_calls": 1,
+      "dependencies": []
+    },
+    {
+      "chapter_id": "ch_115",
+      "chapter_label": "Chapter 115",
+      "run_id": "ch_115__deepseek_v4_pro",
+      "technical_unit_type": "reduction",
+      "model": "deepseek-v4-pro",
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "reason": "second pass recommended because final chapter output looked thin",
+      "failure_mode": "low_objects_count,low_relations_count",
+      "retry_strategy": "compact_reduction",
+      "expected_provider_calls": 2,
+      "dependencies": []
+    }
+  ],
+  "dependency_policy": {
+    "successful_chapters_excluded_by_default": true,
+    "allow_successful_chapter_only_if_dependency_explicit": true,
+    "cross_chapter_dependency_default": "none"
+  },
+  "expected_provider_calls": 7,
+  "cap_recommendation": {
+    "recommended_cap": 24,
+    "expected_provider_calls": 7,
+    "within_recommended_cap": true
+  },
+  "safe_to_rerun_without_full_ingestion": true,
+  "graph_completion_status_before_retry": "complete_with_retryable_warnings",
+  "graph_completion_status_after_retry": {
+    "if_all_retryable_units_recovered": "complete_ready_or_warning",
+    "if_some_units_still_retryable": "complete_with_retryable_warnings",
+    "if_unrecoverable_units_remain": "partial_failure"
+  },
+  "consolidation_rules": [
+    "only retried chapters can change status after retry",
+    "non-retried successful chapters remain ready or ready_with_warnings",
+    "final writer outcome recomputes chapter counts and affected list"
+  ],
+  "successful_chapters_excluded_from_retry_scope": []
+}

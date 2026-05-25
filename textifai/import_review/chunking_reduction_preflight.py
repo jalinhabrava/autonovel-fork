@@ -11,6 +11,15 @@ from textifai.import_review.batch_planner import (
 )
 
 CRITICAL_SECTIONS = ["characters", "places", "concepts", "objects", "events", "relations", "unresolved_mentions"]
+WRITER_OUTCOME_STATUSES = ["success", "success_with_warnings", "success_with_retry_available", "partial_failure", "failed"]
+WRITER_CHAPTER_STATUSES = ["ready", "ready_with_warnings", "needs_retry", "needs_review", "failed"]
+WRITER_REASON_LABELS = [
+    "analysis_incomplete",
+    "temporary_model_error",
+    "chapter_needs_second_pass",
+    "chapter_processed_with_warnings",
+    "manual_review_recommended",
+]
 
 
 def reduce_mock_chunk_partials(
@@ -382,6 +391,298 @@ def build_natural_chunking_replan_simulation(*, rows: list[dict[str, Any]]) -> d
         "fits_cap_64": flash_pro_calls + reserve <= 64,
         "would_produce_natural_multichunk": any(item["new_natural_chunk_count"] > 1 for item in chapter_rows),
         "suggested_subset_if_over_cap": [item["chapter_id"] for item in sorted(chapter_rows, key=lambda item: item["estimated_tokens"], reverse=True)[:4]],
+    }
+
+
+def map_technical_signals_to_writer_status(
+    *,
+    final_chapter_valid: bool,
+    has_internal_warnings: bool,
+    has_retryable_failures: bool,
+    has_semantic_thinness: bool,
+    unrecoverable_failure: bool,
+) -> dict[str, Any]:
+    if unrecoverable_failure:
+        return {
+            "chapter_status": "failed",
+            "reason_label": "manual_review_recommended",
+            "user_message": "This chapter could not be completed and needs manual review.",
+        }
+    if has_retryable_failures:
+        return {
+            "chapter_status": "needs_retry",
+            "reason_label": "chapter_needs_second_pass",
+            "user_message": "This chapter needs a second pass to complete the analysis.",
+        }
+    if has_semantic_thinness and final_chapter_valid:
+        return {
+            "chapter_status": "needs_review",
+            "reason_label": "manual_review_recommended",
+            "user_message": "This chapter is complete but should be reviewed once before finalizing.",
+        }
+    if final_chapter_valid and has_internal_warnings:
+        return {
+            "chapter_status": "ready_with_warnings",
+            "reason_label": "chapter_processed_with_warnings",
+            "user_message": "This chapter is ready with minor warnings.",
+        }
+    if final_chapter_valid:
+        return {
+            "chapter_status": "ready",
+            "reason_label": "analysis_incomplete",
+            "user_message": "This chapter is ready.",
+        }
+    return {
+        "chapter_status": "needs_retry",
+        "reason_label": "temporary_model_error",
+        "user_message": "This chapter needs another pass due to a temporary issue.",
+    }
+
+
+def build_writer_facing_ingestion_outcome_contract() -> dict[str, Any]:
+    return {
+        "assessment": "fail_only_retry_contract_ready_with_review_warnings",
+        "allowed_outcome_statuses": WRITER_OUTCOME_STATUSES,
+        "allowed_chapter_statuses": WRITER_CHAPTER_STATUSES,
+        "allowed_reason_labels": WRITER_REASON_LABELS,
+        "primary_action": {
+            "label": "Retry pending chapters",
+            "action_id": "retry_pending_chapters",
+            "scope": "affected_chapters_only",
+        },
+        "secondary_action": {
+            "label": "Later",
+            "action_id": "dismiss",
+        },
+        "writer_summary_template": "X of Y chapters are ready. Z chapters need a second pass.",
+    }
+
+
+def build_technical_to_user_status_mapping_report() -> dict[str, Any]:
+    return {
+        "assessment": "fail_only_retry_contract_ready_with_review_warnings",
+        "rules": [
+            {
+                "rule_id": "R1",
+                "technical_condition": "final reduction valid and no warnings",
+                "writer_status": "ready",
+                "reason_label": "analysis_incomplete",
+            },
+            {
+                "rule_id": "R2",
+                "technical_condition": "final reduction valid and graph usable with warnings",
+                "writer_status": "ready_with_warnings",
+                "reason_label": "chapter_processed_with_warnings",
+            },
+            {
+                "rule_id": "R3",
+                "technical_condition": "retryable failure or low-density output",
+                "writer_status": "needs_retry",
+                "reason_label": "chapter_needs_second_pass",
+            },
+            {
+                "rule_id": "R4",
+                "technical_condition": "valid output with suspicious semantic thinness",
+                "writer_status": "needs_review",
+                "reason_label": "manual_review_recommended",
+            },
+            {
+                "rule_id": "R5",
+                "technical_condition": "unrecoverable technical failure",
+                "writer_status": "failed",
+                "reason_label": "manual_review_recommended",
+            },
+        ],
+        "user_output_hides_internal_signals": True,
+    }
+
+
+def build_fail_only_retry_contract(
+    *,
+    summary_report: dict[str, Any],
+    internal_rerun_report: dict[str, Any],
+    user_outcome_report: dict[str, Any],
+    retry_cap: int = 24,
+) -> dict[str, Any]:
+    outcome = user_outcome_report.get("user_ingestion_outcome") if isinstance(user_outcome_report, dict) else {}
+    all_chapters = sorted({item.get("chapter_id") for item in outcome.get("affected_chapters", []) if isinstance(item, dict)})
+    retryable_chapters = sorted(set(internal_rerun_report.get("retryable_chapters") or []))
+    warning_chapters = sorted(set(internal_rerun_report.get("warning_chapters") or []))
+    successful_chapters = sorted(set(internal_rerun_report.get("successful_chapters") or []))
+    if not successful_chapters and isinstance(summary_report.get("chapters"), list):
+        all_from_summary = [str(item) for item in summary_report.get("chapters") if isinstance(item, str)]
+        successful_chapters = sorted(set(all_from_summary) - set(retryable_chapters) - set(warning_chapters))
+    retry_units: list[dict[str, Any]] = []
+    seen: set[tuple[str, str, str]] = set()
+    for unit in internal_rerun_report.get("retryable_units_internal") or []:
+        if not isinstance(unit, dict):
+            continue
+        chapter_id = str(unit.get("chapter_id") or "")
+        if chapter_id not in retryable_chapters:
+            continue
+        key = (
+            chapter_id,
+            str(unit.get("run_id") or ""),
+            str(unit.get("technical_unit_type") or ""),
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        retry_units.append(unit)
+    expected_calls = sum(int(unit.get("expected_provider_calls") or 0) for unit in retry_units)
+    return {
+        "assessment": "fail_only_retry_contract_ready_with_review_warnings",
+        "ingestion_run_id": internal_rerun_report.get("dryrun_id") or internal_rerun_report.get("ingestion_run_id"),
+        "total_chapters": int(outcome.get("total_chapters") or len(successful_chapters) + len(warning_chapters) + len(retryable_chapters)),
+        "retryable_chapters": retryable_chapters,
+        "non_retryable_chapters": sorted(set(successful_chapters + warning_chapters) - set(retryable_chapters)),
+        "retryable_units_internal": retry_units,
+        "dependency_policy": {
+            "successful_chapters_excluded_by_default": True,
+            "allow_successful_chapter_only_if_dependency_explicit": True,
+            "cross_chapter_dependency_default": "none",
+        },
+        "expected_provider_calls": expected_calls,
+        "cap_recommendation": {
+            "recommended_cap": retry_cap,
+            "expected_provider_calls": expected_calls,
+            "within_recommended_cap": expected_calls <= retry_cap,
+        },
+        "safe_to_rerun_without_full_ingestion": bool(internal_rerun_report.get("safe_to_rerun_without_full_ingestion", True)),
+        "graph_completion_status_before_retry": internal_rerun_report.get("graph_completion_status_internal", "complete_with_retryable_warnings"),
+        "graph_completion_status_after_retry": {
+            "if_all_retryable_units_recovered": "complete_ready_or_warning",
+            "if_some_units_still_retryable": "complete_with_retryable_warnings",
+            "if_unrecoverable_units_remain": "partial_failure",
+        },
+        "consolidation_rules": [
+            "only retried chapters can change status after retry",
+            "non-retried successful chapters remain ready or ready_with_warnings",
+            "final writer outcome recomputes chapter counts and affected list",
+        ],
+        "successful_chapters_excluded_from_retry_scope": sorted(set(successful_chapters) - set(retryable_chapters)),
+    }
+
+
+def build_sp083_fail_only_rerun_execution_plan(
+    *,
+    source_sha256: str,
+    retryable_chapters: list[str],
+    excluded_chapters: list[str],
+    retry_cap: int = 24,
+) -> dict[str, Any]:
+    per_chapter_plan = {
+        "ch_106": {
+            "models": [
+                "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+                "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+            ],
+            "planned_base_calls": 8,
+            "continuation_reserve": 4,
+            "why": "second-pass divergences plus low-density pro result",
+        },
+        "ch_115": {
+            "models": [
+                "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+                "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+            ],
+            "planned_base_calls": 7,
+            "continuation_reserve": 4,
+            "why": "second-pass divergence plus thin low-density pro output",
+        },
+    }
+    rows = [
+        {
+            "chapter_id": chapter_id,
+            **per_chapter_plan.get(
+                chapter_id,
+                {
+                    "models": ["deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1"],
+                    "planned_base_calls": 4,
+                    "continuation_reserve": 2,
+                    "why": "chapter flagged for targeted retry",
+                },
+            ),
+        }
+        for chapter_id in retryable_chapters
+    ]
+    planned_base_calls = sum(int(row["planned_base_calls"]) for row in rows)
+    reserve = sum(int(row["continuation_reserve"]) for row in rows)
+    return {
+        "assessment": "fail_only_retry_contract_ready_with_review_warnings",
+        "source_sha256": source_sha256,
+        "chapters_to_retry": retryable_chapters,
+        "why_selected": "chapters marked needs_retry in SP-083 writer outcome",
+        "chapters_excluded_because_successful": excluded_chapters,
+        "model_profile_strategy": rows,
+        "planned_provider_calls": planned_base_calls,
+        "continuation_reserve": reserve,
+        "planned_total_calls": planned_base_calls + reserve,
+        "cap": retry_cap,
+        "fits_cap": planned_base_calls + reserve <= retry_cap,
+        "safe_to_rerun_without_full_ingestion": True,
+        "expected_writer_outcome_after_retry": {
+            "best_case": "4 of 4 chapters ready",
+            "conservative_case": "3 of 4 chapters ready, 1 chapter needs second pass",
+        },
+    }
+
+
+def build_controlled_full_source_dryrun_plan(
+    *,
+    source_sha256: str,
+    estimated_chapter_count: int,
+    flash_only_total_calls_with_reserve: int,
+    flash_plus_pro_total_calls_with_reserve: int,
+) -> dict[str, Any]:
+    return {
+        "assessment": "fail_only_retry_contract_ready_with_review_warnings",
+        "source_sha256": source_sha256,
+        "estimated_chapter_count": estimated_chapter_count,
+        "chapter_selection_strategy": "process all chapters in staged batches; prioritize longest chapters early in each batch",
+        "estimated_calls": {
+            "flash_only_with_reserve": flash_only_total_calls_with_reserve,
+            "flash_plus_pro_with_reserve": flash_plus_pro_total_calls_with_reserve,
+        },
+        "proposed_cap": 96,
+        "continuation_reserve_policy": "reserve at least 20 percent of batch cap for continuation and patch recovery",
+        "staged_execution_proposal": [
+            {
+                "phase": "A",
+                "scope": "first 24 chapters flash-only",
+                "target_cap": 96,
+                "goal": "establish baseline chapter readiness and retry scope",
+            },
+            {
+                "phase": "B",
+                "scope": "next 24 chapters flash-only plus pro on flagged high-risk chapters",
+                "target_cap": 96,
+                "goal": "validate difficult chapters while keeping cost bounded",
+            },
+            {
+                "phase": "C",
+                "scope": "remaining chapters flash-only then fail-only retries",
+                "target_cap": 96,
+                "goal": "close graph completion without full rerun",
+            },
+        ],
+        "stop_conditions": [
+            "stop batch if planned calls exceed cap",
+            "stop batch if continuation reserve drops below 10 percent",
+            "stop before any automatic write-back",
+        ],
+        "fail_only_retry_after_each_phase": True,
+        "cost_risk_notes": [
+            "flash-only sweep is materially cheaper and faster",
+            "flash+pro on all chapters is high-cost and should remain opt-in",
+            "fail-only retry reduces repeated processing for ready chapters",
+        ],
+        "private_packet_requirements": [
+            "per-call redacted payload and response artifacts",
+            "phase summary with writer-facing outcome snapshot",
+            "internal retry plan and consolidated outcome notes",
+        ],
+        "writer_facing_outcome_at_end": "X chapters ready, Y chapters need a second pass, retry pending chapters available",
     }
 
 def _fallback_chunk_source_ref(chunk: StructuredSourceChunk) -> dict[str, Any]:

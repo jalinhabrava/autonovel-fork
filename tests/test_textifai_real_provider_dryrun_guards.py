@@ -1260,6 +1260,80 @@ class RealProviderDryRunGuardsTests(unittest.TestCase):
                 },
             )
 
+    def test_fail_only_retry_contract_reports_parse_and_writer_reports_hide_internal_terms(self):
+        contract = json.loads((FIXTURE_ROOT / "fail_only_retry_contract_after_sp083.json").read_text(encoding="utf-8"))
+        writer_contract = json.loads((FIXTURE_ROOT / "writer_facing_ingestion_outcome_contract_after_sp083.json").read_text(encoding="utf-8"))
+        mapping = json.loads((FIXTURE_ROOT / "technical_to_user_status_mapping_after_sp083.json").read_text(encoding="utf-8"))
+        retry_plan = json.loads((FIXTURE_ROOT / "sp083_fail_only_rerun_execution_plan_after_sp083.json").read_text(encoding="utf-8"))
+        consolidated = json.loads((FIXTURE_ROOT / "sp083_fail_only_rerun_consolidated_outcome_after_sp083.json").read_text(encoding="utf-8"))
+        full_source_plan = json.loads((FIXTURE_ROOT / "controlled_full_source_dryrun_plan_after_sp083.json").read_text(encoding="utf-8"))
+        general = json.loads((FIXTURE_ROOT / "fail_only_retry_general_pipeline_learnings_after_sp083.json").read_text(encoding="utf-8"))
+        deepseek = json.loads((FIXTURE_ROOT / "fail_only_retry_deepseek_specific_learnings_after_sp083.json").read_text(encoding="utf-8"))
+
+        valid_enum = {
+            "fail_only_retry_contract_ready_for_full_source_planning",
+            "fail_only_retry_contract_ready_with_review_warnings",
+            "fail_only_retry_contract_partial_needs_patch",
+            "fail_only_retry_contract_blocked",
+        }
+        for payload in (contract, writer_contract, mapping, retry_plan, consolidated, full_source_plan, general, deepseek):
+            text = json.dumps(payload, ensure_ascii=False)
+            self.assertNotIn("sk-", text)
+            self.assertNotIn("Authorization: Bearer", text)
+            self.assertNotIn("CHUNK_TEXT:", text)
+        self.assertIn(contract["assessment"], valid_enum)
+        self.assertIn(full_source_plan["assessment"], valid_enum)
+        self.assertEqual(contract["retryable_chapters"], ["ch_106", "ch_115"])
+        self.assertTrue(contract["safe_to_rerun_without_full_ingestion"])
+        self.assertTrue(contract["dependency_policy"]["successful_chapters_excluded_by_default"])
+        retry_units_chapters = {unit["chapter_id"] for unit in contract["retryable_units_internal"]}
+        self.assertLessEqual(retry_units_chapters, set(contract["retryable_chapters"]))
+        self.assertFalse(retry_units_chapters.intersection(contract["non_retryable_chapters"]))
+        self.assertLessEqual(contract["cap_recommendation"]["expected_provider_calls"], contract["cap_recommendation"]["recommended_cap"])
+
+        self.assertEqual(writer_contract["primary_action"]["label"], "Retry pending chapters")
+        self.assertEqual(writer_contract["primary_action"]["action_id"], "retry_pending_chapters")
+        self.assertEqual(writer_contract["primary_action"]["scope"], "affected_chapters_only")
+        self.assertEqual(writer_contract["secondary_action"]["action_id"], "dismiss")
+        self.assertIn("success_with_retry_available", writer_contract["allowed_outcome_statuses"])
+        self.assertIn("needs_retry", writer_contract["allowed_chapter_statuses"])
+        self.assertIn("chapter_needs_second_pass", writer_contract["allowed_reason_labels"])
+        writer_text = json.dumps(writer_contract, ensure_ascii=False)
+        writer_text_sanitized = writer_text.replace("temporary_model_error", "temporary_error")
+        for forbidden in (
+            "chunk",
+            "reduction",
+            "parseable",
+            "source_ref",
+            "provider",
+            "finish_reason",
+            "JSON",
+            "continuation",
+            "patch",
+            "model",
+            "profile",
+            "token",
+            "API",
+            "telemetry",
+            "run_id",
+            "failure_mode",
+        ):
+            self.assertNotIn(forbidden, writer_text_sanitized)
+
+        writer_like = json.dumps(consolidated["if_retry_all_successful"], ensure_ascii=False)
+        for forbidden in ("chunk", "reduction", "provider", "model", "token", "API", "telemetry", "run_id", "failure_mode"):
+            self.assertNotIn(forbidden, writer_like)
+        self.assertTrue(consolidated["no_fake_success"])
+        self.assertFalse(retry_plan["provider_calls_executed"])
+        self.assertEqual(retry_plan["chapters_to_retry"], ["ch_106", "ch_115"])
+        self.assertEqual(set(retry_plan["chapters_excluded_because_successful"]), {"ch_097", "ch_114"})
+        self.assertLessEqual(retry_plan["planned_total_calls"], retry_plan["cap"])
+        self.assertEqual(full_source_plan["full_source_execution_status"], "not_executed_planning_only")
+        self.assertIn("estimated_calls", full_source_plan)
+        self.assertIn("staged_execution_proposal", full_source_plan)
+        self.assertIn("general_pipeline_learnings", general)
+        self.assertIn("deepseek_specific_learnings", deepseek)
+
     def test_profiled_runtime_reports_record_safe_not_executed_state(self):
         summary = json.loads((FIXTURE_ROOT / "deepseek_ch002_profiled_runtime_summary_after_sp061.json").read_text(encoding="utf-8"))
         generic = json.loads((FIXTURE_ROOT / "deepseek_ch002_profiled_vs_generic_report.json").read_text(encoding="utf-8"))

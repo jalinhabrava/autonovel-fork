@@ -1,0 +1,16 @@
+{
+  "assessment": "fail_only_retry_contract_ready_with_review_warnings",
+  "deepseek_specific_learnings": {
+    "retry_strategy_for_flash_pro": "retry affected chapters ch_106 and ch_115 with explicit DeepSeek Flash/Pro profiles if real validation is approved",
+    "pro_low_density_handling": "use compact Pro reduction retry hints for low-density Pro results",
+    "reasoning_pressure": "keep reasoning_tokens/pro_reasoning_budget_exhaustion as DeepSeek-specific telemetry",
+    "wrong_chapter_behavior": "wrong-chapter continuation outputs remain DeepSeek-specific warning pattern handled by core patch validation"
+  },
+  "what_should_stay_deepseek_specific": [
+    "Flash/Pro model ids",
+    "profile ids",
+    "Pro compact reduction hint",
+    "reasoning_tokens heuristic",
+    "DeepSeek continuation recovery warnings"
+  ]
+}

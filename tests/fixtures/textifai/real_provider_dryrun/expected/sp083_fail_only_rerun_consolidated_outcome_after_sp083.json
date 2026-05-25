@@ -1,0 +1,70 @@
+{
+  "assessment": "fail_only_retry_contract_ready_with_review_warnings",
+  "mode": "simulation_contract_only",
+  "provider_calls_executed": false,
+  "previous_outcome_source": "broader_natural_multichunk_user_ingestion_outcome_after_sp082.json",
+  "previous_counts": {
+    "status": "success_with_retry_available",
+    "total_chapters": 4,
+    "chapters_ready": 2,
+    "chapters_needing_retry": 2,
+    "chapters_needing_review": 0,
+    "chapters_failed": 0,
+    "affected_chapters": [
+      {
+        "chapter_id": "ch_106",
+        "chapter_label": "Chapter 106",
+        "status": "needs_retry",
+        "reason_label": "chapter_needs_second_pass",
+        "user_message": "This chapter needs a second pass to complete the analysis."
+      },
+      {
+        "chapter_id": "ch_115",
+        "chapter_label": "Chapter 115",
+        "status": "needs_retry",
+        "reason_label": "chapter_needs_second_pass",
+        "user_message": "This chapter needs a second pass to complete the analysis."
+      }
+    ],
+    "primary_action": {
+      "label": "Retry pending chapters",
+      "action_id": "retry_pending_chapters",
+      "scope": "affected_chapters_only"
+    },
+    "secondary_action": {
+      "label": "Later",
+      "action_id": "dismiss"
+    },
+    "user_summary": "2 of 4 chapters are ready. 2 chapters need a second pass.",
+    "details_hidden_by_default": true,
+    "retry_safe_without_restarting_book": true
+  },
+  "chapters_that_would_be_retried": [
+    "ch_106",
+    "ch_115"
+  ],
+  "chapters_not_retried": [
+    "ch_097",
+    "ch_114"
+  ],
+  "consolidation_rules": [
+    "only retried chapters can change status after retry",
+    "non-retried successful chapters remain ready or ready_with_warnings",
+    "final writer outcome recomputes chapter counts and affected list"
+  ],
+  "if_retry_all_successful": {
+    "status": "success_with_warnings",
+    "total_chapters": 4,
+    "chapters_ready": 4,
+    "chapters_needing_retry": 0,
+    "chapters_needing_review": 0,
+    "chapters_failed": 0,
+    "affected_chapters": [],
+    "user_summary": "4 of 4 chapters are ready. 0 chapters need a second pass."
+  },
+  "if_retry_partially_successful": {
+    "status": "success_with_retry_available",
+    "affected_chapter_policy": "only chapters that still need a second pass remain listed"
+  },
+  "no_fake_success": true
+}

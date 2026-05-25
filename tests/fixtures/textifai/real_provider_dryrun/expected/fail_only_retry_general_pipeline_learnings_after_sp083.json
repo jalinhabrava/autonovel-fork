@@ -1,0 +1,27 @@
+{
+  "assessment": "fail_only_retry_contract_ready_with_review_warnings",
+  "general_pipeline_learnings": {
+    "fail_only_retry_contract_defined": true,
+    "writer_facing_outcome_contract_defined": true,
+    "technical_to_user_status_mapping_defined": true,
+    "retry_only_affected_chapters": true,
+    "successful_chapters_excluded_without_dependency": true,
+    "consolidated_outcome_contract_defined": true,
+    "controlled_full_source_planning_created": true
+  },
+  "what_should_be_core_textifai": [
+    "ingestion outcome",
+    "fail-only rerun planning",
+    "writer-facing status mapping",
+    "retry CTA contract",
+    "consolidated outcome after retry",
+    "graph completion status",
+    "private decision packet requirement",
+    "long-run monitoring"
+  ],
+  "provider_adapter_implications": [
+    "adapters provide normalized technical signals only",
+    "core maps signals to writer outcome",
+    "core owns retry scope and dependency exclusion"
+  ]
+}

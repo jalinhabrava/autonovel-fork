@@ -14,6 +14,14 @@ from textifai.import_review.batch_planner import (
 )
 from textifai.import_review.chapterizer import detect_story_chapters
 from textifai.import_review.chunking_reduction_preflight import (
+    WRITER_CHAPTER_STATUSES,
+    WRITER_OUTCOME_STATUSES,
+    WRITER_REASON_LABELS,
+    build_controlled_full_source_dryrun_plan,
+    build_fail_only_retry_contract,
+    build_sp083_fail_only_rerun_execution_plan,
+    build_technical_to_user_status_mapping_report,
+    build_writer_facing_ingestion_outcome_contract,
     build_natural_chunking_calibration_report,
     build_natural_chunking_policy_report,
     build_natural_chunking_replan_simulation,
@@ -23,6 +31,7 @@ from textifai.import_review.chunking_reduction_preflight import (
     build_provider_free_chunking_reduction_fixture_report,
     build_source_ref_carry_forward_report,
     build_thin_reduction_diagnostics,
+    map_technical_signals_to_writer_status,
     reduce_mock_chunk_partials,
     validate_patch_continuation_chapter,
 )
@@ -395,6 +404,93 @@ class ChunkingReductionPreflightTests(unittest.TestCase):
         self.assertEqual(policy["assessment"], "natural_chunking_threshold_patch_ready_for_e2e")
         self.assertEqual(calibration["rows"][0]["old_natural_chunk_count"], 1)
         self.assertTrue(replan["would_produce_natural_multichunk"])
+
+    def test_fail_only_retry_and_writer_outcome_contract_helpers(self):
+        summary = {
+            "chapters": ["ch_097", "ch_106", "ch_114", "ch_115"],
+        }
+        internal = {
+            "dryrun_id": "sp083_demo",
+            "retryable_chapters": ["ch_106", "ch_115"],
+            "warning_chapters": ["ch_097", "ch_114"],
+            "successful_chapters": [],
+            "safe_to_rerun_without_full_ingestion": True,
+            "graph_completion_status_internal": "complete_with_retryable_warnings",
+            "retryable_units_internal": [
+                {
+                    "chapter_id": "ch_106",
+                    "run_id": "ch_106__deepseek_v4_pro",
+                    "technical_unit_type": "reduction",
+                    "expected_provider_calls": 2,
+                },
+                {
+                    "chapter_id": "ch_115",
+                    "run_id": "ch_115__deepseek_v4_pro",
+                    "technical_unit_type": "reduction",
+                    "expected_provider_calls": 2,
+                },
+                {
+                    "chapter_id": "ch_097",
+                    "run_id": "ch_097__deepseek_v4_pro",
+                    "technical_unit_type": "reduction",
+                    "expected_provider_calls": 2,
+                },
+            ],
+        }
+        outcome = {
+            "user_ingestion_outcome": {
+                "total_chapters": 4,
+                "affected_chapters": [
+                    {"chapter_id": "ch_106"},
+                    {"chapter_id": "ch_115"},
+                ],
+            }
+        }
+
+        contract = build_fail_only_retry_contract(
+            summary_report=summary,
+            internal_rerun_report=internal,
+            user_outcome_report=outcome,
+            retry_cap=24,
+        )
+        writer_contract = build_writer_facing_ingestion_outcome_contract()
+        mapping = build_technical_to_user_status_mapping_report()
+        retry_plan = build_sp083_fail_only_rerun_execution_plan(
+            source_sha256="abc123",
+            retryable_chapters=["ch_106", "ch_115"],
+            excluded_chapters=["ch_097", "ch_114"],
+            retry_cap=24,
+        )
+        full_plan = build_controlled_full_source_dryrun_plan(
+            source_sha256="abc123",
+            estimated_chapter_count=117,
+            flash_only_total_calls_with_reserve=361,
+            flash_plus_pro_total_calls_with_reserve=723,
+        )
+
+        self.assertEqual(contract["retryable_chapters"], ["ch_106", "ch_115"])
+        self.assertNotIn("ch_097", [unit["chapter_id"] for unit in contract["retryable_units_internal"]])
+        self.assertTrue(contract["cap_recommendation"]["within_recommended_cap"])
+
+        self.assertEqual(writer_contract["allowed_outcome_statuses"], WRITER_OUTCOME_STATUSES)
+        self.assertEqual(writer_contract["allowed_chapter_statuses"], WRITER_CHAPTER_STATUSES)
+        self.assertEqual(writer_contract["allowed_reason_labels"], WRITER_REASON_LABELS)
+        self.assertEqual(writer_contract["primary_action"]["scope"], "affected_chapters_only")
+
+        rule_ids = {rule["rule_id"] for rule in mapping["rules"]}
+        self.assertEqual(rule_ids, {"R1", "R2", "R3", "R4", "R5"})
+        status = map_technical_signals_to_writer_status(
+            final_chapter_valid=True,
+            has_internal_warnings=False,
+            has_retryable_failures=True,
+            has_semantic_thinness=False,
+            unrecoverable_failure=False,
+        )
+        self.assertEqual(status["chapter_status"], "needs_retry")
+
+        self.assertTrue(retry_plan["fits_cap"])
+        self.assertEqual(retry_plan["chapters_excluded_because_successful"], ["ch_097", "ch_114"])
+        self.assertEqual(full_plan["estimated_calls"]["flash_plus_pro_with_reserve"], 723)
 
 
 if __name__ == "__main__":

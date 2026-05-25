@@ -1,0 +1,48 @@
+{
+  "assessment": "fail_only_retry_contract_ready_with_review_warnings",
+  "source_sha256": "61e1bde83941ad9c8d5c4a2e016e0935b01732dfee152f7b3631d33348de96e6",
+  "chapters_to_retry": [
+    "ch_106",
+    "ch_115"
+  ],
+  "why_selected": "chapters marked needs_retry in SP-083 writer outcome",
+  "chapters_excluded_because_successful": [
+    "ch_097",
+    "ch_114"
+  ],
+  "model_profile_strategy": [
+    {
+      "chapter_id": "ch_106",
+      "models": [
+        "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+        "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1"
+      ],
+      "planned_base_calls": 8,
+      "continuation_reserve": 4,
+      "why": "second-pass divergences plus low-density pro result"
+    },
+    {
+      "chapter_id": "ch_115",
+      "models": [
+        "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+        "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1"
+      ],
+      "planned_base_calls": 7,
+      "continuation_reserve": 4,
+      "why": "second-pass divergence plus thin low-density pro output"
+    }
+  ],
+  "planned_provider_calls": 15,
+  "continuation_reserve": 8,
+  "planned_total_calls": 23,
+  "cap": 24,
+  "fits_cap": true,
+  "safe_to_rerun_without_full_ingestion": true,
+  "expected_writer_outcome_after_retry": {
+    "best_case": "4 of 4 chapters ready",
+    "conservative_case": "3 of 4 chapters ready, 1 chapter needs second pass"
+  },
+  "private_packet_root_if_executed": "/tmp/textifai_private_provider_runs/sp084_fail_only_retry_contract/<timestamp>/",
+  "provider_calls_executed": false,
+  "execution_status": "not_executed_contract_only"
+}

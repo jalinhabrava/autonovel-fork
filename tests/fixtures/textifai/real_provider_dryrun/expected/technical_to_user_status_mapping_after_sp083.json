@@ -1,0 +1,36 @@
+{
+  "assessment": "fail_only_retry_contract_ready_with_review_warnings",
+  "rules": [
+    {
+      "rule_id": "R1",
+      "technical_condition": "final reduction valid and no warnings",
+      "writer_status": "ready",
+      "reason_label": "analysis_incomplete"
+    },
+    {
+      "rule_id": "R2",
+      "technical_condition": "final reduction valid and graph usable with warnings",
+      "writer_status": "ready_with_warnings",
+      "reason_label": "chapter_processed_with_warnings"
+    },
+    {
+      "rule_id": "R3",
+      "technical_condition": "retryable failure or low-density output",
+      "writer_status": "needs_retry",
+      "reason_label": "chapter_needs_second_pass"
+    },
+    {
+      "rule_id": "R4",
+      "technical_condition": "valid output with suspicious semantic thinness",
+      "writer_status": "needs_review",
+      "reason_label": "manual_review_recommended"
+    },
+    {
+      "rule_id": "R5",
+      "technical_condition": "unrecoverable technical failure",
+      "writer_status": "failed",
+      "reason_label": "manual_review_recommended"
+    }
+  ],
+  "user_output_hides_internal_signals": true
+}
