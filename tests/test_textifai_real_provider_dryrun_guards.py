@@ -295,7 +295,7 @@ class RealProviderDryRunGuardsTests(unittest.TestCase):
             self.assertEqual(captured["request"].max_tokens, 8192)
             manifest = json.loads((Path(result.output_dir) / "dryrun_manifest.json").read_text(encoding="utf-8"))
             self.assertEqual(manifest["provider_profile_requested"], "auto")
-            self.assertEqual(manifest["provider_profile_id"], "deepseek-v4-flash:bootstrap_chapter_extraction:v1")
+            self.assertEqual(manifest["provider_profile_id"], "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1")
             self.assertTrue(manifest["provider_profile_applied"])
             self.assertEqual(manifest["max_output_tokens_source"], "provider_profile")
 

@@ -1,0 +1,12 @@
+{
+  "assessment": "deepseek_family_profiles_packaged_for_e2e_preflight",
+  "deepseek_family_usable_for_low_cost_e2e_preflight": true,
+  "production_quality_claim": false,
+  "requires_review_warnings": true,
+  "requires_output_validation": true,
+  "reasoner_profile_available": false,
+  "common_family_profile_viable": false,
+  "per_model_profiles_required": true,
+  "provider_calls_required_for_packaging": false,
+  "write_back_allowed": false
+}

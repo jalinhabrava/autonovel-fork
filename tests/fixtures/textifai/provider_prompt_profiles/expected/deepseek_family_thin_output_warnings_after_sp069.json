@@ -1,0 +1,15 @@
+{
+  "warning_policy": "deepseek_family_thin_output_warnings",
+  "warning_codes": [
+    "valid_json_but_thin",
+    "low_density_score",
+    "low_objects_count",
+    "low_events_count",
+    "low_relations_count",
+    "zero_unresolved_mentions_in_ambiguous_context",
+    "model_profile_experimental"
+  ],
+  "same_model_rerun_guidance": "same_provider_same_model_rerun_if_alternate_profile_available",
+  "auto_switching": false,
+  "global_routing": false
+}

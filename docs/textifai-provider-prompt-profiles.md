@@ -1,137 +1,87 @@
 # TextifAI Provider Prompt Profiles
 
-## Product Value
+## Product Reading
 
-TextifAI no solo llama LLMs. TextifAI optimiza extracción por `provider + model + task`.
+TextifAI es BYOK: usuario habilita provider/modelo y TextifAI optimiza harness para esa elección.
+No hay routing automático global en esta fase.
 
-Valor producto:
+Tras `SP-069`, DeepSeek-family queda usable para preflight e2e barato con perfiles por modelo:
 
-- mejor calidad/coste;
-- mayor fiabilidad JSON;
-- densidad semántica calibrada;
-- review safety estable;
-- menor lock-in de vendor.
+- `deepseek-v4-flash` visible y probado.
+- `deepseek-v4-pro` visible y probado.
+- `deepseek-reasoner` no visible en discovery de `SP-069`; no empaquetado todavía.
 
-## Problem Observed
+## DeepSeek Family Packaging (SP-070)
 
-- `SP-060`: DeepSeek V4 Flash con prompt genérico devolvió JSON válido pero semánticamente fino.
-- `SP-061`: se añadió registry + overlay de densidad provider-free.
-- `SP-063`: ejecución real con `--provider-profile auto` aplicó profile, pero salida quedó no parseable JSON.
+### Flash profile v1
 
-Conclusión: profile mecánico funciona; overlay previo era demasiado agresivo/discursivo para JSON reliability.
+- `profile_id`: `deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1`
+- Base: `SP-069 family_variant_2_oer_focus`
+- Mejor evidencia observada: `ch_002` (`score=26.5`)
+- Política: foco fuerte en `objects/events/relations/unresolved_mentions` con JSON-first.
 
-## SP-064 Compact Revision
+### Pro profile v1
 
-Objetivo de revisión:
+- `profile_id`: `deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1`
+- Base: `SP-069 family_variant_3_balanced_kb`
+- Mejor evidencia observada: `ch_003` (`score=25.0`)
+- Política: cobertura equilibrada de knowledge-base con JSON-first.
 
-1. JSON validity first.
-2. Density second.
-3. Overlay corto e imperativo.
-4. Cero contenido de obra específica.
+### Reasoner status
 
-Se mantiene perfil `deepseek-v4-flash:bootstrap_chapter_extraction:v1` con políticas explícitas:
+- `model_id`: `deepseek-reasoner`
+- `discovery_status`: `not_visible_in_sp069`
+- `profile_status`: `not_packaged`
+- `reason`: `not available in current model discovery`
 
-- `json_reliability_policy = json_first_no_markdown_single_object`
-- `prompt_density_policy = compact_high_recall`
-- `overlay_style = compact_json_first`
-- `default_max_output_tokens = 8192`
+## BYOK In-Model Guidance
 
-## Profile Shape (current)
+Si usuario habilita:
 
-```json
-{
-  "profile_id": "deepseek-v4-flash:bootstrap_chapter_extraction:v1",
-  "provider": "deepseek",
-  "model_pattern": "deepseek-v4-flash",
-  "task": "bootstrap_chapter_extraction",
-  "json_mode": true,
-  "default_max_output_tokens": 8192,
-  "json_reliability_policy": "json_first_no_markdown_single_object",
-  "prompt_density_policy": "compact_high_recall",
-  "overlay_style": "compact_json_first",
-  "schema_strategy": "full_v2_with_density_reminder",
-  "review_safety_policy": "do_not_promote_uncertain_identities",
-  "validation_policy": "strict_json_and_density_check",
-  "fallback": "retry_with_density_boost_or_larger_model"
-}
-```
+- Solo `deepseek-v4-flash`:
+  - usar `oer_focus_v1`;
+  - mostrar warning de thin output cuando aplique;
+  - sugerir rerun en mismo modelo si existe perfil alternativo del mismo modelo.
+- Solo `deepseek-v4-pro`:
+  - usar `balanced_kb_v1`;
+  - mostrar warning de thin output;
+  - no asumir superioridad absoluta frente a Flash.
+- Ambos modelos:
+  - mostrar guidance comparativo informativo;
+  - no auto-switch invisible.
 
-## Compact Overlay (current)
+## Thin Output Warnings
 
-```text
-DeepSeek V4 Flash JSON reliability and extraction density:
+Códigos recomendados:
 
-Return exactly one valid JSON object. Do not use markdown.
+- `low_density_score`
+- `zero_unresolved_mentions_in_ambiguous_context`
+- `low_objects_count`
+- `low_events_count`
+- `low_relations_count`
+- `valid_json_but_thin`
+- `model_profile_experimental`
 
-Keep every required schema key:
-work, chapters, characters, places, concepts, objects, events, relations, unresolved_mentions.
+## E2E Readiness Gate
 
-Do not compress the extraction into only the summary.
+`deepseek_family_e2e_readiness_gate_after_sp069.json` declara:
 
-Include structurally relevant:
-- objects/tools/artifacts/catalysts/weapons;
-- durable events;
-- evidence-backed relations;
-- important unresolved mentions.
+- `deepseek_family_usable_for_low_cost_e2e_preflight = true`
+- `production_quality_claim = false`
+- `requires_review_warnings = true`
+- `requires_output_validation = true`
+- `reasoner_profile_available = false`
+- `common_family_profile_viable = false`
+- `per_model_profiles_required = true`
 
-Keep facts concise.
-Keep uncertain identities in review/local candidate.
-Do not invent names.
-```
+## Runtime Scope and Non-goals
 
-## JSON Reliability vs Density Policy
+- Sin llamadas provider/API en `SP-070`.
+- Sin chunking.
+- Sin write-back.
+- Sin routing automático global.
+- Sin cambios de schema productivo.
 
-Separación explícita:
+## Next Suggested Phase
 
-- `json_reliability_policy`: obliga formato (`single JSON object`, `no markdown`).
-- `prompt_density_policy`: empuja cobertura (`objects/events/relations/unresolved`) sin rehacer schema completo.
-
-Regla producto: nunca sacrificar parseabilidad por densidad.
-
-## Density Validation Role
-
-El profile no “garantiza” densidad por sí solo. Flujo recomendado:
-
-1. Prompt profile pide cobertura compacta.
-2. Validación provider-free detecta salida fina o inválida.
-3. Retry/fallback decide:
-   - retry con overlay compacto;
-   - retry con overlay más fuerte y JSON-safe;
-   - subir a `deepseek-v4-pro`;
-   - fallback a OpenAI;
-   - o ajustar split/reduction.
-
-## Non-goals
-
-- no hardcode narrativo por obra;
-- no cambios a schema productivo global;
-- no chunking en esta fase;
-- no llamadas provider en `SP-064`.
-
-## Next Runtime Command (for SP-065)
-
-```bash
-uv run python scripts/dev/real_provider_dryrun.py \
-  --prompt-file "$PROMPT_FILE" \
-  --provider deepseek \
-  --model deepseek-v4-flash \
-  --output-root "/tmp/textifai_real_provider_dryrun_profiled" \
-  --allow-provider-calls \
-  --max-provider-requests 1 \
-  --max-output-tokens 8192 \
-  --response-format-json \
-  --provider-profile auto \
-  --no-write-back
-```
-
-## Future Implementation Plan
-
-- `SP-065`: segunda llamada real única con overlay compacto.
-- Comparar contra:
-  - DeepSeek genérico `SP-060`;
-  - DeepSeek perfilado previo `SP-063`;
-  - baseline manual `SP-056`.
-- Decidir:
-  - mantener Flash con overlay compacto;
-  - iterar profile;
-  - o fallback a modelo más fuerte.
+`Phase 1.3.M-b5c-4a — Chunking/Reduction Preflight with DeepSeek Family Harness Available`

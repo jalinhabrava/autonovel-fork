@@ -81,15 +81,21 @@ _PROFILES: tuple[ProviderPromptProfile, ...] = (
 )
 
 
+def _all_profiles() -> tuple[ProviderPromptProfile, ...]:
+    from textifai.import_review.deepseek_family_profiles import deepseek_family_profiles
+
+    return (*deepseek_family_profiles(), *_PROFILES)
+
+
 def list_provider_prompt_profiles() -> list[ProviderPromptProfile]:
-    return list(_PROFILES)
+    return list(_all_profiles())
 
 
 def get_provider_prompt_profile(provider: str, model: str, task: str) -> ProviderPromptProfile | None:
     normalized_provider = provider.strip().casefold()
     normalized_task = task.strip()
     normalized_model = model.strip().casefold()
-    for profile in _PROFILES:
+    for profile in _all_profiles():
         if profile.provider.casefold() != normalized_provider:
             continue
         if profile.task != normalized_task:

@@ -1,0 +1,120 @@
+{
+  "assessment": "deepseek_family_profiles_packaged_for_e2e_preflight",
+  "source_safepoint": "SP-069",
+  "visible_models_in_sp069": [
+    "deepseek-v4-flash",
+    "deepseek-v4-pro"
+  ],
+  "packaged_models": [
+    "deepseek-v4-flash",
+    "deepseek-v4-pro"
+  ],
+  "profiles": [
+    {
+      "profile_id": "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+      "provider": "deepseek",
+      "model_pattern": "deepseek-v4-flash",
+      "task": "bootstrap_chapter_extraction",
+      "json_mode": true,
+      "default_max_output_tokens": 8192,
+      "json_reliability_policy": "json_first_no_markdown_single_object",
+      "prompt_density_policy": "oer_focus_high_recall",
+      "overlay_style": "deepseek_family_oer_focus",
+      "schema_strategy": "full_v2_objects_events_relations_boost",
+      "must_include_sections": [
+        "characters",
+        "places",
+        "concepts",
+        "objects",
+        "events",
+        "relations",
+        "unresolved_mentions"
+      ],
+      "minimum_density_targets": {
+        "objects": "include tools, artifacts, catalysts, weapons, restraints, keys, and event-triggering props.",
+        "events": "include durable state changes, not only final outcomes.",
+        "relations": "include evidence-backed links involving protagonist, authority, places, objects, concepts, and events.",
+        "unresolved_mentions": "include important unclear references instead of dropping them.",
+        "review": "keep uncertain identities in review/local_candidate with review_reason."
+      },
+      "review_safety_policy": "do_not_promote_uncertain_identities",
+      "validation_policy": "strict_json_density_and_thin_output_warnings",
+      "fallback": "same_model_rerun_with_alternate_deepseek_profile_if_available",
+      "prompt_overlay_preview": "Return exactly one valid JSON object. Do not use markdown."
+    },
+    {
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "provider": "deepseek",
+      "model_pattern": "deepseek-v4-pro",
+      "task": "bootstrap_chapter_extraction",
+      "json_mode": true,
+      "default_max_output_tokens": 8192,
+      "json_reliability_policy": "json_first_no_markdown_single_object",
+      "prompt_density_policy": "balanced_story_kb_high_recall",
+      "overlay_style": "deepseek_family_balanced_kb",
+      "schema_strategy": "full_v2_balanced_story_knowledge_base",
+      "must_include_sections": [
+        "characters",
+        "places",
+        "concepts",
+        "objects",
+        "events",
+        "relations",
+        "unresolved_mentions"
+      ],
+      "minimum_density_targets": {
+        "characters": "include named characters and important unnamed roles.",
+        "places": "include places and subplaces.",
+        "concepts": "include concepts and magic/system states.",
+        "objects": "include objects, tools, artifacts, catalysts, weapons, restraints, keys, and event-triggering props.",
+        "events": "include durable events.",
+        "relations": "include relations between extracted items.",
+        "unresolved_mentions": "include unresolved important mentions.",
+        "review": "use review/local_candidate when identity or canonical merge is uncertain."
+      },
+      "review_safety_policy": "do_not_promote_uncertain_identities",
+      "validation_policy": "strict_json_density_and_thin_output_warnings",
+      "fallback": "same_model_rerun_with_alternate_deepseek_profile_if_available",
+      "prompt_overlay_preview": "Return exactly one valid JSON object. Do not use markdown."
+    }
+  ],
+  "sp069_evidence": {
+    "ch_002_best": {
+      "model": "deepseek-v4-flash",
+      "variant": "family_variant_2_oer_focus",
+      "score": 26.5,
+      "counts": {
+        "characters": 3,
+        "places": 2,
+        "concepts": 4,
+        "objects": 4,
+        "events": 1,
+        "relations": 3,
+        "unresolved_mentions": 0
+      }
+    },
+    "ch_003_best": {
+      "model": "deepseek-v4-pro",
+      "variant": "family_variant_3_balanced_kb",
+      "score": 25.0,
+      "counts": {
+        "characters": 2,
+        "places": 2,
+        "concepts": 3,
+        "objects": 3,
+        "events": 1,
+        "relations": 4,
+        "unresolved_mentions": 0
+      }
+    },
+    "common_family_profile_viable": false
+  },
+  "reasoner": {
+    "model_id": "deepseek-reasoner",
+    "discovery_status": "not_visible_in_sp069",
+    "profile_status": "not_packaged",
+    "reason": "not available in current model discovery"
+  },
+  "semantic_contract_changes": false,
+  "provider_calls": false
+}

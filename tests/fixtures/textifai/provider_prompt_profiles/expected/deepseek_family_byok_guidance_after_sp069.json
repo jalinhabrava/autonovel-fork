@@ -1,0 +1,57 @@
+{
+  "provider": "deepseek",
+  "byok_policy": "user_enabled_models_only",
+  "enabled_models": [
+    "deepseek-v4-flash",
+    "deepseek-v4-pro"
+  ],
+  "model_guidance": [
+    {
+      "model_id": "deepseek-v4-flash",
+      "profile_id": "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+      "enabled": true,
+      "guidance": [
+        "Use profile deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1 for bootstrap_chapter_extraction.",
+        "Validate JSON and density before accepting output.",
+        "Keep user-selected provider/model explicit."
+      ],
+      "warnings": [
+        "model_profile_experimental",
+        "valid_json_may_still_be_thin"
+      ],
+      "rerun_guidance": [
+        "If output is thin, rerun with same enabled model when alternate same-model profile exists.",
+        "Do not auto-switch to another model without user action."
+      ]
+    },
+    {
+      "model_id": "deepseek-v4-pro",
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "enabled": true,
+      "guidance": [
+        "Use profile deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1 for bootstrap_chapter_extraction.",
+        "Validate JSON and density before accepting output.",
+        "Keep user-selected provider/model explicit."
+      ],
+      "warnings": [
+        "model_profile_experimental",
+        "valid_json_may_still_be_thin"
+      ],
+      "rerun_guidance": [
+        "If output is thin, rerun with same enabled model when alternate same-model profile exists.",
+        "Do not auto-switch to another model without user action."
+      ]
+    }
+  ],
+  "unavailable_models": [
+    {
+      "model_id": "deepseek-reasoner",
+      "discovery_status": "not_visible_in_sp069",
+      "profile_status": "not_packaged",
+      "reason": "not available in current model discovery"
+    }
+  ],
+  "auto_switching": false,
+  "global_routing": false,
+  "informational_comparison_allowed": true
+}
