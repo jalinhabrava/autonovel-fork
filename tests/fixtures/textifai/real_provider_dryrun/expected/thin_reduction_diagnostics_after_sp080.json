@@ -1,0 +1,585 @@
+{
+  "assessment": "natural_chunking_threshold_patch_ready_with_review_warnings",
+  "source_ref_coverage_ratio_from_sp080": 0.8125,
+  "no_item_reduction_runs": [
+    "ch_001__deepseek_v4_pro",
+    "ch_097__deepseek_v4_pro",
+    "ch_115__deepseek_v4_pro"
+  ],
+  "thin_section_runs": [
+    "ch_001__deepseek_v4_pro",
+    "ch_097__deepseek_v4_pro",
+    "ch_115__deepseek_v4_pro"
+  ],
+  "denominator_explanation": "source_ref coverage denominator is extracted items; no-item reductions explain lower coverage without proving missing source_refs",
+  "rows": [
+    {
+      "run_id": "ch_001__deepseek_v4_flash",
+      "chapter_id": "ch_001",
+      "model": "deepseek-v4-flash",
+      "parseable_json": true,
+      "section_item_counts": {
+        "characters": 5,
+        "places": 6,
+        "concepts": 5,
+        "objects": 2,
+        "events": 5,
+        "relations": 5,
+        "unresolved_mentions": 3
+      },
+      "total_items": 31,
+      "item_level_source_ref_coverage_ratio": 1.0,
+      "diagnostic": {
+        "assessment": "natural_chunking_threshold_patch_ready_for_e2e",
+        "section_item_counts": {
+          "characters": 5,
+          "places": 6,
+          "concepts": 5,
+          "objects": 2,
+          "events": 5,
+          "relations": 5,
+          "unresolved_mentions": 3
+        },
+        "empty_critical_sections": [],
+        "total_items": 31,
+        "no_item_reduction": false,
+        "source_ref_coverage_denominator_explanation": "coverage ratio uses extracted item count; no-item reductions lower coverage without proving missing refs",
+        "warnings": []
+      }
+    },
+    {
+      "run_id": "ch_001__deepseek_v4_pro",
+      "chapter_id": "ch_001",
+      "model": "deepseek-v4-pro",
+      "parseable_json": true,
+      "section_item_counts": {
+        "characters": 0,
+        "places": 0,
+        "concepts": 0,
+        "objects": 0,
+        "events": 0,
+        "relations": 0,
+        "unresolved_mentions": 0
+      },
+      "total_items": 0,
+      "item_level_source_ref_coverage_ratio": 0.0,
+      "diagnostic": {
+        "assessment": "natural_chunking_threshold_patch_ready_for_e2e",
+        "section_item_counts": {
+          "characters": 0,
+          "places": 0,
+          "concepts": 0,
+          "objects": 0,
+          "events": 0,
+          "relations": 0,
+          "unresolved_mentions": 0
+        },
+        "empty_critical_sections": [
+          "objects",
+          "events",
+          "relations"
+        ],
+        "total_items": 0,
+        "no_item_reduction": true,
+        "source_ref_coverage_denominator_explanation": "coverage ratio uses extracted item count; no-item reductions lower coverage without proving missing refs",
+        "warnings": [
+          "valid_reduction_no_items",
+          "valid_reduction_thin_sections",
+          "source_ref_coverage_lower_due_no_items"
+        ]
+      }
+    },
+    {
+      "run_id": "ch_002__deepseek_v4_flash",
+      "chapter_id": "ch_002",
+      "model": "deepseek-v4-flash",
+      "parseable_json": true,
+      "section_item_counts": {
+        "characters": 7,
+        "places": 4,
+        "concepts": 5,
+        "objects": 5,
+        "events": 5,
+        "relations": 5,
+        "unresolved_mentions": 2
+      },
+      "total_items": 33,
+      "item_level_source_ref_coverage_ratio": 1.0,
+      "diagnostic": {
+        "assessment": "natural_chunking_threshold_patch_ready_for_e2e",
+        "section_item_counts": {
+          "characters": 7,
+          "places": 4,
+          "concepts": 5,
+          "objects": 5,
+          "events": 5,
+          "relations": 5,
+          "unresolved_mentions": 2
+        },
+        "empty_critical_sections": [],
+        "total_items": 33,
+        "no_item_reduction": false,
+        "source_ref_coverage_denominator_explanation": "coverage ratio uses extracted item count; no-item reductions lower coverage without proving missing refs",
+        "warnings": []
+      }
+    },
+    {
+      "run_id": "ch_002__deepseek_v4_pro",
+      "chapter_id": "ch_002",
+      "model": "deepseek-v4-pro",
+      "parseable_json": true,
+      "section_item_counts": {
+        "characters": 6,
+        "places": 5,
+        "concepts": 6,
+        "objects": 8,
+        "events": 5,
+        "relations": 5,
+        "unresolved_mentions": 2
+      },
+      "total_items": 37,
+      "item_level_source_ref_coverage_ratio": 1.0,
+      "diagnostic": {
+        "assessment": "natural_chunking_threshold_patch_ready_for_e2e",
+        "section_item_counts": {
+          "characters": 6,
+          "places": 5,
+          "concepts": 6,
+          "objects": 8,
+          "events": 5,
+          "relations": 5,
+          "unresolved_mentions": 2
+        },
+        "empty_critical_sections": [],
+        "total_items": 37,
+        "no_item_reduction": false,
+        "source_ref_coverage_denominator_explanation": "coverage ratio uses extracted item count; no-item reductions lower coverage without proving missing refs",
+        "warnings": []
+      }
+    },
+    {
+      "run_id": "ch_003__deepseek_v4_flash",
+      "chapter_id": "ch_003",
+      "model": "deepseek-v4-flash",
+      "parseable_json": true,
+      "section_item_counts": {
+        "characters": 2,
+        "places": 4,
+        "concepts": 6,
+        "objects": 4,
+        "events": 7,
+        "relations": 6,
+        "unresolved_mentions": 4
+      },
+      "total_items": 33,
+      "item_level_source_ref_coverage_ratio": 1.0,
+      "diagnostic": {
+        "assessment": "natural_chunking_threshold_patch_ready_for_e2e",
+        "section_item_counts": {
+          "characters": 2,
+          "places": 4,
+          "concepts": 6,
+          "objects": 4,
+          "events": 7,
+          "relations": 6,
+          "unresolved_mentions": 4
+        },
+        "empty_critical_sections": [],
+        "total_items": 33,
+        "no_item_reduction": false,
+        "source_ref_coverage_denominator_explanation": "coverage ratio uses extracted item count; no-item reductions lower coverage without proving missing refs",
+        "warnings": []
+      }
+    },
+    {
+      "run_id": "ch_003__deepseek_v4_pro",
+      "chapter_id": "ch_003",
+      "model": "deepseek-v4-pro",
+      "parseable_json": true,
+      "section_item_counts": {
+        "characters": 2,
+        "places": 3,
+        "concepts": 5,
+        "objects": 2,
+        "events": 2,
+        "relations": 2,
+        "unresolved_mentions": 1
+      },
+      "total_items": 17,
+      "item_level_source_ref_coverage_ratio": 1.0,
+      "diagnostic": {
+        "assessment": "natural_chunking_threshold_patch_ready_for_e2e",
+        "section_item_counts": {
+          "characters": 2,
+          "places": 3,
+          "concepts": 5,
+          "objects": 2,
+          "events": 2,
+          "relations": 2,
+          "unresolved_mentions": 1
+        },
+        "empty_critical_sections": [],
+        "total_items": 17,
+        "no_item_reduction": false,
+        "source_ref_coverage_denominator_explanation": "coverage ratio uses extracted item count; no-item reductions lower coverage without proving missing refs",
+        "warnings": []
+      }
+    },
+    {
+      "run_id": "ch_005__deepseek_v4_flash",
+      "chapter_id": "ch_005",
+      "model": "deepseek-v4-flash",
+      "parseable_json": true,
+      "section_item_counts": {
+        "characters": 5,
+        "places": 4,
+        "concepts": 3,
+        "objects": 2,
+        "events": 5,
+        "relations": 4,
+        "unresolved_mentions": 3
+      },
+      "total_items": 26,
+      "item_level_source_ref_coverage_ratio": 1.0,
+      "diagnostic": {
+        "assessment": "natural_chunking_threshold_patch_ready_for_e2e",
+        "section_item_counts": {
+          "characters": 5,
+          "places": 4,
+          "concepts": 3,
+          "objects": 2,
+          "events": 5,
+          "relations": 4,
+          "unresolved_mentions": 3
+        },
+        "empty_critical_sections": [],
+        "total_items": 26,
+        "no_item_reduction": false,
+        "source_ref_coverage_denominator_explanation": "coverage ratio uses extracted item count; no-item reductions lower coverage without proving missing refs",
+        "warnings": []
+      }
+    },
+    {
+      "run_id": "ch_005__deepseek_v4_pro",
+      "chapter_id": "ch_005",
+      "model": "deepseek-v4-pro",
+      "parseable_json": true,
+      "section_item_counts": {
+        "characters": 5,
+        "places": 4,
+        "concepts": 3,
+        "objects": 1,
+        "events": 3,
+        "relations": 4,
+        "unresolved_mentions": 2
+      },
+      "total_items": 22,
+      "item_level_source_ref_coverage_ratio": 1.0,
+      "diagnostic": {
+        "assessment": "natural_chunking_threshold_patch_ready_for_e2e",
+        "section_item_counts": {
+          "characters": 5,
+          "places": 4,
+          "concepts": 3,
+          "objects": 1,
+          "events": 3,
+          "relations": 4,
+          "unresolved_mentions": 2
+        },
+        "empty_critical_sections": [],
+        "total_items": 22,
+        "no_item_reduction": false,
+        "source_ref_coverage_denominator_explanation": "coverage ratio uses extracted item count; no-item reductions lower coverage without proving missing refs",
+        "warnings": []
+      }
+    },
+    {
+      "run_id": "ch_097__deepseek_v4_flash",
+      "chapter_id": "ch_097",
+      "model": "deepseek-v4-flash",
+      "parseable_json": true,
+      "section_item_counts": {
+        "characters": 13,
+        "places": 6,
+        "concepts": 4,
+        "objects": 4,
+        "events": 9,
+        "relations": 7,
+        "unresolved_mentions": 3
+      },
+      "total_items": 46,
+      "item_level_source_ref_coverage_ratio": 1.0,
+      "diagnostic": {
+        "assessment": "natural_chunking_threshold_patch_ready_for_e2e",
+        "section_item_counts": {
+          "characters": 13,
+          "places": 6,
+          "concepts": 4,
+          "objects": 4,
+          "events": 9,
+          "relations": 7,
+          "unresolved_mentions": 3
+        },
+        "empty_critical_sections": [],
+        "total_items": 46,
+        "no_item_reduction": false,
+        "source_ref_coverage_denominator_explanation": "coverage ratio uses extracted item count; no-item reductions lower coverage without proving missing refs",
+        "warnings": []
+      }
+    },
+    {
+      "run_id": "ch_097__deepseek_v4_pro",
+      "chapter_id": "ch_097",
+      "model": "deepseek-v4-pro",
+      "parseable_json": true,
+      "section_item_counts": {
+        "characters": 0,
+        "places": 0,
+        "concepts": 0,
+        "objects": 0,
+        "events": 0,
+        "relations": 0,
+        "unresolved_mentions": 0
+      },
+      "total_items": 0,
+      "item_level_source_ref_coverage_ratio": 0.0,
+      "diagnostic": {
+        "assessment": "natural_chunking_threshold_patch_ready_for_e2e",
+        "section_item_counts": {
+          "characters": 0,
+          "places": 0,
+          "concepts": 0,
+          "objects": 0,
+          "events": 0,
+          "relations": 0,
+          "unresolved_mentions": 0
+        },
+        "empty_critical_sections": [
+          "objects",
+          "events",
+          "relations"
+        ],
+        "total_items": 0,
+        "no_item_reduction": true,
+        "source_ref_coverage_denominator_explanation": "coverage ratio uses extracted item count; no-item reductions lower coverage without proving missing refs",
+        "warnings": [
+          "valid_reduction_no_items",
+          "valid_reduction_thin_sections",
+          "source_ref_coverage_lower_due_no_items"
+        ]
+      }
+    },
+    {
+      "run_id": "ch_106__deepseek_v4_flash",
+      "chapter_id": "ch_106",
+      "model": "deepseek-v4-flash",
+      "parseable_json": true,
+      "section_item_counts": {
+        "characters": 12,
+        "places": 4,
+        "concepts": 7,
+        "objects": 6,
+        "events": 8,
+        "relations": 8,
+        "unresolved_mentions": 3
+      },
+      "total_items": 48,
+      "item_level_source_ref_coverage_ratio": 1.0,
+      "diagnostic": {
+        "assessment": "natural_chunking_threshold_patch_ready_for_e2e",
+        "section_item_counts": {
+          "characters": 12,
+          "places": 4,
+          "concepts": 7,
+          "objects": 6,
+          "events": 8,
+          "relations": 8,
+          "unresolved_mentions": 3
+        },
+        "empty_critical_sections": [],
+        "total_items": 48,
+        "no_item_reduction": false,
+        "source_ref_coverage_denominator_explanation": "coverage ratio uses extracted item count; no-item reductions lower coverage without proving missing refs",
+        "warnings": []
+      }
+    },
+    {
+      "run_id": "ch_106__deepseek_v4_pro",
+      "chapter_id": "ch_106",
+      "model": "deepseek-v4-pro",
+      "parseable_json": true,
+      "section_item_counts": {
+        "characters": 11,
+        "places": 3,
+        "concepts": 4,
+        "objects": 3,
+        "events": 4,
+        "relations": 7,
+        "unresolved_mentions": 0
+      },
+      "total_items": 32,
+      "item_level_source_ref_coverage_ratio": 1.0,
+      "diagnostic": {
+        "assessment": "natural_chunking_threshold_patch_ready_for_e2e",
+        "section_item_counts": {
+          "characters": 11,
+          "places": 3,
+          "concepts": 4,
+          "objects": 3,
+          "events": 4,
+          "relations": 7,
+          "unresolved_mentions": 0
+        },
+        "empty_critical_sections": [],
+        "total_items": 32,
+        "no_item_reduction": false,
+        "source_ref_coverage_denominator_explanation": "coverage ratio uses extracted item count; no-item reductions lower coverage without proving missing refs",
+        "warnings": []
+      }
+    },
+    {
+      "run_id": "ch_114__deepseek_v4_flash",
+      "chapter_id": "ch_114",
+      "model": "deepseek-v4-flash",
+      "parseable_json": true,
+      "section_item_counts": {
+        "characters": 10,
+        "places": 4,
+        "concepts": 5,
+        "objects": 5,
+        "events": 8,
+        "relations": 10,
+        "unresolved_mentions": 3
+      },
+      "total_items": 45,
+      "item_level_source_ref_coverage_ratio": 1.0,
+      "diagnostic": {
+        "assessment": "natural_chunking_threshold_patch_ready_for_e2e",
+        "section_item_counts": {
+          "characters": 10,
+          "places": 4,
+          "concepts": 5,
+          "objects": 5,
+          "events": 8,
+          "relations": 10,
+          "unresolved_mentions": 3
+        },
+        "empty_critical_sections": [],
+        "total_items": 45,
+        "no_item_reduction": false,
+        "source_ref_coverage_denominator_explanation": "coverage ratio uses extracted item count; no-item reductions lower coverage without proving missing refs",
+        "warnings": []
+      }
+    },
+    {
+      "run_id": "ch_114__deepseek_v4_pro",
+      "chapter_id": "ch_114",
+      "model": "deepseek-v4-pro",
+      "parseable_json": true,
+      "section_item_counts": {
+        "characters": 10,
+        "places": 5,
+        "concepts": 8,
+        "objects": 5,
+        "events": 9,
+        "relations": 5,
+        "unresolved_mentions": 0
+      },
+      "total_items": 42,
+      "item_level_source_ref_coverage_ratio": 1.0,
+      "diagnostic": {
+        "assessment": "natural_chunking_threshold_patch_ready_for_e2e",
+        "section_item_counts": {
+          "characters": 10,
+          "places": 5,
+          "concepts": 8,
+          "objects": 5,
+          "events": 9,
+          "relations": 5,
+          "unresolved_mentions": 0
+        },
+        "empty_critical_sections": [],
+        "total_items": 42,
+        "no_item_reduction": false,
+        "source_ref_coverage_denominator_explanation": "coverage ratio uses extracted item count; no-item reductions lower coverage without proving missing refs",
+        "warnings": []
+      }
+    },
+    {
+      "run_id": "ch_115__deepseek_v4_flash",
+      "chapter_id": "ch_115",
+      "model": "deepseek-v4-flash",
+      "parseable_json": true,
+      "section_item_counts": {
+        "characters": 11,
+        "places": 6,
+        "concepts": 7,
+        "objects": 3,
+        "events": 7,
+        "relations": 6,
+        "unresolved_mentions": 3
+      },
+      "total_items": 43,
+      "item_level_source_ref_coverage_ratio": 1.0,
+      "diagnostic": {
+        "assessment": "natural_chunking_threshold_patch_ready_for_e2e",
+        "section_item_counts": {
+          "characters": 11,
+          "places": 6,
+          "concepts": 7,
+          "objects": 3,
+          "events": 7,
+          "relations": 6,
+          "unresolved_mentions": 3
+        },
+        "empty_critical_sections": [],
+        "total_items": 43,
+        "no_item_reduction": false,
+        "source_ref_coverage_denominator_explanation": "coverage ratio uses extracted item count; no-item reductions lower coverage without proving missing refs",
+        "warnings": []
+      }
+    },
+    {
+      "run_id": "ch_115__deepseek_v4_pro",
+      "chapter_id": "ch_115",
+      "model": "deepseek-v4-pro",
+      "parseable_json": true,
+      "section_item_counts": {
+        "characters": 0,
+        "places": 0,
+        "concepts": 0,
+        "objects": 0,
+        "events": 0,
+        "relations": 0,
+        "unresolved_mentions": 0
+      },
+      "total_items": 0,
+      "item_level_source_ref_coverage_ratio": 0.0,
+      "diagnostic": {
+        "assessment": "natural_chunking_threshold_patch_ready_for_e2e",
+        "section_item_counts": {
+          "characters": 0,
+          "places": 0,
+          "concepts": 0,
+          "objects": 0,
+          "events": 0,
+          "relations": 0,
+          "unresolved_mentions": 0
+        },
+        "empty_critical_sections": [
+          "objects",
+          "events",
+          "relations"
+        ],
+        "total_items": 0,
+        "no_item_reduction": true,
+        "source_ref_coverage_denominator_explanation": "coverage ratio uses extracted item count; no-item reductions lower coverage without proving missing refs",
+        "warnings": [
+          "valid_reduction_no_items",
+          "valid_reduction_thin_sections",
+          "source_ref_coverage_lower_due_no_items"
+        ]
+      }
+    }
+  ]
+}

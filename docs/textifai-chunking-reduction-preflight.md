@@ -162,3 +162,20 @@ Closed or improved in this phase:
 Remaining gap:
 
 - larger real DeepSeek rerun should verify new source-ref carry-forward end to end after script/runtime adoption.
+
+
+## SP-081 Natural Chunking Threshold Calibration Patch
+
+Closed or improved in this phase:
+
+- provider-agnostic `NaturalChunkingThresholdPolicy` separates hard context fit from soft quality split;
+- soft split thresholds can produce natural multi-chunk before hard overflow;
+- provider profiles can suggest chunking preferences without owning planner decisions;
+- patch continuation chapter validation rejects `valid_json_wrong_chapter` before merge;
+- thin/no-item reduction diagnostics explain source-ref coverage drops;
+- provider-free replan simulation estimates natural multi-chunk call counts before provider runs.
+
+Boundary:
+
+- chunking threshold logic is TextifAI core;
+- DeepSeek model/profile recommendations stay provider-specific hints only.

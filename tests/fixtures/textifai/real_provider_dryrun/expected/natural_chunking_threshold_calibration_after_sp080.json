@@ -1,0 +1,179 @@
+{
+  "assessment": "natural_chunking_threshold_patch_ready_with_review_warnings",
+  "why_all_rows_were_single_chunk": "current natural budget tracks hard fit only; selected chapters stayed far below usable input budget",
+  "proposed_soft_thresholds": {
+    "soft_chunk_target_tokens": 1200,
+    "soft_chunk_max_tokens": 1800,
+    "min_chunk_tokens": 450
+  },
+  "risk_of_over_splitting": "medium if chapters cluster near 1800 tokens; mitigated by min_chunk_tokens",
+  "risk_of_under_splitting": "high under current hard-fit-only behavior for full-novel readiness",
+  "validation_candidate_chapters": [
+    "ch_097",
+    "ch_106",
+    "ch_114",
+    "ch_115"
+  ],
+  "rows": [
+    {
+      "chapter_id": "ch_001",
+      "model": "deepseek-v4-flash",
+      "estimated_tokens": 576,
+      "old_natural_chunk_count": 1,
+      "threshold_for_2_chunks": 289,
+      "threshold_for_3_chunks": 193,
+      "would_soft_split_under_proposed_policy": false
+    },
+    {
+      "chapter_id": "ch_001",
+      "model": "deepseek-v4-pro",
+      "estimated_tokens": 576,
+      "old_natural_chunk_count": 1,
+      "threshold_for_2_chunks": 289,
+      "threshold_for_3_chunks": 193,
+      "would_soft_split_under_proposed_policy": false
+    },
+    {
+      "chapter_id": "ch_002",
+      "model": "deepseek-v4-flash",
+      "estimated_tokens": 676,
+      "old_natural_chunk_count": 1,
+      "threshold_for_2_chunks": 339,
+      "threshold_for_3_chunks": 226,
+      "would_soft_split_under_proposed_policy": false
+    },
+    {
+      "chapter_id": "ch_002",
+      "model": "deepseek-v4-pro",
+      "estimated_tokens": 676,
+      "old_natural_chunk_count": 1,
+      "threshold_for_2_chunks": 339,
+      "threshold_for_3_chunks": 226,
+      "would_soft_split_under_proposed_policy": false
+    },
+    {
+      "chapter_id": "ch_003",
+      "model": "deepseek-v4-flash",
+      "estimated_tokens": 568,
+      "old_natural_chunk_count": 1,
+      "threshold_for_2_chunks": 285,
+      "threshold_for_3_chunks": 190,
+      "would_soft_split_under_proposed_policy": false
+    },
+    {
+      "chapter_id": "ch_003",
+      "model": "deepseek-v4-pro",
+      "estimated_tokens": 568,
+      "old_natural_chunk_count": 1,
+      "threshold_for_2_chunks": 285,
+      "threshold_for_3_chunks": 190,
+      "would_soft_split_under_proposed_policy": false
+    },
+    {
+      "chapter_id": "ch_005",
+      "model": "deepseek-v4-flash",
+      "estimated_tokens": 418,
+      "old_natural_chunk_count": 1,
+      "threshold_for_2_chunks": 210,
+      "threshold_for_3_chunks": 140,
+      "would_soft_split_under_proposed_policy": false
+    },
+    {
+      "chapter_id": "ch_005",
+      "model": "deepseek-v4-pro",
+      "estimated_tokens": 418,
+      "old_natural_chunk_count": 1,
+      "threshold_for_2_chunks": 210,
+      "threshold_for_3_chunks": 140,
+      "would_soft_split_under_proposed_policy": false
+    },
+    {
+      "chapter_id": "ch_097",
+      "model": "deepseek-v4-flash",
+      "estimated_tokens": 2801,
+      "old_natural_chunk_count": 1,
+      "threshold_for_2_chunks": 1401,
+      "threshold_for_3_chunks": 934,
+      "would_soft_split_under_proposed_policy": true
+    },
+    {
+      "chapter_id": "ch_097",
+      "model": "deepseek-v4-pro",
+      "estimated_tokens": 2801,
+      "old_natural_chunk_count": 1,
+      "threshold_for_2_chunks": 1401,
+      "threshold_for_3_chunks": 934,
+      "would_soft_split_under_proposed_policy": true
+    },
+    {
+      "chapter_id": "ch_106",
+      "model": "deepseek-v4-flash",
+      "estimated_tokens": 2579,
+      "old_natural_chunk_count": 1,
+      "threshold_for_2_chunks": 1290,
+      "threshold_for_3_chunks": 860,
+      "would_soft_split_under_proposed_policy": true
+    },
+    {
+      "chapter_id": "ch_106",
+      "model": "deepseek-v4-pro",
+      "estimated_tokens": 2579,
+      "old_natural_chunk_count": 1,
+      "threshold_for_2_chunks": 1290,
+      "threshold_for_3_chunks": 860,
+      "would_soft_split_under_proposed_policy": true
+    },
+    {
+      "chapter_id": "ch_114",
+      "model": "deepseek-v4-flash",
+      "estimated_tokens": 2397,
+      "old_natural_chunk_count": 1,
+      "threshold_for_2_chunks": 1199,
+      "threshold_for_3_chunks": 800,
+      "would_soft_split_under_proposed_policy": true
+    },
+    {
+      "chapter_id": "ch_114",
+      "model": "deepseek-v4-pro",
+      "estimated_tokens": 2397,
+      "old_natural_chunk_count": 1,
+      "threshold_for_2_chunks": 1199,
+      "threshold_for_3_chunks": 800,
+      "would_soft_split_under_proposed_policy": true
+    },
+    {
+      "chapter_id": "ch_115",
+      "model": "deepseek-v4-flash",
+      "estimated_tokens": 2359,
+      "old_natural_chunk_count": 1,
+      "threshold_for_2_chunks": 1180,
+      "threshold_for_3_chunks": 787,
+      "would_soft_split_under_proposed_policy": true
+    },
+    {
+      "chapter_id": "ch_115",
+      "model": "deepseek-v4-pro",
+      "estimated_tokens": 2359,
+      "old_natural_chunk_count": 1,
+      "threshold_for_2_chunks": 1180,
+      "threshold_for_3_chunks": 787,
+      "would_soft_split_under_proposed_policy": true
+    }
+  ],
+  "sp080_findings": {
+    "selected_chapters": [
+      "ch_001",
+      "ch_002",
+      "ch_003",
+      "ch_005",
+      "ch_097",
+      "ch_106",
+      "ch_114",
+      "ch_115"
+    ],
+    "single_chunk_rows": 16,
+    "multi_chunk_rows": 0,
+    "assessment": "natural_chunking_good_but_needs_threshold_tuning"
+  },
+  "product_recommendation": "introduce provider-agnostic soft quality split before full novel E2E"
+}

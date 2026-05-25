@@ -33,6 +33,9 @@ class DeepSeekFamilyProfilesTests(unittest.TestCase):
         self.assertEqual(pro.default_max_output_tokens, 8192)
         self.assertTrue(flash.json_mode)
         self.assertTrue(pro.json_mode)
+        self.assertIsInstance(flash.chunking_preferences, dict)
+        self.assertIsInstance(pro.chunking_preferences, dict)
+        self.assertTrue(pro.chunking_preferences.get("compact_reduction_recommended"))
 
     def test_provider_profile_auto_resolution_uses_packaged_family_profiles(self):
         flash = get_provider_prompt_profile("deepseek", "deepseek-v4-flash", "bootstrap_chapter_extraction")

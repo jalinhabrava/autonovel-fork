@@ -23,6 +23,7 @@ class ProviderPromptProfile:
     validation_policy: str
     fallback: str
     prompt_overlay: str
+    chunking_preferences: dict[str, Any] | None = None
 
 
 _DEEPSEEK_V4_FLASH_BOOTSTRAP_CHAPTER_EXTRACTION_OVERLAY = """DeepSeek V4 Flash JSON reliability and extraction density:

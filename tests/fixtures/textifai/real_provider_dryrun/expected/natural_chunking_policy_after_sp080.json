@@ -1,0 +1,57 @@
+{
+  "assessment": "natural_chunking_threshold_patch_ready_with_review_warnings",
+  "general_provider_agnostic_defaults": {
+    "hard_max_source_tokens": 6000,
+    "soft_chunk_target_tokens": 1400,
+    "soft_chunk_max_tokens": 2200,
+    "min_chunk_tokens": 450,
+    "preferred_overlap_paragraphs": 1,
+    "policy_id": "natural_quality_split_v1"
+  },
+  "deepseek_suggested_overrides": {
+    "deepseek-v4-flash": {
+      "hard_max_source_tokens": 6000,
+      "soft_chunk_target_tokens": 1200,
+      "soft_chunk_max_tokens": 1800,
+      "min_chunk_tokens": 450,
+      "preferred_overlap_paragraphs": 1,
+      "policy_id": "natural_quality_split_v1",
+      "compact_reduction_recommended": false
+    },
+    "deepseek-v4-pro": {
+      "hard_max_source_tokens": 6000,
+      "soft_chunk_target_tokens": 1100,
+      "soft_chunk_max_tokens": 1700,
+      "min_chunk_tokens": 450,
+      "preferred_overlap_paragraphs": 1,
+      "policy_id": "natural_quality_split_v1",
+      "compact_reduction_recommended": true
+    }
+  },
+  "overlap_policy": {
+    "preferred_overlap_paragraphs": 1,
+    "preferred_overlap_tokens": null
+  },
+  "split_reasons": [
+    "chapter_within_budget",
+    "soft_quality_split",
+    "hard_budget_split",
+    "heading_boundary_split",
+    "paragraph_boundary_split"
+  ],
+  "default_change_status": "product-default-change",
+  "justification": "split earlier for ingestion quality and reduction robustness, not only hard context fit",
+  "general_vs_provider_specific": {
+    "core_general": [
+      "hard_max_source_tokens",
+      "soft_chunk_target_tokens",
+      "soft_chunk_max_tokens",
+      "min_chunk_tokens",
+      "split_quality_reason"
+    ],
+    "provider_specific": [
+      "DeepSeek suggested soft thresholds",
+      "Pro compact reduction recommended flag"
+    ]
+  }
+}

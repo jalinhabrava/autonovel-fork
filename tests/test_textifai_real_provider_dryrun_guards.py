@@ -999,6 +999,113 @@ class RealProviderDryRunGuardsTests(unittest.TestCase):
         self.assertTrue(chapter["objects"][0].get("source_refs"))
         self.assertTrue(chapter["events"][0].get("source_refs"))
 
+    def test_patch_merge_rejects_wrong_chapter_payload(self):
+        chunk = E2E_MODULE.StructuredSourceChunk(
+            source_id="src",
+            chunk_id="src_ch_001_chunk_001",
+            chapter_id="ch_001",
+            section_id="ch_001",
+            sequence_index=1,
+            heading_path=["Chapter 1"],
+            text="text",
+            char_start=10,
+            char_end=110,
+            char_count=100,
+            estimated_tokens=20,
+            chunk_kind="chapter",
+            split_reason="synthetic",
+            predecessor_chunk_id=None,
+            successor_chunk_id=None,
+            parent_chunk_id="src_ch_001",
+            source_span={"char_start": 10, "char_end": 110},
+            budget_profile_id="test",
+            provider_profile_id="deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+        )
+        run = {
+            "chapter": {"chapter_id": "ch_001"},
+            "chunks": [chunk],
+            "effective_output_budget": SimpleNamespace(effective_max_output_tokens=8192),
+        }
+        call_result = {
+            "mode": "chapter_reduction_compact",
+            "chunk_id": "reduction",
+            "parseable_json": False,
+            "finish_reason": "length",
+            "usage": {"completion_tokens": 8192},
+            "effective_max_output_tokens": 8192,
+            "response_control": {"completion_status": "unknown"},
+            "failure_mode": "finish_reason_length",
+        }
+        patch_result = {
+            "parsed": {
+                "continuation_patch": {
+                    "objects": [
+                        {
+                            "canonical_name": "Bastón",
+                            "surface": "杖",
+                            "source_refs": [
+                                {
+                                    "source_id": "src",
+                                    "chapter_id": "ch_002",
+                                    "chunk_id": "src_ch_002_chunk_001",
+                                    "char_start": 1,
+                                    "char_end": 10,
+                                }
+                            ],
+                        }
+                    ]
+                },
+                "patch_metadata": {"chapter_id": "ch_002"},
+            },
+            "finish_reason": "stop",
+            "usage": {"completion_tokens": 100},
+        }
+        partial_payloads = [{"partial_signals": {"objects": []}}]
+
+        merged = E2E_MODULE._merge_patch_into_reduction(
+            call_result=call_result,
+            patch_result=patch_result,
+            run=run,
+            partial_payloads=partial_payloads,
+        )
+        self.assertIsNone(merged)
+        self.assertEqual(patch_result.get("failure_mode"), "valid_json_wrong_chapter")
+
+    def test_natural_chunking_threshold_patch_reports_parse_and_stay_private_safe(self):
+        calibration = json.loads((FIXTURE_ROOT / "natural_chunking_threshold_calibration_after_sp080.json").read_text(encoding="utf-8"))
+        policy = json.loads((FIXTURE_ROOT / "natural_chunking_policy_after_sp080.json").read_text(encoding="utf-8"))
+        replan = json.loads((FIXTURE_ROOT / "natural_chunking_replan_simulation_after_sp080.json").read_text(encoding="utf-8"))
+        patch_validation = json.loads((FIXTURE_ROOT / "patch_continuation_chapter_validation_after_sp080.json").read_text(encoding="utf-8"))
+        thin = json.loads((FIXTURE_ROOT / "thin_reduction_diagnostics_after_sp080.json").read_text(encoding="utf-8"))
+        decision = json.loads((FIXTURE_ROOT / "natural_chunking_threshold_patch_decision_after_sp080.json").read_text(encoding="utf-8"))
+        general = json.loads((FIXTURE_ROOT / "natural_chunking_general_pipeline_learnings_after_sp080.json").read_text(encoding="utf-8"))
+        provider_specific = json.loads((FIXTURE_ROOT / "natural_chunking_provider_specific_learnings_after_sp080.json").read_text(encoding="utf-8"))
+
+        valid_enum = {
+            "natural_chunking_threshold_patch_ready_for_e2e",
+            "natural_chunking_threshold_patch_ready_with_review_warnings",
+            "natural_chunking_threshold_patch_partial_needs_more_validation",
+            "natural_chunking_threshold_patch_blocked",
+        }
+        for payload in (calibration, policy, replan, patch_validation, thin, decision, general, provider_specific):
+            text = json.dumps(payload, ensure_ascii=False)
+            self.assertNotIn("sk-", text)
+            self.assertNotIn("Authorization: Bearer", text)
+            self.assertNotIn("CHUNK_TEXT:", text)
+
+        self.assertIn(calibration["assessment"], valid_enum)
+        self.assertIn(policy["assessment"], valid_enum)
+        self.assertIn(replan["assessment"], valid_enum)
+        self.assertIn(decision["assessment"], valid_enum)
+        self.assertTrue(replan["would_produce_natural_multichunk"])
+        self.assertLessEqual(replan["provider_call_cap"], 64)
+        self.assertIn("general_provider_agnostic_defaults", policy)
+        self.assertIn("deepseek_suggested_overrides", policy)
+        self.assertEqual(patch_validation["failure_mode"], "valid_json_wrong_chapter")
+        self.assertIn("no_item_reduction_runs", thin)
+        self.assertIn("what_should_be_abstracted", general)
+        self.assertIn("what_should_not_be_generalized_blindly", provider_specific)
+
     def test_profiled_runtime_reports_record_safe_not_executed_state(self):
         summary = json.loads((FIXTURE_ROOT / "deepseek_ch002_profiled_runtime_summary_after_sp061.json").read_text(encoding="utf-8"))
         generic = json.loads((FIXTURE_ROOT / "deepseek_ch002_profiled_vs_generic_report.json").read_text(encoding="utf-8"))

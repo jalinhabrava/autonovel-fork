@@ -90,6 +90,12 @@ def deepseek_family_profiles() -> tuple[ProviderPromptProfile, ...]:
             validation_policy="strict_json_density_and_thin_output_warnings",
             fallback="same_model_rerun_with_alternate_deepseek_profile_if_available",
             prompt_overlay=FLASH_OER_FOCUS_OVERLAY,
+            chunking_preferences={
+                "soft_chunk_target_tokens": 1200,
+                "soft_chunk_max_tokens": 1800,
+                "min_chunk_tokens": 450,
+                "compact_reduction_recommended": False,
+            },
         ),
         ProviderPromptProfile(
             profile_id="deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
@@ -117,6 +123,12 @@ def deepseek_family_profiles() -> tuple[ProviderPromptProfile, ...]:
             validation_policy="strict_json_density_and_thin_output_warnings",
             fallback="same_model_rerun_with_alternate_deepseek_profile_if_available",
             prompt_overlay=PRO_BALANCED_KB_OVERLAY,
+            chunking_preferences={
+                "soft_chunk_target_tokens": 1100,
+                "soft_chunk_max_tokens": 1700,
+                "min_chunk_tokens": 450,
+                "compact_reduction_recommended": True,
+            },
         ),
     )
 

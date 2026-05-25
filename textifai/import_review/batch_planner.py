@@ -42,6 +42,77 @@ class StructuredSourceChunk:
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
+@dataclass(frozen=True)
+class NaturalChunkingThresholdPolicy:
+    hard_max_source_tokens: int
+    soft_chunk_target_tokens: int
+    soft_chunk_max_tokens: int
+    min_chunk_tokens: int
+    preferred_overlap_paragraphs: int = 1
+    policy_id: str = "natural_quality_split_v1"
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+def build_default_natural_chunking_threshold_policy(
+    *,
+    hard_max_source_tokens: int,
+    provider_chunking_preferences: dict[str, Any] | None = None,
+    user_override: dict[str, Any] | None = None,
+) -> NaturalChunkingThresholdPolicy:
+    preferences = provider_chunking_preferences or {}
+    overrides = user_override or {}
+
+    def _pick(key: str, default: int) -> int:
+        value = overrides.get(key, preferences.get(key, default))
+        try:
+            return max(1, int(value))
+        except (TypeError, ValueError):
+            return default
+
+    target = _pick("soft_chunk_target_tokens", 1400)
+    soft_max = _pick("soft_chunk_max_tokens", 2200)
+    min_tokens = _pick("min_chunk_tokens", 450)
+    overlap = _pick("preferred_overlap_paragraphs", 1)
+    hard_max = max(1, int(hard_max_source_tokens))
+    soft_max = min(soft_max, hard_max)
+    target = min(target, soft_max)
+    min_tokens = min(min_tokens, target)
+    return NaturalChunkingThresholdPolicy(
+        hard_max_source_tokens=hard_max,
+        soft_chunk_target_tokens=target,
+        soft_chunk_max_tokens=soft_max,
+        min_chunk_tokens=min_tokens,
+        preferred_overlap_paragraphs=overlap,
+    )
+
+def choose_natural_chunking_split(
+    *,
+    chapter_tokens: int,
+    hard_max_source_tokens: int,
+    threshold_policy: NaturalChunkingThresholdPolicy | None = None,
+) -> dict[str, Any]:
+    hard_max = max(1, int(hard_max_source_tokens))
+    tokens = max(0, int(chapter_tokens))
+    policy = threshold_policy or build_default_natural_chunking_threshold_policy(hard_max_source_tokens=hard_max)
+    if tokens > hard_max:
+        max_chunk_tokens = min(policy.soft_chunk_target_tokens, hard_max)
+        reason = "hard_budget_split"
+    elif tokens > policy.soft_chunk_max_tokens and tokens - policy.soft_chunk_target_tokens >= policy.min_chunk_tokens:
+        max_chunk_tokens = policy.soft_chunk_target_tokens
+        reason = "soft_quality_split"
+    else:
+        max_chunk_tokens = hard_max
+        reason = "chapter_within_budget"
+    return {
+        "split_quality_reason": reason,
+        "max_chunk_tokens": max(1, int(max_chunk_tokens)),
+        "policy": policy.to_dict(),
+        "chapter_tokens": tokens,
+        "hard_context_fit": tokens <= hard_max,
+        "soft_quality_split_recommended": reason == "soft_quality_split",
+    }
+
 
 def pack_items_by_budget(
     *,
@@ -139,13 +210,25 @@ def split_structured_chapter_into_chunks(
     overlap_paragraphs: int = 1,
     budget_profile_id: str | None = None,
     provider_profile_id: str | None = None,
+    threshold_policy: NaturalChunkingThresholdPolicy | None = None,
 ) -> list[StructuredSourceChunk]:
     text = str(chapter_text or "")
+    effective_max_chunk_tokens = max_chunk_tokens
+    split_quality_reason_override: str | None = None
+    if threshold_policy is not None:
+        chapter_tokens = estimate_tokens(text)
+        decision = choose_natural_chunking_split(
+            chapter_tokens=chapter_tokens,
+            hard_max_source_tokens=max_chunk_tokens,
+            threshold_policy=threshold_policy,
+        )
+        effective_max_chunk_tokens = int(decision["max_chunk_tokens"])
+        split_quality_reason_override = str(decision["split_quality_reason"])
     legacy_chunks = split_markdown_semantically(
         chapter_text=text,
-        max_chunk_tokens=max_chunk_tokens,
+        max_chunk_tokens=effective_max_chunk_tokens,
         estimate_tokens=estimate_tokens,
-        overlap_paragraphs=overlap_paragraphs,
+        overlap_paragraphs=threshold_policy.preferred_overlap_paragraphs if threshold_policy is not None else overlap_paragraphs,
     )
     records: list[StructuredSourceChunk] = []
     search_start = 0
@@ -160,7 +243,7 @@ def split_structured_chapter_into_chunks(
         chunk_id = f"{source_id}_{chapter_id}_chunk_{index:03d}"
         heading_path = _heading_path_for_chunk(chunk_text, fallback=[chapter_id])
         section_id = _stable_section_id(chapter_id=chapter_id, heading_path=heading_path, sequence_index=index)
-        split_reason = "semantic_budget_split" if len(legacy_chunks) > 1 else "chapter_within_budget"
+        split_reason = split_quality_reason_override if len(legacy_chunks) > 1 and split_quality_reason_override else ("semantic_budget_split" if len(legacy_chunks) > 1 else "chapter_within_budget")
         records.append(
             StructuredSourceChunk(
                 source_id=source_id,

@@ -7,14 +7,24 @@ from pathlib import Path
 
 from textifai.bootstrap.contracts import SourceDocumentRecord
 from textifai.import_review.auxiliary_ingestion import AuxiliaryDocumentInput, _build_auxiliary_document_record, _chunk_auxiliary_document
-from textifai.import_review.batch_planner import split_markdown_semantically, split_structured_chapter_into_chunks
+from textifai.import_review.batch_planner import (
+    build_default_natural_chunking_threshold_policy,
+    split_markdown_semantically,
+    split_structured_chapter_into_chunks,
+)
 from textifai.import_review.chapterizer import detect_story_chapters
 from textifai.import_review.chunking_reduction_preflight import (
+    build_natural_chunking_calibration_report,
+    build_natural_chunking_policy_report,
+    build_natural_chunking_replan_simulation,
     build_long_provider_run_contract,
+    build_patch_continuation_chapter_validation_report,
     build_private_decision_packet_contract,
     build_provider_free_chunking_reduction_fixture_report,
     build_source_ref_carry_forward_report,
+    build_thin_reduction_diagnostics,
     reduce_mock_chunk_partials,
+    validate_patch_continuation_chapter,
 )
 from textifai.import_review.deepseek_family_profiles import (
     build_continuation_repair_contract,
@@ -300,6 +310,75 @@ class ChunkingReductionPreflightTests(unittest.TestCase):
         self.assertIn("response_control", response_control)
         self.assertEqual(response_control["response_control"]["completion_status"], "complete|partial")
         self.assertIn("invalid_json_truncated", continuation["triggers"])
+
+    def test_natural_chunking_threshold_policy_and_soft_split_behavior(self):
+        policy = build_default_natural_chunking_threshold_policy(hard_max_source_tokens=6000)
+        self.assertEqual(policy.soft_chunk_target_tokens, 1400)
+        self.assertEqual(policy.soft_chunk_max_tokens, 2200)
+
+        text = "\n\n".join(f"P{i} uno dos tres cuatro cinco seis siete ocho nueve diez once doce." for i in range(20))
+        chunks = split_structured_chapter_into_chunks(
+            source_id="src",
+            chapter_id="ch_200",
+            chapter_text=text,
+            chapter_char_start=0,
+            max_chunk_tokens=6000,
+            estimate_tokens=lambda value: max(1, len(value.split())),
+            threshold_policy=build_default_natural_chunking_threshold_policy(
+                hard_max_source_tokens=6000,
+                provider_chunking_preferences={"soft_chunk_target_tokens": 60, "soft_chunk_max_tokens": 80, "min_chunk_tokens": 20},
+            ),
+        )
+        self.assertGreater(len(chunks), 1)
+        self.assertEqual(chunks[0].split_reason, "soft_quality_split")
+
+    def test_min_chunk_tokens_avoids_tiny_chunks(self):
+        text = "\n\n".join(["uno dos tres cuatro cinco seis"] * 5 + ["coda corta"])
+        chunks = split_structured_chapter_into_chunks(
+            source_id="src",
+            chapter_id="ch_201",
+            chapter_text=text,
+            chapter_char_start=0,
+            max_chunk_tokens=200,
+            estimate_tokens=lambda value: max(1, len(value.split())),
+            threshold_policy=build_default_natural_chunking_threshold_policy(
+                hard_max_source_tokens=200,
+                provider_chunking_preferences={"soft_chunk_target_tokens": 12, "soft_chunk_max_tokens": 15, "min_chunk_tokens": 6},
+            ),
+        )
+        self.assertTrue(all(chunk.estimated_tokens >= 2 for chunk in chunks))
+
+    def test_patch_chapter_validation_rejects_wrong_chapter(self):
+        report = build_patch_continuation_chapter_validation_report()
+        self.assertEqual(report["failure_mode"], "valid_json_wrong_chapter")
+        validation = validate_patch_continuation_chapter(
+            expected_chapter_id="ch_001",
+            expected_chunk_ids=["source_x_ch_001_chunk_001"],
+            patch_payload={
+                "continuation_patch": {
+                    "objects": [{"canonical_name": "Bastón", "source_refs": [{"chapter_id": "ch_002", "chunk_id": "source_x_ch_002_chunk_001"}]}]
+                },
+                "patch_metadata": {"chapter_id": "ch_002"},
+            },
+        )
+        self.assertFalse(validation["valid"])
+        self.assertEqual(validation["failure_mode"], "valid_json_wrong_chapter")
+
+    def test_thin_no_item_reduction_diagnostics_distinguish_no_items_from_missing_refs(self):
+        no_items = build_thin_reduction_diagnostics(parsed={"chapters": [{"chapter_id": "ch_001"}]})
+        with_items = build_thin_reduction_diagnostics(parsed={"chapters": [{"chapter_id": "ch_001", "objects": [{"canonical_name": "Llave", "source_refs": []}], "events": [{"canonical_name": "Apertura"}], "relations": []}]})
+        self.assertTrue(no_items["no_item_reduction"])
+        self.assertIn("valid_reduction_no_items", no_items["warnings"])
+        self.assertFalse(with_items["no_item_reduction"])
+        self.assertIn("valid_reduction_thin_sections", with_items["warnings"])
+
+    def test_replan_simulation_and_policy_reports_parse(self):
+        policy = build_natural_chunking_policy_report()
+        calibration = build_natural_chunking_calibration_report(rows=[{"chapter_id": "ch_001", "model": "deepseek-v4-flash", "estimated_tokens": 2400, "natural_chunk_count": 1}])
+        replan = build_natural_chunking_replan_simulation(rows=[{"chapter_id": "ch_001", "model": "deepseek-v4-flash", "estimated_tokens": 2400, "natural_chunk_count": 1, "effective_source_text_budget_tokens": 6000}])
+        self.assertEqual(policy["assessment"], "natural_chunking_threshold_patch_ready_for_e2e")
+        self.assertEqual(calibration["rows"][0]["old_natural_chunk_count"], 1)
+        self.assertTrue(replan["would_produce_natural_multichunk"])
 
 
 if __name__ == "__main__":

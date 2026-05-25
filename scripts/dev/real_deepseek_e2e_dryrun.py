@@ -20,6 +20,7 @@ from textifai.author_understanding.normalization import extract_json_payload
 from textifai.bootstrap.contracts import SourceDocumentRecord
 from textifai.import_review.batch_planner import StructuredSourceChunk, split_structured_chapter_into_chunks
 from textifai.import_review.chapterizer import detect_story_chapters
+from textifai.import_review.chunking_reduction_preflight import build_thin_reduction_diagnostics, validate_patch_continuation_chapter
 from textifai.import_review.deepseek_family_profiles import (
     build_finish_reason_length_strategy,
     build_patch_based_continuation_contract,
@@ -1100,6 +1101,15 @@ def _merge_patch_into_reduction(
     patch = patch_payload.get("continuation_patch")
     if not isinstance(patch, dict):
         return None
+    patch_validation = validate_patch_continuation_chapter(
+        expected_chapter_id=run["chapter"]["chapter_id"],
+        patch_payload=patch_payload,
+        expected_chunk_ids=[chunk.chunk_id for chunk in run["chunks"]],
+    )
+    if not patch_validation.get("valid"):
+        patch_result["failure_mode"] = patch_validation.get("failure_mode")
+        patch_result["patch_chapter_validation"] = patch_validation
+        return None
 
     base_payload = call_result.get("parsed") if isinstance(call_result.get("parsed"), dict) else _build_reduction_fallback_from_partials(run, partial_payloads)
     if not isinstance(base_payload, dict):
@@ -1148,6 +1158,7 @@ def _merge_patch_into_reduction(
             "counts": validation.get("counts") or merged.get("counts") or {},
             "score": validation.get("score") if validation.get("score") is not None else merged.get("score"),
             "thin_warnings": validation.get("thin_warnings") or merged.get("thin_warnings") or [],
+            "patch_chapter_validation": patch_validation,
         }
     )
     return merged
@@ -1683,6 +1694,7 @@ def _build_public_reports(*, plan: dict[str, Any], results: list[dict[str, Any]]
 
 def _source_ref_audit_row(*, result: dict[str, Any], parsed: dict[str, Any] | None) -> dict[str, Any]:
     section_totals = {section: {"items": 0, "with_source_refs": 0} for section in ("characters", "places", "concepts", "objects", "events", "relations", "unresolved_mentions")}
+    diagnostics = build_thin_reduction_diagnostics(parsed=parsed if isinstance(parsed, dict) else None)
     if not isinstance(parsed, dict):
         return {
             "run_id": result["run_id"],
@@ -1693,6 +1705,8 @@ def _source_ref_audit_row(*, result: dict[str, Any], parsed: dict[str, Any] | No
             "item_level_source_ref_coverage_ratio": 0.0,
             "sections": section_totals,
             "missing_examples": [],
+            "no_item_reduction": diagnostics.get("no_item_reduction"),
+            "thin_warnings": diagnostics.get("warnings") or [],
         }
     chapter = _first_chapter(parsed)
     missing_examples = []
@@ -1725,6 +1739,9 @@ def _source_ref_audit_row(*, result: dict[str, Any], parsed: dict[str, Any] | No
         "item_level_source_ref_coverage_ratio": (with_refs / total) if total else 0.0,
         "sections": section_totals,
         "missing_examples": missing_examples,
+        "no_item_reduction": diagnostics.get("no_item_reduction"),
+        "thin_warnings": diagnostics.get("warnings") or [],
+        "source_ref_coverage_denominator_explanation": diagnostics.get("source_ref_coverage_denominator_explanation"),
     }
 
 

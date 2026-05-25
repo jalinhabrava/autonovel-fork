@@ -1,0 +1,34 @@
+{
+  "assessment": "natural_chunking_threshold_patch_ready_with_review_warnings",
+  "deepseek_specific_learnings": {
+    "suggested_flash_thresholds": {
+      "hard_max_source_tokens": 6000,
+      "soft_chunk_target_tokens": 1200,
+      "soft_chunk_max_tokens": 1800,
+      "min_chunk_tokens": 450,
+      "preferred_overlap_paragraphs": 1,
+      "policy_id": "natural_quality_split_v1",
+      "compact_reduction_recommended": false
+    },
+    "suggested_pro_thresholds": {
+      "hard_max_source_tokens": 6000,
+      "soft_chunk_target_tokens": 1100,
+      "soft_chunk_max_tokens": 1700,
+      "min_chunk_tokens": 450,
+      "preferred_overlap_paragraphs": 1,
+      "policy_id": "natural_quality_split_v1",
+      "compact_reduction_recommended": true
+    },
+    "pro_compact_reduction_preference": true,
+    "reasoning_token_risk": "observed in SP080 and stays DeepSeek-specific warning",
+    "flash_pro_behavior_from_sp080": {
+      "provider_call_count": 42,
+      "valid_reductions": "16/16"
+    }
+  },
+  "what_should_not_be_generalized_blindly": [
+    "DeepSeek 8192 output default",
+    "DeepSeek reasoning_tokens ratio",
+    "Pro compact reduction as universal default"
+  ]
+}

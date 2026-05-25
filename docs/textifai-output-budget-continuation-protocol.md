@@ -83,3 +83,26 @@ Final reduced items should carry `source_refs`. If exact item spans are missing,
 - no OpenAI auto-switch;
 - no provider auto-switch;
 - same-model rerun or continuation only unless user changes selection.
+
+
+## Patch Chapter Validation
+
+Patch continuation should not merge only because JSON parses. Before merge:
+
+- `chapter_id` in patch metadata must match expected chapter;
+- `continuation_for.chapter_id` must match when present;
+- referenced `chunk_id` values must belong to expected chapter;
+- mismatches classify as `valid_json_wrong_chapter`;
+- rejected patch stays traceable in private packet and privacy-safe reports.
+
+## Thin / No-item Diagnostics
+
+Parseable reductions can still be too thin to help tracing. Diagnostics should record:
+
+- section item counts;
+- empty critical sections;
+- `valid_reduction_no_items`;
+- `valid_reduction_thin_sections`;
+- `source_ref_coverage_lower_due_no_items`.
+
+This keeps source-ref coverage interpretation honest when denominator is near zero.

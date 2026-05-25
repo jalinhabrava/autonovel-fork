@@ -1,0 +1,17 @@
+{
+  "assessment": "natural_chunking_threshold_patch_ready_with_review_warnings",
+  "rules": {
+    "patch_chapter_id_must_match_expected": true,
+    "continuation_for_chapter_must_match_expected": true,
+    "chunk_ids_must_belong_to_expected_chapter": true,
+    "reject_valid_json_wrong_chapter": true,
+    "merge_block_on_mismatch": true
+  },
+  "failure_mode": "valid_json_wrong_chapter",
+  "sp080_issue": "some patch continuations returned valid JSON for wrong chapter",
+  "synthetic_wrong_chapter_example": {
+    "expected_chapter_id": "ch_001",
+    "patch_chapter_id": "ch_002",
+    "decision": "reject_before_merge"
+  }
+}

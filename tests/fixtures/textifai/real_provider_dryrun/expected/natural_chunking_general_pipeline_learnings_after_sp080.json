@@ -1,0 +1,23 @@
+{
+  "assessment": "natural_chunking_threshold_patch_ready_with_review_warnings",
+  "general_pipeline_learnings": {
+    "soft_split_thresholds": "core planner now distinguishes hard context fit from soft ingestion-quality split",
+    "hard_vs_soft_budget_distinction": "hard max remains context safety; soft max/target controls extraction quality",
+    "patch_chapter_validation": "provider-agnostic patch validation rejects wrong chapter before merge",
+    "thin_no_item_diagnostics": "diagnostics separate no-item reductions from true missing source_refs",
+    "replan_simulation": "provider-free simulation estimates call count and natural multi-chunk readiness before provider calls"
+  },
+  "what_should_be_abstracted": [
+    "NaturalChunkingThresholdPolicy",
+    "provider preference suggestion hook",
+    "patch chapter validation",
+    "thin/no-item diagnostics",
+    "replan simulation"
+  ],
+  "what_should_stay_provider_specific": [
+    "concrete model ids",
+    "profile ids",
+    "reasoning token heuristics",
+    "compact reduction wording"
+  ]
+}

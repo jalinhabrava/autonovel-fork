@@ -1,0 +1,101 @@
+{
+  "assessment": "natural_chunking_threshold_patch_ready_with_review_warnings",
+  "chapters": [
+    {
+      "chapter_id": "ch_001",
+      "old_natural_chunk_count": 1,
+      "new_natural_chunk_count": 1,
+      "estimated_tokens": 576,
+      "models": [
+        "deepseek-v4-flash",
+        "deepseek-v4-pro"
+      ]
+    },
+    {
+      "chapter_id": "ch_002",
+      "old_natural_chunk_count": 1,
+      "new_natural_chunk_count": 1,
+      "estimated_tokens": 676,
+      "models": [
+        "deepseek-v4-flash",
+        "deepseek-v4-pro"
+      ]
+    },
+    {
+      "chapter_id": "ch_003",
+      "old_natural_chunk_count": 1,
+      "new_natural_chunk_count": 1,
+      "estimated_tokens": 568,
+      "models": [
+        "deepseek-v4-flash",
+        "deepseek-v4-pro"
+      ]
+    },
+    {
+      "chapter_id": "ch_005",
+      "old_natural_chunk_count": 1,
+      "new_natural_chunk_count": 1,
+      "estimated_tokens": 418,
+      "models": [
+        "deepseek-v4-flash",
+        "deepseek-v4-pro"
+      ]
+    },
+    {
+      "chapter_id": "ch_097",
+      "old_natural_chunk_count": 1,
+      "new_natural_chunk_count": 3,
+      "estimated_tokens": 2801,
+      "models": [
+        "deepseek-v4-flash",
+        "deepseek-v4-pro"
+      ]
+    },
+    {
+      "chapter_id": "ch_106",
+      "old_natural_chunk_count": 1,
+      "new_natural_chunk_count": 3,
+      "estimated_tokens": 2579,
+      "models": [
+        "deepseek-v4-flash",
+        "deepseek-v4-pro"
+      ]
+    },
+    {
+      "chapter_id": "ch_114",
+      "old_natural_chunk_count": 1,
+      "new_natural_chunk_count": 2,
+      "estimated_tokens": 2397,
+      "models": [
+        "deepseek-v4-flash",
+        "deepseek-v4-pro"
+      ]
+    },
+    {
+      "chapter_id": "ch_115",
+      "old_natural_chunk_count": 1,
+      "new_natural_chunk_count": 2,
+      "estimated_tokens": 2359,
+      "models": [
+        "deepseek-v4-flash",
+        "deepseek-v4-pro"
+      ]
+    }
+  ],
+  "estimated_call_count_flash_plus_pro": 44,
+  "expected_continuation_reserve": 16,
+  "provider_call_cap": 64,
+  "fits_cap_64": true,
+  "would_produce_natural_multichunk": true,
+  "suggested_subset_if_over_cap": [
+    "ch_097",
+    "ch_106",
+    "ch_114",
+    "ch_115"
+  ],
+  "old_natural_chunk_rows": {
+    "single_chunk_rows": 16,
+    "multi_chunk_rows": 0
+  },
+  "provider_models": "Flash+Pro simulated, provider-free"
+}
