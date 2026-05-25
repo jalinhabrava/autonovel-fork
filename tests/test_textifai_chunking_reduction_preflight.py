@@ -13,11 +13,21 @@ from textifai.import_review.chunking_reduction_preflight import (
     build_long_provider_run_contract,
     build_private_decision_packet_contract,
     build_provider_free_chunking_reduction_fixture_report,
+    build_source_ref_carry_forward_report,
     reduce_mock_chunk_partials,
 )
-from textifai.import_review.deepseek_family_profiles import build_deepseek_budget_bridge, get_deepseek_family_profile
+from textifai.import_review.deepseek_family_profiles import (
+    build_continuation_repair_contract,
+    build_deepseek_budget_bridge,
+    build_response_control_contract,
+    get_deepseek_family_profile,
+)
 from textifai.import_review.model_registry import get_model_capabilities
-from textifai.import_review.token_budget import TokenPlanningRequest, build_token_budget_from_planning_request
+from textifai.import_review.token_budget import (
+    TokenPlanningRequest,
+    build_token_budget_from_planning_request,
+    resolve_effective_output_budget,
+)
 
 FIXTURE_ROOT = Path("tests/fixtures/textifai/chunking_preflight/expected")
 ONT_NAMES = ["セラ", "王者の杖", "アデルマン", "ティセイア", "ベル"]
@@ -225,6 +235,71 @@ class ChunkingReductionPreflightTests(unittest.TestCase):
         self.assertTrue(long_run["progress_log"]["incremental"])
         self.assertIn("last_output_activity_at", long_run["progress_log"]["required_fields"])
         self.assertTrue(long_run["timeout_policy"]["stall_detection_required"])
+
+    def test_source_ref_carry_forward_rules_and_dedupe(self):
+        report = build_source_ref_carry_forward_report()
+        self.assertEqual(report["assessment"], "source_refs_and_output_budget_protocol_ready")
+        self.assertTrue(report["rules"]["merge_multiple_chunk_refs_without_duplicates"])
+
+        chunks = split_structured_chapter_into_chunks(
+            source_id="src",
+            chapter_id="ch_100",
+            chapter_text="## A\n\nUno dos tres.\n\n## B\n\nCuatro cinco seis.",
+            chapter_char_start=10,
+            max_chunk_tokens=4,
+            estimate_tokens=lambda value: max(1, len(value.split())),
+            overlap_paragraphs=0,
+        )
+        partials = [
+            {
+                "chunk_id": chunks[0].chunk_id,
+                "status": "ok",
+                "payload": {"chapters": [{"objects": [{"canonical_name": "Llave", "source_refs": [{"source_id": "src", "chapter_id": "ch_100", "chunk_id": chunks[0].chunk_id, "char_start": 10, "char_end": 20}]}]}]},
+            },
+            {
+                "chunk_id": chunks[1].chunk_id,
+                "status": "ok",
+                "payload": {"chapters": [{"objects": [{"canonical_name": "Llave"}]}]},
+            },
+        ]
+        reduced = reduce_mock_chunk_partials(chunks=chunks, partials=partials, chapter_id="ch_100")
+        objects = reduced["chapters"][0]["objects"]
+        self.assertEqual(len(objects), 1)
+        self.assertGreaterEqual(len(objects[0].get("source_refs") or []), 2)
+
+    def test_output_budget_resolver_dynamic_sources(self):
+        caps = get_model_capabilities("deepseek-v4-flash")
+        resolved_profile = resolve_effective_output_budget(
+            provider="deepseek",
+            model="deepseek-v4-flash",
+            task="bootstrap_chapter_extraction",
+            capabilities=caps,
+            provider_profile_id="deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+            profile_default_max_output_tokens=8192,
+            provider_default_max_output_tokens=4096,
+        )
+        self.assertEqual(resolved_profile.decision_source, "profile_default")
+        self.assertEqual(resolved_profile.effective_max_output_tokens, 8192)
+
+        resolved_override = resolve_effective_output_budget(
+            provider="deepseek",
+            model="deepseek-v4-flash",
+            task="bootstrap_chapter_extraction",
+            capabilities=caps,
+            provider_profile_id="deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+            profile_default_max_output_tokens=8192,
+            cli_override_max_output_tokens=7000,
+            provider_default_max_output_tokens=4096,
+        )
+        self.assertEqual(resolved_override.decision_source, "cli_override")
+        self.assertEqual(resolved_override.effective_max_output_tokens, 7000)
+
+    def test_response_control_and_continuation_contracts(self):
+        response_control = build_response_control_contract()
+        continuation = build_continuation_repair_contract()
+        self.assertIn("response_control", response_control)
+        self.assertEqual(response_control["response_control"]["completion_status"], "complete|partial")
+        self.assertIn("invalid_json_truncated", continuation["triggers"])
 
 
 if __name__ == "__main__":

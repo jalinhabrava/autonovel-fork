@@ -65,3 +65,12 @@ Operational rules:
 - provider calls in provider-free phases;
 - committing raw provider outputs;
 - automatic provider/model switching.
+
+## Output Budget and Continuation Protocol
+
+- Resolve output budget dynamically per run from CLI override, user/config override, provider profile default, model registry, or provider default.
+- Inject the resolved budget into prompts using an output budget control block.
+- If the model cannot finish within budget, it should return valid JSON with `response_control.completion_status = "partial"` instead of truncating.
+- Capture `finish_reason`, `usage`, and `effective_max_output_tokens` in the private packet.
+- Classify truncation risk from finish reason, near-max completion token usage, and unterminated JSON endings.
+- Continuation/repair must stay on same provider/model/profile unless user explicitly allows otherwise.

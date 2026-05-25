@@ -1,0 +1,17 @@
+{
+  "assessment": "source_refs_and_output_budget_protocol_ready",
+  "response_control": {
+    "completion_status": "complete|partial",
+    "part_index": 1,
+    "part_count_estimate": 1,
+    "continuation_required": false,
+    "continuation_cursor": null,
+    "omitted_sections": []
+  },
+  "legacy_outputs_without_response_control": "allowed_but_unknown",
+  "compatible_with": [
+    "partial_extraction",
+    "reduction",
+    "continuation_output"
+  ]
+}

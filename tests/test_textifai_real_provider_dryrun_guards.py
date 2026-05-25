@@ -680,6 +680,27 @@ class RealProviderDryRunGuardsTests(unittest.TestCase):
         self.assertTrue(args.no_write_back)
         self.assertEqual(args.max_provider_requests, 24)
 
+    def test_output_budget_and_continuation_protocol_reports_parse(self):
+        resolver = json.loads((FIXTURE_ROOT / "output_budget_capability_resolver_after_sp075.json").read_text(encoding="utf-8"))
+        response_control = json.loads((FIXTURE_ROOT / "response_control_contract_after_sp075.json").read_text(encoding="utf-8"))
+        continuation = json.loads((FIXTURE_ROOT / "continuation_repair_contract_after_sp075.json").read_text(encoding="utf-8"))
+        source_refs = json.loads((FIXTURE_ROOT / "source_ref_carry_forward_after_sp075.json").read_text(encoding="utf-8"))
+        truncation = json.loads((FIXTURE_ROOT / "truncation_detection_after_sp075.json").read_text(encoding="utf-8"))
+
+        for payload in (resolver, response_control, continuation, source_refs, truncation):
+            text = json.dumps(payload, ensure_ascii=False)
+            self.assertNotIn("sk-", text)
+            self.assertNotIn("Authorization: Bearer", text)
+            self.assertNotIn("CHUNK_TEXT:", text)
+
+        self.assertEqual(resolver["assessment"], "source_refs_and_output_budget_protocol_ready")
+        self.assertEqual(response_control["assessment"], "source_refs_and_output_budget_protocol_ready")
+        self.assertEqual(continuation["assessment"], "source_refs_and_output_budget_protocol_ready")
+        self.assertEqual(source_refs["assessment"], "source_refs_and_output_budget_protocol_ready")
+        self.assertEqual(truncation["assessment"], "source_refs_and_output_budget_protocol_ready")
+        self.assertTrue(resolver["flash_resolution"]["effective_max_output_tokens"] > 0)
+        self.assertIn("response_control.partial", continuation["trigger_conditions"])
+
     def test_profiled_runtime_reports_record_safe_not_executed_state(self):
         summary = json.loads((FIXTURE_ROOT / "deepseek_ch002_profiled_runtime_summary_after_sp061.json").read_text(encoding="utf-8"))
         generic = json.loads((FIXTURE_ROOT / "deepseek_ch002_profiled_vs_generic_report.json").read_text(encoding="utf-8"))

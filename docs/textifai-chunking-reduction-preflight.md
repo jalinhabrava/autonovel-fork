@@ -146,3 +146,19 @@ Readiness:
 - provider-free chunking/reduction fixture e2e is ready;
 - path is ready for controlled real DeepSeek dry-run with private decision packet;
 - no provider calls were made in this phase.
+
+## SP-076 Source Refs and Output Budget Protocol
+
+Closed or improved in this phase:
+
+- reduction carry-forward rules for item-level `source_refs` with chunk-level fallback;
+- dynamic output budget resolver with source-of-decision metadata;
+- prompt injection for output budget control;
+- provider-free `response_control` contract;
+- truncation detection taxonomy and continuation/repair contract;
+- usage / finish_reason capture requirements for private decision packets;
+- candidate summary budget guidance to reduce truncation risk.
+
+Remaining gap:
+
+- larger real DeepSeek rerun should verify new source-ref carry-forward end to end after script/runtime adoption.

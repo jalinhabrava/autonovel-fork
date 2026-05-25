@@ -1,0 +1,35 @@
+{
+  "assessment": "source_refs_and_output_budget_protocol_ready",
+  "triggers": [
+    "response_control.partial",
+    "invalid_json_truncated",
+    "finish_reason_length",
+    "output_near_max_tokens"
+  ],
+  "continuation_request_shape": {
+    "same_provider_model_profile_required": true,
+    "continuation_cursor_required": true,
+    "prior_partial_reference_required": true
+  },
+  "continuation_output_shape": {
+    "must_return_valid_json": true,
+    "must_include_response_control": true,
+    "must_preserve_source_refs": true
+  },
+  "merge_rules": [
+    "do_not_duplicate_previous_items",
+    "merge_source_refs_without_duplicates",
+    "preserve_review_state_and_local_candidate"
+  ],
+  "safety_rules": {
+    "same_provider_model_profile_unless_user_allows_other": true,
+    "no_auto_switch_invisible": true,
+    "private_packet_trace_required": true
+  },
+  "trigger_conditions": [
+    "response_control.partial",
+    "invalid_json_truncated",
+    "finish_reason_length",
+    "output_near_max_tokens"
+  ]
+}

@@ -35,6 +35,10 @@ class PromptExperimentObservabilityTests(unittest.TestCase):
             "valid_json_zero_unresolved",
             "provider_empty_response",
             "provider_error",
+            "finish_reason_length",
+            "output_near_max_tokens",
+            "unterminated_string",
+            "unterminated_array_or_object",
             "validation_failed_missing_event_importance",
             "validation_failed_missing_relation_category",
         }
@@ -62,6 +66,16 @@ class PromptExperimentObservabilityTests(unittest.TestCase):
         )
         self.assertEqual(thin, "valid_json_low_objects")
         self.assertEqual(missing, "valid_json_missing_required_sections")
+
+    def test_classifies_truncation_signals(self):
+        by_finish = classify_failure_mode({"parseable_json": False, "validation_ok": False, "finish_reason": "length"})
+        by_tokens = classify_failure_mode({"parseable_json": False, "validation_ok": False, "completion_tokens": 7800, "effective_max_output_tokens": 8000})
+        by_string = classify_failure_mode({"parseable_json": False, "validation_ok": False, "response_tail": '{"x":"unterminated'})
+        by_object = classify_failure_mode({"parseable_json": False, "validation_ok": False, "response_tail": '{"x": ['})
+        self.assertEqual(by_finish, "finish_reason_length")
+        self.assertEqual(by_tokens, "output_near_max_tokens")
+        self.assertEqual(by_string, "unterminated_string")
+        self.assertEqual(by_object, "unterminated_array_or_object")
 
     def test_classifies_decisions_keep_mutate_discard(self):
         keep = classify_variant_decision(

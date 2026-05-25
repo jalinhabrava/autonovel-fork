@@ -1,0 +1,25 @@
+{
+  "assessment": "source_refs_and_output_budget_protocol_ready",
+  "flash_resolution": {
+    "model": "deepseek-v4-flash",
+    "profile_id": "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+    "effective_max_output_tokens": 8192,
+    "decision_source": "profile_default",
+    "model_registry_max_output_tokens": 8192,
+    "profile_default_max_output_tokens": 8192
+  },
+  "pro_resolution": {
+    "model": "deepseek-v4-pro",
+    "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+    "effective_max_output_tokens": 8192,
+    "decision_source": "profile_default",
+    "model_registry_max_output_tokens": 8192,
+    "profile_default_max_output_tokens": 8192
+  },
+  "override_example": {
+    "model": "deepseek-v4-pro",
+    "effective_max_output_tokens": 7000,
+    "decision_source": "cli_override",
+    "override_max_output_tokens": 7000
+  }
+}

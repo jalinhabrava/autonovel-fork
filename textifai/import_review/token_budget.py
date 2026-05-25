@@ -24,6 +24,18 @@ class TokenPlanningRequest:
     source_text_budget_tokens: int
     safety_margin: int
 
+@dataclass(frozen=True)
+class EffectiveOutputBudget:
+    provider: str
+    model: str
+    task: str
+    provider_profile_id: str | None
+    effective_max_output_tokens: int
+    decision_source: str
+    model_registry_max_output_tokens: int | None
+    profile_default_max_output_tokens: int | None
+    override_max_output_tokens: int | None
+
 
 def build_token_budget(
     *,
@@ -71,3 +83,45 @@ def build_token_budget_from_planning_request(
         "safety_margin": budget.safety_margin,
         "usable_input_budget": budget.usable_input_budget,
     }
+
+def resolve_effective_output_budget(
+    *,
+    provider: str,
+    model: str,
+    task: str,
+    capabilities: ModelCapabilities | None = None,
+    provider_profile_id: str | None = None,
+    profile_default_max_output_tokens: int | None = None,
+    user_override_max_output_tokens: int | None = None,
+    cli_override_max_output_tokens: int | None = None,
+    provider_default_max_output_tokens: int | None = None,
+) -> EffectiveOutputBudget:
+    registry_max = capabilities.max_output_tokens if capabilities is not None else None
+    candidates = [
+        ("cli_override", cli_override_max_output_tokens),
+        ("user_override", user_override_max_output_tokens),
+        ("profile_default", profile_default_max_output_tokens),
+        ("model_registry", registry_max),
+        ("provider_default", provider_default_max_output_tokens),
+    ]
+    selected_source = "provider_default"
+    selected_value = provider_default_max_output_tokens or 4096
+    for source, value in candidates:
+        if value is None:
+            continue
+        selected_source = source
+        selected_value = int(value)
+        break
+    if registry_max is not None:
+        selected_value = min(selected_value, int(registry_max))
+    return EffectiveOutputBudget(
+        provider=provider,
+        model=model,
+        task=task,
+        provider_profile_id=provider_profile_id,
+        effective_max_output_tokens=max(1, selected_value),
+        decision_source=selected_source,
+        model_registry_max_output_tokens=registry_max,
+        profile_default_max_output_tokens=profile_default_max_output_tokens,
+        override_max_output_tokens=cli_override_max_output_tokens or user_override_max_output_tokens,
+    )

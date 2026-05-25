@@ -8,6 +8,7 @@ from textifai.import_review.provider_prompt_profiles import (
     ProviderPromptProfile,
     apply_provider_prompt_profile,
     get_provider_prompt_profile,
+    inject_output_budget_control,
     list_provider_prompt_profiles,
     summarize_provider_prompt_profile,
     validate_extraction_density,
@@ -75,6 +76,14 @@ class ProviderPromptProfilesTests(unittest.TestCase):
         second_system, second_user = apply_provider_prompt_profile(updated_system, updated_user, profile)
         self.assertEqual(second_system.count("## Provider Profile Overlay"), 1)
         self.assertEqual(second_user, user)
+
+    def test_output_budget_control_injection_is_dynamic_and_idempotent(self):
+        system = "Return only valid JSON."
+        injected = inject_output_budget_control(system, effective_max_output_tokens=7000)
+        reinjected = inject_output_budget_control(injected, effective_max_output_tokens=9000)
+        self.assertIn("maximum output budget of 7000 tokens", injected)
+        self.assertIn("response_control.completion_status", injected)
+        self.assertEqual(injected, reinjected)
 
     def test_summarize_profile_excludes_overlay_body(self):
         profile = get_provider_prompt_profile("deepseek", "deepseek-v4-flash", "bootstrap_chapter_extraction")

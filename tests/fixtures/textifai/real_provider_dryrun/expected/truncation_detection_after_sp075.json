@@ -1,0 +1,10 @@
+{
+  "assessment": "source_refs_and_output_budget_protocol_ready",
+  "signals": {
+    "finish_reason_length": "finish_reason_length",
+    "output_near_max_tokens": "output_near_max_tokens",
+    "unterminated_string": "unterminated_string",
+    "unterminated_array_or_object": "unterminated_array_or_object"
+  },
+  "fallback_unknown": "invalid_json_unknown"
+}

@@ -30,6 +30,10 @@ FAILURE_MODE_TAXONOMY: dict[str, str] = {
     "valid_json_zero_unresolved": "JSON parsed but unresolved important mentions collapsed to zero in ambiguous context.",
     "provider_empty_response": "Provider returned empty text or no usable content.",
     "provider_error": "Provider call failed before usable response payload.",
+    "finish_reason_length": "Provider metadata indicates output hit length limit.",
+    "output_near_max_tokens": "Output token usage reached near configured max output budget.",
+    "unterminated_string": "Raw response appears to end inside an unterminated JSON string.",
+    "unterminated_array_or_object": "Raw response appears to end with unclosed array/object delimiters.",
     "validation_failed_missing_event_importance": "Validation failed because events lacked event_importance.",
     "validation_failed_missing_relation_category": "Validation failed because relations lacked relation_category.",
 }
@@ -46,13 +50,27 @@ def classify_failure_mode(result_summary: dict[str, Any]) -> str | None:
     counts = deepcopy(result_summary.get("counts", {}) or {})
     ambiguous_context = bool(result_summary.get("ambiguous_context", False))
     warnings = {str(item) for item in (result_summary.get("warnings") or [])}
+    finish_reason = str(result_summary.get("finish_reason") or "").strip().casefold()
+    completion_tokens = _number(result_summary.get("completion_tokens"), result_summary.get("output_tokens"))
+    max_output_tokens = _number(result_summary.get("effective_max_output_tokens"), result_summary.get("max_output_tokens"))
+    raw_tail = str(result_summary.get("response_tail") or result_summary.get("raw_response_tail") or "")
 
     if result_summary.get("provider_error"):
         return "provider_error"
     if result_summary.get("provider_empty_response"):
         return "provider_empty_response"
 
+    if finish_reason == "length":
+        return "finish_reason_length"
+    if completion_tokens is not None and max_output_tokens is not None and completion_tokens >= max_output_tokens * 0.95:
+        return "output_near_max_tokens"
+
     if not parseable:
+        raw_tail_stripped = raw_tail.rstrip()
+        if raw_tail_stripped and raw_tail_stripped.count('"') % 2 == 1:
+            return "unterminated_string"
+        if raw_tail_stripped and any(raw_tail_stripped.endswith(token) for token in ["{", "[", ","]):
+            return "unterminated_array_or_object"
         if "markdown" in failure_hint:
             return "invalid_json_markdown"
         if "trunc" in failure_hint:

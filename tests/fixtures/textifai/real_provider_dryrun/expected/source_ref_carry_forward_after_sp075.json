@@ -1,0 +1,19 @@
+{
+  "assessment": "source_refs_and_output_budget_protocol_ready",
+  "rules": {
+    "preserve_partial_source_refs": true,
+    "fallback_to_chunk_span_when_missing": true,
+    "merge_multiple_chunk_refs_without_duplicates": true,
+    "do_not_invent_item_level_spans_beyond_chunk_span": true,
+    "preserve_review_state": true
+  },
+  "applies_to_sections": [
+    "characters",
+    "places",
+    "concepts",
+    "objects",
+    "events",
+    "relations",
+    "unresolved_mentions"
+  ]
+}

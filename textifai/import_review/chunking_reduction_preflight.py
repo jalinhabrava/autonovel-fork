@@ -35,6 +35,7 @@ def reduce_mock_chunk_partials(
     chapter = merged["chapters"][0]
     chunk_index = {chunk.chunk_id: chunk for chunk in chunks}
     seen_keys: dict[str, set[str]] = {section: set() for section in CRITICAL_SECTIONS}
+    item_index: dict[str, dict[str, dict[str, Any]]] = {section: {} for section in CRITICAL_SECTIONS}
 
     for partial in partials:
         chunk_id = str(partial.get("chunk_id") or "")
@@ -59,13 +60,22 @@ def reduce_mock_chunk_partials(
                 normalized = _normalize_item(item, chunk=chunk)
                 key = _dedupe_key(section=section, item=normalized)
                 if key in seen_keys[section]:
+                    existing = item_index[section].get(key)
+                    if existing is not None:
+                        existing["source_refs"] = _merge_source_refs(existing.get("source_refs") or [], normalized.get("source_refs") or [])
                     if section in {"objects", "events", "relations"}:
-                        normalized.setdefault("review_state", "needs_review")
-                        normalized.setdefault("review_reason", "duplicate_across_chunk_partials")
+                        if existing is not None:
+                            existing.setdefault("review_state", normalized.get("review_state") or "needs_review")
+                            existing.setdefault("review_reason", normalized.get("review_reason") or "duplicate_across_chunk_partials")
+                        else:
+                            normalized.setdefault("review_state", "needs_review")
+                            normalized.setdefault("review_reason", "duplicate_across_chunk_partials")
                     else:
                         continue
-                seen_keys[section].add(key)
-                chapter[section].append(normalized)
+                if key not in seen_keys[section]:
+                    seen_keys[section].add(key)
+                    chapter[section].append(normalized)
+                    item_index[section][key] = normalized
     return merged
 
 
@@ -166,21 +176,53 @@ def _first_chapter(payload: dict[str, Any]) -> dict[str, Any] | None:
 
 def _normalize_item(item: dict[str, Any], *, chunk: StructuredSourceChunk | None) -> dict[str, Any]:
     normalized = deepcopy(item)
-    source_refs = list(normalized.get("source_refs") or [])
+    source_refs = list(normalized.get("source_refs") or normalized.get("source_spans") or [])
     if chunk is not None:
-        source_refs.append(
-            {
-                "source_id": chunk.source_id,
-                "chunk_id": chunk.chunk_id,
-                "chapter_id": chunk.chapter_id,
-                "char_start": chunk.char_start,
-                "char_end": chunk.char_end,
-                "heading_path": chunk.heading_path,
-                "source_origin": "structured_chunk",
-            }
-        )
+        source_refs = _merge_source_refs(source_refs, [_fallback_chunk_source_ref(chunk)])
     normalized["source_refs"] = source_refs
     return normalized
+
+def build_source_ref_carry_forward_report() -> dict[str, Any]:
+    return {
+        "assessment": "source_refs_and_output_budget_protocol_ready",
+        "rules": {
+            "preserve_partial_source_refs": True,
+            "fallback_to_chunk_span_when_missing": True,
+            "merge_multiple_chunk_refs_without_duplicates": True,
+            "do_not_invent_item_level_spans_beyond_chunk_span": True,
+            "preserve_review_state": True,
+        },
+        "applies_to_sections": list(CRITICAL_SECTIONS),
+    }
+
+def _fallback_chunk_source_ref(chunk: StructuredSourceChunk) -> dict[str, Any]:
+    return {
+        "source_id": chunk.source_id,
+        "chapter_id": chunk.chapter_id,
+        "chunk_id": chunk.chunk_id,
+        "char_start": chunk.char_start,
+        "char_end": chunk.char_end,
+    }
+
+def _merge_source_refs(existing: list[dict[str, Any]], incoming: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    merged: list[dict[str, Any]] = []
+    seen: set[tuple[Any, ...]] = set()
+    for item in [*existing, *incoming]:
+        if not isinstance(item, dict):
+            continue
+        normalized = {
+            "source_id": item.get("source_id"),
+            "chapter_id": item.get("chapter_id"),
+            "chunk_id": item.get("chunk_id"),
+            "char_start": item.get("char_start"),
+            "char_end": item.get("char_end"),
+        }
+        key = tuple(normalized.get(field) for field in ("source_id", "chapter_id", "chunk_id", "char_start", "char_end"))
+        if key in seen:
+            continue
+        seen.add(key)
+        merged.append(normalized)
+    return merged
 
 
 def _dedupe_key(*, section: str, item: dict[str, Any]) -> str:

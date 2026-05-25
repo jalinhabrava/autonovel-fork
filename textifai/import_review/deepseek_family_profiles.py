@@ -250,6 +250,50 @@ def build_deepseek_budget_bridge(task: str = "bootstrap_chapter_extraction") -> 
         ],
     }
 
+def build_response_control_contract() -> dict[str, Any]:
+    return {
+        "response_control": {
+            "completion_status": "complete|partial",
+            "part_index": 1,
+            "part_count_estimate": 1,
+            "continuation_required": False,
+            "continuation_cursor": None,
+            "omitted_sections": [],
+        },
+        "legacy_outputs_without_response_control": "allowed_but_unknown",
+        "compatible_with": ["partial_extraction", "reduction", "continuation_output"],
+    }
+
+def build_continuation_repair_contract() -> dict[str, Any]:
+    return {
+        "triggers": [
+            "response_control.partial",
+            "invalid_json_truncated",
+            "finish_reason_length",
+            "output_near_max_tokens",
+        ],
+        "continuation_request_shape": {
+            "same_provider_model_profile_required": True,
+            "continuation_cursor_required": True,
+            "prior_partial_reference_required": True,
+        },
+        "continuation_output_shape": {
+            "must_return_valid_json": True,
+            "must_include_response_control": True,
+            "must_preserve_source_refs": True,
+        },
+        "merge_rules": [
+            "do_not_duplicate_previous_items",
+            "merge_source_refs_without_duplicates",
+            "preserve_review_state_and_local_candidate",
+        ],
+        "safety_rules": {
+            "same_provider_model_profile_unless_user_allows_other": True,
+            "no_auto_switch_invisible": True,
+            "private_packet_trace_required": True,
+        },
+    }
+
 
 def _count(metrics: dict[str, Any], section: str) -> int:
     counts = metrics.get("counts")

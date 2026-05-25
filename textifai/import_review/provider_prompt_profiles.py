@@ -114,6 +114,24 @@ def apply_provider_prompt_profile(system_prompt: str, user_prompt: str, profile:
     updated_system = f"{system_prompt.rstrip()}{separator}{overlay_header}\n\n{profile.prompt_overlay}".strip()
     return updated_system, user_prompt
 
+def inject_output_budget_control(system_prompt: str, *, effective_max_output_tokens: int) -> str:
+    header = "## Output Budget Control"
+    if header in system_prompt:
+        return system_prompt
+    block = f"""{header}
+
+You have a maximum output budget of {effective_max_output_tokens} tokens for this response.
+
+If you cannot complete the extraction within this budget:
+- return valid JSON anyway;
+- set response_control.completion_status = "partial";
+- set response_control.continuation_required = true;
+- set response_control.continuation_cursor;
+- list response_control.omitted_sections;
+- do not end mid-string or mid-object."""
+    separator = "\n\n" if system_prompt.strip() else ""
+    return f"{system_prompt.rstrip()}{separator}{block}".strip()
+
 
 def summarize_provider_prompt_profile(profile: ProviderPromptProfile) -> dict[str, Any]:
     data = asdict(profile)
