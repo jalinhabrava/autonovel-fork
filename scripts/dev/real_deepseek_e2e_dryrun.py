@@ -20,18 +20,28 @@ from textifai.author_understanding.normalization import extract_json_payload
 from textifai.bootstrap.contracts import SourceDocumentRecord
 from textifai.import_review.batch_planner import StructuredSourceChunk, split_structured_chapter_into_chunks
 from textifai.import_review.chapterizer import detect_story_chapters
-from textifai.import_review.deepseek_family_profiles import build_deepseek_budget_bridge, get_deepseek_family_profile, build_thin_output_warnings
+from textifai.import_review.deepseek_family_profiles import (
+    build_continuation_repair_contract,
+    build_deepseek_budget_bridge,
+    build_response_control_contract,
+    build_thin_output_warnings,
+    get_deepseek_family_profile,
+)
 from textifai.import_review.model_registry import get_model_capabilities
+from textifai.import_review.prompt_experiment_observability import classify_failure_mode
 from textifai.import_review.provider_prompt_profiles import apply_provider_prompt_profile, inject_output_budget_control
 from textifai.import_review.structured_bootstrap_v1 import (
     CHAPTER_PARTIAL_EXTRACTION_PROMPT,
     CHAPTER_REDUCTION_PROMPT,
+    _estimate_token_count,
     _extract_title_entity_hints,
     _extract_title_parse_signals,
-    _estimate_token_count,
 )
-from textifai.import_review.token_budget import TokenPlanningRequest, build_token_budget_from_planning_request, resolve_effective_output_budget
-from textifai.import_review.prompt_experiment_observability import classify_failure_mode
+from textifai.import_review.token_budget import (
+    TokenPlanningRequest,
+    build_token_budget_from_planning_request,
+    resolve_effective_output_budget,
+)
 
 TASK = "bootstrap_chapter_extraction"
 EXPECTED_ROOT = Path("tests/fixtures/textifai/real_provider_dryrun/expected")
@@ -49,6 +59,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--response-format-json", action="store_true")
     parser.add_argument("--no-write-back", action="store_true", default=True)
     parser.add_argument("--plan-only", action="store_true")
+    parser.add_argument("--report-prefix", default="real_deepseek_e2e")
+    parser.add_argument("--report-suffix", default="after_sp074")
+    parser.add_argument("--include-extra-chapter-longest", action="store_true")
+    parser.add_argument("--extra-chapter-scan-limit", type=int, default=6)
+    parser.add_argument("--continuation-reserve-per-run", type=int, default=1)
     return parser
 
 
@@ -56,15 +71,26 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if not args.no_write_back:
         raise SystemExit("--no-write-back is required")
+
     source_path = Path(args.source_file)
     source_text = source_path.read_text(encoding="utf-8", errors="replace")
+
     timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     packet_root = Path(args.output_root) / timestamp
     packet_root.mkdir(parents=True, exist_ok=True)
     progress_path = packet_root / "progress_log.jsonl"
-    expected_chapter_ids = [item.strip() for item in args.chapter_ids.split(",") if item.strip()]
+
+    required_chapters = [item.strip() for item in args.chapter_ids.split(",") if item.strip()]
     models = [item.strip() for item in args.models.split(",") if item.strip()]
-    chapters = _detect_target_chapters(source_path, source_text, expected_chapter_ids)
+
+    chapters = _detect_target_chapters(
+        source_path=source_path,
+        source_text=source_text,
+        chapter_ids=required_chapters,
+        include_extra_longest=args.include_extra_chapter_longest,
+        scan_limit=args.extra_chapter_scan_limit,
+    )
+
     plan = _build_execution_plan(
         source_path=source_path,
         source_text=source_text,
@@ -72,28 +98,36 @@ def main(argv: list[str] | None = None) -> int:
         models=models,
         packet_root=packet_root,
         cli_max_output_tokens=args.max_output_tokens,
+        continuation_reserve_per_run=max(0, int(args.continuation_reserve_per_run)),
     )
-    _write_expected("real_deepseek_e2e_execution_plan_after_sp074.json", plan["public_plan"])
+
+    names = _report_names(prefix=args.report_prefix, suffix=args.report_suffix)
+    _write_expected(names["execution_plan"], plan["public_plan"])
+    _write_private(packet_root / "execution_plan_private.md", json.dumps(plan["public_plan"], ensure_ascii=False, indent=2))
     _write_private(packet_root / "chunk_plan_private.md", _private_chunk_plan(plan))
+
     if plan["public_plan"]["planned_provider_call_count"] > args.max_provider_requests:
-        _write_blocked_reports(plan, reason="planned_provider_call_count_exceeds_cap")
+        _write_blocked_reports(names, plan, reason="planned_provider_call_count_exceeds_cap")
+        return 2
+    if plan["public_plan"]["planned_provider_call_count_with_continuation_reserve"] > args.max_provider_requests:
+        _write_blocked_reports(names, plan, reason="continuation_reserve_exceeds_cap")
         return 2
     if args.plan_only:
-        _write_blocked_reports(plan, reason="plan_only")
+        _write_blocked_reports(names, plan, reason="plan_only")
         return 0
     if not args.allow_provider_calls:
-        _write_blocked_reports(plan, reason="missing_allow_provider_calls")
+        _write_blocked_reports(names, plan, reason="missing_allow_provider_calls")
         return 2
     if not os.environ.get("DEEPSEEK_API_KEY"):
-        _write_blocked_reports(plan, reason="missing_deepseek_api_key")
+        _write_blocked_reports(names, plan, reason="missing_deepseek_api_key")
         return 2
     config_error = get_text_provider_config_error(task_name=TASK, provider_name="deepseek")
     if config_error is not None:
-        _write_blocked_reports(plan, reason=f"provider_config_error:{config_error}")
+        _write_blocked_reports(names, plan, reason=f"provider_config_error:{config_error}")
         return 2
 
     provider = get_text_provider(provider_name="deepseek")
-    results = []
+    results: list[dict[str, Any]] = []
     total = plan["public_plan"]["planned_provider_call_count"]
     call_index = 0
     for run in plan["runs"]:
@@ -104,18 +138,41 @@ def main(argv: list[str] | None = None) -> int:
             progress_path=progress_path,
             call_index_start=call_index,
             total_calls=total,
+            max_provider_requests=args.max_provider_requests,
             response_format_json=args.response_format_json,
+            names=names,
         )
         call_index += used_calls
         results.append(run_result)
+
     reports = _build_public_reports(plan=plan, results=results, packet_root=packet_root)
-    for name, payload in reports.items():
-        _write_expected(name, payload)
+    for key, payload in reports.items():
+        _write_expected(names[key], payload)
     _write_private_matrix_files(packet_root=packet_root, plan=plan, results=results, reports=reports)
     return 0
 
 
-def _detect_target_chapters(source_path: Path, source_text: str, chapter_ids: list[str]) -> list[dict[str, Any]]:
+def _report_names(*, prefix: str, suffix: str) -> dict[str, str]:
+    return {
+        "execution_plan": f"{prefix}_execution_plan_{suffix}.json",
+        "summary": f"{prefix}_summary_{suffix}.json",
+        "chunk_results": f"{prefix}_chunk_results_{suffix}.json",
+        "reduction_summary": f"{prefix}_reduction_summary_{suffix}.json",
+        "decision": f"{prefix}_decision_{suffix}.json",
+        "budget_report": f"{prefix}_budget_report_{suffix}.json",
+        "source_ref_audit": f"{prefix}_source_ref_audit_{suffix}.json",
+        "truncation_audit": f"{prefix}_truncation_continuation_audit_{suffix}.json",
+    }
+
+
+def _detect_target_chapters(
+    *,
+    source_path: Path,
+    source_text: str,
+    chapter_ids: list[str],
+    include_extra_longest: bool,
+    scan_limit: int,
+) -> list[dict[str, Any]]:
     record = SourceDocumentRecord(
         source_id=f"source_{hashlib.sha256(str(source_path).encode()).hexdigest()[:10]}",
         path=str(source_path),
@@ -133,22 +190,46 @@ def _detect_target_chapters(source_path: Path, source_text: str, chapter_ids: li
     )
     detected = detect_story_chapters(record, source_text)
     wanted = set(chapter_ids)
-    out = []
+    out: list[dict[str, Any]] = []
     for index, chapter in enumerate(detected, start=1):
         chapter_id = f"ch_{index:03d}"
         if chapter_id in wanted:
             out.append({"chapter_id": chapter_id, "sequence_index": index, "detected": chapter, "source_id": record.source_id})
+
     missing = sorted(wanted - {item["chapter_id"] for item in out})
     if missing:
         raise SystemExit(f"missing target chapters: {missing}")
+
+    if include_extra_longest:
+        selected = {item["chapter_id"] for item in out}
+        candidates = []
+        for index, chapter in enumerate(detected[: max(1, scan_limit)], start=1):
+            chapter_id = f"ch_{index:03d}"
+            if chapter_id in selected:
+                continue
+            candidates.append((len(chapter.text), chapter_id, index, chapter))
+        if candidates:
+            _chars, chapter_id, index, chapter = sorted(candidates, reverse=True)[0]
+            out.append({"chapter_id": chapter_id, "sequence_index": index, "detected": chapter, "source_id": record.source_id, "selected_as_extra_longest": True})
+    out.sort(key=lambda item: item["sequence_index"])
     return out
 
 
-def _build_execution_plan(*, source_path: Path, source_text: str, chapters: list[dict[str, Any]], models: list[str], packet_root: Path, cli_max_output_tokens: int | None) -> dict[str, Any]:
+def _build_execution_plan(
+    *,
+    source_path: Path,
+    source_text: str,
+    chapters: list[dict[str, Any]],
+    models: list[str],
+    packet_root: Path,
+    cli_max_output_tokens: int | None,
+    continuation_reserve_per_run: int,
+) -> dict[str, Any]:
     source_hash = hashlib.sha256(source_text.encode("utf-8", errors="replace")).hexdigest()
-    runs = []
-    public_runs = []
+    runs: list[dict[str, Any]] = []
+    public_runs: list[dict[str, Any]] = []
     call_count = 0
+    continuation_reserve = 0
     for chapter in chapters:
         detected = chapter["detected"]
         for model in models:
@@ -191,7 +272,18 @@ def _build_execution_plan(*, source_path: Path, source_text: str, chapters: list
             run_id = f"{chapter['chapter_id']}__{model.replace('-', '_')}"
             planned_calls = len(chunks) + 1
             call_count += planned_calls
-            run = {"run_id": run_id, "chapter": chapter, "model": model, "profile": profile, "effective_output_budget": effective_budget, "token_plan": token_plan, "chunks": chunks, "planned_calls": planned_calls}
+            continuation_reserve += continuation_reserve_per_run
+            run = {
+                "run_id": run_id,
+                "chapter": chapter,
+                "model": model,
+                "profile": profile,
+                "effective_output_budget": effective_budget,
+                "token_plan": token_plan,
+                "chunks": chunks,
+                "planned_calls": planned_calls,
+                "continuation_reserve": continuation_reserve_per_run,
+            }
             runs.append(run)
             public_runs.append(_public_run_plan(run))
     return {
@@ -206,6 +298,8 @@ def _build_execution_plan(*, source_path: Path, source_text: str, chapters: list
             "profiles": [run["profile"].profile_id for run in runs],
             "planned_runs": public_runs,
             "planned_provider_call_count": call_count,
+            "planned_continuation_reserve_calls": continuation_reserve,
+            "planned_provider_call_count_with_continuation_reserve": call_count + continuation_reserve,
             "provider_call_cap": 24,
             "private_packet_root": str(packet_root),
             "write_back": False,
@@ -214,36 +308,128 @@ def _build_execution_plan(*, source_path: Path, source_text: str, chapters: list
     }
 
 
-def _execute_run(*, provider: Any, run: dict[str, Any], packet_root: Path, progress_path: Path, call_index_start: int, total_calls: int, response_format_json: bool) -> tuple[dict[str, Any], int]:
+def _execute_run(
+    *,
+    provider: Any,
+    run: dict[str, Any],
+    packet_root: Path,
+    progress_path: Path,
+    call_index_start: int,
+    total_calls: int,
+    max_provider_requests: int,
+    response_format_json: bool,
+    names: dict[str, str],
+) -> tuple[dict[str, Any], int]:
     run_dir = packet_root / run["run_id"]
     run_dir.mkdir(parents=True, exist_ok=True)
-    partial_payloads = []
-    chunk_results = []
+    partial_payloads: list[dict[str, Any]] = []
+    chunk_results: list[dict[str, Any]] = []
     calls = 0
+
     for chunk in run["chunks"]:
         calls += 1
         call_no = call_index_start + calls
-        print(f"run {call_no}/{total_calls} model={run['model']} chapter={run['chapter']['chapter_id']} chunk={chunk.chunk_id} profile={run['profile'].profile_id}", flush=True)
-        result = _call_chunk(provider=provider, run=run, chunk=chunk, run_dir=run_dir, call_no=call_no, total_calls=total_calls, response_format_json=response_format_json, progress_path=progress_path)
+        print(
+            f"run {call_no}/{total_calls} model={run['model']} chapter={run['chapter']['chapter_id']} chunk={chunk.chunk_id} profile={run['profile'].profile_id}",
+            flush=True,
+        )
+        result = _call_chunk(
+            provider=provider,
+            run=run,
+            chunk=chunk,
+            run_dir=run_dir,
+            call_no=call_no,
+            total_calls=total_calls,
+            response_format_json=response_format_json,
+            progress_path=progress_path,
+        )
+        result, extra_calls = _maybe_continue_or_repair(
+            provider=provider,
+            run=run,
+            call_result=result,
+            run_dir=run_dir,
+            response_format_json=response_format_json,
+            progress_path=progress_path,
+            call_index_start=call_index_start,
+            current_calls=calls,
+            total_calls=total_calls,
+            max_provider_requests=max_provider_requests,
+        )
+        calls += extra_calls
         chunk_results.append(result)
         if isinstance(result.get("parsed"), dict):
             partial_payloads.append(result["parsed"])
+
     calls += 1
     call_no = call_index_start + calls
-    print(f"run {call_no}/{total_calls} model={run['model']} chapter={run['chapter']['chapter_id']} chunk=reduction profile={run['profile'].profile_id}", flush=True)
-    reduction = _call_reduction(provider=provider, run=run, partial_payloads=partial_payloads, run_dir=run_dir, call_no=call_no, total_calls=total_calls, response_format_json=response_format_json, progress_path=progress_path)
-    manifest = {"run_id": run["run_id"], "model": run["model"], "profile_id": run["profile"].profile_id, "chapter_id": run["chapter"]["chapter_id"], "chunk_count": len(run["chunks"]), "provider_call_count": calls, "status": "completed", "write_back": False}
+    print(
+        f"run {call_no}/{total_calls} model={run['model']} chapter={run['chapter']['chapter_id']} chunk=reduction profile={run['profile'].profile_id}",
+        flush=True,
+    )
+    reduction = _call_reduction(
+        provider=provider,
+        run=run,
+        partial_payloads=partial_payloads,
+        run_dir=run_dir,
+        call_no=call_no,
+        total_calls=total_calls,
+        response_format_json=response_format_json,
+        progress_path=progress_path,
+    )
+    reduction, extra_calls = _maybe_continue_or_repair(
+        provider=provider,
+        run=run,
+        call_result=reduction,
+        run_dir=run_dir,
+        response_format_json=response_format_json,
+        progress_path=progress_path,
+        call_index_start=call_index_start,
+        current_calls=calls,
+        total_calls=total_calls,
+        max_provider_requests=max_provider_requests,
+    )
+    calls += extra_calls
+
+    manifest = {
+        "run_id": run["run_id"],
+        "model": run["model"],
+        "profile_id": run["profile"].profile_id,
+        "chapter_id": run["chapter"]["chapter_id"],
+        "chunk_count": len(run["chunks"]),
+        "provider_call_count": calls,
+        "status": "completed",
+        "write_back": False,
+    }
     _write_json(run_dir / "run_manifest.json", manifest)
-    return {"run_id": run["run_id"], "model": run["model"], "profile_id": run["profile"].profile_id, "chapter_id": run["chapter"]["chapter_id"], "effective_output_budget": asdict(run["effective_output_budget"]), "chunks": chunk_results, "reduction": reduction, "provider_call_count": calls}, calls
+    return {
+        "run_id": run["run_id"],
+        "model": run["model"],
+        "profile_id": run["profile"].profile_id,
+        "chapter_id": run["chapter"]["chapter_id"],
+        "effective_output_budget": asdict(run["effective_output_budget"]),
+        "chunks": chunk_results,
+        "reduction": reduction,
+        "provider_call_count": calls,
+    }, calls
 
 
-def _call_chunk(*, provider: Any, run: dict[str, Any], chunk: StructuredSourceChunk, run_dir: Path, call_no: int, total_calls: int, response_format_json: bool, progress_path: Path) -> dict[str, Any]:
+def _call_chunk(
+    *,
+    provider: Any,
+    run: dict[str, Any],
+    chunk: StructuredSourceChunk,
+    run_dir: Path,
+    call_no: int,
+    total_calls: int,
+    response_format_json: bool,
+    progress_path: Path,
+) -> dict[str, Any]:
     detected = run["chapter"]["detected"]
     title_hints = _extract_title_entity_hints(detected.title)
     title_signals = _extract_title_parse_signals(detected.title)
     prompt = (
         f"{CHAPTER_PARTIAL_EXTRACTION_PROMPT}\n\n"
-        f"WORK_TITLE: {Path(run['chapter']['detected'].source_path).stem if hasattr(run['chapter']['detected'], 'source_path') else '王者の杖'}\n"
+        f"WORK_TITLE: 王者の杖\n"
         f"WORK_LANGUAGE: ja\n\n"
         f"CHAPTER_ID: {run['chapter']['chapter_id']}\n"
         f"CHUNK_ID: {chunk.chunk_id}\n"
@@ -256,11 +442,38 @@ def _call_chunk(*, provider: Any, run: dict[str, Any], chunk: StructuredSourceCh
     )
     system, user = apply_provider_prompt_profile("Return only valid JSON for one chapter subchunk extraction.", prompt, run["profile"])
     system = inject_output_budget_control(system, effective_max_output_tokens=run["effective_output_budget"].effective_max_output_tokens)
-    user = f"{user}\n\nBUDGET_PRIORITY_NOTE: Keep candidate_summary_points short and optional. Prioritize structured extraction sections over long prose summaries."
-    return _execute_request(provider=provider, run=run, run_dir=run_dir, stem=chunk.chunk_id, system=system, user=user, mode="chapter_partial_extraction", chunk=chunk, call_no=call_no, total_calls=total_calls, response_format_json=response_format_json, progress_path=progress_path)
+    user = (
+        f"{user}\n\n"
+        "BUDGET_PRIORITY_NOTE: Keep candidate_summary_points short and optional. "
+        "Prioritize structured extraction sections over long prose summaries."
+    )
+    return _execute_request(
+        provider=provider,
+        run=run,
+        run_dir=run_dir,
+        stem=chunk.chunk_id,
+        system=system,
+        user=user,
+        mode="chapter_partial_extraction",
+        chunk=chunk,
+        call_no=call_no,
+        total_calls=total_calls,
+        response_format_json=response_format_json,
+        progress_path=progress_path,
+    )
 
 
-def _call_reduction(*, provider: Any, run: dict[str, Any], partial_payloads: list[dict[str, Any]], run_dir: Path, call_no: int, total_calls: int, response_format_json: bool, progress_path: Path) -> dict[str, Any]:
+def _call_reduction(
+    *,
+    provider: Any,
+    run: dict[str, Any],
+    partial_payloads: list[dict[str, Any]],
+    run_dir: Path,
+    call_no: int,
+    total_calls: int,
+    response_format_json: bool,
+    progress_path: Path,
+) -> dict[str, Any]:
     detected = run["chapter"]["detected"]
     title_hints = _extract_title_entity_hints(detected.title)
     title_signals = _extract_title_parse_signals(detected.title)
@@ -280,29 +493,97 @@ def _call_reduction(*, provider: Any, run: dict[str, Any], partial_payloads: lis
     )
     system, user = apply_provider_prompt_profile("Return only valid JSON for chapter reduction.", prompt, run["profile"])
     system = inject_output_budget_control(system, effective_max_output_tokens=run["effective_output_budget"].effective_max_output_tokens)
-    user = f"{user}\n\nSOURCE_REF_RULE: Every final item in characters, places, concepts, objects, events, relations, and unresolved_mentions must preserve source_refs from matching partial signals. If exact item spans are unavailable, use the contributing chunk source_span."
-    return _execute_request(provider=provider, run=run, run_dir=run_dir, stem="reduction", system=system, user=user, mode="chapter_reduction", chunk=None, call_no=call_no, total_calls=total_calls, response_format_json=response_format_json, progress_path=progress_path)
+    user = (
+        f"{user}\n\n"
+        "SOURCE_REF_RULE: Every final item in characters, places, concepts, objects, events, relations, and unresolved_mentions "
+        "must preserve source_refs from matching partial signals. If exact item spans are unavailable, use contributing chunk spans."
+    )
+    return _execute_request(
+        provider=provider,
+        run=run,
+        run_dir=run_dir,
+        stem="reduction",
+        system=system,
+        user=user,
+        mode="chapter_reduction",
+        chunk=None,
+        call_no=call_no,
+        total_calls=total_calls,
+        response_format_json=response_format_json,
+        progress_path=progress_path,
+    )
 
 
-def _execute_request(*, provider: Any, run: dict[str, Any], run_dir: Path, stem: str, system: str, user: str, mode: str, chunk: StructuredSourceChunk | None, call_no: int, total_calls: int, response_format_json: bool, progress_path: Path) -> dict[str, Any]:
+def _execute_request(
+    *,
+    provider: Any,
+    run: dict[str, Any],
+    run_dir: Path,
+    stem: str,
+    system: str,
+    user: str,
+    mode: str,
+    chunk: StructuredSourceChunk | None,
+    call_no: int,
+    total_calls: int,
+    response_format_json: bool,
+    progress_path: Path,
+) -> dict[str, Any]:
     started = datetime.now(UTC)
-    _append_progress(progress_path, {"run_index": call_no, "run_total": total_calls, "started_at": started.isoformat(), "model": run["model"], "chapter": run["chapter"]["chapter_id"], "chunk_id": stem, "status": "started"})
+    _append_progress(
+        progress_path,
+        {
+            "run_index": call_no,
+            "run_total": total_calls,
+            "started_at": started.isoformat(),
+            "model": run["model"],
+            "chapter": run["chapter"]["chapter_id"],
+            "chunk_id": stem,
+            "profile_id": run["profile"].profile_id,
+            "status": "started",
+        },
+    )
+
     call_dir = run_dir / stem
     call_dir.mkdir(parents=True, exist_ok=True)
+
     _write_private(call_dir / "system_prompt.md", system)
     _write_private(call_dir / "user_prompt.md", user)
     _write_private(call_dir / "final_prompt_sent.md", f"# System\n\n{system}\n\n# User\n\n{user}\n")
     _write_private(call_dir / "provider_profile_or_overlay.md", run["profile"].prompt_overlay)
+
     max_output_tokens = run["effective_output_budget"].effective_max_output_tokens
-    request_payload = {"model": run["model"], "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}], "max_tokens": max_output_tokens, "temperature": 0.1, "response_format": {"type": "json_object"} if response_format_json else None, "effective_max_output_tokens": max_output_tokens, "headers": {"Authorization": "<redacted>"}}
+    request_payload = {
+        "model": run["model"],
+        "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
+        "max_tokens": max_output_tokens,
+        "temperature": 0.1,
+        "response_format": {"type": "json_object"} if response_format_json else None,
+        "effective_max_output_tokens": max_output_tokens,
+        "headers": {"Authorization": "<redacted>"},
+    }
     _write_json(call_dir / "provider_request_payload.redacted.json", request_payload)
-    started_perf = time.perf_counter()
+
     parsed = None
     error = None
     response_text = ""
     provider_metadata: dict[str, Any] = {}
+    started_perf = time.perf_counter()
     try:
-        response = provider.generate(TextGenerationRequest(task=TASK, provider_name="deepseek", model=run["model"], system=system, messages=[TextMessage(role="user", content=user)], max_tokens=max_output_tokens, temperature=0.1, timeout_seconds=180, retries=1, response_format={"type": "json_object"} if response_format_json else None))
+        response = provider.generate(
+            TextGenerationRequest(
+                task=TASK,
+                provider_name="deepseek",
+                model=run["model"],
+                system=system,
+                messages=[TextMessage(role="user", content=user)],
+                max_tokens=max_output_tokens,
+                temperature=0.1,
+                timeout_seconds=180,
+                retries=1,
+                response_format={"type": "json_object"} if response_format_json else None,
+            )
+        )
         response_text = response.text or ""
         provider_metadata = _extract_provider_metadata(response.raw)
         _write_private(call_dir / "provider_response_raw.txt", response_text)
@@ -314,29 +595,191 @@ def _execute_request(*, provider: Any, run: dict[str, Any], run_dir: Path, stem:
     except Exception as exc:  # noqa: BLE001
         error = f"{type(exc).__name__}: {exc}"
         _write_private(call_dir / "provider_response_raw.txt", response_text)
+
     duration = time.perf_counter() - started_perf
     parseable = isinstance(parsed, dict)
+
     _write_json(call_dir / "provider_usage.json", provider_metadata.get("usage") or {})
-    _write_json(call_dir / "finish_reason_report.json", {"finish_reason": provider_metadata.get("finish_reason"), "effective_max_output_tokens": max_output_tokens})
-    validation = _validation_report(parsed=parsed, expected_chapter_id=run["chapter"]["chapter_id"], mode=mode, chunk=chunk, response_text=response_text, error=error, provider_metadata=provider_metadata, effective_max_output_tokens=max_output_tokens)
+    _write_json(
+        call_dir / "finish_reason_report.json",
+        {
+            "finish_reason": provider_metadata.get("finish_reason"),
+            "effective_max_output_tokens": max_output_tokens,
+            "model": provider_metadata.get("model"),
+            "response_id": provider_metadata.get("id"),
+            "created": provider_metadata.get("created"),
+        },
+    )
+
+    validation = _validation_report(
+        parsed=parsed,
+        expected_chapter_id=run["chapter"]["chapter_id"],
+        mode=mode,
+        chunk=chunk,
+        response_text=response_text,
+        error=error,
+        provider_metadata=provider_metadata,
+        effective_max_output_tokens=max_output_tokens,
+    )
     failure_mode = _failure_mode(validation)
+
     _write_json(call_dir / "validation_report.json", validation)
-    _write_json(call_dir / "failure_mode_report.json", {"failure_mode": failure_mode, "validation_ok": validation["validation_ok"], "parseable_json": parseable})
-    _write_json(call_dir / "variant_diff_and_hypothesis.json", {"profile_id": run["profile"].profile_id, "hypothesis": "SP070 profile plus SP074 structured chunk metadata improves chunked extraction traceability.", "prompt_change_type": ["structured_chunk_metadata", "provider_profile", "budget_bridge"]})
-    _write_private(call_dir / "codex_interpretation.md", f"mode={mode}\nparseable_json={parseable}\nvalidation_ok={validation['validation_ok']}\nfailure_mode={failure_mode}\n")
+    _write_json(
+        call_dir / "failure_mode_report.json",
+        {
+            "failure_mode": failure_mode,
+            "validation_ok": validation["validation_ok"],
+            "parseable_json": parseable,
+        },
+    )
+    _write_json(call_dir / "response_control_report.json", _extract_response_control(parsed))
+    _write_json(
+        call_dir / "variant_diff_and_hypothesis.json",
+        {
+            "profile_id": run["profile"].profile_id,
+            "hypothesis": "SP076 protocol: dynamic budget + response_control + source-ref carry-forward + truncation recovery improves robustness.",
+            "prompt_change_type": ["structured_chunk_metadata", "output_budget_control", "response_control", "source_ref_carry_forward"],
+        },
+    )
+    _write_private(
+        call_dir / "codex_interpretation.md",
+        f"mode={mode}\nparseable_json={parseable}\nvalidation_ok={validation['validation_ok']}\nfailure_mode={failure_mode}\n",
+    )
+
     finished = datetime.now(UTC)
     size = (call_dir / "provider_response_raw.txt").stat().st_size if (call_dir / "provider_response_raw.txt").exists() else 0
-    _append_progress(progress_path, {"run_index": call_no, "run_total": total_calls, "started_at": started.isoformat(), "last_output_activity_at": finished.isoformat(), "finished_at": finished.isoformat(), "duration_seconds": duration, "output_file_size_bytes": size, "model": run["model"], "chapter": run["chapter"]["chapter_id"], "chunk_id": stem, "status": "finished", "failure_mode": failure_mode})
-    return {"mode": mode, "chunk_id": stem, "parseable_json": parseable, "validation_ok": validation["validation_ok"], "failure_mode": failure_mode, "counts": validation["counts"], "score": validation["score"], "thin_warnings": validation["thin_warnings"], "source_span": chunk.source_span if chunk else None, "finish_reason": provider_metadata.get("finish_reason"), "usage": provider_metadata.get("usage") or {}, "effective_max_output_tokens": max_output_tokens, "parsed": parsed if isinstance(parsed, dict) else None, "private_dir": str(call_dir)}
+    _append_progress(
+        progress_path,
+        {
+            "run_index": call_no,
+            "run_total": total_calls,
+            "started_at": started.isoformat(),
+            "last_output_activity_at": finished.isoformat(),
+            "finished_at": finished.isoformat(),
+            "duration_seconds": duration,
+            "output_file_size_bytes": size,
+            "model": run["model"],
+            "chapter": run["chapter"]["chapter_id"],
+            "chunk_id": stem,
+            "profile_id": run["profile"].profile_id,
+            "status": "finished",
+            "failure_mode": failure_mode,
+        },
+    )
+
+    return {
+        "mode": mode,
+        "chunk_id": stem,
+        "parseable_json": parseable,
+        "validation_ok": validation["validation_ok"],
+        "failure_mode": failure_mode,
+        "counts": validation["counts"],
+        "score": validation["score"],
+        "thin_warnings": validation["thin_warnings"],
+        "source_span": chunk.source_span if chunk else None,
+        "finish_reason": provider_metadata.get("finish_reason"),
+        "usage": provider_metadata.get("usage") or {},
+        "effective_max_output_tokens": max_output_tokens,
+        "response_control": _extract_response_control(parsed),
+        "parsed": parsed if isinstance(parsed, dict) else None,
+        "private_dir": str(call_dir),
+    }
 
 
-def _validation_report(*, parsed: Any, expected_chapter_id: str, mode: str, chunk: StructuredSourceChunk | None, response_text: str, error: str | None, provider_metadata: dict[str, Any] | None = None, effective_max_output_tokens: int | None = None) -> dict[str, Any]:
+def _maybe_continue_or_repair(
+    *,
+    provider: Any,
+    run: dict[str, Any],
+    call_result: dict[str, Any],
+    run_dir: Path,
+    response_format_json: bool,
+    progress_path: Path,
+    call_index_start: int,
+    current_calls: int,
+    total_calls: int,
+    max_provider_requests: int,
+) -> tuple[dict[str, Any], int]:
+    if call_result.get("parseable_json") and call_result.get("response_control", {}).get("completion_status") != "partial":
+        return call_result, 0
+
+    should_continue = False
+    triggers = []
+    if call_result.get("response_control", {}).get("completion_status") == "partial":
+        should_continue = True
+        triggers.append("response_control.partial")
+    if call_result.get("failure_mode") in {"invalid_json_truncated", "finish_reason_length", "output_near_max_tokens", "unterminated_string", "unterminated_array_or_object"}:
+        should_continue = True
+        triggers.append(call_result.get("failure_mode"))
+
+    if not should_continue:
+        return call_result, 0
+    if call_index_start + current_calls + 1 > max_provider_requests:
+        call_result["continuation_status"] = "skipped_cap_reached"
+        call_result["continuation_triggers"] = triggers
+        return call_result, 0
+
+    next_call_no = call_index_start + current_calls + 1
+    stem = f"{call_result['chunk_id']}__continuation"
+    prior_dir = Path(call_result["private_dir"])
+    prior_raw = (prior_dir / "provider_response_raw.txt").read_text(encoding="utf-8", errors="replace") if (prior_dir / "provider_response_raw.txt").exists() else ""
+
+    continuation_contract = build_continuation_repair_contract()
+    prompt = (
+        "CONTINUATION_REPAIR_REQUEST\n\n"
+        "Return ONLY one valid JSON object.\n"
+        "Do not repeat full prose. Repair or continue previous output to a complete valid JSON object.\n"
+        f"TRIGGERS: {json.dumps(triggers, ensure_ascii=False)}\n"
+        f"CONTRACT: {json.dumps(continuation_contract, ensure_ascii=False)}\n\n"
+        f"PREVIOUS_RESPONSE_TAIL:\n{prior_raw[-6000:]}"
+    )
+    system = inject_output_budget_control(
+        "Return valid JSON continuation/repair only.",
+        effective_max_output_tokens=run["effective_output_budget"].effective_max_output_tokens,
+    )
+    continuation_result = _execute_request(
+        provider=provider,
+        run=run,
+        run_dir=run_dir,
+        stem=stem,
+        system=system,
+        user=prompt,
+        mode=f"{call_result['mode']}_continuation",
+        chunk=None,
+        call_no=next_call_no,
+        total_calls=total_calls,
+        response_format_json=response_format_json,
+        progress_path=progress_path,
+    )
+
+    call_result["continuation_status"] = "executed"
+    call_result["continuation_triggers"] = triggers
+    call_result["continuation_private_dir"] = continuation_result["private_dir"]
+    if continuation_result.get("parseable_json"):
+        call_result.update(continuation_result)
+        call_result["continuation_status"] = "executed_replaced_primary"
+    else:
+        call_result["continuation_status"] = "executed_but_not_parseable"
+    return call_result, 1
+
+
+def _validation_report(
+    *,
+    parsed: Any,
+    expected_chapter_id: str,
+    mode: str,
+    chunk: StructuredSourceChunk | None,
+    response_text: str,
+    error: str | None,
+    provider_metadata: dict[str, Any] | None = None,
+    effective_max_output_tokens: int | None = None,
+) -> dict[str, Any]:
     counts = {"characters": 0, "places": 0, "concepts": 0, "objects": 0, "events": 0, "relations": 0, "unresolved_mentions": 0}
     chapter_ok = False
     relation_category_present = False
     event_importance_present = False
+
     if isinstance(parsed, dict):
-        if mode == "chapter_partial_extraction":
+        if mode.startswith("chapter_partial_extraction"):
             chapter_ok = str(parsed.get("chapter_id") or "") == expected_chapter_id
             signals = parsed.get("partial_signals") if isinstance(parsed.get("partial_signals"), dict) else {}
             counts = {key: len(signals.get(key) or []) for key in counts}
@@ -349,10 +792,38 @@ def _validation_report(*, parsed: Any, expected_chapter_id: str, mode: str, chun
                 counts = {key: len(chapter.get(key) or []) for key in counts}
                 event_importance_present = any(bool(item.get("event_importance")) for item in chapter.get("events") or [] if isinstance(item, dict))
                 relation_category_present = any(bool(item.get("relation_category")) for item in chapter.get("relations") or [] if isinstance(item, dict))
+
     score = _score(counts, event_importance_present, relation_category_present, len(response_text), chapter_ok)
-    thin = build_thin_output_warnings({"score": score, "counts": counts, "response_text_chars": len(response_text), "validation_ok": chapter_ok, "response_parseable_json": isinstance(parsed, dict)})
     usage = (provider_metadata or {}).get("usage") or {}
-    return {"validation_ok": isinstance(parsed, dict) and chapter_ok and error is None, "parseable_json": isinstance(parsed, dict), "expected_chapter_id": expected_chapter_id, "chapter_id_ok": chapter_ok, "error": error, "counts": counts, "score": score, "event_importance_present": event_importance_present, "relation_category_present": relation_category_present, "response_text_chars": len(response_text), "thin_warnings": thin["warnings"], "source_span_preserved": bool(chunk.source_span) if chunk else True, "finish_reason": (provider_metadata or {}).get("finish_reason"), "completion_tokens": usage.get("completion_tokens"), "prompt_tokens": usage.get("prompt_tokens"), "total_tokens": usage.get("total_tokens"), "effective_max_output_tokens": effective_max_output_tokens, "response_tail": response_text[-200:]}
+    thin = build_thin_output_warnings(
+        {
+            "score": score,
+            "counts": counts,
+            "response_text_chars": len(response_text),
+            "validation_ok": chapter_ok,
+            "response_parseable_json": isinstance(parsed, dict),
+        }
+    )
+    return {
+        "validation_ok": isinstance(parsed, dict) and chapter_ok and error is None,
+        "parseable_json": isinstance(parsed, dict),
+        "expected_chapter_id": expected_chapter_id,
+        "chapter_id_ok": chapter_ok,
+        "error": error,
+        "counts": counts,
+        "score": score,
+        "event_importance_present": event_importance_present,
+        "relation_category_present": relation_category_present,
+        "response_text_chars": len(response_text),
+        "thin_warnings": thin["warnings"],
+        "source_span_preserved": bool(chunk.source_span) if chunk else True,
+        "finish_reason": (provider_metadata or {}).get("finish_reason"),
+        "completion_tokens": usage.get("completion_tokens"),
+        "prompt_tokens": usage.get("prompt_tokens"),
+        "total_tokens": usage.get("total_tokens"),
+        "effective_max_output_tokens": effective_max_output_tokens,
+        "response_tail": response_text[-200:],
+    }
 
 
 def _failure_mode(validation: dict[str, Any]) -> str | None:
@@ -369,6 +840,7 @@ def _failure_mode(validation: dict[str, Any]) -> str | None:
         return "valid_json_thin"
     return "validation_failed_missing_required_sections"
 
+
 def _extract_provider_metadata(raw: dict[str, Any] | None) -> dict[str, Any]:
     raw = raw if isinstance(raw, dict) else {}
     choices = raw.get("choices") if isinstance(raw.get("choices"), list) else []
@@ -381,11 +853,31 @@ def _extract_provider_metadata(raw: dict[str, Any] | None) -> dict[str, Any]:
         "created": raw.get("created"),
     }
 
+
+def _extract_response_control(parsed: dict[str, Any] | None) -> dict[str, Any]:
+    if not isinstance(parsed, dict):
+        return {"present": False, "completion_status": "unknown", "continuation_required": None, "continuation_cursor": None, "omitted_sections": []}
+    control = parsed.get("response_control") if isinstance(parsed.get("response_control"), dict) else {}
+    return {
+        "present": bool(control),
+        "completion_status": control.get("completion_status", "unknown"),
+        "continuation_required": control.get("continuation_required"),
+        "continuation_cursor": control.get("continuation_cursor"),
+        "omitted_sections": list(control.get("omitted_sections") or []),
+    }
+
+
 def _carry_forward_reduction_source_refs(payload: dict[str, Any], *, chunks: list[StructuredSourceChunk]) -> dict[str, Any]:
     if not chunks:
         return payload
     fallback_refs = [
-        {"source_id": chunk.source_id, "chapter_id": chunk.chapter_id, "chunk_id": chunk.chunk_id, "char_start": chunk.char_start, "char_end": chunk.char_end}
+        {
+            "source_id": chunk.source_id,
+            "chapter_id": chunk.chapter_id,
+            "chunk_id": chunk.chunk_id,
+            "char_start": chunk.char_start,
+            "char_end": chunk.char_end,
+        }
         for chunk in chunks
     ]
     chapter = _first_chapter(payload)
@@ -397,13 +889,20 @@ def _carry_forward_reduction_source_refs(payload: dict[str, Any], *, chunks: lis
                 item["source_refs"] = _dedupe_source_refs(list(item.get("source_refs") or item.get("source_spans") or []) + fallback_refs)
     return payload
 
+
 def _dedupe_source_refs(refs: list[dict[str, Any]]) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     seen: set[tuple[Any, ...]] = set()
     for ref in refs:
         if not isinstance(ref, dict):
             continue
-        normalized = {"source_id": ref.get("source_id"), "chapter_id": ref.get("chapter_id"), "chunk_id": ref.get("chunk_id"), "char_start": ref.get("char_start"), "char_end": ref.get("char_end")}
+        normalized = {
+            "source_id": ref.get("source_id"),
+            "chapter_id": ref.get("chapter_id"),
+            "chunk_id": ref.get("chunk_id"),
+            "char_start": ref.get("char_start"),
+            "char_end": ref.get("char_end"),
+        }
         key = tuple(normalized.values())
         if key in seen:
             continue
@@ -413,7 +912,15 @@ def _dedupe_source_refs(refs: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def _score(counts: dict[str, int], event_importance: bool, relation_category: bool, chars: int, chapter_ok: bool) -> float:
-    score = counts["characters"] + counts["places"] + counts["concepts"] + counts["objects"] * 1.5 + counts["events"] * 1.5 + counts["relations"] * 2 + counts["unresolved_mentions"]
+    score = (
+        counts["characters"]
+        + counts["places"]
+        + counts["concepts"]
+        + counts["objects"] * 1.5
+        + counts["events"] * 1.5
+        + counts["relations"] * 2
+        + counts["unresolved_mentions"]
+    )
     if event_importance:
         score += 2
     if relation_category:
@@ -426,101 +933,235 @@ def _score(counts: dict[str, int], event_importance: bool, relation_category: bo
 
 
 def _build_public_reports(*, plan: dict[str, Any], results: list[dict[str, Any]], packet_root: Path) -> dict[str, Any]:
-    chunk_rows = []
-    reduction_rows = []
+    chunk_rows: list[dict[str, Any]] = []
+    reduction_rows: list[dict[str, Any]] = []
+    budget_rows: list[dict[str, Any]] = []
+    truncation_rows: list[dict[str, Any]] = []
+    source_ref_rows: list[dict[str, Any]] = []
+
     for result in results:
+        budget_rows.append(
+            {
+                "run_id": result["run_id"],
+                "model": result["model"],
+                "profile_id": result["profile_id"],
+                **result["effective_output_budget"],
+            }
+        )
+
         for chunk in result["chunks"]:
             row = {key: result[key] for key in ("run_id", "model", "profile_id", "chapter_id")}
             row.update({k: v for k, v in chunk.items() if k not in {"parsed", "private_dir"}})
             row["private_dir"] = _private_path_hint(chunk["private_dir"])
             chunk_rows.append(row)
+            truncation_rows.append(
+                {
+                    "run_id": row["run_id"],
+                    "model": row["model"],
+                    "profile_id": row["profile_id"],
+                    "chapter_id": row["chapter_id"],
+                    "chunk_id": row["chunk_id"],
+                    "mode": row["mode"],
+                    "failure_mode": row.get("failure_mode"),
+                    "finish_reason": row.get("finish_reason"),
+                    "completion_tokens": (row.get("usage") or {}).get("completion_tokens"),
+                    "total_tokens": (row.get("usage") or {}).get("total_tokens"),
+                    "effective_max_output_tokens": row.get("effective_max_output_tokens"),
+                    "response_control": row.get("response_control"),
+                    "continuation_status": row.get("continuation_status", "not_triggered"),
+                }
+            )
+
         red = {key: result[key] for key in ("run_id", "model", "profile_id", "chapter_id")}
         red.update({k: v for k, v in result["reduction"].items() if k not in {"parsed", "private_dir"}})
         red["private_dir"] = _private_path_hint(result["reduction"]["private_dir"])
         reduction_rows.append(red)
+        truncation_rows.append(
+            {
+                "run_id": red["run_id"],
+                "model": red["model"],
+                "profile_id": red["profile_id"],
+                "chapter_id": red["chapter_id"],
+                "chunk_id": red["chunk_id"],
+                "mode": red["mode"],
+                "failure_mode": red.get("failure_mode"),
+                "finish_reason": red.get("finish_reason"),
+                "completion_tokens": (red.get("usage") or {}).get("completion_tokens"),
+                "total_tokens": (red.get("usage") or {}).get("total_tokens"),
+                "effective_max_output_tokens": red.get("effective_max_output_tokens"),
+                "response_control": red.get("response_control"),
+                "continuation_status": red.get("continuation_status", "not_triggered"),
+            }
+        )
+
+        parsed = result["reduction"].get("parsed")
+        source_ref_rows.append(_source_ref_audit_row(result=result, parsed=parsed))
+
     valid_reductions = [row for row in reduction_rows if row["parseable_json"] and row["validation_ok"]]
-    source_ref_preservation = all(_chapter_has_source_refs(result.get("reduction", {}).get("parsed")) for result in results if isinstance(result.get("reduction", {}).get("parsed"), dict))
-    if valid_reductions and source_ref_preservation:
-        assessment = "real_deepseek_e2e_dryrun_passed_with_review_warnings"
+    all_reductions_valid = bool(reduction_rows) and len(valid_reductions) == len(reduction_rows)
+    source_ref_preservation = all(item["item_level_source_ref_coverage_ratio"] >= 1.0 for item in source_ref_rows if item["parseable_json"]) if source_ref_rows else False
+    all_parseable_reductions_have_source_refs = all(
+        item["parseable_json"] and item["item_level_source_ref_coverage_ratio"] >= 1.0
+        for item in source_ref_rows
+        if item["parseable_json"]
+    ) if source_ref_rows else False
+    continuation_problem = any(
+        item.get("continuation_status") in {"executed_but_not_parseable", "skipped_cap_reached"}
+        or item.get("failure_mode") in {"invalid_json_truncated", "finish_reason_length", "output_near_max_tokens", "unterminated_string", "unterminated_array_or_object"}
+        for item in truncation_rows
+    )
+
+    if all_reductions_valid and source_ref_preservation and all_parseable_reductions_have_source_refs and not continuation_problem:
+        assessment = "real_deepseek_e2e_validation_passed_ready_for_larger_e2e"
     elif valid_reductions:
-        assessment = "real_deepseek_e2e_dryrun_partial_success"
+        assessment = "real_deepseek_e2e_validation_passed_with_review_warnings"
     elif any(row["parseable_json"] for row in reduction_rows + chunk_rows):
-        assessment = "real_deepseek_e2e_dryrun_partial_success"
+        assessment = "real_deepseek_e2e_validation_partial_success_needs_patch"
     else:
-        assessment = "real_deepseek_e2e_dryrun_failed_but_debuggable"
+        assessment = "real_deepseek_e2e_validation_failed_but_debuggable"
+
     summary = {
         "assessment": assessment,
         "provider": "deepseek",
         "models": plan["public_plan"]["models"],
         "chapters": plan["public_plan"]["chapters"],
         "provider_call_count": sum(item["provider_call_count"] for item in results),
-        "effective_output_budgets": [
-            {
-                "run_id": item["run_id"],
-                "model": item["model"],
-                "profile_id": item["profile_id"],
-                "effective_max_output_tokens": item["effective_output_budget"]["effective_max_output_tokens"],
-                "decision_source": item["effective_output_budget"]["decision_source"],
-            }
-            for item in results
-        ],
+        "provider_call_cap": plan["public_plan"]["provider_call_cap"],
+        "valid_reduction_count": len(valid_reductions),
+        "total_reduction_count": len(reduction_rows),
+        "triggered_continuation_count": sum(1 for item in truncation_rows if item.get("continuation_status", "not_triggered") != "not_triggered"),
         "private_packet_root": str(packet_root),
         "recommended_files_to_upload_to_chatgpt": [
             "README.md",
+            "execution_plan_private.md",
             "matrix_summary_private.md",
-            "matrix_comparison_private.md",
             "decision_notes_private.md",
-            "chunk_plan_private.md",
+            "source_ref_audit_private.md",
+            "truncation_recovery_audit_private.md",
             "reduction_trace_private.md",
         ],
-        "comparison_vs_previous_non_chunked_runs": {
-            "sp069_best_ch002_score": 26.5,
-            "sp069_best_ch003_score": 25.0,
-            "sp075_best_reduction_score": max((row.get("score", -999) for row in reduction_rows), default=-999),
-            "chunked_input_shape_tested": True,
+        "comparison_vs_sp075": {
+            "sp075_assessment": "real_deepseek_e2e_dryrun_partial_success",
+            "sp075_best_reduction_score": 57.5,
+            "sp077_best_reduction_score": max((row.get("score", -999) for row in reduction_rows), default=-999),
+            "source_ref_item_level_improved": source_ref_preservation,
+            "continuation_or_truncation_issue_remaining": continuation_problem,
         },
         "write_back": False,
     }
+
     decision = {
         "assessment": assessment,
-        "ready_for_larger_real_e2e": assessment == "real_deepseek_e2e_dryrun_passed_with_review_warnings",
-        "needs_review_warnings": True,
+        "ready_for_larger_real_e2e": assessment in {"real_deepseek_e2e_validation_passed_ready_for_larger_e2e", "real_deepseek_e2e_validation_passed_with_review_warnings"},
+        "needs_review_warnings": assessment != "real_deepseek_e2e_validation_passed_ready_for_larger_e2e",
         "private_packet_root": str(packet_root),
-        "next_suggested_phase": "Phase 1.3.M-b5c-4e — Review Real DeepSeek E2E Packet and Decide Larger Dry-run",
+        "product_decision": assessment,
+        "next_suggested_phase": "Phase 1.3.M-b5c-4g — Larger DeepSeek E2E with Continuation in Multi-chunk Chapters" if assessment in {"real_deepseek_e2e_validation_passed_ready_for_larger_e2e", "real_deepseek_e2e_validation_passed_with_review_warnings"} else "Phase 1.3.M-b5c-4g — Patch Source-refs/Continuation before Larger E2E",
     }
+
     return {
-        "real_deepseek_e2e_summary_after_sp074.json": summary,
-        "real_deepseek_e2e_chunk_results_after_sp074.json": {
+        "summary": summary,
+        "chunk_results": {"assessment": assessment, "chunks": chunk_rows},
+        "reduction_summary": {"assessment": assessment, "reductions": reduction_rows, "source_ref_preservation": source_ref_preservation},
+        "budget_report": {
             "assessment": assessment,
-            "chunks": chunk_rows,
-            "usage_finish_reason_summary": [
-                {
-                    "run_id": row["run_id"],
-                    "chunk_id": row["chunk_id"],
-                    "finish_reason": row.get("finish_reason"),
-                    "completion_tokens": (row.get("usage") or {}).get("completion_tokens"),
-                    "total_tokens": (row.get("usage") or {}).get("total_tokens"),
-                    "effective_max_output_tokens": row.get("effective_max_output_tokens"),
-                }
-                for row in chunk_rows
-            ],
+            "runs": budget_rows,
+            "resolution_sources": sorted({item.get("decision_source") for item in budget_rows if item.get("decision_source")}),
         },
-        "real_deepseek_e2e_reduction_summary_after_sp074.json": {
+        "source_ref_audit": {
             "assessment": assessment,
-            "reductions": reduction_rows,
-            "source_ref_preservation": source_ref_preservation,
+            "runs": source_ref_rows,
+            "item_level_source_ref_coverage_ratio": (
+                sum(item["item_level_source_ref_coverage_ratio"] for item in source_ref_rows) / len(source_ref_rows)
+                if source_ref_rows
+                else 0.0
+            ),
+            "parseable_reduction_runs": sum(1 for item in source_ref_rows if item.get("parseable_json")),
+            "missing_source_ref_runs": sum(
+                1 for item in source_ref_rows if item.get("parseable_json") and item.get("item_level_source_ref_coverage_ratio", 0.0) < 1.0
+            ),
         },
-        "real_deepseek_e2e_decision_after_sp074.json": decision,
+        "truncation_audit": {
+            "assessment": assessment,
+            "events": truncation_rows,
+            "triggered_continuation_count": sum(1 for item in truncation_rows if item.get("continuation_status", "not_triggered") != "not_triggered"),
+            "continuation_problem_count": sum(
+                1 for item in truncation_rows if item.get("continuation_status") in {"executed_but_not_parseable", "skipped_cap_reached"}
+            ),
+        },
+        "decision": decision,
     }
 
 
-def _write_blocked_reports(plan: dict[str, Any], *, reason: str) -> None:
-    assessment = "real_deepseek_e2e_dryrun_blocked"
-    base = {"assessment": assessment, "blocked_reason": reason, "private_packet_root": plan["public_plan"]["private_packet_root"], "provider_call_count": 0, "write_back": False}
-    _write_expected("real_deepseek_e2e_summary_after_sp074.json", base)
-    _write_expected("real_deepseek_e2e_chunk_results_after_sp074.json", {"assessment": assessment, "chunks": []})
-    _write_expected("real_deepseek_e2e_reduction_summary_after_sp074.json", {"assessment": assessment, "reductions": []})
-    _write_expected("real_deepseek_e2e_decision_after_sp074.json", {**base, "next_suggested_phase": "Phase 1.3.M-b5c-4d — Retry Real DeepSeek E2E Dry-run after unblock"})
+def _source_ref_audit_row(*, result: dict[str, Any], parsed: dict[str, Any] | None) -> dict[str, Any]:
+    section_totals = {section: {"items": 0, "with_source_refs": 0} for section in ("characters", "places", "concepts", "objects", "events", "relations", "unresolved_mentions")}
+    if not isinstance(parsed, dict):
+        return {
+            "run_id": result["run_id"],
+            "model": result["model"],
+            "profile_id": result["profile_id"],
+            "chapter_id": result["chapter_id"],
+            "parseable_json": False,
+            "item_level_source_ref_coverage_ratio": 0.0,
+            "sections": section_totals,
+            "missing_examples": [],
+        }
+    chapter = _first_chapter(parsed)
+    missing_examples = []
+    total = 0
+    with_refs = 0
+    if isinstance(chapter, dict):
+        for section, audit in section_totals.items():
+            for item in chapter.get(section) or []:
+                if not isinstance(item, dict):
+                    continue
+                total += 1
+                audit["items"] += 1
+                refs = item.get("source_refs") or []
+                if refs:
+                    with_refs += 1
+                    audit["with_source_refs"] += 1
+                elif len(missing_examples) < 5:
+                    missing_examples.append(
+                        {
+                            "section": section,
+                            "item_label": item.get("canonical") or item.get("canonical_name") or item.get("surface") or item.get("source") or item.get("target") or "unknown",
+                        }
+                    )
+    return {
+        "run_id": result["run_id"],
+        "model": result["model"],
+        "profile_id": result["profile_id"],
+        "chapter_id": result["chapter_id"],
+        "parseable_json": True,
+        "item_level_source_ref_coverage_ratio": (with_refs / total) if total else 0.0,
+        "sections": section_totals,
+        "missing_examples": missing_examples,
+    }
+
+
+def _write_blocked_reports(names: dict[str, str], plan: dict[str, Any], *, reason: str) -> None:
+    assessment = "real_deepseek_e2e_validation_blocked"
+    base = {
+        "assessment": assessment,
+        "blocked_reason": reason,
+        "private_packet_root": plan["public_plan"]["private_packet_root"],
+        "provider_call_count": 0,
+        "write_back": False,
+    }
+    _write_expected(names["summary"], base)
+    _write_expected(names["chunk_results"], {"assessment": assessment, "chunks": []})
+    _write_expected(names["reduction_summary"], {"assessment": assessment, "reductions": []})
+    _write_expected(names["budget_report"], {"assessment": assessment, "runs": []})
+    _write_expected(names["source_ref_audit"], {"assessment": assessment, "runs": []})
+    _write_expected(names["truncation_audit"], {"assessment": assessment, "events": []})
+    _write_expected(
+        names["decision"],
+        {
+            **base,
+            "next_suggested_phase": "Phase 1.3.M-b5c-4f — Retry Full Real DeepSeek E2E Validation after unblock",
+        },
+    )
 
 
 def _public_run_plan(run: dict[str, Any]) -> dict[str, Any]:
@@ -530,6 +1171,7 @@ def _public_run_plan(run: dict[str, Any]) -> dict[str, Any]:
         "model": run["model"],
         "profile_id": run["profile"].profile_id,
         "planned_provider_calls": run["planned_calls"],
+        "planned_continuation_reserve_calls": run["continuation_reserve"],
         "token_plan": run["token_plan"],
         "effective_output_budget": asdict(run["effective_output_budget"]),
         "chunks": [
@@ -552,19 +1194,6 @@ def _public_run_plan(run: dict[str, Any]) -> dict[str, Any]:
 def _first_chapter(payload: dict[str, Any]) -> dict[str, Any] | None:
     chapters = payload.get("chapters") if isinstance(payload, dict) else None
     return chapters[0] if isinstance(chapters, list) and chapters and isinstance(chapters[0], dict) else None
-
-
-def _chapter_has_source_refs(payload: dict[str, Any] | None) -> bool:
-    if not isinstance(payload, dict):
-        return False
-    chapter = _first_chapter(payload)
-    if not isinstance(chapter, dict):
-        return False
-    for section in ("characters", "places", "concepts", "objects", "events", "relations", "unresolved_mentions"):
-        for item in chapter.get(section) or []:
-            if isinstance(item, dict) and (item.get("source_refs") or item.get("source_spans")):
-                return True
-    return False
 
 
 def _write_expected(name: str, payload: dict[str, Any]) -> None:
@@ -597,11 +1226,13 @@ def _private_chunk_plan(plan: dict[str, Any]) -> str:
 
 
 def _write_private_matrix_files(*, packet_root: Path, plan: dict[str, Any], results: list[dict[str, Any]], reports: dict[str, Any]) -> None:
-    _write_private(packet_root / "README.md", "Private DeepSeek E2E packet. Do not commit. Start with matrix_summary_private.md and decision_notes_private.md.\n")
-    _write_private(packet_root / "matrix_summary_private.md", json.dumps(reports["real_deepseek_e2e_summary_after_sp074.json"], ensure_ascii=False, indent=2))
-    _write_private(packet_root / "matrix_comparison_private.md", "Compare SP070 non-chunked baselines with SP075 chunked E2E outputs in per-run folders.\n")
-    _write_private(packet_root / "decision_notes_private.md", json.dumps(reports["real_deepseek_e2e_decision_after_sp074.json"], ensure_ascii=False, indent=2))
-    _write_private(packet_root / "reduction_trace_private.md", json.dumps(reports["real_deepseek_e2e_reduction_summary_after_sp074.json"], ensure_ascii=False, indent=2))
+    _write_private(packet_root / "README.md", "Private DeepSeek full E2E validation packet. Do not commit.\n")
+    _write_private(packet_root / "matrix_summary_private.md", json.dumps(reports["summary"], ensure_ascii=False, indent=2))
+    _write_private(packet_root / "matrix_comparison_private.md", json.dumps(reports["decision"], ensure_ascii=False, indent=2))
+    _write_private(packet_root / "decision_notes_private.md", json.dumps(reports["decision"], ensure_ascii=False, indent=2))
+    _write_private(packet_root / "source_ref_audit_private.md", json.dumps(reports["source_ref_audit"], ensure_ascii=False, indent=2))
+    _write_private(packet_root / "truncation_recovery_audit_private.md", json.dumps(reports["truncation_audit"], ensure_ascii=False, indent=2))
+    _write_private(packet_root / "reduction_trace_private.md", json.dumps(reports["reduction_summary"], ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":

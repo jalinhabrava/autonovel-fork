@@ -1,0 +1,242 @@
+{
+  "assessment": "real_deepseek_e2e_validation_passed_with_review_warnings",
+  "runs": [
+    {
+      "run_id": "ch_001__deepseek_v4_flash",
+      "model": "deepseek-v4-flash",
+      "profile_id": "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+      "chapter_id": "ch_001",
+      "parseable_json": true,
+      "item_level_source_ref_coverage_ratio": 1.0,
+      "sections": {
+        "characters": {
+          "items": 6,
+          "with_source_refs": 6
+        },
+        "places": {
+          "items": 3,
+          "with_source_refs": 3
+        },
+        "concepts": {
+          "items": 4,
+          "with_source_refs": 4
+        },
+        "objects": {
+          "items": 1,
+          "with_source_refs": 1
+        },
+        "events": {
+          "items": 5,
+          "with_source_refs": 5
+        },
+        "relations": {
+          "items": 6,
+          "with_source_refs": 6
+        },
+        "unresolved_mentions": {
+          "items": 3,
+          "with_source_refs": 3
+        }
+      },
+      "missing_examples": []
+    },
+    {
+      "run_id": "ch_001__deepseek_v4_pro",
+      "model": "deepseek-v4-pro",
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "chapter_id": "ch_001",
+      "parseable_json": false,
+      "item_level_source_ref_coverage_ratio": 0.0,
+      "sections": {
+        "characters": {
+          "items": 0,
+          "with_source_refs": 0
+        },
+        "places": {
+          "items": 0,
+          "with_source_refs": 0
+        },
+        "concepts": {
+          "items": 0,
+          "with_source_refs": 0
+        },
+        "objects": {
+          "items": 0,
+          "with_source_refs": 0
+        },
+        "events": {
+          "items": 0,
+          "with_source_refs": 0
+        },
+        "relations": {
+          "items": 0,
+          "with_source_refs": 0
+        },
+        "unresolved_mentions": {
+          "items": 0,
+          "with_source_refs": 0
+        }
+      },
+      "missing_examples": []
+    },
+    {
+      "run_id": "ch_002__deepseek_v4_flash",
+      "model": "deepseek-v4-flash",
+      "profile_id": "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+      "chapter_id": "ch_002",
+      "parseable_json": true,
+      "item_level_source_ref_coverage_ratio": 1.0,
+      "sections": {
+        "characters": {
+          "items": 7,
+          "with_source_refs": 7
+        },
+        "places": {
+          "items": 3,
+          "with_source_refs": 3
+        },
+        "concepts": {
+          "items": 3,
+          "with_source_refs": 3
+        },
+        "objects": {
+          "items": 9,
+          "with_source_refs": 9
+        },
+        "events": {
+          "items": 7,
+          "with_source_refs": 7
+        },
+        "relations": {
+          "items": 7,
+          "with_source_refs": 7
+        },
+        "unresolved_mentions": {
+          "items": 4,
+          "with_source_refs": 4
+        }
+      },
+      "missing_examples": []
+    },
+    {
+      "run_id": "ch_002__deepseek_v4_pro",
+      "model": "deepseek-v4-pro",
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "chapter_id": "ch_002",
+      "parseable_json": true,
+      "item_level_source_ref_coverage_ratio": 1.0,
+      "sections": {
+        "characters": {
+          "items": 7,
+          "with_source_refs": 7
+        },
+        "places": {
+          "items": 6,
+          "with_source_refs": 6
+        },
+        "concepts": {
+          "items": 6,
+          "with_source_refs": 6
+        },
+        "objects": {
+          "items": 6,
+          "with_source_refs": 6
+        },
+        "events": {
+          "items": 3,
+          "with_source_refs": 3
+        },
+        "relations": {
+          "items": 7,
+          "with_source_refs": 7
+        },
+        "unresolved_mentions": {
+          "items": 4,
+          "with_source_refs": 4
+        }
+      },
+      "missing_examples": []
+    },
+    {
+      "run_id": "ch_003__deepseek_v4_flash",
+      "model": "deepseek-v4-flash",
+      "profile_id": "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+      "chapter_id": "ch_003",
+      "parseable_json": true,
+      "item_level_source_ref_coverage_ratio": 1.0,
+      "sections": {
+        "characters": {
+          "items": 2,
+          "with_source_refs": 2
+        },
+        "places": {
+          "items": 3,
+          "with_source_refs": 3
+        },
+        "concepts": {
+          "items": 4,
+          "with_source_refs": 4
+        },
+        "objects": {
+          "items": 5,
+          "with_source_refs": 5
+        },
+        "events": {
+          "items": 8,
+          "with_source_refs": 8
+        },
+        "relations": {
+          "items": 5,
+          "with_source_refs": 5
+        },
+        "unresolved_mentions": {
+          "items": 4,
+          "with_source_refs": 4
+        }
+      },
+      "missing_examples": []
+    },
+    {
+      "run_id": "ch_003__deepseek_v4_pro",
+      "model": "deepseek-v4-pro",
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "chapter_id": "ch_003",
+      "parseable_json": true,
+      "item_level_source_ref_coverage_ratio": 1.0,
+      "sections": {
+        "characters": {
+          "items": 3,
+          "with_source_refs": 3
+        },
+        "places": {
+          "items": 6,
+          "with_source_refs": 6
+        },
+        "concepts": {
+          "items": 4,
+          "with_source_refs": 4
+        },
+        "objects": {
+          "items": 5,
+          "with_source_refs": 5
+        },
+        "events": {
+          "items": 4,
+          "with_source_refs": 4
+        },
+        "relations": {
+          "items": 3,
+          "with_source_refs": 3
+        },
+        "unresolved_mentions": {
+          "items": 2,
+          "with_source_refs": 2
+        }
+      },
+      "missing_examples": []
+    }
+  ],
+  "item_level_source_ref_coverage_ratio": 0.8333333333333334,
+  "parseable_reduction_runs": 5,
+  "missing_source_ref_runs": 0
+}

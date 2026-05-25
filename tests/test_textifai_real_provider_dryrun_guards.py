@@ -701,6 +701,60 @@ class RealProviderDryRunGuardsTests(unittest.TestCase):
         self.assertTrue(resolver["flash_resolution"]["effective_max_output_tokens"] > 0)
         self.assertIn("response_control.partial", continuation["trigger_conditions"])
 
+    def test_full_real_deepseek_validation_reports_parse_and_stay_private_safe(self):
+        plan = json.loads((FIXTURE_ROOT / "full_deepseek_e2e_execution_plan_after_sp076.json").read_text(encoding="utf-8"))
+        summary = json.loads((FIXTURE_ROOT / "full_deepseek_e2e_summary_after_sp076.json").read_text(encoding="utf-8"))
+        chunks = json.loads((FIXTURE_ROOT / "full_deepseek_e2e_chunk_results_after_sp076.json").read_text(encoding="utf-8"))
+        reduction = json.loads((FIXTURE_ROOT / "full_deepseek_e2e_reduction_summary_after_sp076.json").read_text(encoding="utf-8"))
+        budget = json.loads((FIXTURE_ROOT / "full_deepseek_e2e_budget_report_after_sp076.json").read_text(encoding="utf-8"))
+        source_refs = json.loads((FIXTURE_ROOT / "full_deepseek_e2e_source_ref_audit_after_sp076.json").read_text(encoding="utf-8"))
+        truncation = json.loads((FIXTURE_ROOT / "full_deepseek_e2e_truncation_continuation_audit_after_sp076.json").read_text(encoding="utf-8"))
+        decision = json.loads((FIXTURE_ROOT / "full_deepseek_e2e_decision_after_sp076.json").read_text(encoding="utf-8"))
+
+        valid_enum = {
+            "real_deepseek_e2e_validation_passed_ready_for_larger_e2e",
+            "real_deepseek_e2e_validation_passed_with_review_warnings",
+            "real_deepseek_e2e_validation_partial_success_needs_patch",
+            "real_deepseek_e2e_validation_failed_but_debuggable",
+            "real_deepseek_e2e_validation_blocked",
+        }
+        continuation_statuses = {
+            "not_triggered",
+            "executed",
+            "executed_replaced_primary",
+            "executed_but_not_parseable",
+            "skipped_cap_reached",
+        }
+
+        for payload in (plan, summary, chunks, reduction, budget, source_refs, truncation, decision):
+            text = json.dumps(payload, ensure_ascii=False)
+            self.assertNotIn("sk-", text)
+            self.assertNotIn("Authorization: Bearer", text)
+            self.assertNotIn("CHUNK_TEXT:", text)
+            self.assertNotIn("provider_response_raw.txt\n", text)
+
+        self.assertEqual(plan["assessment"], "real_deepseek_e2e_execution_plan_ready")
+        self.assertLessEqual(plan["planned_provider_call_count_with_continuation_reserve"], plan["provider_call_cap"])
+        self.assertIn(summary["assessment"], valid_enum)
+        self.assertIn(decision["assessment"], valid_enum)
+        self.assertIn(decision["product_decision"], valid_enum)
+        self.assertLessEqual(summary["provider_call_count"], summary["provider_call_cap"])
+        self.assertFalse(summary["write_back"])
+        self.assertTrue(summary["private_packet_root"].startswith("/tmp/textifai_private_provider_runs/"))
+        self.assertIn("deepseek-v4-flash", summary["models"])
+        self.assertIn("deepseek-v4-pro", summary["models"])
+        self.assertIn("ch_002", summary["chapters"])
+        self.assertIn("ch_003", summary["chapters"])
+        self.assertTrue(all(row.get("chunk_id") for row in chunks["chunks"]))
+        self.assertTrue(all(row.get("source_span") for row in chunks["chunks"]))
+        self.assertTrue(all("effective_max_output_tokens" in row for row in budget["runs"]))
+        self.assertTrue(all(row.get("decision_source") for row in budget["runs"]))
+        self.assertIn("item_level_source_ref_coverage_ratio", source_refs)
+        self.assertIn("parseable_reduction_runs", source_refs)
+        self.assertTrue(all(event.get("continuation_status") in continuation_statuses for event in truncation["events"]))
+        self.assertIn("triggered_continuation_count", truncation)
+        self.assertIn("source_ref_preservation", reduction)
+
     def test_profiled_runtime_reports_record_safe_not_executed_state(self):
         summary = json.loads((FIXTURE_ROOT / "deepseek_ch002_profiled_runtime_summary_after_sp061.json").read_text(encoding="utf-8"))
         generic = json.loads((FIXTURE_ROOT / "deepseek_ch002_profiled_vs_generic_report.json").read_text(encoding="utf-8"))
