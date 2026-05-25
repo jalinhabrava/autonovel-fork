@@ -1,0 +1,111 @@
+{
+  "assessment": "real_deepseek_e2e_dryrun_partial_success",
+  "reductions": [
+    {
+      "run_id": "ch_002__deepseek_v4_flash",
+      "model": "deepseek-v4-flash",
+      "profile_id": "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+      "chapter_id": "ch_002",
+      "mode": "chapter_reduction",
+      "chunk_id": "reduction",
+      "parseable_json": true,
+      "validation_ok": true,
+      "failure_mode": null,
+      "counts": {
+        "characters": 6,
+        "places": 4,
+        "concepts": 4,
+        "objects": 6,
+        "events": 7,
+        "relations": 8,
+        "unresolved_mentions": 4
+      },
+      "score": 57.5,
+      "thin_warnings": [
+        "model_profile_experimental"
+      ],
+      "source_span": null,
+      "private_dir": "/tmp/textifai_private_provider_runs/sp075_real_deepseek_e2e/20260525T104441Z/ch_002__deepseek_v4_flash/reduction"
+    },
+    {
+      "run_id": "ch_002__deepseek_v4_pro",
+      "model": "deepseek-v4-pro",
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "chapter_id": "ch_002",
+      "mode": "chapter_reduction",
+      "chunk_id": "reduction",
+      "parseable_json": true,
+      "validation_ok": true,
+      "failure_mode": null,
+      "counts": {
+        "characters": 5,
+        "places": 4,
+        "concepts": 4,
+        "objects": 5,
+        "events": 3,
+        "relations": 4,
+        "unresolved_mentions": 0
+      },
+      "score": 37.0,
+      "thin_warnings": [
+        "zero_unresolved_mentions_in_ambiguous_context",
+        "model_profile_experimental"
+      ],
+      "source_span": null,
+      "private_dir": "/tmp/textifai_private_provider_runs/sp075_real_deepseek_e2e/20260525T104441Z/ch_002__deepseek_v4_pro/reduction"
+    },
+    {
+      "run_id": "ch_003__deepseek_v4_flash",
+      "model": "deepseek-v4-flash",
+      "profile_id": "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+      "chapter_id": "ch_003",
+      "mode": "chapter_reduction",
+      "chunk_id": "reduction",
+      "parseable_json": true,
+      "validation_ok": true,
+      "failure_mode": null,
+      "counts": {
+        "characters": 3,
+        "places": 3,
+        "concepts": 5,
+        "objects": 5,
+        "events": 5,
+        "relations": 4,
+        "unresolved_mentions": 2
+      },
+      "score": 40.0,
+      "thin_warnings": [
+        "model_profile_experimental"
+      ],
+      "source_span": null,
+      "private_dir": "/tmp/textifai_private_provider_runs/sp075_real_deepseek_e2e/20260525T104441Z/ch_003__deepseek_v4_flash/reduction"
+    },
+    {
+      "run_id": "ch_003__deepseek_v4_pro",
+      "model": "deepseek-v4-pro",
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "chapter_id": "ch_003",
+      "mode": "chapter_reduction",
+      "chunk_id": "reduction",
+      "parseable_json": true,
+      "validation_ok": true,
+      "failure_mode": null,
+      "counts": {
+        "characters": 3,
+        "places": 6,
+        "concepts": 6,
+        "objects": 3,
+        "events": 3,
+        "relations": 4,
+        "unresolved_mentions": 3
+      },
+      "score": 39.0,
+      "thin_warnings": [
+        "model_profile_experimental"
+      ],
+      "source_span": null,
+      "private_dir": "/tmp/textifai_private_provider_runs/sp075_real_deepseek_e2e/20260525T104441Z/ch_003__deepseek_v4_pro/reduction"
+    }
+  ],
+  "source_ref_preservation": false
+}

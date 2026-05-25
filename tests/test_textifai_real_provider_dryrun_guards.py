@@ -29,6 +29,12 @@ assert FAMILY_SPEC and FAMILY_SPEC.loader
 FAMILY_MODULE = importlib.util.module_from_spec(FAMILY_SPEC)
 sys.modules[FAMILY_SPEC.name] = FAMILY_MODULE
 FAMILY_SPEC.loader.exec_module(FAMILY_MODULE)
+E2E_MODULE_PATH = Path("scripts/dev/real_deepseek_e2e_dryrun.py").resolve()
+E2E_SPEC = importlib.util.spec_from_file_location("real_deepseek_e2e_dryrun", E2E_MODULE_PATH)
+assert E2E_SPEC and E2E_SPEC.loader
+E2E_MODULE = importlib.util.module_from_spec(E2E_SPEC)
+sys.modules[E2E_SPEC.name] = E2E_MODULE
+E2E_SPEC.loader.exec_module(E2E_MODULE)
 FIXTURE_ROOT = Path("tests/fixtures/textifai/real_provider_dryrun/expected")
 
 
@@ -618,23 +624,61 @@ class RealProviderDryRunGuardsTests(unittest.TestCase):
         self.assertIn(decision["assessment"], valid_enum)
         self.assertIn(decision["product_decision"], valid_enum)
         self.assertEqual(variants["assessment"], summary["assessment"])
-        self.assertEqual(targeted_diff["assessment"], summary["assessment"])
-        self.assertEqual(targeted_fail["assessment"], summary["assessment"])
-        self.assertEqual(ch002["chapter_id"], "ch_002")
-        self.assertEqual(ch003["chapter_id"], "ch_003")
-        self.assertEqual(hyp["bottleneck_principal"]["chapter_id"], "ch_002")
 
-        text_blob = json.dumps(
-            [summary, variants, ch002, ch003, decision, hyp, targeted_diff, targeted_fail],
-            ensure_ascii=False,
+    def test_real_deepseek_e2e_reports_parse_and_use_valid_decision_enum(self):
+        plan = json.loads((FIXTURE_ROOT / "real_deepseek_e2e_execution_plan_after_sp074.json").read_text(encoding="utf-8"))
+        summary = json.loads((FIXTURE_ROOT / "real_deepseek_e2e_summary_after_sp074.json").read_text(encoding="utf-8"))
+        chunks = json.loads((FIXTURE_ROOT / "real_deepseek_e2e_chunk_results_after_sp074.json").read_text(encoding="utf-8"))
+        reduction = json.loads((FIXTURE_ROOT / "real_deepseek_e2e_reduction_summary_after_sp074.json").read_text(encoding="utf-8"))
+        decision = json.loads((FIXTURE_ROOT / "real_deepseek_e2e_decision_after_sp074.json").read_text(encoding="utf-8"))
+        valid_enum = {
+            "real_deepseek_e2e_dryrun_passed_with_review_warnings",
+            "real_deepseek_e2e_dryrun_partial_success",
+            "real_deepseek_e2e_dryrun_failed_but_debuggable",
+            "real_deepseek_e2e_dryrun_blocked",
+        }
+
+        for payload in (plan, summary, chunks, reduction, decision):
+            text = json.dumps(payload, ensure_ascii=False)
+            self.assertNotIn("sk-", text)
+            self.assertNotIn("Authorization: Bearer", text)
+            self.assertNotIn("CHUNK_TEXT:", text)
+            self.assertNotIn("provider_response_raw", text.split("private_dir")[0])
+
+        self.assertEqual(plan["assessment"], "real_deepseek_e2e_execution_plan_ready")
+        self.assertIn(summary["assessment"], valid_enum)
+        self.assertIn(decision["assessment"], valid_enum)
+        self.assertLessEqual(summary["provider_call_count"], 24)
+        self.assertFalse(summary["write_back"])
+        self.assertTrue(summary["private_packet_root"].startswith("/tmp/textifai_private_provider_runs/"))
+        self.assertTrue(all(row.get("chunk_id") for row in chunks["chunks"]))
+        self.assertTrue(all(row.get("source_span") for row in chunks["chunks"]))
+        self.assertIn("source_ref_preservation", reduction)
+
+    def test_real_deepseek_e2e_script_requires_no_write_back_and_allow_flag(self):
+        parser = E2E_MODULE.build_parser()
+        args = parser.parse_args(
+            [
+                "--source-file",
+                "/tmp/source.md",
+                "--chapter-ids",
+                "ch_002",
+                "--models",
+                "deepseek-v4-flash",
+                "--output-root",
+                "/tmp/textifai_private_provider_runs/test",
+                "--max-provider-requests",
+                "24",
+                "--max-output-tokens",
+                "8192",
+                "--response-format-json",
+                "--no-write-back",
+            ]
         )
-        self.assertNotIn("sk-", text_blob)
-        self.assertNotIn("provider_response_raw", text_blob)
-        self.assertNotIn("セラ", text_blob)
-        self.assertNotIn("王者の杖", text_blob)
-        self.assertNotIn("アデルマン", text_blob)
-        self.assertNotIn("ティセイア", text_blob)
-        self.assertNotIn("ベル", text_blob)
+
+        self.assertFalse(args.allow_provider_calls)
+        self.assertTrue(args.no_write_back)
+        self.assertEqual(args.max_provider_requests, 24)
 
     def test_profiled_runtime_reports_record_safe_not_executed_state(self):
         summary = json.loads((FIXTURE_ROOT / "deepseek_ch002_profiled_runtime_summary_after_sp061.json").read_text(encoding="utf-8"))

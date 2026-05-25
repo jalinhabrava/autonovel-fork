@@ -1,0 +1,178 @@
+{
+  "assessment": "real_deepseek_e2e_execution_plan_ready",
+  "source_file_reference": "/home/david/OnT/王者の杖.md",
+  "source_sha256": "61e1bde83941ad9c8d5c4a2e016e0935b01732dfee152f7b3631d33348de96e6",
+  "source_text_committed": false,
+  "chapters": [
+    "ch_002",
+    "ch_003"
+  ],
+  "models": [
+    "deepseek-v4-flash",
+    "deepseek-v4-pro"
+  ],
+  "profiles": [
+    "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+    "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+    "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+    "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1"
+  ],
+  "planned_runs": [
+    {
+      "run_id": "ch_002__deepseek_v4_flash",
+      "chapter_id": "ch_002",
+      "model": "deepseek-v4-flash",
+      "profile_id": "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+      "planned_provider_calls": 2,
+      "token_plan": {
+        "provider": "deepseek",
+        "model": "deepseek-v4-flash",
+        "task": "bootstrap_chapter_extraction",
+        "provider_profile_id": "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+        "context_window": 128000,
+        "max_output_tokens": 8192,
+        "reserved_output_tokens": 8192,
+        "prompt_overhead_tokens": 5000,
+        "source_text_budget_tokens": 6000,
+        "safety_margin": 8000,
+        "usable_input_budget": 111808
+      },
+      "chunks": [
+        {
+          "chunk_id": "source_f1e650917c_ch_002_chunk_001",
+          "chapter_id": "ch_002",
+          "char_start": 2309,
+          "char_end": 5013,
+          "char_count": 2704,
+          "estimated_tokens": 676,
+          "chunk_kind": "structured_chapter_subchunk",
+          "split_reason": "chapter_within_budget",
+          "source_span": {
+            "source_id": "source_f1e650917c",
+            "chapter_id": "ch_002",
+            "char_start": 2309,
+            "char_end": 5013
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "ch_002__deepseek_v4_pro",
+      "chapter_id": "ch_002",
+      "model": "deepseek-v4-pro",
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "planned_provider_calls": 2,
+      "token_plan": {
+        "provider": "deepseek",
+        "model": "deepseek-v4-pro",
+        "task": "bootstrap_chapter_extraction",
+        "provider_profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+        "context_window": 128000,
+        "max_output_tokens": 8192,
+        "reserved_output_tokens": 8192,
+        "prompt_overhead_tokens": 5000,
+        "source_text_budget_tokens": 6000,
+        "safety_margin": 8000,
+        "usable_input_budget": 111808
+      },
+      "chunks": [
+        {
+          "chunk_id": "source_f1e650917c_ch_002_chunk_001",
+          "chapter_id": "ch_002",
+          "char_start": 2309,
+          "char_end": 5013,
+          "char_count": 2704,
+          "estimated_tokens": 676,
+          "chunk_kind": "structured_chapter_subchunk",
+          "split_reason": "chapter_within_budget",
+          "source_span": {
+            "source_id": "source_f1e650917c",
+            "chapter_id": "ch_002",
+            "char_start": 2309,
+            "char_end": 5013
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "ch_003__deepseek_v4_flash",
+      "chapter_id": "ch_003",
+      "model": "deepseek-v4-flash",
+      "profile_id": "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+      "planned_provider_calls": 2,
+      "token_plan": {
+        "provider": "deepseek",
+        "model": "deepseek-v4-flash",
+        "task": "bootstrap_chapter_extraction",
+        "provider_profile_id": "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+        "context_window": 128000,
+        "max_output_tokens": 8192,
+        "reserved_output_tokens": 8192,
+        "prompt_overhead_tokens": 5000,
+        "source_text_budget_tokens": 6000,
+        "safety_margin": 8000,
+        "usable_input_budget": 111808
+      },
+      "chunks": [
+        {
+          "chunk_id": "source_f1e650917c_ch_003_chunk_001",
+          "chapter_id": "ch_003",
+          "char_start": 5015,
+          "char_end": 7290,
+          "char_count": 2275,
+          "estimated_tokens": 568,
+          "chunk_kind": "structured_chapter_subchunk",
+          "split_reason": "chapter_within_budget",
+          "source_span": {
+            "source_id": "source_f1e650917c",
+            "chapter_id": "ch_003",
+            "char_start": 5015,
+            "char_end": 7290
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "ch_003__deepseek_v4_pro",
+      "chapter_id": "ch_003",
+      "model": "deepseek-v4-pro",
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "planned_provider_calls": 2,
+      "token_plan": {
+        "provider": "deepseek",
+        "model": "deepseek-v4-pro",
+        "task": "bootstrap_chapter_extraction",
+        "provider_profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+        "context_window": 128000,
+        "max_output_tokens": 8192,
+        "reserved_output_tokens": 8192,
+        "prompt_overhead_tokens": 5000,
+        "source_text_budget_tokens": 6000,
+        "safety_margin": 8000,
+        "usable_input_budget": 111808
+      },
+      "chunks": [
+        {
+          "chunk_id": "source_f1e650917c_ch_003_chunk_001",
+          "chapter_id": "ch_003",
+          "char_start": 5015,
+          "char_end": 7290,
+          "char_count": 2275,
+          "estimated_tokens": 568,
+          "chunk_kind": "structured_chapter_subchunk",
+          "split_reason": "chapter_within_budget",
+          "source_span": {
+            "source_id": "source_f1e650917c",
+            "chapter_id": "ch_003",
+            "char_start": 5015,
+            "char_end": 7290
+          }
+        }
+      ]
+    }
+  ],
+  "planned_provider_call_count": 8,
+  "provider_call_cap": 24,
+  "private_packet_root": "/tmp/textifai_private_provider_runs/sp075_real_deepseek_e2e/20260525T104441Z",
+  "write_back": false
+}

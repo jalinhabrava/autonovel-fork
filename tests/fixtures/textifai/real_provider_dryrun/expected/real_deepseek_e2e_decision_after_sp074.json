@@ -1,0 +1,7 @@
+{
+  "assessment": "real_deepseek_e2e_dryrun_partial_success",
+  "ready_for_larger_real_e2e": false,
+  "needs_review_warnings": true,
+  "private_packet_root": "/tmp/textifai_private_provider_runs/sp075_real_deepseek_e2e/20260525T104441Z",
+  "next_suggested_phase": "Phase 1.3.M-b5c-4e — Review Real DeepSeek E2E Packet and Decide Larger Dry-run"
+}

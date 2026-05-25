@@ -1,0 +1,29 @@
+{
+  "assessment": "real_deepseek_e2e_dryrun_partial_success",
+  "provider": "deepseek",
+  "models": [
+    "deepseek-v4-flash",
+    "deepseek-v4-pro"
+  ],
+  "chapters": [
+    "ch_002",
+    "ch_003"
+  ],
+  "provider_call_count": 8,
+  "private_packet_root": "/tmp/textifai_private_provider_runs/sp075_real_deepseek_e2e/20260525T104441Z",
+  "recommended_files_to_upload_to_chatgpt": [
+    "README.md",
+    "matrix_summary_private.md",
+    "matrix_comparison_private.md",
+    "decision_notes_private.md",
+    "chunk_plan_private.md",
+    "reduction_trace_private.md"
+  ],
+  "comparison_vs_previous_non_chunked_runs": {
+    "sp069_best_ch002_score": 26.5,
+    "sp069_best_ch003_score": 25.0,
+    "sp075_best_reduction_score": 57.5,
+    "chunked_input_shape_tested": true
+  },
+  "write_back": false
+}
