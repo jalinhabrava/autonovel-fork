@@ -1,0 +1,46 @@
+{
+  "assessment": "prompt_experiment_observability_ready_for_chunking_preflight",
+  "provider_family": "deepseek",
+  "variant_diffs": [
+    {
+      "variant_id": "family_variant_2_oer_focus",
+      "parent_variant_id": "variant_e_objects_events_relations_boost",
+      "conceptual_change": "Narrow explicit focus on objects/events/relations/unresolved with compact JSON-first wording.",
+      "hypothesis": "Direct OER targeting helps ch_002 bottleneck without breaking JSON.",
+      "primary_target": "objects_events_relations_unresolved",
+      "risk": "May still suppress unresolved recall to zero.",
+      "observed_result": "Best ch_002 run in SP-069 with Flash, score 26.5, valid JSON.",
+      "decision": "package_as_flash_profile"
+    },
+    {
+      "variant_id": "family_variant_3_balanced_kb",
+      "parent_variant_id": "variant_l_balanced_final_candidate",
+      "conceptual_change": "Balanced knowledge-base coverage with concise JSON-first instruction set.",
+      "hypothesis": "Broader balanced coverage should generalize better on Pro for ch_003.",
+      "primary_target": "balanced_knowledge_base",
+      "risk": "Could underperform on object-heavy bottlenecks.",
+      "observed_result": "Best ch_003 run in SP-069 with Pro, score 25.0, valid JSON.",
+      "decision": "package_as_pro_profile"
+    },
+    {
+      "variant_id": "variant_g_combined_best",
+      "parent_variant_id": "variant_b_dense_plus_check",
+      "conceptual_change": "Merge broad recall plus targeted OER boost.",
+      "hypothesis": "Combining best prior ideas may raise density on both chapters.",
+      "primary_target": "combined_best",
+      "risk": "Instruction collision and unstable cross-chapter behavior.",
+      "observed_result": "Strong ch_003 signal in SP-068 but not stable enough as universal candidate.",
+      "decision": "mutate_or_discard_as_universal"
+    },
+    {
+      "variant_id": "variant_l_balanced_final_candidate",
+      "parent_variant_id": "variant_c_section_targets_json_safe",
+      "conceptual_change": "Balanced final candidate optimized for KB coverage with concise facts.",
+      "hypothesis": "Balanced concise wording may improve reliability and enough density.",
+      "primary_target": "balanced_final_candidate",
+      "risk": "Objects and unresolved recall may collapse.",
+      "observed_result": "Useful signal but too thin on ch_002; objects/unresolved stayed at zero in weak runs.",
+      "decision": "keep_for_mutation_not_final"
+    }
+  ]
+}

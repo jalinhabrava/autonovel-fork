@@ -1,0 +1,41 @@
+{
+  "assessment": "prompt_experiment_observability_ready_for_chunking_preflight",
+  "packaged_variants": [
+    {
+      "variant_id": "family_variant_2_oer_focus",
+      "packaged_profile": "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+      "reason": "Best observed Flash result on ch_002 in SP-069."
+    },
+    {
+      "variant_id": "family_variant_3_balanced_kb",
+      "packaged_profile": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "reason": "Best observed Pro result on ch_003 in SP-069."
+    }
+  ],
+  "kept_for_future_mutation": [
+    {
+      "variant_id": "variant_g_combined_best",
+      "reason": "Has useful signal but not stable as universal candidate."
+    },
+    {
+      "variant_id": "variant_l_balanced_final_candidate",
+      "reason": "Balanced wording useful as parent, but too thin for final packaging."
+    }
+  ],
+  "discarded_variants": [
+    {
+      "variant_id": "variant_03_dense_explicit",
+      "reason": "Helpful historically, but superseded by family_variant_2_oer_focus packaging outcome."
+    }
+  ],
+  "variants_requiring_repeat": [
+    {
+      "variant_id": "family_variant_4_ch002_gap_attack",
+      "reason": "Promising ch_002 signal, but not enough cross-chapter evidence yet."
+    }
+  ],
+  "packaged_flash_profile": "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+  "packaged_pro_profile": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+  "reasoner_profile": "not_packaged_not_visible",
+  "next_experiment_need": "only if future DeepSeek tuning resumes"
+}

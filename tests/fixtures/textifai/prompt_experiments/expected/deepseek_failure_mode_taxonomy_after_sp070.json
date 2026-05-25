@@ -1,0 +1,75 @@
+{
+  "assessment": "prompt_experiment_observability_ready_for_chunking_preflight",
+  "provider_family": "deepseek",
+  "failure_modes": [
+    {
+      "code": "invalid_json_markdown",
+      "description": "Output used markdown fences or markdown structure instead of raw JSON object."
+    },
+    {
+      "code": "invalid_json_extra_text",
+      "description": "Output wrapped JSON with extra narrative or prefatory text."
+    },
+    {
+      "code": "invalid_json_truncated",
+      "description": "Output appears cut off before closing JSON structure."
+    },
+    {
+      "code": "invalid_json_reasoning_leak",
+      "description": "Output leaked hidden reasoning or checklist text into final response."
+    },
+    {
+      "code": "invalid_json_unknown",
+      "description": "Output was not parseable JSON, but exact cause is unknown from safe metadata."
+    },
+    {
+      "code": "valid_json_wrong_shape",
+      "description": "JSON parsed but top-level or chapter structure did not match expected schema shape."
+    },
+    {
+      "code": "valid_json_missing_required_sections",
+      "description": "JSON parsed but required extraction sections were missing."
+    },
+    {
+      "code": "valid_json_wrong_chapter",
+      "description": "JSON parsed but chapter identifier did not match requested chapter."
+    },
+    {
+      "code": "valid_json_thin",
+      "description": "JSON parsed and shape passed, but semantic density stayed too low for useful extraction."
+    },
+    {
+      "code": "valid_json_low_objects",
+      "description": "JSON parsed but object coverage stayed too low."
+    },
+    {
+      "code": "valid_json_low_events",
+      "description": "JSON parsed but event coverage stayed too low."
+    },
+    {
+      "code": "valid_json_low_relations",
+      "description": "JSON parsed but relation coverage stayed too low."
+    },
+    {
+      "code": "valid_json_zero_unresolved",
+      "description": "JSON parsed but unresolved important mentions collapsed to zero in ambiguous context."
+    },
+    {
+      "code": "provider_empty_response",
+      "description": "Provider returned empty text or no usable content."
+    },
+    {
+      "code": "provider_error",
+      "description": "Provider call failed before usable response payload."
+    },
+    {
+      "code": "validation_failed_missing_event_importance",
+      "description": "Validation failed because events lacked event_importance."
+    },
+    {
+      "code": "validation_failed_missing_relation_category",
+      "description": "Validation failed because relations lacked relation_category."
+    }
+  ],
+  "privacy_rule": "classify from safe metadata, not committed private outputs"
+}

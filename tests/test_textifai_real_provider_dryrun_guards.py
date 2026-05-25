@@ -585,6 +585,18 @@ class RealProviderDryRunGuardsTests(unittest.TestCase):
         self.assertIn(decision["assessment"], valid_enum)
         self.assertLessEqual(summary["provider_calls_count"], 24)
 
+    def test_prompt_experiment_observability_reports_parse(self):
+        root = Path("tests/fixtures/textifai/prompt_experiments/expected")
+        taxonomy = json.loads((root / "deepseek_prompt_experiment_taxonomy_after_sp070.json").read_text(encoding="utf-8"))
+        diff = json.loads((root / "deepseek_variant_diff_report_after_sp070.json").read_text(encoding="utf-8"))
+        failure = json.loads((root / "deepseek_failure_mode_taxonomy_after_sp070.json").read_text(encoding="utf-8"))
+        decision = json.loads((root / "deepseek_variant_decision_report_after_sp070.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(taxonomy["assessment"], "prompt_experiment_observability_ready_for_chunking_preflight")
+        self.assertEqual(diff["assessment"], "prompt_experiment_observability_ready_for_chunking_preflight")
+        self.assertEqual(failure["assessment"], "prompt_experiment_observability_ready_for_chunking_preflight")
+        self.assertEqual(decision["assessment"], "prompt_experiment_observability_ready_for_chunking_preflight")
+
     def test_profiled_runtime_reports_record_safe_not_executed_state(self):
         summary = json.loads((FIXTURE_ROOT / "deepseek_ch002_profiled_runtime_summary_after_sp061.json").read_text(encoding="utf-8"))
         generic = json.loads((FIXTURE_ROOT / "deepseek_ch002_profiled_vs_generic_report.json").read_text(encoding="utf-8"))

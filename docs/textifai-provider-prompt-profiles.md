@@ -85,3 +85,7 @@ Códigos recomendados:
 ## Next Suggested Phase
 
 `Phase 1.3.M-b5c-4a — Chunking/Reduction Preflight with DeepSeek Family Harness Available`
+
+## Prompt Experiment Observability
+
+Ver `docs/textifai-prompt-experiment-observability.md` para trazabilidad de variantes, failure modes y decisiones keep/mutate/discard sin commitear prompts u outputs privados.
