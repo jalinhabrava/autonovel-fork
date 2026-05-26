@@ -1,0 +1,8 @@
+{
+  "assessment": "viewer_ready_open_design_blocked_by_node",
+  "tests_status": "pass",
+  "node24_status": "ready",
+  "open_design_status": "partial_runtime_blocked",
+  "why_partial": "tools-dev start hit ENOTSUP pipe/socket in this environment; direct daemon CLI logged listening but endpoint exited before HTTP check. Open Design remains partially usable via install/build/od mcp help under Node 24.",
+  "next_phase": "Phase 1.3.M-b5c-4x — Spanish 20-chapter E2E preflight + manual viewer review follow-through"
+}

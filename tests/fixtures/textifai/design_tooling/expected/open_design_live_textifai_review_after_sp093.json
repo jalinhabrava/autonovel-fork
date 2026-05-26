@@ -1,0 +1,22 @@
+{
+  "assessment": "open_design_live_review_partial",
+  "used_open_design": false,
+  "reason_if_false": "runtime not reachable enough for live review workflow",
+  "reviewed_surfaces": [
+    "dashboard",
+    "wiki_browser",
+    "graph_global_local",
+    "node_detail",
+    "ai_authoring_shell"
+  ],
+  "top_recommendations": [
+    "keep Wiki and Graph CTA in first fold",
+    "improve graph label collision handling before dense real runs",
+    "show backlinks/outgoing summary above note body",
+    "keep artifacts secondary",
+    "future editor should show grounding chips"
+  ],
+  "output_path_private": "/tmp/textifai_private_provider_runs/sp094_validation_node24_open_design_viewer/20260526T175334Z/open_design_outputs/textifai_design_review_live.md",
+  "recommendations_actionable": true,
+  "should_next_ui_phase_use_open_design": true
+}

@@ -1,0 +1,22 @@
+{
+  "assessment": "open_design_skills_design_systems_validated",
+  "skills_count": 132,
+  "design_systems_count": 150,
+  "recommended_skills": [
+    "design-review",
+    "plan-design-review",
+    "web-design-guidelines",
+    "d3-visualization",
+    "design-consultation"
+  ],
+  "recommended_design_system": "dashboard",
+  "activation_setup_steps": [
+    "source ~/.nvm/nvm.sh && nvm use 24",
+    "cd /tmp/textifai_dev_tools/open-design",
+    "corepack pnpm tools-dev start web --daemon-port 7457 --web-port 5175",
+    "open http://127.0.0.1:5175"
+  ],
+  "limitations": [
+    "runtime requires Node 24 shell activation before start"
+  ]
+}

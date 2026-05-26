@@ -1,0 +1,11 @@
+{
+  "assessment": "viewer_markdown_wiki_data_quality_checked",
+  "overview_ok": true,
+  "wiki_ok": true,
+  "graph_ok": true,
+  "node_detail_ok": true,
+  "backlinks_ok": true,
+  "local_graph_ok": true,
+  "artifacts_secondary": true,
+  "readiness": "ready_for_manual_author_review_with_minor_ui_warnings"
+}

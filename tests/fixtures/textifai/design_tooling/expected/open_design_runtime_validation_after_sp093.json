@@ -1,0 +1,26 @@
+{
+  "assessment": "open_design_runtime_validated",
+  "open_design_path": "/tmp/textifai_dev_tools/open-design",
+  "node_version_used": "v24.16.0",
+  "install_status": "success",
+  "build_status": "success",
+  "cli_status": "daemon cli built",
+  "mcp_status": "available via apps/daemon/dist/cli.js mcp",
+  "daemon_started": false,
+  "web_started": false,
+  "port": {
+    "daemon": 7457,
+    "web": 5175
+  },
+  "url": {
+    "web": "http://127.0.0.1:5175",
+    "daemon": "http://127.0.0.1:7457"
+  },
+  "pid_log_stop": {
+    "start_log": "/tmp/sp094_od_start.log",
+    "status_log": "/tmp/sp094_od_status.log",
+    "stop_command": "bash -lc \"source ~/.nvm/nvm.sh && nvm use 24 >/dev/null && cd /tmp/textifai_dev_tools/open-design && corepack pnpm tools-dev stop\""
+  },
+  "blocked_reason": "tools-dev start hit ENOTSUP pipe/socket in this environment; direct daemon CLI logged listening but endpoint exited before HTTP check. Open Design remains partially usable via install/build/od mcp help under Node 24.",
+  "no_textifai_package_changes": true
+}

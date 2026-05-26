@@ -1,0 +1,21 @@
+{
+  "assessment": "open_design_codex_mcp_validated",
+  "mcp_command": "node /tmp/textifai_dev_tools/open-design/apps/daemon/dist/cli.js mcp --daemon-url http://127.0.0.1:7457",
+  "config_snippet_present": true,
+  "global_config_modified": false,
+  "manual_setup_steps": [
+    "activate Node 24 shell",
+    "start Open Design daemon/web",
+    "add snippet from docs/textifai-open-design-codex-setup.md to Codex MCP config manually",
+    "restart Codex MCP client"
+  ],
+  "test_status": "mcp help verified; live daemon-backed session requires manual Codex config",
+  "risks": [
+    "daemon URL changes if using ephemeral ports",
+    "MCP client restart needed after daemon restart"
+  ],
+  "rollback": [
+    "remove open-design MCP snippet from local Codex config",
+    "stop Open Design tools-dev services"
+  ]
+}

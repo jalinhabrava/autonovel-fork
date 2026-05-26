@@ -1,0 +1,14 @@
+{
+  "assessment": "node24_dev_environment_ready",
+  "current_node_version": "v22.22.2",
+  "target_node_version": "v24.16.0",
+  "version_manager_found": "nvm",
+  "node24_available": true,
+  "activation_command": "source ~/.nvm/nvm.sh && nvm use 24",
+  "rollback_notes": [
+    "close shell",
+    "source ~/.nvm/nvm.sh && nvm use 22"
+  ],
+  "blocked_reason": "",
+  "global_environment_changed": false
+}

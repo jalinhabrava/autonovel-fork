@@ -1,0 +1,135 @@
+{
+  "assessment": "sp093_full_validation_completed",
+  "all_passed": true,
+  "blocking": false,
+  "results": [
+    {
+      "command": "uv run python -m unittest -v tests.test_textifai_viewer_markdown_wiring",
+      "status": "pass",
+      "duration_seconds": 0.264,
+      "pass": true,
+      "failure_summary": "",
+      "blocking": false
+    },
+    {
+      "command": "uv run python -m unittest -v tests.test_textifai_open_design_setup",
+      "status": "pass",
+      "duration_seconds": 0.091,
+      "pass": true,
+      "failure_summary": "",
+      "blocking": false
+    },
+    {
+      "command": "uv run python -m unittest -v tests.test_textifai_markdown_materialization",
+      "status": "pass",
+      "duration_seconds": 1.673,
+      "pass": true,
+      "failure_summary": "",
+      "blocking": false
+    },
+    {
+      "command": "uv run python -m unittest -v tests.test_textifai_design_tooling",
+      "status": "pass",
+      "duration_seconds": 0.076,
+      "pass": true,
+      "failure_summary": "",
+      "blocking": false
+    },
+    {
+      "command": "uv run python -m unittest -v tests.test_textifai_platform_architecture",
+      "status": "pass",
+      "duration_seconds": 0.082,
+      "pass": true,
+      "failure_summary": "",
+      "blocking": false
+    },
+    {
+      "command": "uv run python -m unittest -v tests.test_textifai_manual_viewer_revalidation",
+      "status": "pass",
+      "duration_seconds": 1.809,
+      "pass": true,
+      "failure_summary": "",
+      "blocking": false
+    },
+    {
+      "command": "uv run python -m unittest -v tests.test_textifai_vaerl_projection_patch",
+      "status": "pass",
+      "duration_seconds": 1.615,
+      "pass": true,
+      "failure_summary": "",
+      "blocking": false
+    },
+    {
+      "command": "uv run python -m unittest -v tests.test_textifai_vaerl_viewer_retry_audit",
+      "status": "pass",
+      "duration_seconds": 0.098,
+      "pass": true,
+      "failure_summary": "",
+      "blocking": false
+    },
+    {
+      "command": "uv run python -m unittest -v tests.test_textifai_viewer_preflight",
+      "status": "pass",
+      "duration_seconds": 1.445,
+      "pass": true,
+      "failure_summary": "",
+      "blocking": false
+    },
+    {
+      "command": "uv run python -m unittest -v tests.test_textifai_chunking_reduction_preflight",
+      "status": "pass",
+      "duration_seconds": 0.274,
+      "pass": true,
+      "failure_summary": "",
+      "blocking": false
+    },
+    {
+      "command": "uv run python -m unittest -v tests.test_textifai_prompt_experiment_observability",
+      "status": "pass",
+      "duration_seconds": 0.163,
+      "pass": true,
+      "failure_summary": "",
+      "blocking": false
+    },
+    {
+      "command": "uv run python -m unittest -v tests.test_textifai_deepseek_family_profiles",
+      "status": "pass",
+      "duration_seconds": 0.166,
+      "pass": true,
+      "failure_summary": "",
+      "blocking": false
+    },
+    {
+      "command": "uv run python -m unittest -v tests.test_textifai_provider_prompt_profiles",
+      "status": "pass",
+      "duration_seconds": 0.179,
+      "pass": true,
+      "failure_summary": "",
+      "blocking": false
+    },
+    {
+      "command": "uv run python -m unittest -v tests.test_textifai_real_provider_dryrun_guards",
+      "status": "pass",
+      "duration_seconds": 1.294,
+      "pass": true,
+      "failure_summary": "",
+      "blocking": false
+    },
+    {
+      "command": "uv run python -m unittest -v tests.test_text_provider",
+      "status": "pass",
+      "duration_seconds": 1.188,
+      "pass": true,
+      "failure_summary": "",
+      "blocking": false
+    },
+    {
+      "command": "DEEPSEEK_API_KEY='' uv run python -m unittest -v tests.test_textifai_provider_onboarding",
+      "status": "pass",
+      "duration_seconds": 2.058,
+      "pass": true,
+      "failure_summary": "",
+      "blocking": false
+    }
+  ]
+}

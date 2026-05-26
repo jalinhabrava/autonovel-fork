@@ -1,0 +1,24 @@
+{
+  "assessment": "viewer_manual_review_server_ready",
+  "server_started": true,
+  "host": "0.0.0.0",
+  "port": 8871,
+  "local_url": "http://127.0.0.1:8871",
+  "project_id": "home__david__projects__autonovel-fork__tests__fixtures__textifai__viewer_wiring__input__sample_markdown_viewer_project_after_sp092",
+  "stop_command": "kill $(ss -ltnp | rg \":8871\" -o >/dev/null; ss -ltnp | rg \":8871\" | sed -E \"s/.*pid=([0-9]+).*/\\1/\")",
+  "endpoint_status": {
+    "/": 200,
+    "/api/projects": 200,
+    "/api/projects/<id>": 200,
+    "/api/projects/<id>/graph": 200,
+    "/api/projects/<id>/note": 200
+  },
+  "graph_node_count": 8,
+  "graph_edge_count": 11,
+  "wiki_note_count": 8,
+  "known_ui_limitations": [
+    "read-only wiki",
+    "dense graph label overlap still possible"
+  ],
+  "manual_review_required": true
+}

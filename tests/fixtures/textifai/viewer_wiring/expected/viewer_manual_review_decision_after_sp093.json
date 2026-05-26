@@ -1,0 +1,7 @@
+{
+  "assessment": "viewer_ready_open_design_blocked_by_node",
+  "viewer_readiness": "ready_for_manual_author_review_with_minor_ui_warnings",
+  "manual_review_required": true,
+  "spanish_e2e_allowed": true,
+  "next_phase": "Run manual viewer review in browser, then launch Spanish 20-chapter E2E only if author-facing UX is acceptable."
+}
