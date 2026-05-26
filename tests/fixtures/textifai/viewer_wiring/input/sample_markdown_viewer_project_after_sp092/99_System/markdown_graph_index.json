@@ -1,0 +1,602 @@
+{
+  "schema_version": "textifai.markdown_graph_index.v1",
+  "root": "/home/david/projects/autonovel-fork/tests/fixtures/textifai/markdown_materialization/expected/sample_vault_after_sp091",
+  "notes": [
+    {
+      "path": "Chapters/Ch_001.md",
+      "title": "Arrival at the Farmhouse",
+      "frontmatter": {
+        "vaerl_id": "chapter:ch_001",
+        "kind": "chapter",
+        "canonical_label": "Arrival at the Farmhouse",
+        "aliases": [],
+        "tags": [
+          "chapter",
+          "ready"
+        ],
+        "status": "ready",
+        "review_state": "ready",
+        "chapter_ids": [
+          "ch_001"
+        ],
+        "source_refs": [
+          {
+            "source_id": "fixture",
+            "chapter_id": "ch_001",
+            "span_id": "chapter"
+          }
+        ]
+      },
+      "tags": [
+        "chapter",
+        "ready"
+      ],
+      "outgoing_wikilinks": [
+        {
+          "target": "Characters/Ada_Bright",
+          "label": "Characters/Ada_Bright"
+        },
+        {
+          "target": "Characters/Bryn_Vale",
+          "label": "Characters/Bryn_Vale"
+        },
+        {
+          "target": "Places/Farmhouse",
+          "label": "Places/Farmhouse"
+        },
+        {
+          "target": "Objects/Copper_Key",
+          "label": "Objects/Copper_Key"
+        },
+        {
+          "target": "Concepts/Hidden_Archive",
+          "label": "Concepts/Hidden_Archive"
+        },
+        {
+          "target": "Events/Cellar_Discovery",
+          "label": "Events/Cellar_Discovery"
+        }
+      ],
+      "backlinks": [],
+      "degree": 1
+    },
+    {
+      "path": "Characters/Ada_Bright_2.md",
+      "title": "Ada Bright",
+      "frontmatter": {
+        "vaerl_id": "character:ada",
+        "kind": "character",
+        "canonical_label": "Ada Bright",
+        "aliases": [
+          "Ada",
+          "Archivist"
+        ],
+        "tags": [
+          "character",
+          "lead",
+          "ready"
+        ],
+        "status": "ready",
+        "review_state": "ready",
+        "chapter_ids": [
+          "ch_001"
+        ],
+        "source_refs": [
+          {
+            "source_id": "fixture",
+            "chapter_id": "ch_001",
+            "span_id": "s1"
+          }
+        ]
+      },
+      "tags": [
+        "character",
+        "lead",
+        "ready"
+      ],
+      "outgoing_wikilinks": [
+        {
+          "target": "Places/Farmhouse",
+          "label": "Places/Farmhouse"
+        },
+        {
+          "target": "Copper Key",
+          "label": "Copper Key"
+        },
+        {
+          "target": "Places/Farmhouse",
+          "label": "Places/Farmhouse"
+        },
+        {
+          "target": "Objects/Copper_Key",
+          "label": "Objects/Copper_Key"
+        }
+      ],
+      "backlinks": [
+        "Characters/Bryn_Vale_2.md",
+        "Concepts/Hidden_Archive_2.md"
+      ],
+      "degree": 5
+    },
+    {
+      "path": "Characters/Bryn_Vale_2.md",
+      "title": "Bryn Vale",
+      "frontmatter": {
+        "vaerl_id": "character:bryn",
+        "kind": "character",
+        "canonical_label": "Bryn Vale",
+        "aliases": [
+          "Bryn"
+        ],
+        "tags": [
+          "ally",
+          "character",
+          "ready"
+        ],
+        "status": "ready",
+        "review_state": "ready",
+        "chapter_ids": [
+          "ch_001"
+        ],
+        "source_refs": [
+          {
+            "source_id": "fixture",
+            "chapter_id": "ch_001",
+            "span_id": "s2"
+          }
+        ]
+      },
+      "tags": [
+        "ally",
+        "character",
+        "ready"
+      ],
+      "outgoing_wikilinks": [
+        {
+          "target": "Ada Bright",
+          "label": "Ada Bright"
+        },
+        {
+          "target": "Characters/Ada_Bright",
+          "label": "Characters/Ada_Bright"
+        }
+      ],
+      "backlinks": [],
+      "degree": 1
+    },
+    {
+      "path": "Concepts/Hidden_Archive_2.md",
+      "title": "Hidden Archive",
+      "frontmatter": {
+        "vaerl_id": "concept:hidden_archive",
+        "kind": "concept",
+        "canonical_label": "Hidden Archive",
+        "aliases": [
+          "archive"
+        ],
+        "tags": [
+          "concept",
+          "lore",
+          "ready"
+        ],
+        "status": "ready",
+        "review_state": "ready",
+        "chapter_ids": [
+          "ch_001"
+        ],
+        "source_refs": [
+          {
+            "source_id": "fixture",
+            "chapter_id": "ch_001",
+            "span_id": "s5"
+          }
+        ]
+      },
+      "tags": [
+        "concept",
+        "lore",
+        "ready"
+      ],
+      "outgoing_wikilinks": [
+        {
+          "target": "Ada Bright",
+          "label": "Ada Bright"
+        },
+        {
+          "target": "Characters/Ada_Bright",
+          "label": "Characters/Ada_Bright"
+        }
+      ],
+      "backlinks": [],
+      "degree": 1
+    },
+    {
+      "path": "Events/Cellar_Discovery_2.md",
+      "title": "Cellar Discovery",
+      "frontmatter": {
+        "vaerl_id": "event:cellar_discovery",
+        "kind": "event",
+        "canonical_label": "Cellar Discovery",
+        "aliases": [
+          "discovery"
+        ],
+        "tags": [
+          "event",
+          "ready"
+        ],
+        "status": "ready",
+        "review_state": "ready",
+        "chapter_ids": [
+          "ch_001"
+        ],
+        "source_refs": [
+          {
+            "source_id": "fixture",
+            "chapter_id": "ch_001",
+            "span_id": "s6"
+          }
+        ]
+      },
+      "tags": [
+        "event",
+        "ready"
+      ],
+      "outgoing_wikilinks": [
+        {
+          "target": "Copper Key",
+          "label": "Copper Key"
+        },
+        {
+          "target": "Places/Farmhouse",
+          "label": "Places/Farmhouse"
+        },
+        {
+          "target": "Objects/Copper_Key",
+          "label": "Objects/Copper_Key"
+        },
+        {
+          "target": "Places/Farmhouse",
+          "label": "Places/Farmhouse"
+        }
+      ],
+      "backlinks": [],
+      "degree": 3
+    },
+    {
+      "path": "Objects/Copper_Key_2.md",
+      "title": "Copper Key",
+      "frontmatter": {
+        "vaerl_id": "object:copper_key",
+        "kind": "object",
+        "canonical_label": "Copper Key",
+        "aliases": [
+          "cellar key"
+        ],
+        "tags": [
+          "mystery",
+          "needs_review",
+          "object"
+        ],
+        "status": "needs_review",
+        "review_state": "needs_review",
+        "chapter_ids": [
+          "ch_001"
+        ],
+        "source_refs": [
+          {
+            "source_id": "fixture",
+            "chapter_id": "ch_001",
+            "span_id": "s4"
+          }
+        ]
+      },
+      "tags": [
+        "mystery",
+        "needs_review",
+        "object"
+      ],
+      "outgoing_wikilinks": [
+        {
+          "target": "Places/Farmhouse",
+          "label": "Places/Farmhouse"
+        },
+        {
+          "target": "Places/Farmhouse",
+          "label": "Places/Farmhouse"
+        }
+      ],
+      "backlinks": [
+        "Characters/Ada_Bright_2.md",
+        "Events/Cellar_Discovery_2.md"
+      ],
+      "degree": 4
+    },
+    {
+      "path": "Places/Farmhouse_2.md",
+      "title": "Farmhouse",
+      "frontmatter": {
+        "vaerl_id": "place:farmhouse",
+        "kind": "place",
+        "canonical_label": "Farmhouse",
+        "aliases": [
+          "Old Farm"
+        ],
+        "tags": [
+          "place",
+          "ready",
+          "safehouse"
+        ],
+        "status": "ready",
+        "review_state": "ready",
+        "chapter_ids": [
+          "ch_001"
+        ],
+        "source_refs": [
+          {
+            "source_id": "fixture",
+            "chapter_id": "ch_001",
+            "span_id": "s3"
+          }
+        ]
+      },
+      "tags": [
+        "place",
+        "ready",
+        "safehouse"
+      ],
+      "outgoing_wikilinks": [],
+      "backlinks": [
+        "Chapters/Ch_001.md",
+        "Characters/Ada_Bright_2.md",
+        "Events/Cellar_Discovery_2.md",
+        "Objects/Copper_Key_2.md"
+      ],
+      "degree": 7
+    },
+    {
+      "path": "Reviews/pending.md",
+      "title": "Pending Reviews",
+      "frontmatter": {
+        "vaerl_id": "review:index",
+        "kind": "review",
+        "canonical_label": "Pending Reviews",
+        "aliases": [],
+        "tags": [
+          "review",
+          "needs_review"
+        ],
+        "status": "needs_review",
+        "review_state": "needs_review",
+        "chapter_ids": [],
+        "source_refs": []
+      },
+      "tags": [
+        "needs_review",
+        "review"
+      ],
+      "outgoing_wikilinks": [
+        {
+          "target": "Objects/Copper_Key",
+          "label": "Objects/Copper_Key"
+        }
+      ],
+      "backlinks": [],
+      "degree": 0
+    }
+  ],
+  "nodes": [
+    {
+      "id": "Chapters/Ch_001.md",
+      "label": "Arrival at the Farmhouse",
+      "kind": "chapter",
+      "tags": [
+        "chapter",
+        "ready"
+      ],
+      "degree": 1,
+      "size": 2
+    },
+    {
+      "id": "Characters/Ada_Bright_2.md",
+      "label": "Ada Bright",
+      "kind": "character",
+      "tags": [
+        "character",
+        "lead",
+        "ready"
+      ],
+      "degree": 5,
+      "size": 6
+    },
+    {
+      "id": "Characters/Bryn_Vale_2.md",
+      "label": "Bryn Vale",
+      "kind": "character",
+      "tags": [
+        "ally",
+        "character",
+        "ready"
+      ],
+      "degree": 1,
+      "size": 2
+    },
+    {
+      "id": "Concepts/Hidden_Archive_2.md",
+      "label": "Hidden Archive",
+      "kind": "concept",
+      "tags": [
+        "concept",
+        "lore",
+        "ready"
+      ],
+      "degree": 1,
+      "size": 2
+    },
+    {
+      "id": "Events/Cellar_Discovery_2.md",
+      "label": "Cellar Discovery",
+      "kind": "event",
+      "tags": [
+        "event",
+        "ready"
+      ],
+      "degree": 3,
+      "size": 4
+    },
+    {
+      "id": "Objects/Copper_Key_2.md",
+      "label": "Copper Key",
+      "kind": "object",
+      "tags": [
+        "mystery",
+        "needs_review",
+        "object"
+      ],
+      "degree": 4,
+      "size": 5
+    },
+    {
+      "id": "Places/Farmhouse_2.md",
+      "label": "Farmhouse",
+      "kind": "place",
+      "tags": [
+        "place",
+        "ready",
+        "safehouse"
+      ],
+      "degree": 7,
+      "size": 8
+    },
+    {
+      "id": "Reviews/pending.md",
+      "label": "Pending Reviews",
+      "kind": "review",
+      "tags": [
+        "needs_review",
+        "review"
+      ],
+      "degree": 0,
+      "size": 1
+    }
+  ],
+  "edges": [
+    {
+      "source": "Chapters/Ch_001.md",
+      "target": "Places/Farmhouse_2.md",
+      "label": "Places/Farmhouse"
+    },
+    {
+      "source": "Characters/Ada_Bright_2.md",
+      "target": "Places/Farmhouse_2.md",
+      "label": "Places/Farmhouse"
+    },
+    {
+      "source": "Characters/Ada_Bright_2.md",
+      "target": "Objects/Copper_Key_2.md",
+      "label": "Copper Key"
+    },
+    {
+      "source": "Characters/Ada_Bright_2.md",
+      "target": "Places/Farmhouse_2.md",
+      "label": "Places/Farmhouse"
+    },
+    {
+      "source": "Characters/Bryn_Vale_2.md",
+      "target": "Characters/Ada_Bright_2.md",
+      "label": "Ada Bright"
+    },
+    {
+      "source": "Concepts/Hidden_Archive_2.md",
+      "target": "Characters/Ada_Bright_2.md",
+      "label": "Ada Bright"
+    },
+    {
+      "source": "Events/Cellar_Discovery_2.md",
+      "target": "Objects/Copper_Key_2.md",
+      "label": "Copper Key"
+    },
+    {
+      "source": "Events/Cellar_Discovery_2.md",
+      "target": "Places/Farmhouse_2.md",
+      "label": "Places/Farmhouse"
+    },
+    {
+      "source": "Events/Cellar_Discovery_2.md",
+      "target": "Places/Farmhouse_2.md",
+      "label": "Places/Farmhouse"
+    },
+    {
+      "source": "Objects/Copper_Key_2.md",
+      "target": "Places/Farmhouse_2.md",
+      "label": "Places/Farmhouse"
+    },
+    {
+      "source": "Objects/Copper_Key_2.md",
+      "target": "Places/Farmhouse_2.md",
+      "label": "Places/Farmhouse"
+    }
+  ],
+  "orphan_notes": [
+    "Reviews/pending.md"
+  ],
+  "unresolved_links": [
+    {
+      "source": "Chapters/Ch_001.md",
+      "target": "Characters/Ada_Bright"
+    },
+    {
+      "source": "Chapters/Ch_001.md",
+      "target": "Characters/Bryn_Vale"
+    },
+    {
+      "source": "Chapters/Ch_001.md",
+      "target": "Objects/Copper_Key"
+    },
+    {
+      "source": "Chapters/Ch_001.md",
+      "target": "Concepts/Hidden_Archive"
+    },
+    {
+      "source": "Chapters/Ch_001.md",
+      "target": "Events/Cellar_Discovery"
+    },
+    {
+      "source": "Characters/Ada_Bright_2.md",
+      "target": "Objects/Copper_Key"
+    },
+    {
+      "source": "Characters/Bryn_Vale_2.md",
+      "target": "Characters/Ada_Bright"
+    },
+    {
+      "source": "Concepts/Hidden_Archive_2.md",
+      "target": "Characters/Ada_Bright"
+    },
+    {
+      "source": "Events/Cellar_Discovery_2.md",
+      "target": "Objects/Copper_Key"
+    },
+    {
+      "source": "Reviews/pending.md",
+      "target": "Objects/Copper_Key"
+    }
+  ],
+  "tags": [
+    "ally",
+    "chapter",
+    "character",
+    "concept",
+    "event",
+    "lead",
+    "lore",
+    "mystery",
+    "needs_review",
+    "object",
+    "place",
+    "ready",
+    "review",
+    "safehouse"
+  ],
+  "note_count": 8,
+  "edge_count": 11
+}

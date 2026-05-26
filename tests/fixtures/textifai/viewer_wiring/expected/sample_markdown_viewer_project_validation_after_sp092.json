@@ -1,0 +1,17 @@
+{
+  "assessment": "sample_markdown_viewer_project_valid",
+  "project_root": "tests/fixtures/textifai/viewer_wiring/input/sample_markdown_viewer_project_after_sp092",
+  "project_discovered": true,
+  "project_id": "home__david__projects__autonovel-fork__tests__fixtures__textifai__viewer_wiring__input__sample_markdown_viewer_project_after_sp092",
+  "has_markdown_manifest": true,
+  "has_markdown_graph_index": true,
+  "note_count": 8,
+  "graph_node_count": 8,
+  "graph_edge_count": 11,
+  "overview": {
+    "chapters_processed": 1,
+    "markdown_note_count": 8,
+    "orphan_note_count": 1,
+    "unresolved_link_count": 10
+  }
+}

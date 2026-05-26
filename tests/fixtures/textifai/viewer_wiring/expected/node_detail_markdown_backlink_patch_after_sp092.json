@@ -1,0 +1,21 @@
+{
+  "assessment": "node_detail_markdown_backlink_patch_applied",
+  "node_detail_fields": [
+    "label",
+    "kind",
+    "role",
+    "tags",
+    "degree",
+    "backlinks_count",
+    "outgoing_count",
+    "note_path",
+    "frontmatter",
+    "markdown",
+    "backlinks",
+    "outgoing_wikilinks",
+    "local_graph"
+  ],
+  "uses_markdown_when_available": true,
+  "vaerl_fallback_when_no_note": true,
+  "avoids_debug_only_dependency": true
+}

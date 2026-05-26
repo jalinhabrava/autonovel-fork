@@ -1,0 +1,23 @@
+{
+  "assessment": "open_design_first_review_partial",
+  "used_open_design": false,
+  "output_path_private": "/tmp/textifai_private_provider_runs/sp093_markdown_wiki_viewer_open_design/20260526T155501Z/open_design_outputs/textifai_design_review_sp093.md",
+  "evaluated_surfaces": [
+    "dashboard",
+    "graph",
+    "wiki_browser",
+    "node_detail",
+    "editor_ai_shell"
+  ],
+  "key_recommendations": [
+    "keep author CTA first",
+    "local graph toggle near filters",
+    "surface backlinks/outgoing near note title",
+    "lead node detail with narrative facts/aliases"
+  ],
+  "next_design_actions": [
+    "switch to Node 24 and run tools-dev web",
+    "execute design-review skill on live viewer shell"
+  ],
+  "blocked_reason": "daemon/web runtime blocked by Node 24 requirement"
+}

@@ -62,3 +62,31 @@
 - Graph should be navigable before decorative.
 - Detail panel should summarize before dumping.
 - Debug artifacts belong behind secondary surfaces.
+
+## Graph Readability Acceptance (SP-093)
+- Degree-based radius visible at glance.
+- Local graph mode toggles neighborhood focus.
+- Kind/status/tag filters reduce noise fast.
+- Edge labels readable on medium density graphs.
+- Selected node context stays visible while panning.
+
+## Wiki / Browser Acceptance (SP-093)
+- Wiki tab exposes Markdown notes as primary knowledge surface.
+- Search + kind/tag/status filters work together.
+- Backlinks and outgoing links are visible in note detail.
+- Frontmatter summary is visible without opening raw artifacts.
+
+## Node Detail Acceptance (SP-093)
+- Node panel includes tags, degree, backlink/outgoing counts.
+- Markdown note metadata is visible when note exists.
+- VaERL fallback appears only when note missing.
+
+## Open Design Dev Usage
+- Setup and MCP/Codex snippet: `docs/textifai-open-design-codex-setup.md`.
+- Open Design is dev-only tooling; never runtime dependency.
+
+## Design Review Cadence
+- Run lightweight checklist every viewer patch.
+- Run deep Open Design review every major UI safepoint.
+- Carry top 3 visual/UX deltas into next implementation phase.
+

@@ -1,0 +1,21 @@
+{
+  "assessment": "graph_readability_v1_applied",
+  "node_sizing_rule": "radius = base_by_role + degree factor (capped)",
+  "collision_strategy": "force repulsion weighted by node radii + desired edge distance by node radii",
+  "filters": [
+    "hide system",
+    "hide review",
+    "hide chapters",
+    "kind",
+    "status",
+    "tag hide chips"
+  ],
+  "local_graph_support": "checkbox local graph uses selected node neighborhood",
+  "selected_node_highlight": true,
+  "edge_labels": "inline edge label text + title",
+  "graph_legend": "high/low degree legend",
+  "limitations": [
+    "layout still force-heuristic",
+    "label overlap may occur on dense graphs"
+  ]
+}

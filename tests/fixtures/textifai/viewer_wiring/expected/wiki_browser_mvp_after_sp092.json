@@ -1,0 +1,27 @@
+{
+  "assessment": "wiki_browser_mvp_implemented",
+  "features_implemented": [
+    "Wiki tab label",
+    "note list",
+    "search by title/path/tag/alias",
+    "filter by kind/tag/status",
+    "note detail markdown render",
+    "frontmatter panel",
+    "backlinks panel",
+    "outgoing links panel",
+    "tags badges",
+    "degree metrics",
+    "local graph summary"
+  ],
+  "limitations": [
+    "read-only",
+    "no markdown edit/write-back",
+    "no fulltext index beyond in-memory list"
+  ],
+  "data_source": [
+    "project.notes",
+    "api/projects/<id>/note",
+    "markdown_graph_index"
+  ],
+  "read_only": true
+}

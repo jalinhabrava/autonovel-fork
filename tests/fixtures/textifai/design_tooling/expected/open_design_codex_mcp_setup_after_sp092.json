@@ -1,0 +1,9 @@
+{
+  "assessment": "open_design_codex_mcp_setup_documented",
+  "setup_doc": "docs/textifai-open-design-codex-setup.md",
+  "mcp_command": "node /tmp/textifai_dev_tools/open-design/apps/daemon/dist/cli.js mcp --daemon-url http://127.0.0.1:7457",
+  "snippet_included": true,
+  "global_config_modified": false,
+  "requires_node24_for_live_daemon": true,
+  "dev_only_warning": true
+}

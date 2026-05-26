@@ -176,6 +176,13 @@ button:hover, button.active {
   padding: 10px 13px;
 }
 
+.wiki-filters {
+  display: grid;
+  grid-template-columns: 1.5fr repeat(3, minmax(120px, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -1134,6 +1141,21 @@ button:hover, button.active {
   margin-bottom: 12px;
   flex-wrap: wrap;
 }
+.graph-legend {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--muted);
+  font-size: 12px;
+}
+.legend-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.legend-dot.low { background: #8fb3af; }
 .graph-zoom-controls {
   display: flex;
   gap: 8px;
@@ -1182,6 +1204,14 @@ button:hover, button.active {
 }
 #graph-svg:active { cursor: grabbing; }
 .edge { stroke: rgba(32, 33, 28, 0.22); stroke-width: 1.2; }
+.edge-label {
+  fill: #7a6d58;
+  font-size: 10px;
+  paint-order: stroke;
+  stroke: rgba(255, 250, 240, 0.86);
+  stroke-width: 2px;
+  pointer-events: none;
+}
 .node { cursor: pointer; }
 .node circle { stroke: white; stroke-width: 2; }
 .node text { font-size: 12px; paint-order: stroke; stroke: #fffaf0; stroke-width: 4px; fill: var(--ink); }

@@ -1,0 +1,15 @@
+{
+  "assessment": "markdown_wiki_viewer_partial_open_design_ready",
+  "ready": [
+    "project_reader manifest/index wiring",
+    "wiki browser mvp",
+    "graph index-backed graph",
+    "dashboard markdown metrics"
+  ],
+  "partial": [
+    "graph overlap still possible in dense sets",
+    "no markdown editor/write-back yet"
+  ],
+  "blocks_author_review": [],
+  "recommended_next_phase": "Phase 1.3.M-b5c-4w — Editable Wiki + VaERL Patch Proposal Queue + Graph Layout Refinement"
+}

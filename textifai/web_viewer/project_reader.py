@@ -7,6 +7,7 @@ from typing import Any
 
 from textifai.obsidian.parser import extract_obsidian_links, parse_obsidian_frontmatter
 from vault.schema import slugify
+from textifai.import_review.markdown_graph_index import build_markdown_graph_index, local_graph
 from textifai.import_review.viewer_graph_adapter import adapt_ingestion_graph_to_viewer_graph
 
 
@@ -26,6 +27,8 @@ VISIBLE_ARTIFACTS = [
     "primary_note_synthesis_audit.json",
     "obsidian_relationship_reconciliation_audit.json",
     "ingestion_graph.json",
+    "markdown_manifest.json",
+    "markdown_graph_index.json",
 ]
 
 HEALTH_EXPECTED_ARTIFACTS = [
@@ -84,6 +87,8 @@ class ProjectCatalog:
         review_queue = _read_json(system / "review_queue.json") if system else None
         invariants = _read_json(system / "semantic_invariants_audit.json") if system else None
         ingestion_graph = _read_json(system / "ingestion_graph.json") if system else None
+        markdown_manifest = read_markdown_manifest(project)
+        markdown_index = read_markdown_graph_index(project)
         entities = obsidian_import.get("entities") if isinstance(obsidian_import, dict) else []
         chapters = obsidian_import.get("chapters") if isinstance(obsidian_import, dict) else []
         primary_count = sum(1 for item in entities or [] if _is_primary(item))
@@ -95,7 +100,15 @@ class ProjectCatalog:
             if isinstance(metadata, dict):
                 graph_summary = metadata.get("graph_summary") if isinstance(metadata.get("graph_summary"), dict) else {}
                 writer_outcome = metadata.get("writer_outcome") if isinstance(metadata.get("writer_outcome"), dict) else {}
-        chapter_count = int(writer_outcome.get("total_chapters") or len(chapters or []) or len((ingestion_graph or {}).get("metadata", {}).get("chapters") or []))
+        if not graph_summary and isinstance(markdown_index, dict):
+            graph_summary = {
+                "node_count": len(markdown_index.get("nodes") or []),
+                "edge_count": len(markdown_index.get("edges") or []),
+                "node_counts_by_kind": _count_nodes_by_kind([node for node in markdown_index.get("nodes") or [] if isinstance(node, dict)]),
+                "synthetic_label_count": 0,
+            }
+        markdown_chapter_count = sum(1 for note in (markdown_manifest or {}).get("notes", []) if isinstance(note, dict) and str(note.get("kind") or "") == "chapter")
+        chapter_count = int(writer_outcome.get("total_chapters") or len(chapters or []) or len((ingestion_graph or {}).get("metadata", {}).get("chapters") or []) or markdown_chapter_count)
         synthetic_label_count = graph_summary.get("synthetic_label_count")
         recommended = bool(graph_summary) and synthetic_label_count == 0 and str(project.name).endswith("sp089")
         return {
@@ -113,6 +126,10 @@ class ProjectCatalog:
             "review_queue_count": review_queue.get("item_count") if isinstance(review_queue, dict) else None,
             "invariants_status": invariants.get("status") if isinstance(invariants, dict) else None,
             "has_ingestion_graph": isinstance(ingestion_graph, dict),
+            "has_markdown_manifest": isinstance(markdown_manifest, dict),
+            "has_markdown_graph_index": isinstance(markdown_index, dict),
+            "markdown_note_count": markdown_manifest.get("note_count") if isinstance(markdown_manifest, dict) else None,
+            "markdown_unresolved_link_count": len(markdown_index.get("unresolved_links") or []) if isinstance(markdown_index, dict) else None,
             "graph_summary": graph_summary,
             "writer_outcome": writer_outcome,
             "recommended": recommended,
@@ -123,11 +140,13 @@ def read_project(project: ProjectRef) -> dict[str, Any]:
     canon = read_canon(project)
     artifacts = list_artifacts(project)
     graph = build_graph(project, canon=canon)
+    markdown_manifest = read_markdown_manifest(project) or {}
+    markdown_graph_index = read_markdown_graph_index(project) or {}
     graph_metadata = graph.get("metadata") if isinstance(graph, dict) else {}
-    writer_outcome = graph_metadata.get("writer_outcome") if isinstance(graph_metadata, dict) else {}
-    graph_summary = graph_metadata.get("graph_summary") if isinstance(graph_metadata, dict) else {}
+    writer_outcome = graph_metadata.get("writer_outcome") if isinstance(graph_metadata, dict) and isinstance(graph_metadata.get("writer_outcome"), dict) else {}
+    graph_summary = graph_metadata.get("graph_summary") if isinstance(graph_metadata, dict) and isinstance(graph_metadata.get("graph_summary"), dict) else {}
     overview = {
-        "chapters_processed": writer_outcome.get("total_chapters") or len(graph_metadata.get("chapters") or canon.get("chapters") or []),
+        "chapters_processed": writer_outcome.get("total_chapters") or len(graph_metadata.get("chapters") or canon.get("chapters") or []) or sum(1 for note in markdown_manifest.get("notes", []) if isinstance(note, dict) and str(note.get("kind") or "") == "chapter"),
         "chapters_ready": writer_outcome.get("chapters_ready"),
         "chapters_ready_with_warnings": writer_outcome.get("chapters_ready_with_warnings"),
         "chapters_needing_retry": writer_outcome.get("chapters_needing_retry"),
@@ -140,6 +159,12 @@ def read_project(project: ProjectRef) -> dict[str, Any]:
         "relationship_count": graph_summary.get("edge_count") if isinstance(graph_summary, dict) else None,
         "warning_summary": (graph_metadata.get("warnings") or [])[:12] if isinstance(graph_metadata, dict) else [],
         "synthetic_label_count": graph_summary.get("synthetic_label_count") if isinstance(graph_summary, dict) else None,
+        "markdown_note_count": markdown_manifest.get("note_count") or markdown_graph_index.get("note_count"),
+        "markdown_graph_edge_count": markdown_graph_index.get("edge_count"),
+        "markdown_tag_count": len(markdown_graph_index.get("tags") or []),
+        "orphan_note_count": len(markdown_graph_index.get("orphan_notes") or []),
+        "unresolved_link_count": len(markdown_graph_index.get("unresolved_links") or []),
+        "next_action_cta": "Open Wiki to review notes, backlinks, tags, and local graph context.",
     }
     return {
         "project": {
@@ -149,7 +174,9 @@ def read_project(project: ProjectRef) -> dict[str, Any]:
             "root": str(project.root),
             "system_root": str(project.system_root) if project.system_root else None,
         },
-        "notes": list_notes(project.root),
+        "notes": list_notes(project.root, markdown_manifest=markdown_manifest, markdown_index=markdown_graph_index),
+        "markdown_manifest": markdown_manifest,
+        "markdown_graph_index": markdown_graph_index,
         "canon": canon,
         "artifacts": artifacts,
         "graph": graph,
@@ -160,8 +187,23 @@ def read_project(project: ProjectRef) -> dict[str, Any]:
     }
 
 
-def list_notes(root: Path) -> list[dict[str, Any]]:
+def list_notes(
+    root: Path,
+    *,
+    markdown_manifest: dict[str, Any] | None = None,
+    markdown_index: dict[str, Any] | None = None,
+) -> list[dict[str, Any]]:
     notes: list[dict[str, Any]] = []
+    manifest_by_path = {
+        str(note.get("path") or ""): note
+        for note in (markdown_manifest or {}).get("notes", [])
+        if isinstance(note, dict)
+    }
+    index_by_path = {
+        str(note.get("path") or ""): note
+        for note in (markdown_index or {}).get("notes", [])
+        if isinstance(note, dict)
+    }
     for path in sorted(root.rglob("*.md")):
         if any(part.startswith(".") for part in path.relative_to(root).parts):
             continue
@@ -169,15 +211,25 @@ def list_notes(root: Path) -> list[dict[str, Any]]:
         text = path.read_text(encoding="utf-8", errors="replace")
         frontmatter = parse_obsidian_frontmatter(text)
         tags = _tags_from_frontmatter(frontmatter)
+        manifest_note = manifest_by_path.get(rel, {})
+        index_note = index_by_path.get(rel, {})
+        merged_tags = sorted(set([*tags, *(manifest_note.get("tags") or []), *(index_note.get("tags") or [])]))
         notes.append(
             {
                 "path": rel,
-                "name": path.stem,
+                "name": manifest_note.get("title") or frontmatter.get("canonical_label") or path.stem,
                 "folder": path.parent.relative_to(root).as_posix() if path.parent != root else "",
                 "frontmatter": frontmatter,
-                "tags": tags,
+                "tags": merged_tags,
                 "role": _note_role(path, frontmatter),
                 "mtime": path.stat().st_mtime,
+                "kind": frontmatter.get("kind") or manifest_note.get("kind") or "note",
+                "status": frontmatter.get("status") or manifest_note.get("status"),
+                "review_state": frontmatter.get("review_state") or manifest_note.get("review_state"),
+                "aliases": frontmatter.get("aliases") or manifest_note.get("aliases") or [],
+                "backlinks": index_note.get("backlinks") or [],
+                "outgoing_wikilinks": index_note.get("outgoing_wikilinks") or [],
+                "degree": index_note.get("degree") or 0,
             }
         )
     return notes
@@ -188,11 +240,20 @@ def read_note(project: ProjectRef, note_path: str) -> dict[str, Any]:
     if path.suffix != ".md" or not path.exists():
         raise FileNotFoundError(note_path)
     text = path.read_text(encoding="utf-8", errors="replace")
+    rel = path.relative_to(project.root).as_posix()
+    frontmatter = parse_obsidian_frontmatter(text)
+    markdown_index = read_markdown_graph_index(project) or {}
+    indexed_note = _markdown_index_note(markdown_index, rel)
     return {
-        "path": path.relative_to(project.root).as_posix(),
+        "path": rel,
         "markdown": text,
-        "frontmatter": parse_obsidian_frontmatter(text),
+        "frontmatter": frontmatter,
         "links": extract_obsidian_links(text),
+        "tags": indexed_note.get("tags") or _tags_from_frontmatter(frontmatter),
+        "backlinks": indexed_note.get("backlinks") or [],
+        "outgoing_wikilinks": indexed_note.get("outgoing_wikilinks") or [],
+        "degree": indexed_note.get("degree") or 0,
+        "local_graph": local_graph(markdown_index, rel, depth=1) if isinstance(markdown_index, dict) and markdown_index.get("nodes") else {},
     }
 
 
@@ -255,6 +316,10 @@ def read_artifact(project: ProjectRef, artifact_path: str) -> dict[str, Any]:
 
 
 def build_graph(project: ProjectRef, canon: dict[str, Any] | None = None) -> dict[str, Any]:
+    markdown_graph = _build_graph_from_markdown_index(project)
+    if markdown_graph is not None:
+        return markdown_graph
+
     ingestion_graph = _build_graph_from_ingestion_artifact(project)
     if ingestion_graph is not None:
         return ingestion_graph
@@ -637,13 +702,126 @@ def _graph_chapter_payload(chapter: dict[str, Any]) -> dict[str, Any]:
 
 def _project_from_candidate(path: Path) -> ProjectRef | None:
     system = path / "99_System"
-    has_system_artifacts = lambda root: any((root / name).exists() for name in ("obsidian_import.json", "review_queue.json", "ingestion_graph.json"))
+    has_system_artifacts = lambda root: any((root / name).exists() for name in ("obsidian_import.json", "review_queue.json", "ingestion_graph.json", "markdown_manifest.json", "markdown_graph_index.json"))
+    has_markdown_manifest = lambda root: any((root / name).exists() for name in ("System/materialization_manifest.json", "System/markdown_manifest.json", "99_System/markdown_manifest.json"))
     if system.exists() and has_system_artifacts(system):
         return ProjectRef(project_id=_project_id(path), name=path.name, root=path, system_root=system, kind="vault_or_run")
     if path.name == "99_System" and has_system_artifacts(path):
         root = path.parent
         return ProjectRef(project_id=_project_id(root), name=root.name, root=root, system_root=path, kind="system_run")
+    if has_markdown_manifest(path):
+        return ProjectRef(project_id=_project_id(path), name=path.name, root=path, system_root=system if system.exists() else path / "System", kind="markdown_vault")
     return None
+
+def _markdown_manifest_candidates(project: ProjectRef) -> list[Path]:
+    candidates: list[Path] = []
+    if project.system_root:
+        candidates.extend([
+            project.system_root / "markdown_manifest.json",
+            project.system_root / "materialization_manifest.json",
+        ])
+    candidates.extend([
+        project.root / "99_System" / "markdown_manifest.json",
+        project.root / "System" / "materialization_manifest.json",
+        project.root / "System" / "markdown_manifest.json",
+    ])
+    return candidates
+
+def _markdown_index_candidates(project: ProjectRef) -> list[Path]:
+    candidates: list[Path] = []
+    if project.system_root:
+        candidates.append(project.system_root / "markdown_graph_index.json")
+    candidates.extend([
+        project.root / "99_System" / "markdown_graph_index.json",
+        project.root / "System" / "markdown_graph_index.json",
+    ])
+    return candidates
+
+def read_markdown_manifest(project: ProjectRef) -> dict[str, Any] | None:
+    for path in _markdown_manifest_candidates(project):
+        payload = _read_json(path)
+        if isinstance(payload, dict) and isinstance(payload.get("notes"), list):
+            return payload
+    return None
+
+def read_markdown_graph_index(project: ProjectRef) -> dict[str, Any] | None:
+    for path in _markdown_index_candidates(project):
+        payload = _read_json(path)
+        if isinstance(payload, dict) and isinstance(payload.get("nodes"), list):
+            return payload
+    if read_markdown_manifest(project):
+        try:
+            return build_markdown_graph_index(project.root)
+        except OSError:
+            return None
+    return None
+
+def _markdown_index_note(markdown_index: dict[str, Any], note_path: str) -> dict[str, Any]:
+    for note in markdown_index.get("notes") or []:
+        if isinstance(note, dict) and note.get("path") == note_path:
+            return note
+    return {}
+
+def _build_graph_from_markdown_index(project: ProjectRef) -> dict[str, Any] | None:
+    markdown_index = read_markdown_graph_index(project)
+    if not isinstance(markdown_index, dict) or not markdown_index.get("nodes"):
+        return None
+    notes_by_path = {
+        str(note.get("path") or ""): note
+        for note in markdown_index.get("notes") or []
+        if isinstance(note, dict)
+    }
+    nodes: list[dict[str, Any]] = []
+    for node in markdown_index.get("nodes") or []:
+        if not isinstance(node, dict):
+            continue
+        note_path = str(node.get("id") or "")
+        note = notes_by_path.get(note_path, {})
+        frontmatter = note.get("frontmatter") if isinstance(note.get("frontmatter"), dict) else {}
+        kind = str(node.get("kind") or frontmatter.get("kind") or "note")
+        role = "chapter" if kind == "chapter" else "review" if kind == "review" or frontmatter.get("review_state") == "needs_review" else "primary"
+        nodes.append({
+            "id": note_path,
+            "label": node.get("label") or frontmatter.get("canonical_label") or Path(note_path).stem,
+            "kind": kind,
+            "role": role,
+            "tags": node.get("tags") or note.get("tags") or [],
+            "note_path": note_path,
+            "degree": node.get("degree") or note.get("degree") or 0,
+            "size": node.get("size") or 1 + int(node.get("degree") or note.get("degree") or 0),
+            "frontmatter": frontmatter,
+            "backlinks": note.get("backlinks") or [],
+            "outgoing_wikilinks": note.get("outgoing_wikilinks") or [],
+        })
+    edges = [
+        {
+            "source": edge.get("source"),
+            "target": edge.get("target"),
+            "type": edge.get("label") or "wikilink",
+            "label": edge.get("label") or "wikilink",
+        }
+        for edge in markdown_index.get("edges") or []
+        if isinstance(edge, dict) and edge.get("source") and edge.get("target")
+    ]
+    return {
+        "nodes": nodes,
+        "edges": edges,
+        "metadata": {
+            "source": "markdown_graph_index",
+            "graph_summary": {
+                "node_count": len(nodes),
+                "edge_count": len(edges),
+                "node_counts_by_kind": _count_nodes_by_kind(nodes),
+                "synthetic_label_count": 0,
+            },
+            "markdown_summary": {
+                "note_count": markdown_index.get("note_count"),
+                "orphan_note_count": len(markdown_index.get("orphan_notes") or []),
+                "unresolved_link_count": len(markdown_index.get("unresolved_links") or []),
+                "tags": markdown_index.get("tags") or [],
+            },
+        },
+    }
 
 
 def _build_graph_from_ingestion_artifact(project: ProjectRef) -> dict[str, Any] | None:
@@ -745,6 +923,13 @@ def _guess_chapter_note_path(root: Path, chapter: dict[str, Any]) -> str | None:
 
 def _key(value: Any) -> str:
     return slugify(str(value or "")).strip("_")
+
+def _count_nodes_by_kind(nodes: list[dict[str, Any]]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for node in nodes:
+        kind = str(node.get("kind") or "unknown")
+        counts[kind] = counts.get(kind, 0) + 1
+    return counts
 
 
 def _check_status(check: Any) -> str:

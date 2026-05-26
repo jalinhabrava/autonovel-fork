@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>TextifAI Run Viewer</title>
+    <title>TextifAI VaERL Viewer</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
@@ -13,7 +13,7 @@
           <span class="brand-mark">T</span>
           <div>
             <h1>TextifAI Viewer</h1>
-            <p>Internal run/vault inspection</p>
+            <p>VaERL knowledge workspace for authors</p>
           </div>
         </div>
         <div class="toolbar">
@@ -31,7 +31,7 @@
           </div>
           <nav class="tabs">
             <button data-view="overview" class="active">Overview</button>
-            <button data-view="notes">Notes</button>
+            <button data-view="notes">Wiki</button>
             <button data-view="canon">Canon</button>
             <button data-view="review">Review Queue</button>
             <button data-view="graph">Graph</button>
@@ -42,8 +42,14 @@
         <section id="view-overview" class="view active"></section>
         <section id="view-notes" class="view split-view">
           <div class="panel">
-            <h3>Vault / Files</h3>
-            <input id="note-filter" class="search" placeholder="Filter notes..." />
+            <h3>Wiki / Knowledge Base</h3>
+            <p class="muted">Markdown notes projected from VaERL. Read-only in this MVP; edits become future VaERL patch proposals.</p>
+            <div class="wiki-filters">
+              <input id="note-filter" class="search" placeholder="Search title, path, tag, alias..." />
+              <select id="note-kind-filter"><option value="">all kinds</option></select>
+              <select id="note-tag-filter"><option value="">all tags</option></select>
+              <select id="note-status-filter"><option value="">all status</option></select>
+            </div>
             <div id="note-list" class="list"></div>
           </div>
           <div class="panel detail">
@@ -57,9 +63,14 @@
             <label><input type="checkbox" id="hide-system" checked /> hide system</label>
             <label><input type="checkbox" id="hide-review" /> hide review</label>
             <label><input type="checkbox" id="hide-chapters" checked /> hide chapters</label>
+            <label><input type="checkbox" id="local-graph-mode" /> local graph</label>
             <select id="graph-kind-filter">
               <option value="">all kinds</option>
             </select>
+            <select id="graph-status-filter">
+              <option value="">all status</option>
+            </select>
+            <div class="graph-legend"><span class="legend-dot high"></span> high degree <span class="legend-dot low"></span> low degree</div>
             <div class="graph-zoom-controls" aria-label="Graph zoom controls">
               <button id="graph-zoom-in" type="button">Zoom +</button>
               <button id="graph-zoom-out" type="button">Zoom -</button>

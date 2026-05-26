@@ -1,0 +1,86 @@
+{
+  "assessment": "viewer_wiring_inventory_recorded",
+  "existing_endpoints": [
+    "/api/projects",
+    "/api/projects/<id>",
+    "/api/projects/<id>/graph",
+    "/api/projects/<id>/note?path=",
+    "/api/projects/<id>/artifacts",
+    "/api/projects/<id>/artifact?path="
+  ],
+  "current_data_contract": {
+    "project_keys": [
+      "artifacts",
+      "canon",
+      "canonicalization",
+      "graph",
+      "health",
+      "markdown_graph_index",
+      "markdown_manifest",
+      "notes",
+      "overview",
+      "project",
+      "writer_outcome"
+    ],
+    "overview_keys": [
+      "chapters_failed",
+      "chapters_needing_retry",
+      "chapters_needing_review",
+      "chapters_processed",
+      "chapters_ready",
+      "chapters_ready_with_warnings",
+      "markdown_graph_edge_count",
+      "markdown_note_count",
+      "markdown_tag_count",
+      "next_action_cta",
+      "node_counts_by_kind",
+      "orphan_note_count",
+      "primary_action",
+      "relationship_count",
+      "secondary_action",
+      "synthetic_label_count",
+      "unresolved_link_count",
+      "user_summary",
+      "warning_summary"
+    ],
+    "note_keys": [
+      "aliases",
+      "backlinks",
+      "degree",
+      "folder",
+      "frontmatter",
+      "kind",
+      "mtime",
+      "name",
+      "outgoing_wikilinks",
+      "path",
+      "review_state",
+      "role",
+      "status",
+      "tags"
+    ]
+  },
+  "markdown_manifest_hook": "read_project() -> markdown_manifest",
+  "markdown_graph_index_hook": "build_graph() prioritizes markdown_graph_index when available",
+  "ui_surfaces": [
+    "overview",
+    "wiki(notes)",
+    "canon",
+    "review",
+    "graph",
+    "artifacts"
+  ],
+  "legacy_routes_kept": [
+    "canon",
+    "review",
+    "artifacts"
+  ],
+  "legacy_to_adapt_or_remove": [
+    "artifacts as primary UX",
+    "notes tab naming ambiguity"
+  ],
+  "adapters_needed": [
+    "viewer reads markdown note metadata",
+    "graph local mode + status filter"
+  ]
+}

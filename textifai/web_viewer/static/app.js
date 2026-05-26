@@ -9,6 +9,7 @@ const state = {
   graphPan: null,
   graphDidPan: false,
   hiddenGraphTags: new Set(),
+  wikiFilters: { query: "", kind: "", tag: "", status: "" },
   selectedCanonEntityKey: null,
   selectedReviewItemId: null,
   navNotice: null,
@@ -224,6 +225,7 @@ async function selectProject(projectId, options = {}) {
   state.navNotice = null;
   state.compareView = { baseId: projectId, candidateId: state.compareView.candidateId || "", loading: false, result: null, error: "" };
   state.hiddenGraphTags = new Set();
+  state.wikiFilters = { query: "", kind: "", tag: "", status: "" };
   state.reviewView = { severity: "", reviewType: "", query: "", sortBy: "severity_desc", quickFilter: "all", candidate: "" };
   if (options.notice) setNavNotice(options.notice, "info");
   else if (!options.preserveNotice) state.navNotice = null;
@@ -280,6 +282,10 @@ function renderOverview() {
       <div class="stat-card"><span>Failed</span><strong>${fmtCount(overview.chapters_failed ?? "—")}</strong></div>
       <div class="stat-card"><span>Relationships</span><strong>${fmtCount(overview.relationship_count ?? (state.current.graph?.edges || []).length)}</strong></div>
       <div class="stat-card"><span>Review Items</span><strong>${fmtCount(queue.item_count)}</strong></div>
+      <div class="stat-card"><span>Wiki Notes</span><strong>${fmtCount(overview.markdown_note_count ?? (state.current.notes || []).length)}</strong></div>
+      <div class="stat-card"><span>Backlink Edges</span><strong>${fmtCount(overview.markdown_graph_edge_count ?? "—")}</strong></div>
+      <div class="stat-card"><span>Tags</span><strong>${fmtCount(overview.markdown_tag_count ?? "—")}</strong></div>
+      <div class="stat-card"><span>Unresolved Links</span><strong>${fmtCount(overview.unresolved_link_count ?? "—")}</strong></div>
     </div>
     ${hasWriterOutcome ? `
       <div class="panel">
@@ -291,6 +297,8 @@ function renderOverview() {
         </div>
         <p class="muted">Primary action: ${escapeHtml((overview.primary_action || {}).label || "not available")}</p>
         <p class="muted">Secondary action: ${escapeHtml((overview.secondary_action || {}).label || "not available")}</p>
+        <div class="nav-actions"><button type="button" id="overview-open-wiki">Open Wiki</button><button type="button" id="overview-open-graph">Open Graph</button></div>
+        <p class="muted">${escapeHtml(overview.next_action_cta || "Review Wiki and Graph before inspecting debug artifacts.")}</p>
         ${warningSummary.length ? `<details><summary>Warnings</summary><ul>${warningSummary.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></details>` : `<p class="muted">Warnings: none highlighted.</p>`}
       </div>
     ` : ""}
@@ -308,6 +316,8 @@ function renderOverview() {
   bindIngestionWizardInteractions();
   bindCompareRunsInteractions();
   bindEntityTriageInteractions();
+  $("overview-open-wiki")?.addEventListener("click", () => setView("notes"));
+  $("overview-open-graph")?.addEventListener("click", () => setView("graph"));
 }
 
 function renderIngestionWizard() {
@@ -1869,15 +1879,43 @@ function renderNotes() {
   if (!state.current) return;
   const notes = state.current.notes || [];
   const filter = $("note-filter");
+  const kindFilter = $("note-kind-filter");
+  const tagFilter = $("note-tag-filter");
+  const statusFilter = $("note-status-filter");
+  const kinds = [...new Set(notes.map((note) => note.kind || note.frontmatter?.kind || note.role).filter(Boolean))].sort();
+  const tags = [...new Set(notes.flatMap((note) => note.tags || []))].sort();
+  const statuses = [...new Set(notes.map((note) => note.review_state || note.status || note.frontmatter?.review_state || note.frontmatter?.status).filter(Boolean))].sort();
+  kindFilter.innerHTML = `<option value="">all kinds</option>${kinds.map((kind) => `<option value="${escapeHtml(kind)}">${escapeHtml(kind)}</option>`).join("")}`;
+  tagFilter.innerHTML = `<option value="">all tags</option>${tags.map((tag) => `<option value="${escapeHtml(tag)}">${escapeHtml(tag)}</option>`).join("")}`;
+  statusFilter.innerHTML = `<option value="">all status</option>${statuses.map((status) => `<option value="${escapeHtml(status)}">${escapeHtml(status)}</option>`).join("")}`;
+  kindFilter.value = state.wikiFilters.kind || "";
+  tagFilter.value = state.wikiFilters.tag || "";
+  statusFilter.value = state.wikiFilters.status || "";
+  filter.value = state.wikiFilters.query || "";
   const draw = () => {
-    const needle = filter.value.toLowerCase();
+    state.wikiFilters = {
+      query: filter.value || "",
+      kind: kindFilter.value || "",
+      tag: tagFilter.value || "",
+      status: statusFilter.value || "",
+    };
+    const needle = state.wikiFilters.query.toLowerCase();
     $("note-list").innerHTML = notes
-      .filter((note) => `${note.path} ${note.tags.join(" ")} ${note.role}`.toLowerCase().includes(needle))
+      .filter((note) => {
+        const searchBlob = `${note.name} ${note.path} ${(note.tags || []).join(" ")} ${note.role} ${(note.aliases || []).join(" ")}`.toLowerCase();
+        if (needle && !searchBlob.includes(needle)) return false;
+        if (state.wikiFilters.kind && (note.kind || note.frontmatter?.kind || note.role) !== state.wikiFilters.kind) return false;
+        if (state.wikiFilters.tag && !(note.tags || []).includes(state.wikiFilters.tag)) return false;
+        const noteStatus = note.review_state || note.status || note.frontmatter?.review_state || note.frontmatter?.status || "";
+        if (state.wikiFilters.status && noteStatus !== state.wikiFilters.status) return false;
+        return true;
+      })
       .map((note) => `
         <div class="list-item" data-note="${escapeHtml(note.path)}">
           <strong>${escapeHtml(note.name)}</strong>
           <small>${escapeHtml(note.path)}</small>
-          <small>${escapeHtml(note.role)} ${note.tags.map((tag) => `<span class="badge">${escapeHtml(tag)}</span>`).join("")}</small>
+          <small>${escapeHtml(note.kind || note.role)} · degree ${escapeHtml(fmtCount(note.degree || 0))} · backlinks ${escapeHtml(fmtCount((note.backlinks || []).length))}</small>
+          <small>${(note.tags || []).map((tag) => `<span class="badge">${escapeHtml(tag)}</span>`).join("")}</small>
         </div>
       `).join("");
     document.querySelectorAll("[data-note]").forEach((node) => {
@@ -1885,14 +1923,25 @@ function renderNotes() {
     });
   };
   filter.oninput = draw;
+  kindFilter.onchange = draw;
+  tagFilter.onchange = draw;
+  statusFilter.onchange = draw;
   draw();
 }
 
 async function openNote(path) {
   const data = await api(`/api/projects/${encodeURIComponent(state.currentId)}/note?path=${encodeURIComponent(path)}`);
+  const backlinks = data.backlinks || [];
+  const outgoing = data.outgoing_wikilinks || [];
+  const local = data.local_graph || {};
   $("note-detail").innerHTML = `
     <h3>${escapeHtml(data.path)}</h3>
+    <p>${(data.tags || []).map((tag) => `<span class="badge tag-badge">${escapeHtml(tag)}</span>`).join("")}</p>
+    <p class="muted">Degree ${escapeHtml(fmtCount(data.degree || 0))} · backlinks ${escapeHtml(fmtCount(backlinks.length))} · outgoing ${escapeHtml(fmtCount(outgoing.length))}</p>
     <details open><summary>Frontmatter</summary><pre class="frontmatter">${escapeHtml(JSON.stringify(data.frontmatter || {}, null, 2))}</pre></details>
+    ${backlinks.length ? `<details open><summary>Backlinks</summary><ul>${backlinks.map((item) => `<li><a href="#" class="wikilink" data-wikilink="${escapeHtml(item)}">${escapeHtml(item)}</a></li>`).join("")}</ul></details>` : `<p class="muted">Backlinks: none.</p>`}
+    ${outgoing.length ? `<details open><summary>Outgoing links</summary><ul>${outgoing.map((item) => `<li><a href="#" class="wikilink" data-wikilink="${escapeHtml(item.target || item.label || "")}">[[${escapeHtml(item.label || item.target || "") }]]</a></li>`).join("")}</ul></details>` : `<p class="muted">Outgoing links: none.</p>`}
+    ${(local.nodes || []).length ? `<details><summary>Local graph</summary><p class="muted">Nodes ${escapeHtml(fmtCount((local.nodes || []).length))} · edges ${escapeHtml(fmtCount((local.edges || []).length))}</p></details>` : ""}
     <article class="markdown">${renderMarkdown(data.markdown || "")}</article>
   `;
   attachWikiLinkHandlers($("note-detail"));
@@ -3036,23 +3085,39 @@ function renderGraph() {
   const hideSystem = $("hide-system").checked;
   const hideReview = $("hide-review").checked;
   const hideChapters = $("hide-chapters").checked;
+  const localGraphMode = $("local-graph-mode")?.checked;
   const kindFilter = $("graph-kind-filter").value;
+  const statusFilter = $("graph-status-filter").value;
   const kinds = [...new Set(graph.nodes.map((node) => node.kind).filter(Boolean))].sort();
   const tags = [...new Set(graph.nodes.flatMap((node) => node.tags || []))].sort();
+  const statuses = [...new Set(graph.nodes.map((node) => node.frontmatter?.review_state || node.frontmatter?.status || node.role).filter(Boolean))].sort();
   if (!$("graph-kind-filter").dataset.ready) {
     $("graph-kind-filter").innerHTML = `<option value="">all kinds</option>${kinds.map((kind) => `<option value="${escapeHtml(kind)}">${escapeHtml(kind)}</option>`).join("")}`;
+    $("graph-status-filter").innerHTML = `<option value="">all status</option>${statuses.map((status) => `<option value="${escapeHtml(status)}">${escapeHtml(status)}</option>`).join("")}`;
     $("graph-kind-filter").dataset.ready = "1";
     $("graph-kind-filter").onchange = renderGraph;
+    $("graph-status-filter").onchange = renderGraph;
+    $("local-graph-mode").onchange = renderGraph;
   }
   renderGraphTagFilter(tags);
-  const visibleNodes = graph.nodes.filter((node) => {
+  let visibleNodes = graph.nodes.filter((node) => {
     if (hideSystem && node.role === "system") return false;
     if (hideReview && node.role === "review") return false;
     if (hideChapters && node.role === "chapter") return false;
     if (kindFilter && node.kind !== kindFilter) return false;
+    const nodeStatus = node.frontmatter?.review_state || node.frontmatter?.status || node.role || "";
+    if (statusFilter && nodeStatus !== statusFilter) return false;
     if ((node.tags || []).some((tag) => state.hiddenGraphTags.has(tag))) return false;
     return true;
   });
+  if (localGraphMode && state.selectedGraphNodeId) {
+    const neighborIds = new Set([state.selectedGraphNodeId]);
+    for (const edge of graph.edges || []) {
+      if (edge.source === state.selectedGraphNodeId) neighborIds.add(edge.target);
+      if (edge.target === state.selectedGraphNodeId) neighborIds.add(edge.source);
+    }
+    visibleNodes = visibleNodes.filter((node) => neighborIds.has(node.id));
+  }
   const visibleIds = new Set(visibleNodes.map((node) => node.id));
   const visibleEdges = graph.edges.filter((edge) => visibleIds.has(edge.source) && visibleIds.has(edge.target));
   drawForceGraph(visibleNodes, visibleEdges);
@@ -3096,14 +3161,14 @@ function drawForceGraph(nodes, edges) {
     <g class="nodes">
     ${Object.values(byId).map((node) => `
       <g class="node ${node.id === state.selectedGraphNodeId ? "selected" : ""}" data-node="${escapeHtml(node.id)}" transform="translate(${node.x}, ${node.y})">
-        <circle r="${node.role === "primary" ? 11 : 8}" fill="${nodeColor(node)}"></circle>
-        <text x="14" y="4">${escapeHtml(node.label)}</text>
+        <circle r="${graphNodeRadius(node)}" fill="${nodeColor(node)}"></circle>
+        <text x="${graphNodeRadius(node) + 4}" y="4">${escapeHtml(node.label)}</text>
       </g>
     `).join("")}
     </g>
   `;
   const edgeLayer = svg.querySelector(".edges");
-  edgeLayer.innerHTML = edges.map((edge, index) => `<line class="edge" data-edge="${index}"><title>${escapeHtml(edge.type)}</title></line>`).join("");
+  edgeLayer.innerHTML = edges.map((edge, index) => `<g class="edge-group" data-edge-group="${index}"><line class="edge" data-edge="${index}"><title>${escapeHtml(edge.label || edge.type || "")}</title></line><text class="edge-label">${escapeHtml(edge.label || edge.type || "")}</text></g>`).join("");
   applyGraphViewBox();
   bindGraphViewportHandlers(svg);
 
@@ -3156,7 +3221,8 @@ function runForceTick(byId, edges, width, height, tick) {
       const dx = a.x - b.x || 0.01;
       const dy = a.y - b.y || 0.01;
       const dist2 = dx * dx + dy * dy;
-      const force = Math.min(4500 / dist2, 2.4) * cooling;
+      const minDistance = graphNodeRadius(a) + graphNodeRadius(b) + 22;
+      const force = Math.min((4500 + minDistance * 120) / dist2, 3.2) * cooling;
       a.vx += dx * force * 0.012;
       a.vy += dy * force * 0.012;
       b.vx -= dx * force * 0.012;
@@ -3169,7 +3235,7 @@ function runForceTick(byId, edges, width, height, tick) {
     const dx = b.x - a.x;
     const dy = b.y - a.y;
     const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-    const desired = 120;
+    const desired = Math.max(120, graphNodeRadius(a) + graphNodeRadius(b) + 68);
     const force = (dist - desired) * 0.006 * cooling;
     const fx = (dx / dist) * force;
     const fy = (dy / dist) * force;
@@ -3198,12 +3264,27 @@ function updateGraphDom(svg, byId, edges) {
     line.setAttribute("x2", b.x);
     line.setAttribute("y2", b.y);
   });
+  svg.querySelectorAll("[data-edge-group]").forEach((groupEl) => {
+    const edge = edges[Number(groupEl.dataset.edgeGroup)];
+    const a = byId[edge.source], b = byId[edge.target];
+    if (!a || !b) return;
+    const label = groupEl.querySelector(".edge-label");
+    if (!label) return;
+    label.setAttribute("x", (a.x + b.x) / 2);
+    label.setAttribute("y", (a.y + b.y) / 2 - 4);
+  });
   svg.querySelectorAll("[data-node]").forEach((nodeEl) => {
     const node = byId[nodeEl.dataset.node];
     if (!node) return;
     nodeEl.setAttribute("transform", `translate(${node.x}, ${node.y})`);
     nodeEl.classList.toggle("selected", node.id === state.selectedGraphNodeId);
   });
+}
+
+function graphNodeRadius(node) {
+  const degree = Number(node.degree || 0);
+  const base = node.role === "chapter" ? 8 : node.role === "review" ? 9 : 11;
+  return Math.max(base, Math.min(base + degree * 1.4, 22));
 }
 
 function selectGraphNode(nodeId) {
@@ -3230,10 +3311,18 @@ async function renderGraphNodeDetail(node) {
 async function openGraphNote(path, nodeId = null) {
   if (nodeId) state.selectedGraphNodeId = nodeId;
   const data = await api(`/api/projects/${encodeURIComponent(state.currentId)}/note?path=${encodeURIComponent(path)}`);
+  const backlinks = data.backlinks || [];
+  const outgoing = data.outgoing_wikilinks || [];
+  const local = data.local_graph || {};
   $("graph-detail").innerHTML = `
     ${graphNodeSummary((state.current.graph.nodes || []).find((item) => item.id === state.selectedGraphNodeId) || {})}
     <hr />
     <h3>${escapeHtml(data.path)}</h3>
+    <p class="muted">Degree ${escapeHtml(fmtCount(data.degree || 0))} · backlinks ${escapeHtml(fmtCount(backlinks.length))} · outgoing ${escapeHtml(fmtCount(outgoing.length))}</p>
+    <p>${(data.tags || []).map((tag) => `<span class="badge tag-badge">${escapeHtml(tag)}</span>`).join("")}</p>
+    ${backlinks.length ? `<details><summary>Backlinks</summary><ul>${backlinks.map((item) => `<li><a href="#" class="wikilink" data-wikilink="${escapeHtml(item)}">${escapeHtml(item)}</a></li>`).join("")}</ul></details>` : ""}
+    ${outgoing.length ? `<details><summary>Outgoing links</summary><ul>${outgoing.map((item) => `<li><a href="#" class="wikilink" data-wikilink="${escapeHtml(item.target || item.label || "")}">[[${escapeHtml(item.label || item.target || "")}]]</a></li>`).join("")}</ul></details>` : ""}
+    ${(local.nodes || []).length ? `<details><summary>Local graph</summary><p class="muted">Nodes ${escapeHtml(fmtCount((local.nodes || []).length))} · edges ${escapeHtml(fmtCount((local.edges || []).length))}</p></details>` : ""}
     <details><summary>Frontmatter</summary><pre class="frontmatter">${escapeHtml(JSON.stringify(data.frontmatter || {}, null, 2))}</pre></details>
     <article class="markdown">${renderMarkdown(data.markdown || "")}</article>
   `;
@@ -3245,6 +3334,7 @@ async function openGraphNote(path, nodeId = null) {
 function graphNodeSummary(node) {
   const entity = node.entity || {};
   const chapter = node.chapter || {};
+  const frontmatter = node.frontmatter || {};
   const hasVaerlDetail = Object.keys(entity).length || Object.keys(chapter).length;
   const canonLabel = Object.keys(entity).length ? (entity.canonical_name || entity.preferred_slug || node.label || "") : "";
   const reviewLabel = entity.canonical_name || entity.preferred_slug || node.label || chapter.chapter_id || "";
@@ -3253,6 +3343,7 @@ function graphNodeSummary(node) {
     <h3>${escapeHtml(node.label || "Unresolved")}</h3>
     <p><span class="badge">${escapeHtml(node.kind || "unknown")}</span> <span class="badge">${escapeHtml(node.role || "unknown")}</span></p>
     ${(node.tags || []).length ? `<p>${(node.tags || []).map((tag) => `<span class="badge tag-badge">${escapeHtml(tag)}</span>`).join("")}</p>` : ""}
+    <p class="muted">Degree ${escapeHtml(fmtCount(node.degree || 0))} · backlinks ${escapeHtml(fmtCount((node.backlinks || []).length))} · outgoing ${escapeHtml(fmtCount((node.outgoing_wikilinks || []).length))}</p>
     <p class="muted">${escapeHtml(node.id || "")}</p>
     <div class="nav-actions">
       ${canonLabel ? `<button type="button" data-graph-open-canon="${escapeHtml(canonLabel)}">Open in Canon</button>` : ""}
@@ -3264,6 +3355,7 @@ function graphNodeSummary(node) {
       : hasVaerlDetail
         ? `<p class="note-fallback">No Markdown note found. Showing VaERL data from <code>obsidian_import.json</code>.</p>`
         : `<p class="muted">No materialized note or VaERL detail for this node.</p>`}
+    ${Object.keys(frontmatter).length ? `<details><summary>Note metadata</summary><pre class="frontmatter">${escapeHtml(JSON.stringify(frontmatter, null, 2))}</pre></details>` : ""}
     ${Object.keys(entity).length ? entityDetail(entity) : ""}
     ${Object.keys(entity).length ? renderCanonicalizationVisibility(entity, { source: "graph" }) : ""}
     ${Object.keys(chapter).length ? chapterDetail(chapter) : ""}

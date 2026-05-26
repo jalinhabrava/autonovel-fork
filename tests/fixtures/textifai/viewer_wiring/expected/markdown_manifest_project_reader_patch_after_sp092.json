@@ -1,0 +1,32 @@
+{
+  "assessment": "markdown_manifest_project_reader_patch_applied",
+  "filenames_expected": {
+    "manifest_candidates": [
+      "99_System/markdown_manifest.json",
+      "System/materialization_manifest.json",
+      "System/markdown_manifest.json"
+    ],
+    "index_candidates": [
+      "99_System/markdown_graph_index.json",
+      "System/markdown_graph_index.json"
+    ]
+  },
+  "reader_behavior": {
+    "project_discovery_supports_markdown_only": true,
+    "graph_prefers_markdown_index": true,
+    "index_fallback_build_from_notes_if_manifest_exists": true,
+    "note_detail_includes_backlinks_outgoing_degree_local_graph": true
+  },
+  "fallback_policy": "lean fallback: ingestion_graph only when markdown index absent; no ambiguous parallel truth",
+  "errors_warnings": [
+    "if markdown index missing and build fails, returns empty markdown payload"
+  ],
+  "fields_exposed": [
+    "markdown_manifest",
+    "markdown_graph_index",
+    "notes[].degree",
+    "notes[].backlinks",
+    "overview.orphan_note_count",
+    "overview.unresolved_link_count"
+  ]
+}

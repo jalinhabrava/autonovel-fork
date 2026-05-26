@@ -1,0 +1,15 @@
+{
+  "assessment": "markdown_wiki_viewer_ready_open_design_partial",
+  "open_design_ready": "partial",
+  "what_is_ready": [
+    "external clone",
+    "dependencies installed",
+    "daemon CLI built",
+    "skills/design systems audited",
+    "codex mcp snippet documented"
+  ],
+  "what_is_blocked": [
+    "tools-dev runtime start on Node 22"
+  ],
+  "recommended_next_phase": "Phase 1.3.M-b5c-4w — run Open Design live review on Node 24 and apply visual deltas"
+}

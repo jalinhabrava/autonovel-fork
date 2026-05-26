@@ -1,0 +1,17 @@
+{
+  "assessment": "viewer_markdown_wiki_manual_server_started",
+  "server_started": true,
+  "host": "0.0.0.0",
+  "port": 8871,
+  "url": "http://127.0.0.1:8871",
+  "project_id": "home__david__projects__autonovel-fork__tests__fixtures__textifai__viewer_wiring__input__sample_markdown_viewer_project_after_sp092",
+  "command": "uv run python -m textifai.web_viewer.server --root tests/fixtures/textifai/viewer_wiring/input --host 0.0.0.0 --port 8871",
+  "pid": "1798927",
+  "stop_command": "kill 1798927",
+  "endpoint_status": {
+    "/": 200,
+    "/api/projects": 200,
+    "/api/projects/<id>": 200,
+    "/api/projects/<id>/graph": 200
+  }
+}

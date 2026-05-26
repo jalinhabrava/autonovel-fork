@@ -1,0 +1,19 @@
+{
+  "assessment": "dashboard_overview_markdown_index_patch_applied",
+  "author_facing_priorities": [
+    "project status",
+    "wiki notes count",
+    "graph node/edge counts",
+    "tags count",
+    "orphan notes",
+    "unresolved links",
+    "chapter/review/retry summary",
+    "next action CTA"
+  ],
+  "raw_json_primary_surface": false,
+  "artifacts_debug_secondary": true,
+  "cta_buttons": [
+    "Open Wiki",
+    "Open Graph"
+  ]
+}

@@ -52,3 +52,27 @@
 - Graph/detail split degrades cleanly.
 - Note reading width remains comfortable.
 - Buttons remain clickable and labeled.
+
+## SP-093 Graph Readability Acceptance
+- Degree sizing clearly distinguishes hubs from leaf notes.
+- Local graph mode available and discoverable.
+- Kind/status/tag filters can isolate review-heavy slices.
+- Edge labels readable on normal zoom.
+
+## SP-093 Wiki Browser Acceptance
+- Wiki tab is explicitly labeled author-facing.
+- Note detail shows backlinks, outgoing links, tags, local graph summary.
+- Filtering by status supports review-first workflows.
+
+## SP-093 Node Detail Acceptance
+- Node panel shows degree + relationship context first.
+- Markdown metadata appears before debug artifacts.
+
+## Open Design Usage
+- Use `docs/textifai-open-design-codex-setup.md` for dev-only setup and MCP snippet.
+- Do not add Open Design to TextifAI runtime dependencies.
+
+## Cadence
+- Weekly deep design review.
+- Per-safepoint quick checklist review.
+
