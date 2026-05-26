@@ -1,0 +1,42 @@
+{
+  "assessment": "open_design_dev_only_install_plan_ready",
+  "recommended_install_path": "/tmp/textifai_dev_tools/open-design",
+  "commands": [
+    "mkdir -p /tmp/textifai_dev_tools",
+    "git clone https://github.com/nexu-io/open-design.git /tmp/textifai_dev_tools/open-design",
+    "cd /tmp/textifai_dev_tools/open-design",
+    "corepack enable",
+    "corepack pnpm --version",
+    "pnpm install",
+    "pnpm tools-dev run web"
+  ],
+  "environment_assumptions": [
+    "network access",
+    "Node ~24",
+    "pnpm 10.33.x via corepack"
+  ],
+  "codex_usage": [
+    "run external design reviews",
+    "generate prototype ideas",
+    "compare dashboard/graph/wiki layouts",
+    "do not import into TextifAI runtime"
+  ],
+  "do_not_commit": [
+    "/tmp/textifai_dev_tools/open-design",
+    ".od runtime data",
+    "generated exports unless explicitly converted to TextifAI-owned fixtures"
+  ],
+  "rollback": [
+    "rm -rf /tmp/textifai_dev_tools/open-design"
+  ],
+  "security_considerations": [
+    "localhost binding preferred",
+    "do not store TextifAI secrets in tool",
+    "do not expose to LAN",
+    "review any copied code/license"
+  ],
+  "package_json_changes_required": false,
+  "default_recommendation": "defer install; use audit/checklist first, install externally only for design sprint",
+  "clone_status": "cloned to /tmp for audit only; install not run",
+  "clone_committed": false
+}

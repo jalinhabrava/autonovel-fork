@@ -1,0 +1,27 @@
+{
+  "assessment": "markdown_materialization_cleanup_plan_ready",
+  "old_obsidian_import_reused": [
+    "frontmatter conventions",
+    "note path conventions",
+    "review queue concepts",
+    "wikilink/backlink parsing"
+  ],
+  "old_pieces_adapted": [
+    "Markdown generation becomes VaERL-first materialization",
+    "graph index derived from materialized markdown"
+  ],
+  "old_pieces_to_remove_or_deprecate": [
+    "obsidian_import as source of truth",
+    "raw artifact browsing as primary author UX",
+    "indefinite legacy fallback"
+  ],
+  "ambiguous_fallbacks_pending": [
+    "viewer still reads older artifacts until VaERL materialized wiki is wired"
+  ],
+  "tests_required_before_removal": [
+    "materialized markdown parity",
+    "backlink graph parity",
+    "review status parity",
+    "viewer loads materialized notes/index"
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "assessment": "existing_markdown_materialization_inventory_ready",
+  "existing_pieces": [
+    "textifai.obsidian.json_import renders Markdown notes",
+    "textifai.obsidian.parser parses frontmatter and wikilinks",
+    "textifai.vaerl.index derives backlinks from vault notes",
+    "web_viewer reads notes/artifacts/graph",
+    "review_queue and obsidian_import preserve author-facing concepts"
+  ],
+  "reuse": [
+    "slug/title normalization ideas",
+    "frontmatter parser",
+    "wikilink/backlink parser concepts",
+    "note_path conventions",
+    "review_queue semantics"
+  ],
+  "adapt": [
+    "obsidian_import output becomes projection, not truth",
+    "vault note generation becomes VaERL materialization",
+    "graph reader consumes markdown_graph_index"
+  ],
+  "deprecate": [
+    "debug JSON as primary UX",
+    "external Obsidian requirement",
+    "indefinite obsidian_import-only fallback"
+  ],
+  "gaps_vs_sp091_contract": [
+    "no standalone VaERL materializer module before this phase",
+    "no provider-free backlink graph index for materialized Markdown before this phase",
+    "no edit-to-VaERL patch proposal model implemented yet"
+  ]
+}

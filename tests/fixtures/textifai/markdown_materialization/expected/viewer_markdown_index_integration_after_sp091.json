@@ -1,0 +1,23 @@
+{
+  "assessment": "viewer_markdown_index_ready_for_future_integration",
+  "endpoint_changes": [],
+  "reader_changes": [
+    "MVP modules produce manifest/index that project_reader can consume in next phase"
+  ],
+  "fields_exposed": [
+    "note path",
+    "frontmatter",
+    "tags",
+    "wikilinks",
+    "backlinks",
+    "degree",
+    "graph edges",
+    "local graph"
+  ],
+  "graph_index_availability": true,
+  "wiki_readiness": "ready for next viewer/wiki wiring phase",
+  "known_limitations": [
+    "not wired into web viewer UI yet",
+    "edit-to-VaERL patch proposal not implemented yet"
+  ]
+}

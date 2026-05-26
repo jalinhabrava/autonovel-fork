@@ -1,0 +1,245 @@
+{
+  "schema_version": "textifai.vaerl.sample_materialization.v1",
+  "work": {
+    "title": "Synthetic Farm Story",
+    "language": "en"
+  },
+  "entities": [
+    {
+      "id": "character:ada",
+      "kind": "character",
+      "canonical_label": "Ada Bright",
+      "aliases": [
+        "Ada",
+        "Archivist"
+      ],
+      "tags": [
+        "lead"
+      ],
+      "status": "ready",
+      "review_state": "ready",
+      "chapter_ids": [
+        "ch_001"
+      ],
+      "summary": "Keeps the archive safe.",
+      "facts": [
+        "Knows the cellar map.",
+        "Trusts Bryn."
+      ],
+      "source_refs": [
+        {
+          "source_id": "fixture",
+          "chapter_id": "ch_001",
+          "span_id": "s1"
+        }
+      ],
+      "relationships": [
+        {
+          "target": "Farmhouse",
+          "label": "guards archive at"
+        },
+        {
+          "target": "Copper Key",
+          "label": "finds"
+        }
+      ]
+    },
+    {
+      "id": "character:bryn",
+      "kind": "character",
+      "canonical_label": "Bryn Vale",
+      "aliases": [
+        "Bryn"
+      ],
+      "tags": [
+        "ally"
+      ],
+      "status": "ready",
+      "review_state": "ready",
+      "chapter_ids": [
+        "ch_001"
+      ],
+      "summary": "Helps Ada inspect the cellar.",
+      "facts": [
+        "Carries a lantern."
+      ],
+      "source_refs": [
+        {
+          "source_id": "fixture",
+          "chapter_id": "ch_001",
+          "span_id": "s2"
+        }
+      ],
+      "relationships": [
+        {
+          "target": "Ada Bright",
+          "label": "helps"
+        }
+      ]
+    },
+    {
+      "id": "place:farmhouse",
+      "kind": "place",
+      "canonical_label": "Farmhouse",
+      "aliases": [
+        "Old Farm"
+      ],
+      "tags": [
+        "safehouse"
+      ],
+      "status": "ready",
+      "review_state": "ready",
+      "chapter_ids": [
+        "ch_001"
+      ],
+      "summary": "A rural archive site.",
+      "facts": [
+        "Has a hidden cellar."
+      ],
+      "source_refs": [
+        {
+          "source_id": "fixture",
+          "chapter_id": "ch_001",
+          "span_id": "s3"
+        }
+      ],
+      "relationships": []
+    },
+    {
+      "id": "object:copper_key",
+      "kind": "object",
+      "canonical_label": "Copper Key",
+      "aliases": [
+        "cellar key"
+      ],
+      "tags": [
+        "mystery"
+      ],
+      "status": "needs_review",
+      "review_state": "needs_review",
+      "chapter_ids": [
+        "ch_001"
+      ],
+      "summary": "Opens the cellar under the farmhouse.",
+      "facts": [
+        "Found in a cracked jar."
+      ],
+      "source_refs": [
+        {
+          "source_id": "fixture",
+          "chapter_id": "ch_001",
+          "span_id": "s4"
+        }
+      ],
+      "relationships": [
+        {
+          "target": "Farmhouse",
+          "label": "opens cellar in"
+        }
+      ]
+    },
+    {
+      "id": "concept:hidden_archive",
+      "kind": "concept",
+      "canonical_label": "Hidden Archive",
+      "aliases": [
+        "archive"
+      ],
+      "tags": [
+        "lore"
+      ],
+      "status": "ready",
+      "review_state": "ready",
+      "chapter_ids": [
+        "ch_001"
+      ],
+      "summary": "A hidden record system.",
+      "facts": [
+        "Contains family records."
+      ],
+      "source_refs": [
+        {
+          "source_id": "fixture",
+          "chapter_id": "ch_001",
+          "span_id": "s5"
+        }
+      ],
+      "relationships": [
+        {
+          "target": "Ada Bright",
+          "label": "protected by"
+        }
+      ]
+    },
+    {
+      "id": "event:cellar_discovery",
+      "kind": "event",
+      "canonical_label": "Cellar Discovery",
+      "aliases": [
+        "discovery"
+      ],
+      "tags": [
+        "event"
+      ],
+      "status": "ready",
+      "review_state": "ready",
+      "chapter_ids": [
+        "ch_001"
+      ],
+      "summary": "Ada and Bryn open the cellar.",
+      "facts": [
+        "Copper Key is used."
+      ],
+      "source_refs": [
+        {
+          "source_id": "fixture",
+          "chapter_id": "ch_001",
+          "span_id": "s6"
+        }
+      ],
+      "relationships": [
+        {
+          "target": "Copper Key",
+          "label": "uses"
+        },
+        {
+          "target": "Farmhouse",
+          "label": "happens at"
+        }
+      ]
+    }
+  ],
+  "chapters": [
+    {
+      "id": "ch_001",
+      "chapter_id": "ch_001",
+      "title": "Arrival at the Farmhouse",
+      "status": "ready",
+      "review_state": "ready",
+      "entity_mentions": [
+        "Ada Bright",
+        "Bryn Vale",
+        "Farmhouse",
+        "Copper Key",
+        "Hidden Archive",
+        "Cellar Discovery"
+      ],
+      "source_refs": [
+        {
+          "source_id": "fixture",
+          "chapter_id": "ch_001",
+          "span_id": "chapter"
+        }
+      ]
+    }
+  ],
+  "reviews": [
+    {
+      "id": "review:001",
+      "target": "Copper Key",
+      "target_label": "Copper Key",
+      "status": "needs_review",
+      "reason": "confirm importance"
+    }
+  ]
+}

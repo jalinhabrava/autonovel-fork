@@ -1,0 +1,8 @@
+{
+  "assessment": "vaerl_markdown_backlink_mvp_ready_with_design_warnings",
+  "materializer_readiness": "MVP implemented provider-free",
+  "backlink_index_readiness": "MVP implemented provider-free",
+  "viewer_wiki_readiness": "data structures ready; UI integration next",
+  "open_design_recommendation": "use as external dev-only design tooling/reference; not runtime/product dependency",
+  "next_phase": "Phase 1.3.M-b5c-4v — Wire VaERL Markdown Wiki/Backlink Index into Viewer MVP"
+}

@@ -1,0 +1,43 @@
+{
+  "assessment": "vaerl_markdown_materializer_contract_implemented_mvp",
+  "module": "textifai.import_review.vaerl_markdown_materializer",
+  "folders": [
+    "Characters",
+    "Places",
+    "Events",
+    "Objects",
+    "Concepts",
+    "Chapters",
+    "Reviews",
+    "System"
+  ],
+  "frontmatter_fields": [
+    "vaerl_id",
+    "kind",
+    "canonical_label",
+    "aliases",
+    "tags",
+    "status",
+    "review_state",
+    "chapter_ids",
+    "source_refs"
+  ],
+  "body_sections": [
+    "Summary",
+    "Facts",
+    "Relationships",
+    "Evidence",
+    "Links",
+    "Review Notes"
+  ],
+  "rules": [
+    "provider-free",
+    "safe paths",
+    "stable slugs",
+    "deterministic collision suffixes",
+    "wikilinks for relationships",
+    "no silent write-back to VaERL"
+  ],
+  "runtime_real_label_policy": "preserve canonical_label/canonical_name/label; no synthetic fallback if real labels exist",
+  "edit_policy": "Markdown edits create patch proposals; VaERL remains source of truth until author confirms"
+}

@@ -1,0 +1,43 @@
+{
+  "assessment": "open_design_dev_tooling_audit_ready",
+  "source": "https://github.com/nexu-io/open-design",
+  "what_it_is": "local-first open-source design tooling for coding agents with skills/design systems/prototype preview/export",
+  "license_found": "Apache-2.0 for repository; bundled skills may retain MIT licenses",
+  "install_feasibility": "external dev-only install feasible; Node ~24 and pnpm 10.33.x required",
+  "codex_dev_workflow_fit": [
+    "design critique",
+    "prototype generation",
+    "dashboard/graph/wiki layout exploration",
+    "design systems/checklists",
+    "component/layout review"
+  ],
+  "useful_for": [
+    "dashboard design",
+    "graph view design",
+    "wiki browser",
+    "node detail panel",
+    "AI editor surfaces",
+    "design system",
+    "component/layout critique"
+  ],
+  "risks": [
+    "runtime dependency creep",
+    "large node toolchain",
+    "possible external model/media integrations",
+    "must not modify TextifAI package files"
+  ],
+  "recommendation": "install as external dev tool or use as reference; copy/adapt design checklists only after review",
+  "not_runtime_dependency": true,
+  "not_product_dependency": true,
+  "html_anything_included": false,
+  "local_dev_clone_attempted": true,
+  "local_dev_clone_path": "/tmp/textifai_dev_tools/open-design",
+  "local_dev_clone_committed": false,
+  "readme_observed_claims": [
+    "local-first alternative to Claude Design",
+    "coding-agent CLIs auto-detected",
+    "skills and design systems",
+    "BYOK"
+  ],
+  "license_verified_from_clone": "Apache-2.0"
+}

@@ -1,0 +1,25 @@
+{
+  "assessment": "markdown_backlink_graph_index_contract_implemented_mvp",
+  "module": "textifai.import_review.markdown_graph_index",
+  "reads": [
+    "Markdown files",
+    "YAML-like frontmatter",
+    "[[wikilinks]]",
+    "[[target|label]]",
+    "inline #tags"
+  ],
+  "produces": [
+    "notes",
+    "outgoing_wikilinks",
+    "backlinks",
+    "tags",
+    "graph nodes",
+    "graph edges",
+    "orphan notes",
+    "unresolved links",
+    "degree counts"
+  ],
+  "local_graph_query": true,
+  "node_size_by_degree": true,
+  "unresolved_links_reported": true
+}
