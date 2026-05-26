@@ -1,0 +1,305 @@
+{
+  "assessment": "real_deepseek_e2e_validation_passed_ready_for_larger_e2e",
+  "chapters": [
+    {
+      "chapter_id": "ch_001",
+      "model": "deepseek-v4-flash",
+      "natural_chunk_count": 1,
+      "split_reasons": [
+        "chapter_within_budget"
+      ],
+      "partial_parseability": true,
+      "reduction_parseability": true,
+      "validation": true,
+      "score": 61.0,
+      "source_ref_coverage": 1.0,
+      "truncation_or_continuation": false,
+      "writer_facing_status": "ready"
+    },
+    {
+      "chapter_id": "ch_002",
+      "model": "deepseek-v4-flash",
+      "natural_chunk_count": 0,
+      "split_reasons": [
+        "chapter_within_budget"
+      ],
+      "partial_parseability": true,
+      "reduction_parseability": true,
+      "validation": true,
+      "score": 59.5,
+      "source_ref_coverage": 1.0,
+      "truncation_or_continuation": true,
+      "writer_facing_status": "needs_review"
+    },
+    {
+      "chapter_id": "ch_003",
+      "model": "deepseek-v4-flash",
+      "natural_chunk_count": 1,
+      "split_reasons": [
+        "chapter_within_budget"
+      ],
+      "partial_parseability": true,
+      "reduction_parseability": true,
+      "validation": true,
+      "score": 59.5,
+      "source_ref_coverage": 1.0,
+      "truncation_or_continuation": false,
+      "writer_facing_status": "ready"
+    },
+    {
+      "chapter_id": "ch_004",
+      "model": "deepseek-v4-flash",
+      "natural_chunk_count": 1,
+      "split_reasons": [
+        "chapter_within_budget"
+      ],
+      "partial_parseability": true,
+      "reduction_parseability": true,
+      "validation": true,
+      "score": 42.0,
+      "source_ref_coverage": 1.0,
+      "truncation_or_continuation": false,
+      "writer_facing_status": "needs_retry"
+    },
+    {
+      "chapter_id": "ch_005",
+      "model": "deepseek-v4-flash",
+      "natural_chunk_count": 1,
+      "split_reasons": [
+        "chapter_within_budget"
+      ],
+      "partial_parseability": true,
+      "reduction_parseability": true,
+      "validation": true,
+      "score": 41.5,
+      "source_ref_coverage": 1.0,
+      "truncation_or_continuation": false,
+      "writer_facing_status": "needs_retry"
+    },
+    {
+      "chapter_id": "ch_006",
+      "model": "deepseek-v4-flash",
+      "natural_chunk_count": 1,
+      "split_reasons": [
+        "chapter_within_budget"
+      ],
+      "partial_parseability": true,
+      "reduction_parseability": true,
+      "validation": true,
+      "score": 38.5,
+      "source_ref_coverage": 1.0,
+      "truncation_or_continuation": false,
+      "writer_facing_status": "needs_retry"
+    },
+    {
+      "chapter_id": "ch_007",
+      "model": "deepseek-v4-flash",
+      "natural_chunk_count": 1,
+      "split_reasons": [
+        "chapter_within_budget"
+      ],
+      "partial_parseability": true,
+      "reduction_parseability": true,
+      "validation": true,
+      "score": 35.5,
+      "source_ref_coverage": 1.0,
+      "truncation_or_continuation": false,
+      "writer_facing_status": "needs_retry"
+    },
+    {
+      "chapter_id": "ch_008",
+      "model": "deepseek-v4-flash",
+      "natural_chunk_count": 1,
+      "split_reasons": [
+        "chapter_within_budget"
+      ],
+      "partial_parseability": true,
+      "reduction_parseability": true,
+      "validation": true,
+      "score": 24.0,
+      "source_ref_coverage": 1.0,
+      "truncation_or_continuation": false,
+      "writer_facing_status": "needs_retry"
+    },
+    {
+      "chapter_id": "ch_009",
+      "model": "deepseek-v4-flash",
+      "natural_chunk_count": 1,
+      "split_reasons": [
+        "chapter_within_budget"
+      ],
+      "partial_parseability": true,
+      "reduction_parseability": true,
+      "validation": true,
+      "score": 33.5,
+      "source_ref_coverage": 1.0,
+      "truncation_or_continuation": false,
+      "writer_facing_status": "needs_retry"
+    },
+    {
+      "chapter_id": "ch_010",
+      "model": "deepseek-v4-flash",
+      "natural_chunk_count": 1,
+      "split_reasons": [
+        "chapter_within_budget"
+      ],
+      "partial_parseability": true,
+      "reduction_parseability": true,
+      "validation": true,
+      "score": 50.0,
+      "source_ref_coverage": 1.0,
+      "truncation_or_continuation": false,
+      "writer_facing_status": "ready"
+    },
+    {
+      "chapter_id": "ch_011",
+      "model": "deepseek-v4-flash",
+      "natural_chunk_count": 1,
+      "split_reasons": [
+        "chapter_within_budget"
+      ],
+      "partial_parseability": true,
+      "reduction_parseability": true,
+      "validation": true,
+      "score": 23.5,
+      "source_ref_coverage": 1.0,
+      "truncation_or_continuation": false,
+      "writer_facing_status": "needs_retry"
+    },
+    {
+      "chapter_id": "ch_012",
+      "model": "deepseek-v4-flash",
+      "natural_chunk_count": 1,
+      "split_reasons": [
+        "chapter_within_budget"
+      ],
+      "partial_parseability": true,
+      "reduction_parseability": true,
+      "validation": true,
+      "score": 31.0,
+      "source_ref_coverage": 1.0,
+      "truncation_or_continuation": false,
+      "writer_facing_status": "needs_retry"
+    },
+    {
+      "chapter_id": "ch_013",
+      "model": "deepseek-v4-flash",
+      "natural_chunk_count": 1,
+      "split_reasons": [
+        "chapter_within_budget"
+      ],
+      "partial_parseability": true,
+      "reduction_parseability": true,
+      "validation": true,
+      "score": 42.5,
+      "source_ref_coverage": 1.0,
+      "truncation_or_continuation": false,
+      "writer_facing_status": "needs_retry"
+    },
+    {
+      "chapter_id": "ch_014",
+      "model": "deepseek-v4-flash",
+      "natural_chunk_count": 1,
+      "split_reasons": [
+        "chapter_within_budget"
+      ],
+      "partial_parseability": true,
+      "reduction_parseability": true,
+      "validation": true,
+      "score": 57.5,
+      "source_ref_coverage": 1.0,
+      "truncation_or_continuation": false,
+      "writer_facing_status": "ready"
+    },
+    {
+      "chapter_id": "ch_015",
+      "model": "deepseek-v4-flash",
+      "natural_chunk_count": 1,
+      "split_reasons": [
+        "chapter_within_budget"
+      ],
+      "partial_parseability": true,
+      "reduction_parseability": true,
+      "validation": true,
+      "score": 41.5,
+      "source_ref_coverage": 1.0,
+      "truncation_or_continuation": false,
+      "writer_facing_status": "needs_retry"
+    },
+    {
+      "chapter_id": "ch_016",
+      "model": "deepseek-v4-flash",
+      "natural_chunk_count": 1,
+      "split_reasons": [
+        "chapter_within_budget"
+      ],
+      "partial_parseability": true,
+      "reduction_parseability": true,
+      "validation": true,
+      "score": 68.0,
+      "source_ref_coverage": 1.0,
+      "truncation_or_continuation": false,
+      "writer_facing_status": "ready"
+    },
+    {
+      "chapter_id": "ch_017",
+      "model": "deepseek-v4-flash",
+      "natural_chunk_count": 1,
+      "split_reasons": [
+        "chapter_within_budget"
+      ],
+      "partial_parseability": true,
+      "reduction_parseability": true,
+      "validation": true,
+      "score": 33.0,
+      "source_ref_coverage": 1.0,
+      "truncation_or_continuation": false,
+      "writer_facing_status": "needs_retry"
+    },
+    {
+      "chapter_id": "ch_018",
+      "model": "deepseek-v4-flash",
+      "natural_chunk_count": 1,
+      "split_reasons": [
+        "chapter_within_budget"
+      ],
+      "partial_parseability": true,
+      "reduction_parseability": true,
+      "validation": true,
+      "score": 32.5,
+      "source_ref_coverage": 1.0,
+      "truncation_or_continuation": false,
+      "writer_facing_status": "needs_retry"
+    },
+    {
+      "chapter_id": "ch_019",
+      "model": "deepseek-v4-flash",
+      "natural_chunk_count": 1,
+      "split_reasons": [
+        "chapter_within_budget"
+      ],
+      "partial_parseability": true,
+      "reduction_parseability": true,
+      "validation": true,
+      "score": 51.5,
+      "source_ref_coverage": 1.0,
+      "truncation_or_continuation": false,
+      "writer_facing_status": "ready"
+    },
+    {
+      "chapter_id": "ch_020",
+      "model": "deepseek-v4-flash",
+      "natural_chunk_count": 1,
+      "split_reasons": [
+        "chapter_within_budget"
+      ],
+      "partial_parseability": true,
+      "reduction_parseability": true,
+      "validation": true,
+      "score": 48.0,
+      "source_ref_coverage": 1.0,
+      "truncation_or_continuation": false,
+      "writer_facing_status": "needs_retry"
+    }
+  ]
+}

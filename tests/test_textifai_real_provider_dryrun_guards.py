@@ -1445,6 +1445,71 @@ class RealProviderDryRunGuardsTests(unittest.TestCase):
         self.assertEqual(baseline["overall_assessment"], "profiled_deepseek_invalid")
         self.assertEqual(issues["real_provider_call_status"], "executed_one_call_profiled_json_invalid")
 
+    def test_twenty_chapter_e2e_reports_parse_and_manual_viewer_contract_holds(self):
+        files = {
+            "plan": FIXTURE_ROOT / "twenty_chapter_e2e_execution_plan_after_sp086.json",
+            "summary": FIXTURE_ROOT / "twenty_chapter_e2e_summary_after_sp086.json",
+            "chapters": FIXTURE_ROOT / "twenty_chapter_chapter_results_after_sp086.json",
+            "rerun": FIXTURE_ROOT / "twenty_chapter_internal_fail_rerun_plan_after_sp086.json",
+            "writer": FIXTURE_ROOT / "twenty_chapter_writer_outcome_after_sp086.json",
+            "graph": FIXTURE_ROOT / "twenty_chapter_graph_projection_summary_after_sp086.json",
+            "viewer": FIXTURE_ROOT / "twenty_chapter_viewer_manual_review_server_after_sp086.json",
+            "viewer_writer": FIXTURE_ROOT / "twenty_chapter_viewer_writer_expectation_after_sp086.json",
+            "general": FIXTURE_ROOT / "twenty_chapter_general_pipeline_learnings_after_sp086.json",
+            "deepseek": FIXTURE_ROOT / "twenty_chapter_deepseek_specific_learnings_after_sp086.json",
+            "decision": FIXTURE_ROOT / "twenty_chapter_e2e_decision_after_sp086.json",
+        }
+        payloads = {name: json.loads(path.read_text(encoding="utf-8")) for name, path in files.items()}
+        for payload in payloads.values():
+            text = json.dumps(payload, ensure_ascii=False)
+            self.assertNotIn("BEGIN PRIVATE", text)
+            self.assertNotIn("final_prompt_sent.md", text)
+            self.assertNotIn("provider_response_raw.txt", text)
+
+        plan = payloads["plan"]
+        self.assertLessEqual(plan["planned_total_calls"], 96)
+        self.assertEqual(plan["chapter_count"], 20)
+        self.assertTrue(plan["fits_cap"])
+
+        writer = payloads["writer"]
+        writer_text = json.dumps(writer, ensure_ascii=False)
+        for forbidden in (
+            "chunk",
+            "reduction",
+            "parseable",
+            "source_ref",
+            "provider",
+            "finish_reason",
+            "JSON",
+            "continuation",
+            "patch",
+            "model",
+            "profile",
+            "token",
+            "API",
+            "telemetry",
+            "run_id",
+            "failure_mode",
+        ):
+            self.assertNotIn(forbidden, writer_text)
+
+        viewer = payloads["viewer"]
+        self.assertEqual(viewer["host"], "0.0.0.0")
+        self.assertTrue(viewer["manual_review_required"])
+        if viewer.get("server_started"):
+            self.assertEqual(viewer["api_status"]["root"], 200)
+            self.assertEqual(viewer["api_status"]["projects"], 200)
+            self.assertEqual(viewer["api_status"]["project_detail"], 200)
+            self.assertEqual(viewer["api_status"]["graph"], 200)
+            self.assertGreater(viewer["graph_node_count"], 0)
+            self.assertGreater(viewer["graph_edge_count"], 0)
+
+        rerun = payloads["rerun"]
+        successful = set(rerun.get("successful_chapters") or [])
+        retryable = set(rerun.get("retryable_chapters") or [])
+        self.assertTrue(retryable.isdisjoint(successful))
+        self.assertTrue(str(payloads["decision"].get("private_packet_root", "")).startswith("/tmp/textifai_private_provider_runs/"))
+
 
 def _sample_capture_markdown() -> str:
     return (

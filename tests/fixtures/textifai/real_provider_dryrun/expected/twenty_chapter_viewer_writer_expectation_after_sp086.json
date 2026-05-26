@@ -1,0 +1,26 @@
+{
+  "assessment": "twenty_chapter_viewer_writer_expectation_ready",
+  "writer_can_see": [
+    "story map with people, places, events, items, and ideas",
+    "20 processed chapters",
+    "chapters needing review",
+    "items marked for review",
+    "basic links between story elements"
+  ],
+  "writer_should_not_see": [
+    "internal diagnostics",
+    "engine internals",
+    "raw service details",
+    "developer-only logs"
+  ],
+  "primary_action": {
+    "label": "Retry pending chapters",
+    "action_id": "retry_pending_chapters",
+    "scope": "affected_chapters_only"
+  },
+  "secondary_action": {
+    "label": "Later",
+    "action_id": "dismiss"
+  },
+  "manual_review_required": true
+}

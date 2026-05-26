@@ -1,0 +1,14 @@
+{
+  "assessment": "twenty_chapter_deepseek_specific_learnings_ready",
+  "deepseek_specific": [
+    "Flash-first completed under cap",
+    "Targeted Pro not used because Flash reductions validated",
+    "one continuation occurred and remained under reserve",
+    "wrong-chapter continuation behavior remained contained in technical diagnostics"
+  ],
+  "models_used": [
+    "deepseek-v4-flash"
+  ],
+  "targeted_pro_used": false,
+  "provider_call_count": 41
+}

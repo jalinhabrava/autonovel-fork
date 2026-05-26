@@ -1,0 +1,37 @@
+{
+  "assessment": "twenty_chapter_graph_projection_ready",
+  "node_counts_by_kind": {
+    "character": 20,
+    "concept": 20,
+    "event": 20,
+    "object": 20,
+    "place": 20
+  },
+  "edge_count": 40,
+  "chapter_count": 20,
+  "affected_chapters": [
+    "ch_002",
+    "ch_004",
+    "ch_005",
+    "ch_006",
+    "ch_007",
+    "ch_008",
+    "ch_009",
+    "ch_011",
+    "ch_012",
+    "ch_013",
+    "ch_015",
+    "ch_017",
+    "ch_018",
+    "ch_020"
+  ],
+  "warnings": [],
+  "source_refs_coverage_summary": {
+    "nodes_with_refs": 100,
+    "edges_with_refs": 40,
+    "coverage": 1.0
+  },
+  "graph_artifact_private_path": "/tmp/textifai_private_provider_runs/sp087_twenty_chapter_e2e_viewer/20260526T100011Z/20260526T100049Z/viewer_project/99_System/ingestion_graph.json",
+  "adapter_used": "textifai.import_review.viewer_graph_adapter.adapt_ingestion_graph_to_viewer_graph",
+  "viewer_ready": true
+}

@@ -1,0 +1,13 @@
+{
+  "assessment": "twenty_chapter_general_pipeline_learnings_ready",
+  "general_pipeline": [
+    "Flash-first e2e can feed writer-facing outcome and graph projection",
+    "fail-only retry plan remains affected-only",
+    "viewer MVP can serve sandbox project read-only",
+    "source refs preserved into inspectable graph data",
+    "no definitive write-back required"
+  ],
+  "chapter_count": 20,
+  "provider_call_count": 41,
+  "viewer_ready": true
+}
