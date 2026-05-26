@@ -1,0 +1,19 @@
+{
+  "assessment": "private_sp087_reprojection_ready_with_relation_warnings",
+  "provider_calls": "NO",
+  "write_back": "NO",
+  "privacy": "no source prose, prompts, provider outputs, or tmp payloads committed",
+  "synthetic_fixture_validation": {
+    "real_named_fixture_used": true,
+    "synthetic_labels_allowed_only_for_committed_fixture": true
+  },
+  "private_sp087_validation_status": "available_and_reprojected_provider_free",
+  "before_synthetic_label_count": 100,
+  "after_synthetic_label_count": 0,
+  "real_labels_present": true,
+  "real_labels_listed_in_repo": false,
+  "node_count_after": 430,
+  "edge_count_after": 91,
+  "private_graph_path": "/tmp/textifai_private_provider_runs/sp087_twenty_chapter_e2e_viewer/20260526T100011Z/20260526T100049Z/viewer_project_sp089/99_System/ingestion_graph.json",
+  "viewer_readiness": "ready for manual revalidation; no screenshots or browser automation used"
+}

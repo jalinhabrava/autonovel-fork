@@ -414,28 +414,28 @@ def map_technical_signals_to_writer_status(
             "reason_label": "chapter_needs_second_pass",
             "user_message": "This chapter needs a second pass to complete the analysis.",
         }
-    if has_semantic_thinness and final_chapter_valid:
+    if not final_chapter_valid:
+        return {
+            "chapter_status": "needs_retry",
+            "reason_label": "temporary_model_error",
+            "user_message": "This chapter needs another pass due to a temporary issue.",
+        }
+    if has_semantic_thinness:
         return {
             "chapter_status": "needs_review",
             "reason_label": "manual_review_recommended",
             "user_message": "This chapter is complete but should be reviewed once before finalizing.",
         }
-    if final_chapter_valid and has_internal_warnings:
+    if has_internal_warnings:
         return {
             "chapter_status": "ready_with_warnings",
             "reason_label": "chapter_processed_with_warnings",
             "user_message": "This chapter is ready with minor warnings.",
         }
-    if final_chapter_valid:
-        return {
-            "chapter_status": "ready",
-            "reason_label": "analysis_incomplete",
-            "user_message": "This chapter is ready.",
-        }
     return {
-        "chapter_status": "needs_retry",
-        "reason_label": "temporary_model_error",
-        "user_message": "This chapter needs another pass due to a temporary issue.",
+        "chapter_status": "ready",
+        "reason_label": "analysis_incomplete",
+        "user_message": "This chapter is ready.",
     }
 
 
@@ -470,19 +470,19 @@ def build_technical_to_user_status_mapping_report() -> dict[str, Any]:
             },
             {
                 "rule_id": "R2",
-                "technical_condition": "final reduction valid and graph usable with warnings",
+                "technical_condition": "final reduction valid and graph usable with minor warnings",
                 "writer_status": "ready_with_warnings",
                 "reason_label": "chapter_processed_with_warnings",
             },
             {
                 "rule_id": "R3",
-                "technical_condition": "retryable failure or low-density output",
+                "technical_condition": "recoverable technical failure, incomplete output, invalid unrecovered output, provider/auth/timeout, missing reduction, or chapter not processed",
                 "writer_status": "needs_retry",
                 "reason_label": "chapter_needs_second_pass",
             },
             {
                 "rule_id": "R4",
-                "technical_condition": "valid output with suspicious semantic thinness",
+                "technical_condition": "valid output with suspicious semantic thinness or low-density signals",
                 "writer_status": "needs_review",
                 "reason_label": "manual_review_recommended",
             },
@@ -492,6 +492,11 @@ def build_technical_to_user_status_mapping_report() -> dict[str, Any]:
                 "writer_status": "failed",
                 "reason_label": "manual_review_recommended",
             },
+        ],
+        "principles": [
+            "low-density does not automatically mean retry",
+            "valid parseable output with source refs should not default to retry",
+            "retry is reserved for technical or incomplete failures",
         ],
         "user_output_hides_internal_signals": True,
     }

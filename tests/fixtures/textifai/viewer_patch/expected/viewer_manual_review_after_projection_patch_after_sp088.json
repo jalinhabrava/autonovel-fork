@@ -1,0 +1,28 @@
+{
+  "assessment": "viewer_manual_review_server_not_restarted_by_patch",
+  "provider_calls": "NO",
+  "write_back": "NO",
+  "privacy": "no source prose, prompts, provider outputs, or tmp payloads committed",
+  "server_started": false,
+  "reason": "existing browser session is open at http://localhost:8870; patch phase did not restart server to avoid disrupting manual review",
+  "host": "0.0.0.0",
+  "port": 8870,
+  "project_id": "tmp__textifai_private_provider_runs__sp087_twenty_chapter_e2e_viewer__20260526T100011Z__20260526T100049Z__viewer_project_sp089",
+  "private_viewer_project_path": "/tmp/textifai_private_provider_runs/sp087_twenty_chapter_e2e_viewer/20260526T100011Z/20260526T100049Z/viewer_project_sp089",
+  "command_to_start": [
+    "/home/david/.local/bin/uv",
+    "run",
+    "python",
+    "-m",
+    "textifai.web_viewer.server",
+    "--root",
+    "/tmp/textifai_private_provider_runs/sp087_twenty_chapter_e2e_viewer/20260526T100011Z/20260526T100049Z",
+    "--host",
+    "0.0.0.0",
+    "--port",
+    "8870"
+  ],
+  "manual_review_required": true,
+  "screenshots": "NO",
+  "browser_automation": "NO"
+}

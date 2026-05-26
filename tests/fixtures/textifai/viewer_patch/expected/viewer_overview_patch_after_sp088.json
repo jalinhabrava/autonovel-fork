@@ -1,0 +1,21 @@
+{
+  "assessment": "viewer_overview_reads_writer_outcome_and_graph_summary",
+  "provider_calls": "NO",
+  "write_back": "NO",
+  "privacy": "no source prose, prompts, provider outputs, or tmp payloads committed",
+  "overview_fields": [
+    "chapters_processed",
+    "chapters_ready",
+    "chapters_ready_with_warnings",
+    "chapters_needing_retry",
+    "chapters_needing_review",
+    "chapters_failed",
+    "node_counts_by_kind",
+    "relationship_count",
+    "warning_summary",
+    "primary_action",
+    "secondary_action"
+  ],
+  "legacy_dependency_removed": "overview no longer depends only on primaries/review_items when ingestion_graph metadata has writer_outcome",
+  "author_facing_summary": "uses writer outcome when present; legacy canon cards remain secondary context"
+}

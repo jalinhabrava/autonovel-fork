@@ -1,0 +1,19 @@
+{
+  "assessment": "writer_outcome_mapping_patch_ready",
+  "write_back": "NO",
+  "privacy": "no source prose, prompts, private outputs, or tmp payloads committed",
+  "if_no_retries": {
+    "primary_action": "Review results",
+    "secondary_action": "Later"
+  },
+  "if_reviews": {
+    "message": "X capítulos necesitan revisión"
+  },
+  "if_retries": {
+    "message": "Y capítulos necesitan volver a procesarse"
+  },
+  "forbidden_terms_absent": true,
+  "example_writer_summary": "20 capítulos procesados. 6 capítulos están listos. 14 capítulos necesitan revisión. 0 capítulos necesitan volver a procesarse.",
+  "example_primary_action": "Review results",
+  "example_secondary_action": "Later"
+}

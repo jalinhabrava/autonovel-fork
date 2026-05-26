@@ -1,0 +1,36 @@
+{
+  "assessment": "fail_only_rerun_plan_patch_ready",
+  "provider_calls": "NO",
+  "write_back": "NO",
+  "privacy": "no source prose, prompts, provider outputs, or tmp payloads committed",
+  "retryable_chapters_only_true_technical_retry": [],
+  "review_chapters_excluded_from_rerun": [
+    "ch_004",
+    "ch_005",
+    "ch_006",
+    "ch_007",
+    "ch_008",
+    "ch_009",
+    "ch_011",
+    "ch_012",
+    "ch_013",
+    "ch_015",
+    "ch_017",
+    "ch_018",
+    "ch_020"
+  ],
+  "ready_with_warnings_excluded_from_rerun": [
+    "ch_002"
+  ],
+  "ready_chapters_excluded_from_rerun": [
+    "ch_001",
+    "ch_003",
+    "ch_010",
+    "ch_014",
+    "ch_016",
+    "ch_019"
+  ],
+  "expected_calls": 0,
+  "safe_to_rerun_without_full_ingestion": true,
+  "review_queue_suggestion": "review valid low-density chapters manually before any provider rerun"
+}

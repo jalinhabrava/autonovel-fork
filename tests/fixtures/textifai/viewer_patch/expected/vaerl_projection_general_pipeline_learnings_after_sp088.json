@@ -1,0 +1,13 @@
+{
+  "assessment": "general_pipeline_learning_patch_recorded",
+  "provider_calls": "NO",
+  "write_back": "NO",
+  "privacy": "no source prose, prompts, provider outputs, or tmp payloads committed",
+  "learnings": [
+    "VaERL runtime outputs must preserve real labels outside repo",
+    "fixture privacy must not degrade runtime product data",
+    "overview needs writer outcome not legacy counters only",
+    "node detail needs aliases/facts/source refs/relationships",
+    "retry/review mapping must separate technical validity from semantic richness"
+  ]
+}

@@ -107,6 +107,24 @@ def read_project(project: ProjectRef) -> dict[str, Any]:
     canon = read_canon(project)
     artifacts = list_artifacts(project)
     graph = build_graph(project, canon=canon)
+    graph_metadata = graph.get("metadata") if isinstance(graph, dict) else {}
+    writer_outcome = graph_metadata.get("writer_outcome") if isinstance(graph_metadata, dict) else {}
+    graph_summary = graph_metadata.get("graph_summary") if isinstance(graph_metadata, dict) else {}
+    overview = {
+        "chapters_processed": writer_outcome.get("total_chapters") or len(graph_metadata.get("chapters") or canon.get("chapters") or []),
+        "chapters_ready": writer_outcome.get("chapters_ready"),
+        "chapters_ready_with_warnings": writer_outcome.get("chapters_ready_with_warnings"),
+        "chapters_needing_retry": writer_outcome.get("chapters_needing_retry"),
+        "chapters_needing_review": writer_outcome.get("chapters_needing_review"),
+        "chapters_failed": writer_outcome.get("chapters_failed"),
+        "primary_action": writer_outcome.get("primary_action"),
+        "secondary_action": writer_outcome.get("secondary_action"),
+        "user_summary": writer_outcome.get("user_summary"),
+        "node_counts_by_kind": graph_summary.get("node_counts_by_kind") if isinstance(graph_summary, dict) else {},
+        "relationship_count": graph_summary.get("edge_count") if isinstance(graph_summary, dict) else None,
+        "warning_summary": (graph_metadata.get("warnings") or [])[:12] if isinstance(graph_metadata, dict) else [],
+        "synthetic_label_count": graph_summary.get("synthetic_label_count") if isinstance(graph_summary, dict) else None,
+    }
     return {
         "project": {
             "project_id": project.project_id,
@@ -119,6 +137,8 @@ def read_project(project: ProjectRef) -> dict[str, Any]:
         "canon": canon,
         "artifacts": artifacts,
         "graph": graph,
+        "overview": overview,
+        "writer_outcome": writer_outcome if isinstance(writer_outcome, dict) else {},
         "health": build_semantic_health(project, canon=canon, artifacts=artifacts, graph=graph),
         "canonicalization": build_canonicalization_payload(project, canon=canon, artifacts=artifacts),
     }

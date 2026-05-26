@@ -1,0 +1,207 @@
+{
+  "assessment": "sp087_reclassified_provider_free",
+  "provider_calls": "NO",
+  "write_back": "NO",
+  "privacy": "no source prose, prompts, provider outputs, or tmp payloads committed",
+  "previous_counts": {
+    "ready": 6,
+    "needs_retry": 13,
+    "needs_review": 1
+  },
+  "new_counts": {
+    "ready": 6,
+    "ready_with_warnings": 1,
+    "needs_review": 13
+  },
+  "chapter_level_mapping": [
+    {
+      "chapter_id": "ch_001",
+      "previous_status": "ready",
+      "new_status": "ready",
+      "needs_provider_rerun": false,
+      "needs_human_review": false,
+      "confidence": "high"
+    },
+    {
+      "chapter_id": "ch_002",
+      "previous_status": "needs_review",
+      "new_status": "ready_with_warnings",
+      "needs_provider_rerun": false,
+      "needs_human_review": true,
+      "confidence": "medium"
+    },
+    {
+      "chapter_id": "ch_003",
+      "previous_status": "ready",
+      "new_status": "ready",
+      "needs_provider_rerun": false,
+      "needs_human_review": false,
+      "confidence": "high"
+    },
+    {
+      "chapter_id": "ch_004",
+      "previous_status": "needs_retry",
+      "new_status": "needs_review",
+      "needs_provider_rerun": false,
+      "needs_human_review": true,
+      "confidence": "medium"
+    },
+    {
+      "chapter_id": "ch_005",
+      "previous_status": "needs_retry",
+      "new_status": "needs_review",
+      "needs_provider_rerun": false,
+      "needs_human_review": true,
+      "confidence": "medium"
+    },
+    {
+      "chapter_id": "ch_006",
+      "previous_status": "needs_retry",
+      "new_status": "needs_review",
+      "needs_provider_rerun": false,
+      "needs_human_review": true,
+      "confidence": "medium"
+    },
+    {
+      "chapter_id": "ch_007",
+      "previous_status": "needs_retry",
+      "new_status": "needs_review",
+      "needs_provider_rerun": false,
+      "needs_human_review": true,
+      "confidence": "medium"
+    },
+    {
+      "chapter_id": "ch_008",
+      "previous_status": "needs_retry",
+      "new_status": "needs_review",
+      "needs_provider_rerun": false,
+      "needs_human_review": true,
+      "confidence": "medium"
+    },
+    {
+      "chapter_id": "ch_009",
+      "previous_status": "needs_retry",
+      "new_status": "needs_review",
+      "needs_provider_rerun": false,
+      "needs_human_review": true,
+      "confidence": "medium"
+    },
+    {
+      "chapter_id": "ch_010",
+      "previous_status": "ready",
+      "new_status": "ready",
+      "needs_provider_rerun": false,
+      "needs_human_review": false,
+      "confidence": "high"
+    },
+    {
+      "chapter_id": "ch_011",
+      "previous_status": "needs_retry",
+      "new_status": "needs_review",
+      "needs_provider_rerun": false,
+      "needs_human_review": true,
+      "confidence": "medium"
+    },
+    {
+      "chapter_id": "ch_012",
+      "previous_status": "needs_retry",
+      "new_status": "needs_review",
+      "needs_provider_rerun": false,
+      "needs_human_review": true,
+      "confidence": "medium"
+    },
+    {
+      "chapter_id": "ch_013",
+      "previous_status": "needs_retry",
+      "new_status": "needs_review",
+      "needs_provider_rerun": false,
+      "needs_human_review": true,
+      "confidence": "medium"
+    },
+    {
+      "chapter_id": "ch_014",
+      "previous_status": "ready",
+      "new_status": "ready",
+      "needs_provider_rerun": false,
+      "needs_human_review": false,
+      "confidence": "high"
+    },
+    {
+      "chapter_id": "ch_015",
+      "previous_status": "needs_retry",
+      "new_status": "needs_review",
+      "needs_provider_rerun": false,
+      "needs_human_review": true,
+      "confidence": "medium"
+    },
+    {
+      "chapter_id": "ch_016",
+      "previous_status": "ready",
+      "new_status": "ready",
+      "needs_provider_rerun": false,
+      "needs_human_review": false,
+      "confidence": "high"
+    },
+    {
+      "chapter_id": "ch_017",
+      "previous_status": "needs_retry",
+      "new_status": "needs_review",
+      "needs_provider_rerun": false,
+      "needs_human_review": true,
+      "confidence": "medium"
+    },
+    {
+      "chapter_id": "ch_018",
+      "previous_status": "needs_retry",
+      "new_status": "needs_review",
+      "needs_provider_rerun": false,
+      "needs_human_review": true,
+      "confidence": "medium"
+    },
+    {
+      "chapter_id": "ch_019",
+      "previous_status": "ready",
+      "new_status": "ready",
+      "needs_provider_rerun": false,
+      "needs_human_review": false,
+      "confidence": "high"
+    },
+    {
+      "chapter_id": "ch_020",
+      "previous_status": "needs_retry",
+      "new_status": "needs_review",
+      "needs_provider_rerun": false,
+      "needs_human_review": true,
+      "confidence": "medium"
+    }
+  ],
+  "true_retry_chapters": [],
+  "review_chapters": [
+    "ch_004",
+    "ch_005",
+    "ch_006",
+    "ch_007",
+    "ch_008",
+    "ch_009",
+    "ch_011",
+    "ch_012",
+    "ch_013",
+    "ch_015",
+    "ch_017",
+    "ch_018",
+    "ch_020"
+  ],
+  "ready_with_warnings_chapters": [
+    "ch_002"
+  ],
+  "ready_chapters": [
+    "ch_001",
+    "ch_003",
+    "ch_010",
+    "ch_014",
+    "ch_016",
+    "ch_019"
+  ],
+  "confidence": "medium-high",
+  "explanation": "20/20 reductions valid and parseable; low-density signals become review, not retry"
+}

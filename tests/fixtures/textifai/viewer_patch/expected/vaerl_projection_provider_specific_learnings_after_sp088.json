@@ -1,0 +1,12 @@
+{
+  "assessment": "provider_specific_learning_minimal",
+  "provider_calls": "NO",
+  "write_back": "NO",
+  "privacy": "no source prose, prompts, provider outputs, or tmp payloads committed",
+  "viewer_dependency_on_deepseek": false,
+  "deepseek_specific_notes": [
+    "DeepSeek quality may affect density warnings",
+    "classification should stay provider-agnostic unless provider failure is technical"
+  ],
+  "core_logic_boundary": "viewer projection and retry semantics remain provider-agnostic"
+}

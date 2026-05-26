@@ -1,0 +1,20 @@
+{
+  "assessment": "vaerl_projection_retry_mapping_patch_ready_for_viewer_revalidation",
+  "provider_calls": "NO",
+  "write_back": "NO",
+  "privacy": "no source prose, prompts, provider outputs, or tmp payloads committed",
+  "recommended_next_phase": "Phase 1.3.M-b5c-4s — Manual Viewer Revalidation with Patched VaERL Projection",
+  "must_fix_before_revalidation": [],
+  "must_fix_before_full_source": [
+    "calibrate density thresholds by chapter type",
+    "decide markdown materialization path for VaERL notes"
+  ],
+  "viewer_can_be_patched_incrementally": true,
+  "graph_projection_replaced": false,
+  "patch_summary": [
+    "real labels preserved",
+    "semantic relations preserved",
+    "overview reads writer outcome",
+    "retry mapping corrected"
+  ]
+}

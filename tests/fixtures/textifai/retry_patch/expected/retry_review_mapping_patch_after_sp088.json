@@ -1,0 +1,33 @@
+{
+  "assessment": "retry_review_mapping_patch_ready",
+  "provider_calls": "NO",
+  "write_back": "NO",
+  "privacy": "no source prose, prompts, provider outputs, or tmp payloads committed",
+  "needs_retry_only_if": [
+    "chapter_not_processed",
+    "output_absent",
+    "invalid_unrecovered_output",
+    "provider_auth_timeout",
+    "missing_reduction",
+    "wrong_chapter_unrecovered",
+    "technical_failure_blocks_trust"
+  ],
+  "needs_review_if": [
+    "valid_low_density",
+    "valid_thin",
+    "low_objects_count",
+    "low_relations_count",
+    "low_score_without_technical_failure",
+    "semantic_quality_warning"
+  ],
+  "ready_with_warnings_if": [
+    "valid_output",
+    "usable_graph",
+    "minor_non_blocking_warnings"
+  ],
+  "principles": [
+    "low-density does not automatically mean retry",
+    "low score does not automatically mean retry",
+    "valid reduction with warnings does not default to retry"
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "assessment": "obsidian_compatible_projection_reused_without_weird_fallback",
+  "provider_calls": "NO",
+  "write_back": "NO",
+  "privacy": "no source prose, prompts, provider outputs, or tmp payloads committed",
+  "core_projection": "VaERL runtime graph is primary source",
+  "reused_parts": [
+    "canonical labels",
+    "aliases",
+    "summaries",
+    "key facts",
+    "relationships",
+    "note_path",
+    "tags",
+    "backlinks",
+    "markdown-compatible detail fields"
+  ],
+  "replaced_parts": [
+    "synthetic node numbering",
+    "generic relationship-only graph"
+  ],
+  "removed_deprecated_legacy_parts": [
+    "debug-artifacts-as-primary-author-view"
+  ],
+  "markdown_note_path_tags_backlinks_support": true,
+  "viewer_graph_compatibility": true,
+  "fallback_decision": "no broad legacy fallback; old obsidian/review structures remain only as existing data routes until VaERL projection replaces them fully"
+}

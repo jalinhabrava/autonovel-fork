@@ -1,0 +1,25 @@
+{
+  "assessment": "node_detail_contract_ready_for_revalidation",
+  "provider_calls": "NO",
+  "write_back": "NO",
+  "privacy": "no source prose, prompts, provider outputs, or tmp payloads committed",
+  "detail_fields_available": [
+    "real label",
+    "kind",
+    "aliases",
+    "surface_forms",
+    "summary",
+    "facts",
+    "chapters",
+    "relationships_out",
+    "relationships_in",
+    "source_refs",
+    "evidence_refs",
+    "status",
+    "note_path",
+    "tags",
+    "backlinks"
+  ],
+  "ui_scope": "data display only; no full redesign",
+  "mvp_minimum_met": true
+}

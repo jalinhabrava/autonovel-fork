@@ -1,0 +1,9 @@
+{
+  "assessment": "artifacts_reframed_as_debug_secondary",
+  "provider_calls": "NO",
+  "write_back": "NO",
+  "privacy": "no source prose, prompts, provider outputs, or tmp payloads committed",
+  "ui_change": "Artifacts list receives Debug / Artifacts explanatory copy",
+  "author_experience": "Overview and Graph are primary; raw artifacts remain secondary technical inspection",
+  "pending_work": "possible tab rename in later visual polish phase"
+}

@@ -1,0 +1,37 @@
+{
+  "assessment": "vaerl_runtime_graph_projection_patch_ready",
+  "provider_calls": "NO",
+  "write_back": "NO",
+  "privacy": "no source prose, prompts, provider outputs, or tmp payloads committed",
+  "fields_preserved": [
+    "id",
+    "canonical_label",
+    "label",
+    "kind",
+    "surface_forms",
+    "aliases",
+    "facts",
+    "summary",
+    "chapter_ids",
+    "source_refs",
+    "evidence_refs",
+    "note_path",
+    "tags",
+    "status",
+    "review_status"
+  ],
+  "real_label_policy": "runtime uses canonical_label/canonical_name/surface/name/title before any missing-label warning",
+  "synthetic_label_prohibition": "runtime real graph must not silently emit Character 001/Object 012/Event 009 when real labels exist",
+  "missing_label_fallback": "label_missing_runtime_warning only when all real label fields are absent",
+  "relation_label_policy": "relation_label/label/relation_type/type preferred; generic appears_in/happens_at only when semantically true or no better relation exists",
+  "source_refs_preservation": true,
+  "evidence_preservation": true,
+  "warnings": [
+    "nodes or edges without source_refs remain explicit warnings",
+    "missing runtime label becomes explicit warning"
+  ],
+  "legacy_routes_removed_or_deprecated": [
+    "silent synthetic label projection deprecated",
+    "artifacts-first author experience deprecated"
+  ]
+}

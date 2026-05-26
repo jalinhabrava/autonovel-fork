@@ -1,0 +1,22 @@
+{
+  "assessment": "relationship_projection_preserves_semantic_labels",
+  "provider_calls": "NO",
+  "write_back": "NO",
+  "privacy": "no source prose, prompts, provider outputs, or tmp payloads committed",
+  "relation_sources": [
+    "relations",
+    "relationships"
+  ],
+  "mapping_rules": [
+    "from_canonical/from_surface map to source",
+    "to_canonical/to_surface map to target",
+    "relation_label preferred for label",
+    "relation_category preserved as kind",
+    "facts/source_refs/evidence_refs preserved"
+  ],
+  "fallback_rules": [
+    "missing relation label emits relation_label_missing_runtime_warning",
+    "generic labels not used when relation_label exists"
+  ],
+  "private_revalidation_edges_after_patch": 91
+}

@@ -225,13 +225,34 @@ function renderOverview() {
   if (!state.current) return;
   const canon = state.current.canon;
   const queue = canon.review_queue || {};
+  const overview = state.current.overview || {};
+  const nodeCounts = overview.node_counts_by_kind || {};
+  const warningSummary = overview.warning_summary || [];
+  const hasWriterOutcome = overview.chapters_processed !== undefined && overview.chapters_processed !== null;
   $("view-overview").innerHTML = `
     <div class="stats-grid">
-      <div class="stat-card"><span>Chapters</span><strong>${canon.chapters.length}</strong></div>
-      <div class="stat-card"><span>Primaries</span><strong>${canon.primaries.length}</strong></div>
-      <div class="stat-card"><span>Review Entities</span><strong>${canon.review_entities.length}</strong></div>
+      <div class="stat-card"><span>Chapters</span><strong>${fmtCount(hasWriterOutcome ? overview.chapters_processed : canon.chapters.length)}</strong></div>
+      <div class="stat-card"><span>Ready</span><strong>${fmtCount(overview.chapters_ready ?? "—")}</strong></div>
+      <div class="stat-card"><span>Ready w/ warnings</span><strong>${fmtCount(overview.chapters_ready_with_warnings ?? "—")}</strong></div>
+      <div class="stat-card"><span>Need review</span><strong>${fmtCount(overview.chapters_needing_review ?? "—")}</strong></div>
+      <div class="stat-card"><span>Need retry</span><strong>${fmtCount(overview.chapters_needing_retry ?? "—")}</strong></div>
+      <div class="stat-card"><span>Failed</span><strong>${fmtCount(overview.chapters_failed ?? "—")}</strong></div>
+      <div class="stat-card"><span>Relationships</span><strong>${fmtCount(overview.relationship_count ?? (state.current.graph?.edges || []).length)}</strong></div>
       <div class="stat-card"><span>Review Items</span><strong>${fmtCount(queue.item_count)}</strong></div>
     </div>
+    ${hasWriterOutcome ? `
+      <div class="panel">
+        <h3>Story map outcome</h3>
+        <p>${escapeHtml(overview.user_summary || "Result ready for manual review.")}</p>
+        <div class="inline-badges">
+          ${Object.entries(nodeCounts).map(([kind, count]) => `<span class="badge">${escapeHtml(kind)} ${escapeHtml(fmtCount(count))}</span>`).join("")}
+          ${overview.synthetic_label_count !== undefined && overview.synthetic_label_count !== null ? `<span class="badge">synthetic labels ${escapeHtml(fmtCount(overview.synthetic_label_count))}</span>` : ""}
+        </div>
+        <p class="muted">Primary action: ${escapeHtml((overview.primary_action || {}).label || "not available")}</p>
+        <p class="muted">Secondary action: ${escapeHtml((overview.secondary_action || {}).label || "not available")}</p>
+        ${warningSummary.length ? `<details><summary>Warnings</summary><ul>${warningSummary.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></details>` : `<p class="muted">Warnings: none highlighted.</p>`}
+      </div>
+    ` : ""}
     ${renderSemanticHealth(state.current.health || {})}
     ${renderIngestionWizard()}
     ${renderCompareRunsPanel()}
@@ -2941,12 +2962,15 @@ function bindCanonNavigation() {
 
 function renderArtifacts() {
   const artifacts = state.current.artifacts || [];
-  $("artifact-list").innerHTML = artifacts.map((artifact) => `
-    <div class="list-item" data-artifact="${escapeHtml(artifact.path)}">
-      <strong>${escapeHtml(artifact.name)}</strong>
-      <small>${escapeHtml(artifact.kind)} · ${fmtCount(artifact.size)} bytes</small>
-    </div>
-  `).join("");
+  $("artifact-list").innerHTML = `
+    <div class="panel"><p class="muted"><strong>Debug / Artifacts:</strong> secondary technical view. Author-facing review should start in Overview and Graph.</p></div>
+    ${artifacts.map((artifact) => `
+      <div class="list-item" data-artifact="${escapeHtml(artifact.path)}">
+        <strong>${escapeHtml(artifact.name)}</strong>
+        <small>${escapeHtml(artifact.kind)} · ${fmtCount(artifact.size)} bytes</small>
+      </div>
+    `).join("")}
+  `;
   document.querySelectorAll("[data-artifact]").forEach((node) => {
     node.addEventListener("click", () => openArtifact(node.dataset.artifact));
   });
@@ -3249,23 +3273,31 @@ function bindCanonicalizationInteractions() {
 
 function entityDetail(entity) {
   const aliases = entity.aliases || [];
-  const facts = entity.key_facts || [];
+  const facts = entity.facts || entity.key_facts || [];
   const relationships = entity.relationships || [];
-  const mentions = entity.source_mentions || [];
+  const relationshipsOut = entity.relationships_out || [];
+  const relationshipsIn = entity.relationships_in || [];
+  const mentions = entity.surface_forms || entity.source_mentions || [];
   const sourceRefs = entity.source_refs || [];
+  const evidenceRefs = entity.evidence_refs || [];
+  const backlinks = entity.backlinks || [];
   return `
     <div class="entity-detail">
       <dl class="meta-list">
         <div><dt>Slug</dt><dd>${escapeHtml(entity.preferred_slug || "")}</dd></div>
         <div><dt>State</dt><dd>${escapeHtml(entity.review_state || entity.note_role || "")}</dd></div>
-        <div><dt>Subkind</dt><dd>${escapeHtml(entity.entity_subkind || "")}</dd></div>
+        <div><dt>Kind</dt><dd>${escapeHtml(entity.entity_kind || entity.entity_subkind || "")}</dd></div>
       </dl>
       ${entity.summary ? `<h4>Summary</h4><p>${escapeHtml(entity.summary)}</p>` : ""}
       ${aliases.length ? `<h4>Aliases</h4><p>${aliases.slice(0, 24).map((alias) => `<span class="badge">${escapeHtml(alias)}</span>`).join("")}</p>` : ""}
-      ${facts.length ? `<h4>Key facts</h4><ul>${facts.slice(0, 12).map((fact) => `<li>${escapeHtml(fact)}</li>`).join("")}</ul>` : ""}
-      ${relationships.length ? `<h4>Relationships</h4><ul>${relationships.slice(0, 12).map((rel) => `<li><strong>${escapeHtml(rel.target || "")}</strong>${rel.type || rel.relation_type ? ` (${escapeHtml(rel.type || rel.relation_type)})` : ""}${(rel.facts || []).length ? `: ${escapeHtml((rel.facts || [])[0])}` : ""}</li>`).join("")}</ul>` : ""}
+      ${mentions.length ? `<h4>Surface forms</h4><p>${mentions.slice(0, 24).map((mention) => `<span class="badge">${escapeHtml(mention)}</span>`).join("")}</p>` : ""}
+      ${facts.length ? `<h4>Facts</h4><ul>${facts.slice(0, 12).map((fact) => `<li>${escapeHtml(fact)}</li>`).join("")}</ul>` : ""}
+      ${relationships.length ? `<h4>Relationships</h4><ul>${relationships.slice(0, 12).map((rel) => `<li><strong>${escapeHtml(rel.target || rel.source || "")}</strong>${rel.type || rel.relation_type ? ` (${escapeHtml(rel.type || rel.relation_type)})` : ""}${(rel.facts || []).length ? `: ${escapeHtml((rel.facts || [])[0])}` : ""}</li>`).join("")}</ul>` : ""}
+      ${relationshipsOut.length ? `<h4>Outgoing links</h4><ul>${relationshipsOut.slice(0, 12).map((rel) => `<li>${escapeHtml(rel.label || rel.kind || "related_to")} → <strong>${escapeHtml(rel.target || "")}</strong></li>`).join("")}</ul>` : ""}
+      ${relationshipsIn.length ? `<h4>Incoming links</h4><ul>${relationshipsIn.slice(0, 12).map((rel) => `<li><strong>${escapeHtml(rel.source || "")}</strong> → ${escapeHtml(rel.label || rel.kind || "related_to")}</li>`).join("")}</ul>` : ""}
       ${sourceRefs.length ? `<h4>Source refs</h4><ul>${sourceRefs.slice(0, 12).map((ref) => `<li>${escapeHtml(ref.chapter_id || ref.chapter || "chapter")}${ref.span_id ? ` · ${escapeHtml(ref.span_id)}` : ""}${ref.source_span ? ` · ${escapeHtml(ref.source_span)}` : ""}</li>`).join("")}</ul>` : ""}
-      ${mentions.length ? `<h4>Source mentions</h4><p>${mentions.slice(0, 20).map((mention) => `<span class="badge">${escapeHtml(mention)}</span>`).join("")}</p>` : ""}
+      ${evidenceRefs.length ? `<h4>Evidence</h4><ul>${evidenceRefs.slice(0, 12).map((ref) => `<li>${escapeHtml(ref.chapter_id || "chapter")}${ref.pointer ? ` · ${escapeHtml(ref.pointer)}` : ""}</li>`).join("")}</ul>` : ""}
+      ${backlinks.length ? `<h4>Backlinks</h4><p>${backlinks.slice(0, 20).map((item) => `<span class="badge">${escapeHtml(item)}</span>`).join("")}</p>` : ""}
     </div>
   `;
 }
