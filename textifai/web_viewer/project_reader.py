@@ -7,6 +7,7 @@ from typing import Any
 
 from textifai.obsidian.parser import extract_obsidian_links, parse_obsidian_frontmatter
 from vault.schema import slugify
+from textifai.import_review.viewer_graph_adapter import adapt_ingestion_graph_to_viewer_graph
 
 
 VISIBLE_ARTIFACTS = [
@@ -24,6 +25,7 @@ VISIBLE_ARTIFACTS = [
     "pre_vaerl_reconciliation_audit.json",
     "primary_note_synthesis_audit.json",
     "obsidian_relationship_reconciliation_audit.json",
+    "ingestion_graph.json",
 ]
 
 HEALTH_EXPECTED_ARTIFACTS = [
@@ -217,6 +219,10 @@ def read_artifact(project: ProjectRef, artifact_path: str) -> dict[str, Any]:
 
 
 def build_graph(project: ProjectRef, canon: dict[str, Any] | None = None) -> dict[str, Any]:
+    ingestion_graph = _build_graph_from_ingestion_artifact(project)
+    if ingestion_graph is not None:
+        return ingestion_graph
+
     canon = canon or read_canon(project)
     nodes: dict[str, dict[str, Any]] = {}
     edges: list[dict[str, Any]] = []
@@ -571,6 +577,7 @@ def _graph_entity_payload(entity: dict[str, Any]) -> dict[str, Any]:
         "key_facts",
         "relationships",
         "source_mentions",
+        "source_refs",
         "tags",
         "confidence",
     ]
@@ -600,6 +607,18 @@ def _project_from_candidate(path: Path) -> ProjectRef | None:
         root = path.parent
         return ProjectRef(project_id=_project_id(root), name=root.name, root=root, system_root=path, kind="system_run")
     return None
+
+
+def _build_graph_from_ingestion_artifact(project: ProjectRef) -> dict[str, Any] | None:
+    system = project.system_root
+    if system is None:
+        return None
+    ingestion = _read_json(system / "ingestion_graph.json")
+    if not isinstance(ingestion, dict):
+        return None
+    if not any(key in ingestion for key in ("nodes", "characters", "places", "concepts", "objects", "events")):
+        return None
+    return adapt_ingestion_graph_to_viewer_graph(ingestion)
 
 
 def _project_id(path: Path) -> str:

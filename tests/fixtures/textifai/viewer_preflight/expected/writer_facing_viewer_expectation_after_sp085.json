@@ -1,0 +1,29 @@
+{
+  "assessment": "writer_facing_viewer_expectation_defined",
+  "writer_can_see": [
+    "story map with people, places, events, items, and ideas",
+    "processed chapter count",
+    "chapters needing review",
+    "items marked for review",
+    "basic links between story elements"
+  ],
+  "writer_should_not_see": [
+    "internal diagnostics",
+    "engine internals",
+    "raw service details",
+    "developer-only logs"
+  ],
+  "status_labels": [
+    "ready",
+    "needs_review"
+  ],
+  "summary_copy": "Your story map is ready. One chapter should be reviewed before you continue.",
+  "primary_action": {
+    "label": "Review story map",
+    "action_id": "review_story_map"
+  },
+  "secondary_action": {
+    "label": "Later",
+    "action_id": "dismiss"
+  }
+}

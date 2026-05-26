@@ -1,0 +1,217 @@
+{
+  "schema_version": "textifai.ingestion_graph.fixture.v1",
+  "source": "synthetic",
+  "metadata": {
+    "sp_reference": "SP-085",
+    "chapters_total": 4,
+    "chapters_ready": 3,
+    "chapters_needing_review": 1,
+    "privacy": "synthetic labels only; no source prose"
+  },
+  "chapters": [
+    {
+      "chapter_id": "ch_097",
+      "chapter_label": "Chapter 97",
+      "status": "ready"
+    },
+    {
+      "chapter_id": "ch_106",
+      "chapter_label": "Chapter 106",
+      "status": "ready"
+    },
+    {
+      "chapter_id": "ch_114",
+      "chapter_label": "Chapter 114",
+      "status": "ready"
+    },
+    {
+      "chapter_id": "ch_115",
+      "chapter_label": "Chapter 115",
+      "status": "needs_review"
+    }
+  ],
+  "characters": [
+    {
+      "id": "character:protagonist_alpha",
+      "label": "Protagonist Alpha",
+      "kind": "character",
+      "status": "ready",
+      "chapter_ids": [
+        "ch_097",
+        "ch_106"
+      ],
+      "source_refs": [
+        {
+          "chapter_id": "ch_097",
+          "span_id": "synthetic-span-001"
+        }
+      ]
+    },
+    {
+      "id": "character:mentor_beta",
+      "label": "Mentor Beta",
+      "kind": "character",
+      "status": "ready",
+      "chapter_ids": [
+        "ch_106",
+        "ch_114"
+      ],
+      "source_refs": [
+        {
+          "chapter_id": "ch_106",
+          "span_id": "synthetic-span-002"
+        }
+      ]
+    }
+  ],
+  "places": [
+    {
+      "id": "place:citadel_north",
+      "label": "Citadel North",
+      "kind": "place",
+      "status": "ready",
+      "chapter_ids": [
+        "ch_097"
+      ],
+      "source_refs": [
+        {
+          "chapter_id": "ch_097",
+          "span_id": "synthetic-span-003"
+        }
+      ]
+    }
+  ],
+  "concepts": [
+    {
+      "id": "concept:oath_of_guardians",
+      "label": "Oath of Guardians",
+      "kind": "concept",
+      "status": "ready",
+      "chapter_ids": [
+        "ch_114"
+      ],
+      "source_refs": [
+        {
+          "chapter_id": "ch_114",
+          "span_id": "synthetic-span-004"
+        }
+      ]
+    }
+  ],
+  "objects": [
+    {
+      "id": "object:signal_relic",
+      "label": "Signal Relic",
+      "kind": "object",
+      "status": "needs_review",
+      "chapter_ids": [
+        "ch_115"
+      ],
+      "source_refs": [
+        {
+          "chapter_id": "ch_115",
+          "span_id": "synthetic-span-005"
+        }
+      ]
+    }
+  ],
+  "events": [
+    {
+      "id": "event:midpoint_choice",
+      "label": "Midpoint Choice",
+      "kind": "event",
+      "status": "ready",
+      "chapter_ids": [
+        "ch_106"
+      ],
+      "source_refs": [
+        {
+          "chapter_id": "ch_106",
+          "span_id": "synthetic-span-006"
+        }
+      ]
+    }
+  ],
+  "relations": [
+    {
+      "id": "rel:alpha_mentor",
+      "source": "character:protagonist_alpha",
+      "target": "character:mentor_beta",
+      "label": "trained_by",
+      "kind": "relation",
+      "chapter_ids": [
+        "ch_106"
+      ],
+      "source_refs": [
+        {
+          "chapter_id": "ch_106",
+          "span_id": "synthetic-span-007"
+        }
+      ]
+    },
+    {
+      "id": "rel:alpha_citadel",
+      "source": "character:protagonist_alpha",
+      "target": "place:citadel_north",
+      "label": "travels_to",
+      "kind": "event_link",
+      "chapter_ids": [
+        "ch_097"
+      ],
+      "source_refs": [
+        {
+          "chapter_id": "ch_097",
+          "span_id": "synthetic-span-008"
+        }
+      ]
+    },
+    {
+      "id": "rel:relic_oath",
+      "source": "object:signal_relic",
+      "target": "concept:oath_of_guardians",
+      "label": "symbolizes",
+      "kind": "object_link",
+      "chapter_ids": [
+        "ch_115"
+      ],
+      "source_refs": [
+        {
+          "chapter_id": "ch_115",
+          "span_id": "synthetic-span-009"
+        }
+      ]
+    },
+    {
+      "id": "rel:event_alpha",
+      "source": "event:midpoint_choice",
+      "target": "character:protagonist_alpha",
+      "label": "affects",
+      "kind": "event_link",
+      "chapter_ids": [
+        "ch_106"
+      ],
+      "source_refs": [
+        {
+          "chapter_id": "ch_106",
+          "span_id": "synthetic-span-010"
+        }
+      ]
+    }
+  ],
+  "unresolved_mentions": [
+    {
+      "id": "unresolved:masked_ally",
+      "label": "Masked Ally",
+      "status": "needs_review",
+      "chapter_ids": [
+        "ch_115"
+      ],
+      "source_refs": [
+        {
+          "chapter_id": "ch_115",
+          "span_id": "synthetic-span-011"
+        }
+      ]
+    }
+  ]
+}

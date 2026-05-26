@@ -1,0 +1,20 @@
+{
+  "assessment": "viewer_adapter_validation_passed",
+  "adapter_module": "textifai/import_review/viewer_graph_adapter.py",
+  "input_fixture": "tests/fixtures/textifai/viewer_preflight/input/sample_ingestion_graph_after_sp085.json",
+  "output_fixture": "tests/fixtures/textifai/viewer_preflight/expected/sample_viewer_graph_after_sp085.json",
+  "nodes_count": 7,
+  "edges_count": 4,
+  "node_kinds": [
+    "character",
+    "concept",
+    "event",
+    "object",
+    "place",
+    "unresolved"
+  ],
+  "source_refs_preserved": true,
+  "edge_type_and_label_present": true,
+  "missing_optional_fields_do_not_crash": true,
+  "provider_agnostic": true
+}

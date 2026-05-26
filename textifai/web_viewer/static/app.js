@@ -3252,6 +3252,7 @@ function entityDetail(entity) {
   const facts = entity.key_facts || [];
   const relationships = entity.relationships || [];
   const mentions = entity.source_mentions || [];
+  const sourceRefs = entity.source_refs || [];
   return `
     <div class="entity-detail">
       <dl class="meta-list">
@@ -3263,6 +3264,7 @@ function entityDetail(entity) {
       ${aliases.length ? `<h4>Aliases</h4><p>${aliases.slice(0, 24).map((alias) => `<span class="badge">${escapeHtml(alias)}</span>`).join("")}</p>` : ""}
       ${facts.length ? `<h4>Key facts</h4><ul>${facts.slice(0, 12).map((fact) => `<li>${escapeHtml(fact)}</li>`).join("")}</ul>` : ""}
       ${relationships.length ? `<h4>Relationships</h4><ul>${relationships.slice(0, 12).map((rel) => `<li><strong>${escapeHtml(rel.target || "")}</strong>${rel.type || rel.relation_type ? ` (${escapeHtml(rel.type || rel.relation_type)})` : ""}${(rel.facts || []).length ? `: ${escapeHtml((rel.facts || [])[0])}` : ""}</li>`).join("")}</ul>` : ""}
+      ${sourceRefs.length ? `<h4>Source refs</h4><ul>${sourceRefs.slice(0, 12).map((ref) => `<li>${escapeHtml(ref.chapter_id || ref.chapter || "chapter")}${ref.span_id ? ` · ${escapeHtml(ref.span_id)}` : ""}${ref.source_span ? ` · ${escapeHtml(ref.source_span)}` : ""}</li>`).join("")}</ul>` : ""}
       ${mentions.length ? `<h4>Source mentions</h4><p>${mentions.slice(0, 20).map((mention) => `<span class="badge">${escapeHtml(mention)}</span>`).join("")}</p>` : ""}
     </div>
   `;

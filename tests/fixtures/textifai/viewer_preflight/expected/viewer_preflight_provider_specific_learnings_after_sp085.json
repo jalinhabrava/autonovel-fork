@@ -1,0 +1,7 @@
+{
+  "assessment": "provider_specific_viewer_dependencies_none",
+  "provider_specific": [],
+  "deepseek_dependency": false,
+  "openai_dependency": false,
+  "learning": "viewer should consume normalized core graph output regardless of provider family"
+}

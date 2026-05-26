@@ -1,0 +1,44 @@
+{
+  "assessment": "ingestion_graph_output_inventory_complete",
+  "formats_found": [
+    "obsidian_import.json canon entities/chapters",
+    "review_queue.json",
+    "privacy-safe dry-run reports with source_ref audits",
+    "synthetic normalized ingestion_graph fixture"
+  ],
+  "entities_available": [
+    "character",
+    "place",
+    "concept",
+    "object",
+    "event",
+    "unresolved"
+  ],
+  "relations_available": [
+    "relation",
+    "event_link",
+    "object_link"
+  ],
+  "source_refs_available": true,
+  "fields_needed_for_viewer": [
+    "nodes[].id",
+    "nodes[].label",
+    "nodes[].kind",
+    "nodes[].role",
+    "nodes[].tags",
+    "edges[].source",
+    "edges[].target",
+    "edges[].type"
+  ],
+  "fields_missing_from_raw_reductions": [
+    "viewer role",
+    "viewer tags",
+    "edge type alias when only label exists"
+  ],
+  "compatibility_risks": [
+    "raw ingestion output is not always directly loadable by current viewer",
+    "current viewer centers on obsidian_import canon projection"
+  ],
+  "directly_loadable_by_viewer": false,
+  "adapter_required": true
+}

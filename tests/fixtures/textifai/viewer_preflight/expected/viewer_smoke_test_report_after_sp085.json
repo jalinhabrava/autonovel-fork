@@ -1,0 +1,30 @@
+{
+  "assessment": "viewer_contract_smoke_passed_without_browser_screenshot",
+  "viewer_exists": true,
+  "entrypoint": "textifai/web_viewer/server.py",
+  "smoke_scope": "ProjectCatalog/read_project/build_graph plus adapter output contract; no provider calls; no browser automation",
+  "fixture_used": "sample_ingestion_graph_after_sp085.json",
+  "adapter_used": true,
+  "nodes_renderizable": 7,
+  "relations_renderizable": 4,
+  "source_refs_available": true,
+  "console_errors": [],
+  "screenshot_paths": [],
+  "warnings": [
+    "no browser screenshot captured in this provider-free preflight",
+    "edge evidence is preserved in data but not highlighted visually yet"
+  ],
+  "ready_for_20_chapter_e2e": true,
+  "http_smoke_test": {
+    "executed": true,
+    "root_status": 200,
+    "projects_status": 200,
+    "project_status": 200,
+    "graph_status": 200,
+    "project_count": 1,
+    "graph_nodes": 7,
+    "graph_edges": 4,
+    "source_refs_preserved": true,
+    "browser_screenshot_captured": false
+  }
+}

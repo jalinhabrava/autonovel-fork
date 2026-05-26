@@ -1,0 +1,15 @@
+{
+  "assessment": "general_viewer_contract_ready_with_minor_warnings",
+  "general_pipeline": [
+    "normalized graph adapter should stay provider-agnostic",
+    "viewer contract needs nodes and edges with stable ids",
+    "source references can be preserved for inspection",
+    "chapter status and review status can map into role/tags",
+    "20-chapter e2e should produce viewer-ready projection before UI smoke"
+  ],
+  "core_boundaries": [
+    "no provider-specific fields required by viewer",
+    "no write-back required for preflight",
+    "raw reductions should not be passed directly to MVP viewer"
+  ]
+}

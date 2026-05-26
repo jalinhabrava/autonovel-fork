@@ -1,0 +1,13 @@
+{
+  "assessment": "viewer_preflight_ready_with_minor_warnings",
+  "blocker": false,
+  "provider_calls": "NO",
+  "write_back": "NO",
+  "readiness_for_20_chapter_e2e": true,
+  "warnings": [
+    "adapter required for raw ingestion graph",
+    "browser screenshot not captured",
+    "evidence display is inspectable but still MVP-level"
+  ],
+  "next_suggested_phase": "Phase 1.3.M-b5c-4p — Controlled 20-chapter E2E: Ingestion to Viewer Smoke Test"
+}

@@ -1,0 +1,56 @@
+{
+  "assessment": "viewer_contract_audited",
+  "entrypoint_viewer": "textifai/web_viewer/server.py",
+  "static_entrypoint": "textifai/web_viewer/static/index.html",
+  "api_entrypoints": [
+    "/api/projects",
+    "/api/projects/<id>",
+    "/api/projects/<id>/graph",
+    "/api/projects/<id>/canon",
+    "/api/projects/<id>/artifacts"
+  ],
+  "format_expected": {
+    "nodes": "list",
+    "edges": "list"
+  },
+  "required_fields": {
+    "node": [
+      "id",
+      "label",
+      "kind"
+    ],
+    "edge": [
+      "source",
+      "target",
+      "type"
+    ]
+  },
+  "optional_fields": {
+    "node": [
+      "role",
+      "tags",
+      "note_path",
+      "entity",
+      "chapter"
+    ],
+    "edge": [
+      "label",
+      "kind",
+      "chapter_ids",
+      "source_refs"
+    ]
+  },
+  "node_model": "viewer force graph node with label, kind, role, tags",
+  "edge_model": "viewer force graph edge with source, target, type tooltip",
+  "labels_grouping": [
+    "kind filter",
+    "tag filter",
+    "role hiding for system/review/chapter"
+  ],
+  "evidence_source_display_support": "inspectable through node detail payloads and artifacts; not yet first-class edge evidence UI",
+  "assumptions_detected": [
+    "edge tooltip reads type",
+    "project discovery expects 99_System/obsidian_import.json or review_queue.json"
+  ],
+  "needs_adapter": true
+}
