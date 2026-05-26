@@ -1,0 +1,93 @@
+{
+  "assessment": "sample_vaerl_markdown_materialization_index_ready",
+  "generated_files": [
+    {
+      "path": "Characters/Ada.md",
+      "frontmatter": {
+        "vaerl_id": "character:ada",
+        "kind": "character",
+        "aliases": [
+          "Archivist"
+        ],
+        "tags": [
+          "character",
+          "archive"
+        ],
+        "status": "ready"
+      },
+      "wikilinks": [
+        "[[Places/Farmhouse]]"
+      ],
+      "backlinks_expected": []
+    },
+    {
+      "path": "Places/Farmhouse.md",
+      "frontmatter": {
+        "vaerl_id": "place:farmhouse",
+        "kind": "place",
+        "aliases": [
+          "Old Farm"
+        ],
+        "tags": [
+          "place"
+        ],
+        "status": "ready"
+      },
+      "wikilinks": [],
+      "backlinks_expected": [
+        "Characters/Ada.md",
+        "Objects/Copper Key.md"
+      ]
+    },
+    {
+      "path": "Objects/Copper Key.md",
+      "frontmatter": {
+        "vaerl_id": "object:copper_key",
+        "kind": "object",
+        "aliases": [
+          "cellar key"
+        ],
+        "tags": [
+          "object",
+          "mystery"
+        ],
+        "status": "needs_review"
+      },
+      "wikilinks": [
+        "[[Places/Farmhouse]]"
+      ],
+      "backlinks_expected": []
+    },
+    {
+      "path": "Chapters/ch_001.md",
+      "frontmatter": {
+        "vaerl_id": "chapter:ch_001",
+        "kind": "chapter",
+        "tags": [
+          "chapter"
+        ],
+        "status": "ready"
+      },
+      "wikilinks": [
+        "[[Characters/Ada]]",
+        "[[Places/Farmhouse]]",
+        "[[Objects/Copper Key]]"
+      ],
+      "backlinks_expected": []
+    },
+    {
+      "path": "Reviews/pending.md",
+      "frontmatter": {
+        "kind": "review_index",
+        "tags": [
+          "review"
+        ]
+      },
+      "wikilinks": [
+        "[[Objects/Copper Key]]"
+      ],
+      "backlinks_expected": []
+    }
+  ],
+  "no_private_source_prose": true
+}

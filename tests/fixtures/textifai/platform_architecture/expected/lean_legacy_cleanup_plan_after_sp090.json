@@ -1,0 +1,35 @@
+{
+  "assessment": "lean_cleanup_plan_ready",
+  "keep": [
+    "VaERL core/index/contracts",
+    "review_queue semantics",
+    "obsidian parser utilities",
+    "web_viewer server/project reader",
+    "provider-free validation reports"
+  ],
+  "adapt": [
+    "obsidian_import into VaERL projection",
+    "review_queue UI into governance surface",
+    "artifacts tab into developer/debug panel"
+  ],
+  "remove_or_deprecate": [
+    "external Obsidian as required workflow",
+    "debug JSON as primary author UX",
+    "silent synthetic labels",
+    "indefinite obsidian_import-only fallback"
+  ],
+  "fallback_policy": "fallbacks must be explicit, scoped, tested, and have removal condition",
+  "tests_before_removal": [
+    "VaERL materialization parity",
+    "backlink graph index parity",
+    "review queue status parity",
+    "viewer loads VaERL-only project"
+  ],
+  "migration_strategy": [
+    "make VaERL core authoritative",
+    "generate Markdown projection",
+    "route viewer through projection indexes",
+    "deprecate legacy artifacts after parity tests"
+  ],
+  "rejects_indefinite_fallback": true
+}

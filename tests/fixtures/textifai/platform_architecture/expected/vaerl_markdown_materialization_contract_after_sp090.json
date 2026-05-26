@@ -1,0 +1,57 @@
+{
+  "assessment": "vaerl_markdown_materialization_contract_ready",
+  "folder_structure": [
+    "Characters/<canonical>.md",
+    "Places/<canonical>.md",
+    "Events/<event_slug>.md",
+    "Objects/<canonical>.md",
+    "Concepts/<canonical>.md",
+    "Chapters/ch_001.md",
+    "Reviews/pending.md",
+    "System/index files"
+  ],
+  "frontmatter_required": [
+    "vaerl_id",
+    "kind",
+    "canonical_label",
+    "aliases",
+    "tags",
+    "status",
+    "review_state",
+    "chapter_ids",
+    "source_refs",
+    "last_materialized_at"
+  ],
+  "body_sections": [
+    "Summary",
+    "Facts",
+    "Relationships",
+    "Evidence",
+    "Appears In",
+    "Review Notes"
+  ],
+  "aliases": "frontmatter aliases plus visible alias section",
+  "tags": "kind/status/chapter/review tags generated from VaERL and author additions reconciled as patch proposals",
+  "wikilinks": "relationships and chapter mentions rendered as [[Kind/Label]] links",
+  "backlinks": "derived index, never manually authoritative",
+  "source_evidence_refs": "stored as stable ids/spans, not full source prose in committed fixtures",
+  "editability_rules": {
+    "editable_body": true,
+    "guarded_frontmatter": [
+      "vaerl_id",
+      "kind"
+    ],
+    "author_editable_frontmatter": [
+      "aliases",
+      "tags",
+      "review_state"
+    ],
+    "write_back": "requires VaERL patch approval"
+  },
+  "conflict_handling": [
+    "detect VaERL changed after Markdown edit",
+    "show diff",
+    "queue review patch",
+    "preserve author note text"
+  ]
+}

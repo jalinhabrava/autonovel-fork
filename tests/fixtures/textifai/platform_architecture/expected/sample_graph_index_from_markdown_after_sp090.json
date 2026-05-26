@@ -1,0 +1,84 @@
+{
+  "assessment": "sample_graph_index_from_markdown_ready",
+  "nodes": [
+    {
+      "id": "Characters/Ada.md",
+      "label": "Ada",
+      "kind": "character",
+      "tags": [
+        "character",
+        "archive"
+      ],
+      "backlink_count": 1
+    },
+    {
+      "id": "Places/Farmhouse.md",
+      "label": "Farmhouse",
+      "kind": "place",
+      "tags": [
+        "place"
+      ],
+      "backlink_count": 3
+    },
+    {
+      "id": "Objects/Copper Key.md",
+      "label": "Copper Key",
+      "kind": "object",
+      "tags": [
+        "object",
+        "mystery"
+      ],
+      "backlink_count": 2
+    },
+    {
+      "id": "Chapters/ch_001.md",
+      "label": "ch_001",
+      "kind": "chapter",
+      "tags": [
+        "chapter"
+      ],
+      "backlink_count": 0
+    },
+    {
+      "id": "Reviews/pending.md",
+      "label": "Pending Reviews",
+      "kind": "review",
+      "tags": [
+        "review"
+      ],
+      "backlink_count": 0
+    }
+  ],
+  "edges": [
+    {
+      "source": "Characters/Ada.md",
+      "target": "Places/Farmhouse.md",
+      "label": "protects archive at"
+    },
+    {
+      "source": "Objects/Copper Key.md",
+      "target": "Places/Farmhouse.md",
+      "label": "opens cellar in"
+    },
+    {
+      "source": "Chapters/ch_001.md",
+      "target": "Characters/Ada.md",
+      "label": "mentions"
+    },
+    {
+      "source": "Chapters/ch_001.md",
+      "target": "Places/Farmhouse.md",
+      "label": "mentions"
+    },
+    {
+      "source": "Chapters/ch_001.md",
+      "target": "Objects/Copper Key.md",
+      "label": "mentions"
+    }
+  ],
+  "index_sources": [
+    "frontmatter",
+    "wikilinks",
+    "VaERL relationships"
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "assessment": "first_party_vaerl_platform_architecture_ready_for_implementation",
+  "recommended_next_phase": "Phase 1.3.M-b5c-4u — VaERL Markdown Materialization + Backlink Index MVP",
+  "must_do_next": [
+    "implement provider-free materializer",
+    "derive backlinks/graph index",
+    "wire wiki view to materialized notes",
+    "keep VaERL authoritative"
+  ],
+  "do_not_do": [
+    "make Obsidian external workflow primary",
+    "embed Quartz as final product",
+    "keep debug viewer as author UX"
+  ],
+  "provider_calls": "NO",
+  "write_back": "NO"
+}

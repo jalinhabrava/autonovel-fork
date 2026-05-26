@@ -1,0 +1,109 @@
+{
+  "schema_version": "textifai.vaerl.sample.v1",
+  "work": {
+    "title": "Synthetic Story",
+    "language": "en"
+  },
+  "entities": [
+    {
+      "id": "character:ada",
+      "kind": "character",
+      "canonical_label": "Ada",
+      "aliases": [
+        "Archivist"
+      ],
+      "tags": [
+        "character",
+        "archive"
+      ],
+      "summary": "Keeps a hidden archive.",
+      "facts": [
+        "Guards records.",
+        "Trusts Bryn."
+      ],
+      "source_refs": [
+        {
+          "chapter_id": "ch_001",
+          "span_id": "s1"
+        }
+      ],
+      "relationships": [
+        {
+          "target": "place:farmhouse",
+          "label": "protects archive at"
+        }
+      ]
+    },
+    {
+      "id": "place:farmhouse",
+      "kind": "place",
+      "canonical_label": "Farmhouse",
+      "aliases": [
+        "Old Farm"
+      ],
+      "tags": [
+        "place"
+      ],
+      "summary": "A rural safehouse.",
+      "facts": [
+        "Contains a cellar."
+      ],
+      "source_refs": [
+        {
+          "chapter_id": "ch_001",
+          "span_id": "s2"
+        }
+      ],
+      "relationships": []
+    },
+    {
+      "id": "object:copper_key",
+      "kind": "object",
+      "canonical_label": "Copper Key",
+      "aliases": [
+        "cellar key"
+      ],
+      "tags": [
+        "object",
+        "mystery"
+      ],
+      "summary": "Opens the cellar.",
+      "facts": [
+        "Found by Ada."
+      ],
+      "source_refs": [
+        {
+          "chapter_id": "ch_001",
+          "span_id": "s3"
+        }
+      ],
+      "relationships": [
+        {
+          "target": "place:farmhouse",
+          "label": "opens cellar in"
+        }
+      ]
+    }
+  ],
+  "chapters": [
+    {
+      "id": "ch_001",
+      "title": "Arrival",
+      "summary": "Ada reaches the farmhouse.",
+      "source_refs": [
+        {
+          "chapter_id": "ch_001",
+          "span_id": "chapter"
+        }
+      ]
+    }
+  ],
+  "reviews": [
+    {
+      "id": "review:001",
+      "status": "needs_review",
+      "target": "object:copper_key",
+      "reason": "confirm object importance"
+    }
+  ]
+}

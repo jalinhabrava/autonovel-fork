@@ -1,0 +1,66 @@
+{
+  "assessment": "readme_doctrine_extracted",
+  "textifai_definition": "Semantic Story Engine for authors and semantic workbench for long-form fiction",
+  "what_textifai_is_not": [
+    "another AI editor",
+    "Codex generator",
+    "Story Bible generator",
+    "chat over Markdown",
+    "Obsidian importer",
+    "whole-novel prompt wrapper",
+    "fully autonomous writing agent"
+  ],
+  "vaerl_as_source_of_truth": true,
+  "vaerl_stores": [
+    "chapters",
+    "summaries",
+    "canonical entities",
+    "aliases",
+    "source mentions",
+    "relationships",
+    "facts",
+    "review states",
+    "confidence",
+    "tags",
+    "unresolved material",
+    "audit metadata",
+    "replay metadata"
+  ],
+  "ecc_vs_vaerl": {
+    "ECC": "editorial/context understanding of task or import",
+    "VaERL": "grounded semantic resolution against vault and artifacts"
+  },
+  "views_as_projections": [
+    "Codex View",
+    "Story Bible View",
+    "Review Queue",
+    "Editor View",
+    "Query Layer",
+    "future free author chat"
+  ],
+  "markdown_first_class_output": true,
+  "author_corrections_feedback_loop": true,
+  "replayability": true,
+  "grounding_beats_giant_prompts": true,
+  "current_product_shape": [
+    "local semantic ingestion",
+    "vault compilation",
+    "replay downstream compilation",
+    "Phase 1 VaERL invariants"
+  ],
+  "principles": [
+    "VaERL is source of truth",
+    "views are projections",
+    "LLMs synthesize but do not own canon",
+    "review state visible",
+    "author corrections feed back",
+    "Markdown first-class",
+    "replayability matters",
+    "grounding beats giant prompts"
+  ],
+  "implications_for_viewer_platform": [
+    "viewer must manage VaERL, not debug artifacts",
+    "Markdown must be editable substrate",
+    "graph/wiki/editor/AI must converge into first-party platform"
+  ]
+}

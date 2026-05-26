@@ -1,0 +1,95 @@
+{
+  "assessment": "first_party_platform_architecture_defined",
+  "layers": [
+    {
+      "name": "Ingestion/ECC",
+      "responsibility": "ingest sources and infer editorial context without owning canon"
+    },
+    {
+      "name": "VaERL core",
+      "responsibility": "semantic source of truth for entities, facts, relationships, evidence, review state"
+    },
+    {
+      "name": "Markdown materialization layer",
+      "responsibility": "editable notes with frontmatter/wikilinks generated from VaERL"
+    },
+    {
+      "name": "Graph/index/backlink layer",
+      "responsibility": "derive graph/search/backlinks from VaERL plus Markdown"
+    },
+    {
+      "name": "Viewer/KB manager",
+      "responsibility": "inspect and edit VaERL-backed KB"
+    },
+    {
+      "name": "Wiki view",
+      "responsibility": "read/navigate Markdown notes with backlinks/tags/previews"
+    },
+    {
+      "name": "AI authoring suite",
+      "responsibility": "line/paragraph rewriting, Character Lab, grounded queries"
+    },
+    {
+      "name": "Review/retry/canon governance",
+      "responsibility": "visible uncertainty and author approvals"
+    }
+  ],
+  "data_ownership": {
+    "VaERL": "canonical semantic truth",
+    "Markdown": "editable projection with sync metadata",
+    "viewer_state": "UI/session only",
+    "debug_artifacts": "diagnostic only"
+  },
+  "read_flow": "VaERL -> materialized Markdown -> graph/backlink index -> viewer/wiki/editor retrieval",
+  "write_flow": "author edit -> change event -> VaERL patch proposal -> review/accept -> rebuild projections",
+  "author_edits_flow": [
+    "edit Markdown or node detail",
+    "track changed fields",
+    "validate against VaERL schema",
+    "queue canonical patch if semantic",
+    "rebuild affected projections"
+  ],
+  "vaerl_update_strategy": [
+    "patch proposals with evidence",
+    "author-approved writes",
+    "audit trail",
+    "replayable rebuild"
+  ],
+  "markdown_edit_strategy": [
+    "frontmatter guarded fields",
+    "body editable",
+    "semantic edits detected and reviewed"
+  ],
+  "graph_rebuild_strategy": [
+    "incremental rebuild from changed VaERL ids and Markdown links",
+    "full rebuild for replay"
+  ],
+  "ai_context_retrieval_strategy": [
+    "retrieve by current paragraph/chapter",
+    "VaERL entities",
+    "source refs",
+    "review state",
+    "local graph neighborhood"
+  ],
+  "boundaries": {
+    "core": [
+      "VaERL schemas",
+      "entity resolution",
+      "review state"
+    ],
+    "projections": [
+      "Markdown",
+      "graph",
+      "wiki pages"
+    ],
+    "viewer_specific": [
+      "layout",
+      "filters",
+      "session"
+    ],
+    "debug": [
+      "raw artifacts",
+      "provider traces"
+    ]
+  }
+}

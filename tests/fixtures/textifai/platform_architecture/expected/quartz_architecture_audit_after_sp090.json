@@ -1,0 +1,55 @@
+{
+  "assessment": "quartz_use_as_reference_not_primary_dependency",
+  "sources": [
+    "https://github.com/jackyzha0/quartz",
+    "https://quartz.jzhao.xyz/features/wikilinks",
+    "https://quartz.jzhao.xyz/plugins/Static"
+  ],
+  "license": "MIT according to GitHub repository listing; license review still required before copying code",
+  "architecture": [
+    "Markdown content pipeline",
+    "frontmatter-driven pages",
+    "Obsidian compatibility",
+    "wikilinks via CrawlLinks-style link resolution",
+    "backlinks",
+    "graph view",
+    "search/indexing",
+    "layout/components",
+    "plugin system",
+    "static asset pipeline"
+  ],
+  "content_pipeline": [
+    "parse Markdown",
+    "transform Obsidian syntax",
+    "emit static pages and indexes",
+    "serve/build site"
+  ],
+  "valuable_patterns": [
+    "wikilink parser behavior",
+    "backlink derivation",
+    "local/global graph distinction",
+    "tags explorer",
+    "popover previews",
+    "componentized layout",
+    "plugin-style transformers"
+  ],
+  "limitations_for_textifai": [
+    "Quartz is static-site generator",
+    "does not solve VaERL write-back",
+    "does not provide paragraph AI editor",
+    "does not govern canon/review state",
+    "external generated site would split platform"
+  ],
+  "adaptation_options": {
+    "reference_only": "recommended baseline",
+    "fork_specific_components": "possible after license review",
+    "embed_generated_site": "temporary spike only",
+    "dependency": "not recommended as core runtime"
+  },
+  "conclusion": "Adapt patterns/components selectively; do not make external Quartz/Obsidian primary workflow.",
+  "open_questions": [
+    "license hygiene if code copied",
+    "React/Preact component fit vs current vanilla viewer",
+    "whether graph/search should be custom or adapted"
+  ]
+}

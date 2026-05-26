@@ -1,0 +1,55 @@
+{
+  "assessment": "first_party_surfaces_defined",
+  "dashboard": [
+    "ingestion status",
+    "review/retry state",
+    "graph summary",
+    "recent changes",
+    "next actions"
+  ],
+  "graph": [
+    "global graph",
+    "local graph",
+    "node size by degree",
+    "collision/force layout",
+    "filters",
+    "tags",
+    "kinds",
+    "chapter filters",
+    "status filters",
+    "click node detail"
+  ],
+  "wiki": [
+    "Markdown browser",
+    "backlinks",
+    "tags",
+    "search",
+    "note preview",
+    "popover previews"
+  ],
+  "node_detail": [
+    "facts",
+    "aliases",
+    "relationships",
+    "evidence",
+    "chapters",
+    "edit link",
+    "review state"
+  ],
+  "ai_authoring": [
+    "chapters",
+    "line/paragraph editor",
+    "inline rewrite/regeneration",
+    "Character Lab",
+    "query/canon grounding",
+    "future free author chat"
+  ],
+  "review_status": [
+    "pending review",
+    "ready",
+    "ready_with_warnings",
+    "needs_review",
+    "needs_retry",
+    "failed"
+  ]
+}

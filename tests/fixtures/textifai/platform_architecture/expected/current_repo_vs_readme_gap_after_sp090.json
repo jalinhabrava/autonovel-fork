@@ -1,0 +1,52 @@
+{
+  "assessment": "repo_gap_ready_for_architecture",
+  "aligned_components": [
+    "chapterizer/source reader",
+    "structured bootstrap",
+    "VaERL contracts/index modules",
+    "obsidian setup/json import",
+    "review_queue artifacts",
+    "viewer graph adapter",
+    "web viewer MVP",
+    "retry/review writer outcome reports"
+  ],
+  "diverged_components": [
+    "viewer still exposes debug artifacts too prominently",
+    "graph layout and detail not yet author-grade",
+    "Markdown materialization not VaERL-first editable platform",
+    "AI authoring/editor surfaces mostly absent"
+  ],
+  "duplicated_legacy_paths": [
+    "legacy AutoNovel scripts",
+    "obsidian_import as durable data route vs new ingestion_graph projection",
+    "review_queue legacy counters vs writer outcome status"
+  ],
+  "missing_first_party_platform_surfaces": [
+    "dashboard",
+    "editable VaERL KB manager",
+    "Markdown wiki view",
+    "live backlinks",
+    "paragraph editor",
+    "Character Lab",
+    "grounded query/chat"
+  ],
+  "keep": [
+    "VaERL contracts/index",
+    "Obsidian-like markdown conventions",
+    "review queue semantics",
+    "web_viewer server/project reader",
+    "provider-free reports/tests"
+  ],
+  "remove_or_deprecate": [
+    "debug-artifacts-as-primary UX",
+    "silent synthetic labels",
+    "indefinite obsidian_import-only route"
+  ],
+  "needs_implementation": [
+    "VaERL markdown materializer",
+    "backlink/index builder",
+    "first-party wiki renderer",
+    "author editing feedback loop",
+    "graph layout upgrade"
+  ]
+}

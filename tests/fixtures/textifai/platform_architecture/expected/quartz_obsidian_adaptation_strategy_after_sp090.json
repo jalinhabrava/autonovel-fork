@@ -1,0 +1,33 @@
+{
+  "assessment": "adapt_quartz_obsidian_patterns_into_first_party_platform",
+  "copy_or_adapt": [
+    "wikilink resolution patterns",
+    "backlink index derivation",
+    "graph UX concepts",
+    "tags explorer UX",
+    "popover preview UX",
+    "component layout ideas"
+  ],
+  "avoid": [
+    "external Obsidian as primary workflow",
+    "full Quartz as core runtime dependency",
+    "static-only generated site as platform",
+    "duplicating VaERL source of truth"
+  ],
+  "fork_quartz_components": "possible only after license review and if component boundaries fit",
+  "embed_generated_quartz": "temporary spike only, not product architecture",
+  "reuse_parser_patterns": true,
+  "license_review_needed": true,
+  "integration_risks": [
+    "Node/Preact stack mismatch with current viewer",
+    "static build vs interactive editor",
+    "canon write-back not solved by Quartz"
+  ],
+  "phase_plan": [
+    "build VaERL Markdown materializer",
+    "build backlink/graph index",
+    "adapt wiki UI patterns",
+    "upgrade graph layout",
+    "add edit-to-VaERL patch queue"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "assessment": "obsidian_like_path_has_reusable_value",
+  "valuable_existing_pieces": [
+    "obsidian_import entities/chapters",
+    "markdown note_path conventions",
+    "tags",
+    "aliases",
+    "wikilink/backlink parser",
+    "review_queue",
+    "canon/review navigation",
+    "VaERL index builder"
+  ],
+  "broken_pieces": [
+    "obsidian_import not clearly subordinate to VaERL core",
+    "viewer artifacts-first UX",
+    "legacy counters not aligned with writer outcome",
+    "Markdown notes not first-party editable feedback loop"
+  ],
+  "duplicated_pieces": [
+    "ingestion_graph vs obsidian_import graph projections",
+    "review_queue vs writer_outcome status"
+  ],
+  "reuse": [
+    "frontmatter shape",
+    "wikilinks/backlinks parser",
+    "note_path",
+    "review_queue semantics",
+    "VaERL index abstractions"
+  ],
+  "replace": [
+    "obsidian_import as source of truth",
+    "manual external Obsidian dependency"
+  ],
+  "remove": [
+    "indefinite fallback to old artifact counters"
+  ],
+  "migration_path": [
+    "VaERL core -> markdown materialization -> graph/backlink index -> viewer/wiki/editor surfaces"
+  ]
+}
