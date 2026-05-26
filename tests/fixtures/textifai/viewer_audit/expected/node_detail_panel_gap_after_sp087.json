@@ -1,0 +1,44 @@
+{
+  "assessment": "node_detail_panel_shell_reusable_but_data_gap_blocks_author_value",
+  "capability_matrix": {
+    "real_name": "supported by UI if data provides it; SP087 graph did not",
+    "type": "supported",
+    "aliases": "supported in entityDetail if data provides aliases",
+    "description_summary": "supported if entity.summary exists",
+    "facts": "supported if key_facts exists",
+    "chapters_where_appears": "partial via chapter_ids/source_refs, not author-friendly yet",
+    "incoming_outgoing_relationships": "outgoing relationships visible in entityDetail; graph edge neighborhood not summarized",
+    "related_events": "missing as first-class section",
+    "source_refs": "visible as pointers after SP086",
+    "evidence_snippets": "missing",
+    "review_status": "supported via role/review_state/status",
+    "canon_review_context": "supported via Open in Canon/Open Review Context when canon exists",
+    "markdown_note_link": "supported through note_path",
+    "tags_backlinks": "tags supported, backlink list missing"
+  },
+  "already_exists": [
+    "graphNodeSummary",
+    "entityDetail",
+    "chapterDetail",
+    "renderCanonicalizationVisibility",
+    "openGraphNote",
+    "wikilink navigation"
+  ],
+  "missing_mvp": [
+    "real-label runtime graph",
+    "aliases/facts/evidence in ingestion_graph",
+    "relationship neighborhood summary",
+    "chapter status panel",
+    "author-friendly source evidence pointers"
+  ],
+  "lost_in_sp087": [
+    "real canonical names from reductions",
+    "meaningful event/object labels",
+    "semantic relationship summaries"
+  ],
+  "do_not_implement_yet": [
+    "new UI redesign",
+    "interactive editor",
+    "write-back actions"
+  ]
+}

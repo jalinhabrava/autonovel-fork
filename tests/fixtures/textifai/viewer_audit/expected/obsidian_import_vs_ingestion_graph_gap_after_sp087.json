@@ -1,0 +1,57 @@
+{
+  "assessment": "obsidian_import_more_author_expressive_than_current_ingestion_graph",
+  "comparison": {
+    "expressiveness": {
+      "obsidian_import": "canonical entities, chapters, aliases, summaries, facts, relationships",
+      "current_ingestion_graph": "synthetic nodes and generic edges in SP087"
+    },
+    "author_usefulness": {
+      "obsidian_import": "high",
+      "current_ingestion_graph": "low"
+    },
+    "node_labels": {
+      "obsidian_import": "real canonical_name/preferred_slug",
+      "current_ingestion_graph": "Character 001 style synthetic labels"
+    },
+    "aliases": {
+      "obsidian_import": "supported",
+      "current_ingestion_graph": "missing"
+    },
+    "tags": {
+      "obsidian_import": "supported via notes and entity tags",
+      "current_ingestion_graph": "adapter generated tags only"
+    },
+    "backlinks": {
+      "obsidian_import": "markdown wikilinks/note_path can support",
+      "current_ingestion_graph": "not meaningful without notes"
+    },
+    "evidence": {
+      "obsidian_import": "review/notes/artifacts can reference",
+      "current_ingestion_graph": "source_refs only, no snippets/facts"
+    },
+    "source_refs": {
+      "obsidian_import": "varies",
+      "current_ingestion_graph": "preserved as pointers"
+    },
+    "relationships": {
+      "obsidian_import": "typed relationships with facts",
+      "current_ingestion_graph": "generic metadata edges"
+    },
+    "review_state": {
+      "obsidian_import": "canonical/review",
+      "current_ingestion_graph": "ready/needs_review status"
+    },
+    "graph_compatibility": {
+      "obsidian_import": "native current build_graph route",
+      "current_ingestion_graph": "adapter route"
+    },
+    "detail_panel": {
+      "obsidian_import": "entityDetail/canonicalization/note detail",
+      "current_ingestion_graph": "thin entity payload"
+    }
+  },
+  "canonical_vaerl_viewer_projection": "should be real-label VaERL projection that can also emit obsidian-compatible import and viewer graph",
+  "obsidian_import_strategy": "recover/adapt as author-facing projection, not discard",
+  "ingestion_graph_strategy": "treat as viewer-specific graph projection, not canonical runtime output unless it carries real labels/facts/aliases/evidence",
+  "viewer_input_recommendation": "feed viewer MVP from obsidian_import-style VaERL plus graph adapter for layout"
+}

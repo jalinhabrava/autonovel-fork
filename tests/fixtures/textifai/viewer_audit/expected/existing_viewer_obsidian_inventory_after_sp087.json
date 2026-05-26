@@ -1,0 +1,48 @@
+{
+  "assessment": "existing_viewer_obsidian_inventory_complete",
+  "viewer_modules": [
+    "textifai/web_viewer/server.py",
+    "textifai/web_viewer/project_reader.py",
+    "textifai/web_viewer/static/app.js",
+    "textifai/import_review/viewer_graph_adapter.py"
+  ],
+  "obsidian_routes": [
+    "99_System/obsidian_import.json",
+    "99_System/review_queue.json",
+    "markdown notes under project root",
+    "99_System/ingestion_graph.json"
+  ],
+  "data_routes_supported": {
+    "obsidian_import": "read_canon entities/chapters -> primaries/review_entities",
+    "review_queue": "review context, counts, review tab and severity/type summaries",
+    "markdown_notes": "read_note, frontmatter tags, wikilinks, note_path links",
+    "ingestion_graph": "SP086 path short-circuits build_graph when ingestion_graph.json exists"
+  },
+  "obsidian_import_role": "canonical author-facing VaERL-like projection with canonical_name, preferred_slug, entity_kind, aliases, summary, key_facts, relationships, review_state and chapters",
+  "review_queue_role": "human review backlog and context, not graph primary source",
+  "ingestion_graph_role": "viewer-ready graph input; currently projection can be synthetic and bypass canon counters",
+  "overview_uses": "Project summary and semantic health based mostly on obsidian_import/review_queue/canon/health artifacts",
+  "graph_tab_uses": "state.current.graph nodes/edges from build_graph; ingestion_graph takes precedence if present",
+  "detail_panel_uses": "node.entity, node.chapter, note_path, canonicalization payload and source_refs if present",
+  "artifacts_tab_uses": "raw 99_System JSON listing and JSON/text reader",
+  "useful_components": [
+    "ProjectCatalog discovery",
+    "markdown note reader",
+    "wikilinks",
+    "tags",
+    "canon table",
+    "review queue UI",
+    "graph filters",
+    "node detail panel",
+    "artifacts for developer inspection"
+  ],
+  "legacy_or_misaligned_components": [
+    "overview counters tied to primaries/review_items only",
+    "artifacts as main fallback for author review",
+    "ingestion_graph synthetic projection"
+  ],
+  "duplicated_responsibilities": [
+    "canon graph builder and ingestion_graph adapter both define graph semantics",
+    "writer outcome status separate from viewer overview counters"
+  ]
+}

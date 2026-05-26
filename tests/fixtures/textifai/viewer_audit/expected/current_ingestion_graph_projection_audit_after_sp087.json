@@ -1,0 +1,27 @@
+{
+  "assessment": "current_ingestion_graph_projection_loses_author_value",
+  "runtime_graph_exists": true,
+  "runtime_graph_private_path": "/tmp/textifai_private_provider_runs/sp087_twenty_chapter_e2e_viewer/20260526T100011Z/20260526T100049Z/viewer_project/99_System/ingestion_graph.json",
+  "runtime_uses_real_labels": false,
+  "synthetic_label_count": 100,
+  "sample_runtime_labels_redacted": [
+    "Character 001",
+    "Place 001",
+    "Concept 001",
+    "Object 001",
+    "Event 001",
+    "Character 002",
+    "Place 002",
+    "Concept 002"
+  ],
+  "nodes_have_canonical_surface_aliases": false,
+  "edges_have_semantic_relationships": "generic appears_in/happens_at only in SP087 projection",
+  "source_refs_preserved": true,
+  "facts_evidence_preserved": false,
+  "chapter_ids_preserved": true,
+  "status_review_preserved": true,
+  "built_from_real_result_or_synthetic_metadata": "metadata-derived synthetic projection, not direct real reduction labels/facts",
+  "why_character_001_appears": "postprocess graph projection created f\"Character {chapter_number}\" labels instead of reading canonical/surface labels from reduction outputs",
+  "loss_source": "SP087 privacy-safe graph projection conflated committed fixture safety with runtime app output; runtime private graph should preserve real labels outside repo",
+  "private_packet_diagnostic": "reduction outputs contain non-synthetic character labels for all 20 chapters, so data existed before projection"
+}

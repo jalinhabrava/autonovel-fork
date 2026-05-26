@@ -1,0 +1,9 @@
+{
+  "assessment": "provider_specific_learnings_minimal",
+  "provider_specific": [
+    "DeepSeek Flash may produce low-density valid reductions in early chapters",
+    "provider-specific quality signals can inform review severity only"
+  ],
+  "viewer_dependency_on_deepseek": false,
+  "core_logic_boundary": "viewer contract and retry semantics must be provider-agnostic; provider-specific failures only feed normalized technical signals"
+}

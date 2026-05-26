@@ -1,0 +1,361 @@
+{
+  "assessment": "sp087_retry_classification_audit_complete",
+  "source_reports": [
+    "twenty_chapter_chapter_results_after_sp086.json",
+    "twenty_chapter_internal_fail_rerun_plan_after_sp086.json",
+    "twenty_chapter_writer_outcome_after_sp086.json",
+    "private packet metadata inspected locally when present"
+  ],
+  "chapter_count": 20,
+  "current_counts": {
+    "ready": 6,
+    "needs_retry": 13,
+    "needs_review": 1,
+    "failed": 0
+  },
+  "recommended_counts": {
+    "ready": 6,
+    "ready_with_warnings": 1,
+    "needs_review": 13,
+    "needs_retry": 0,
+    "failed": 0
+  },
+  "likely_true_retries": 0,
+  "rows": [
+    {
+      "chapter_id": "ch_001",
+      "current_writer_status": "ready",
+      "technical_signals": [
+        "valid_reduction",
+        "partials_parseable",
+        "reduction_parseable",
+        "source_refs_covered"
+      ],
+      "actual_failure_type": "no_clear_failure",
+      "recommended_writer_status": "ready",
+      "reason": "valid parseable output with usable score and refs",
+      "confidence": "high",
+      "needs_provider_rerun": false,
+      "needs_human_review": false
+    },
+    {
+      "chapter_id": "ch_002",
+      "current_writer_status": "needs_review",
+      "technical_signals": [
+        "valid_reduction",
+        "partials_parseable",
+        "reduction_parseable",
+        "source_refs_covered",
+        "continuation_or_truncation_event"
+      ],
+      "actual_failure_type": "semantic_quality_warning",
+      "recommended_writer_status": "ready_with_warnings",
+      "reason": "valid final output with continuation event should be surfaced as warning/review, not retry",
+      "confidence": "medium",
+      "needs_provider_rerun": false,
+      "needs_human_review": true
+    },
+    {
+      "chapter_id": "ch_003",
+      "current_writer_status": "ready",
+      "technical_signals": [
+        "valid_reduction",
+        "partials_parseable",
+        "reduction_parseable",
+        "source_refs_covered"
+      ],
+      "actual_failure_type": "no_clear_failure",
+      "recommended_writer_status": "ready",
+      "reason": "valid parseable output with usable score and refs",
+      "confidence": "high",
+      "needs_provider_rerun": false,
+      "needs_human_review": false
+    },
+    {
+      "chapter_id": "ch_004",
+      "current_writer_status": "needs_retry",
+      "technical_signals": [
+        "valid_reduction",
+        "partials_parseable",
+        "reduction_parseable",
+        "source_refs_covered",
+        "low_reduction_score"
+      ],
+      "actual_failure_type": "low_density",
+      "recommended_writer_status": "needs_review",
+      "reason": "valid parseable reduction with low-density signal is usable but suspicious; should not automatically be retry",
+      "confidence": "medium",
+      "needs_provider_rerun": false,
+      "needs_human_review": true
+    },
+    {
+      "chapter_id": "ch_005",
+      "current_writer_status": "needs_retry",
+      "technical_signals": [
+        "valid_reduction",
+        "partials_parseable",
+        "reduction_parseable",
+        "source_refs_covered",
+        "low_reduction_score"
+      ],
+      "actual_failure_type": "low_density",
+      "recommended_writer_status": "needs_review",
+      "reason": "valid parseable reduction with low-density signal is usable but suspicious; should not automatically be retry",
+      "confidence": "medium",
+      "needs_provider_rerun": false,
+      "needs_human_review": true
+    },
+    {
+      "chapter_id": "ch_006",
+      "current_writer_status": "needs_retry",
+      "technical_signals": [
+        "valid_reduction",
+        "partials_parseable",
+        "reduction_parseable",
+        "source_refs_covered",
+        "low_reduction_score"
+      ],
+      "actual_failure_type": "low_density",
+      "recommended_writer_status": "needs_review",
+      "reason": "valid parseable reduction with low-density signal is usable but suspicious; should not automatically be retry",
+      "confidence": "medium",
+      "needs_provider_rerun": false,
+      "needs_human_review": true
+    },
+    {
+      "chapter_id": "ch_007",
+      "current_writer_status": "needs_retry",
+      "technical_signals": [
+        "valid_reduction",
+        "partials_parseable",
+        "reduction_parseable",
+        "source_refs_covered",
+        "low_objects_count"
+      ],
+      "actual_failure_type": "low_density",
+      "recommended_writer_status": "needs_review",
+      "reason": "valid parseable reduction with low-density signal is usable but suspicious; should not automatically be retry",
+      "confidence": "medium",
+      "needs_provider_rerun": false,
+      "needs_human_review": true
+    },
+    {
+      "chapter_id": "ch_008",
+      "current_writer_status": "needs_retry",
+      "technical_signals": [
+        "valid_reduction",
+        "partials_parseable",
+        "reduction_parseable",
+        "source_refs_covered",
+        "low_reduction_score"
+      ],
+      "actual_failure_type": "low_density",
+      "recommended_writer_status": "needs_review",
+      "reason": "valid parseable reduction with low-density signal is usable but suspicious; should not automatically be retry",
+      "confidence": "medium",
+      "needs_provider_rerun": false,
+      "needs_human_review": true
+    },
+    {
+      "chapter_id": "ch_009",
+      "current_writer_status": "needs_retry",
+      "technical_signals": [
+        "valid_reduction",
+        "partials_parseable",
+        "reduction_parseable",
+        "source_refs_covered",
+        "low_reduction_score"
+      ],
+      "actual_failure_type": "low_density",
+      "recommended_writer_status": "needs_review",
+      "reason": "valid parseable reduction with low-density signal is usable but suspicious; should not automatically be retry",
+      "confidence": "medium",
+      "needs_provider_rerun": false,
+      "needs_human_review": true
+    },
+    {
+      "chapter_id": "ch_010",
+      "current_writer_status": "ready",
+      "technical_signals": [
+        "valid_reduction",
+        "partials_parseable",
+        "reduction_parseable",
+        "source_refs_covered"
+      ],
+      "actual_failure_type": "no_clear_failure",
+      "recommended_writer_status": "ready",
+      "reason": "valid parseable output with usable score and refs",
+      "confidence": "high",
+      "needs_provider_rerun": false,
+      "needs_human_review": false
+    },
+    {
+      "chapter_id": "ch_011",
+      "current_writer_status": "needs_retry",
+      "technical_signals": [
+        "valid_reduction",
+        "partials_parseable",
+        "reduction_parseable",
+        "source_refs_covered",
+        "low_relations_count"
+      ],
+      "actual_failure_type": "low_density",
+      "recommended_writer_status": "needs_review",
+      "reason": "valid parseable reduction with low-density signal is usable but suspicious; should not automatically be retry",
+      "confidence": "medium",
+      "needs_provider_rerun": false,
+      "needs_human_review": true
+    },
+    {
+      "chapter_id": "ch_012",
+      "current_writer_status": "needs_retry",
+      "technical_signals": [
+        "valid_reduction",
+        "partials_parseable",
+        "reduction_parseable",
+        "source_refs_covered",
+        "low_reduction_score"
+      ],
+      "actual_failure_type": "low_density",
+      "recommended_writer_status": "needs_review",
+      "reason": "valid parseable reduction with low-density signal is usable but suspicious; should not automatically be retry",
+      "confidence": "medium",
+      "needs_provider_rerun": false,
+      "needs_human_review": true
+    },
+    {
+      "chapter_id": "ch_013",
+      "current_writer_status": "needs_retry",
+      "technical_signals": [
+        "valid_reduction",
+        "partials_parseable",
+        "reduction_parseable",
+        "source_refs_covered",
+        "low_reduction_score"
+      ],
+      "actual_failure_type": "low_density",
+      "recommended_writer_status": "needs_review",
+      "reason": "valid parseable reduction with low-density signal is usable but suspicious; should not automatically be retry",
+      "confidence": "medium",
+      "needs_provider_rerun": false,
+      "needs_human_review": true
+    },
+    {
+      "chapter_id": "ch_014",
+      "current_writer_status": "ready",
+      "technical_signals": [
+        "valid_reduction",
+        "partials_parseable",
+        "reduction_parseable",
+        "source_refs_covered"
+      ],
+      "actual_failure_type": "no_clear_failure",
+      "recommended_writer_status": "ready",
+      "reason": "valid parseable output with usable score and refs",
+      "confidence": "high",
+      "needs_provider_rerun": false,
+      "needs_human_review": false
+    },
+    {
+      "chapter_id": "ch_015",
+      "current_writer_status": "needs_retry",
+      "technical_signals": [
+        "valid_reduction",
+        "partials_parseable",
+        "reduction_parseable",
+        "source_refs_covered",
+        "low_objects_count"
+      ],
+      "actual_failure_type": "low_density",
+      "recommended_writer_status": "needs_review",
+      "reason": "valid parseable reduction with low-density signal is usable but suspicious; should not automatically be retry",
+      "confidence": "medium",
+      "needs_provider_rerun": false,
+      "needs_human_review": true
+    },
+    {
+      "chapter_id": "ch_016",
+      "current_writer_status": "ready",
+      "technical_signals": [
+        "valid_reduction",
+        "partials_parseable",
+        "reduction_parseable",
+        "source_refs_covered"
+      ],
+      "actual_failure_type": "no_clear_failure",
+      "recommended_writer_status": "ready",
+      "reason": "valid parseable output with usable score and refs",
+      "confidence": "high",
+      "needs_provider_rerun": false,
+      "needs_human_review": false
+    },
+    {
+      "chapter_id": "ch_017",
+      "current_writer_status": "needs_retry",
+      "technical_signals": [
+        "valid_reduction",
+        "partials_parseable",
+        "reduction_parseable",
+        "source_refs_covered",
+        "low_reduction_score"
+      ],
+      "actual_failure_type": "low_density",
+      "recommended_writer_status": "needs_review",
+      "reason": "valid parseable reduction with low-density signal is usable but suspicious; should not automatically be retry",
+      "confidence": "medium",
+      "needs_provider_rerun": false,
+      "needs_human_review": true
+    },
+    {
+      "chapter_id": "ch_018",
+      "current_writer_status": "needs_retry",
+      "technical_signals": [
+        "valid_reduction",
+        "partials_parseable",
+        "reduction_parseable",
+        "source_refs_covered",
+        "low_reduction_score"
+      ],
+      "actual_failure_type": "low_density",
+      "recommended_writer_status": "needs_review",
+      "reason": "valid parseable reduction with low-density signal is usable but suspicious; should not automatically be retry",
+      "confidence": "medium",
+      "needs_provider_rerun": false,
+      "needs_human_review": true
+    },
+    {
+      "chapter_id": "ch_019",
+      "current_writer_status": "ready",
+      "technical_signals": [
+        "valid_reduction",
+        "partials_parseable",
+        "reduction_parseable",
+        "source_refs_covered"
+      ],
+      "actual_failure_type": "no_clear_failure",
+      "recommended_writer_status": "ready",
+      "reason": "valid parseable output with usable score and refs",
+      "confidence": "high",
+      "needs_provider_rerun": false,
+      "needs_human_review": false
+    },
+    {
+      "chapter_id": "ch_020",
+      "current_writer_status": "needs_retry",
+      "technical_signals": [
+        "valid_reduction",
+        "partials_parseable",
+        "reduction_parseable",
+        "source_refs_covered",
+        "low_reduction_score"
+      ],
+      "actual_failure_type": "low_density",
+      "recommended_writer_status": "needs_review",
+      "reason": "valid parseable reduction with low-density signal is usable but suspicious; should not automatically be retry",
+      "confidence": "medium",
+      "needs_provider_rerun": false,
+      "needs_human_review": true
+    }
+  ],
+  "summary": "All 20 reductions were parseable and valid; 13 needs_retry labels are likely over-classified low-density warnings, not technical failures."
+}

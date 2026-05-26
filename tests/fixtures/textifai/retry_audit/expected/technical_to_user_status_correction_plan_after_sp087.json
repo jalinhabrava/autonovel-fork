@@ -1,0 +1,41 @@
+{
+  "assessment": "technical_to_user_status_correction_plan_ready",
+  "rules_to_change": [
+    "low_reduction_score -> needs_review or ready_with_warnings, not automatic needs_retry",
+    "low_objects_count/low_relations_count -> review severity, not retry",
+    "valid parseable reduction with source refs -> not needs_retry by default"
+  ],
+  "rules_to_keep": [
+    "invalid output -> needs_retry",
+    "missing reduction -> needs_retry",
+    "provider/auth/timeout -> needs_retry or failed depending recoverability",
+    "wrong-chapter unrecovered -> needs_retry"
+  ],
+  "suspicious_thresholds": [
+    "score threshold that turned 13/20 valid chapters into retry",
+    "object/relation minimums not calibrated for short/quiet chapters"
+  ],
+  "missing_fields": [
+    "semantic importance of chapter",
+    "expected density by chapter length/type",
+    "confidence per extracted section",
+    "coverage by entity/event/relation type"
+  ],
+  "avoid_false_retries": [
+    "separate technical validity from semantic richness",
+    "introduce ready_with_warnings",
+    "route low-density to review queue",
+    "calibrate density by chapter length and narrative function"
+  ],
+  "low_density_mapping": "needs_review unless output is incomplete or invalid",
+  "thin_no_item_mapping": "needs_review or ready_with_warnings when chapter valid; needs_retry only if required section missing due truncation/incompletion",
+  "valid_but_weak_mapping": "ready_with_warnings or needs_review",
+  "tests_next_phase": [
+    "valid low-density reduction maps to needs_review",
+    "invalid JSON maps to needs_retry",
+    "missing reduction maps to needs_retry",
+    "writer outcome counts do not expose internals",
+    "retry plan excludes valid low-density chapters by default"
+  ],
+  "no_implementation_in_this_phase": true
+}

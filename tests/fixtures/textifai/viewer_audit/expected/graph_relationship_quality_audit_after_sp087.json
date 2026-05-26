@@ -1,0 +1,29 @@
+{
+  "assessment": "graph_relationship_quality_blocked_by_projection_not_extraction",
+  "edge_count": 40,
+  "edge_labels": [
+    "appears_in",
+    "happens_at"
+  ],
+  "relation_kinds": [
+    "event_link"
+  ],
+  "expected_narrative_relationships": [
+    "character-character",
+    "event-character",
+    "place-event",
+    "object-character",
+    "concept-character"
+  ],
+  "missing_relationships": [
+    "character-character edges",
+    "object ownership/use edges",
+    "event causality edges",
+    "meaningful relation summaries"
+  ],
+  "adapter_losing_relations": "not primary issue; SP087 projection did not feed real relations to adapter",
+  "extraction_may_have_relations": "private reductions should be mined before concluding extraction failed",
+  "projection_filtered_relations": true,
+  "renderer_hides_relations": false,
+  "limitation": "no private source prose or full private outputs copied into repo"
+}

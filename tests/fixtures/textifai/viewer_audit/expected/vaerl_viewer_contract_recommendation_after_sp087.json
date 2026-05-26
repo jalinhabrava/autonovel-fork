@@ -1,0 +1,53 @@
+{
+  "assessment": "vaerl_viewer_contract_ready_for_patch",
+  "node_contract": {
+    "id": "stable node id",
+    "canonical_label": "required real canonical or surface label",
+    "surface_forms": "list",
+    "aliases": "list",
+    "kind": "character|place|concept|object|event|unresolved",
+    "summary": "author-facing summary",
+    "facts": "list",
+    "chapter_ids": "list",
+    "tags": "list",
+    "status": "ready|ready_with_warnings|needs_review|needs_retry|failed",
+    "source_refs": "list of pointers",
+    "evidence_refs": "list of snippet/pointer ids",
+    "note_path": "optional markdown path",
+    "backlinks": "list",
+    "relationships": "outgoing/incoming summaries"
+  },
+  "edge_contract": {
+    "id": "stable edge id",
+    "source": "node id",
+    "target": "node id",
+    "label": "real semantic relation label",
+    "kind": "relation|event_link|object_link|causal_link",
+    "summary": "author-facing summary",
+    "chapter_ids": "list",
+    "source_refs": "list",
+    "confidence_status": "confidence/review status"
+  },
+  "chapter_outcome": [
+    "ready",
+    "ready_with_warnings",
+    "needs_review",
+    "needs_retry",
+    "failed"
+  ],
+  "viewer_surfaces": [
+    "overview",
+    "graph",
+    "node detail",
+    "chapter status",
+    "review queue",
+    "artifacts/debug secondary"
+  ],
+  "separation": {
+    "core_vaerl": "provider-agnostic semantic facts/entities/relationships/evidence",
+    "obsidian_projection": "markdown notes/tags/aliases/wikilinks/backlinks",
+    "viewer_projection": "layout-ready graph with real labels and evidence refs",
+    "debug_artifacts": "raw audits and provider diagnostics"
+  },
+  "runtime_policy": "runtime real outputs must preserve real canonical_label/surface forms; synthetic labels only in committed fixtures"
+}

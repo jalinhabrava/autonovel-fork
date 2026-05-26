@@ -1,0 +1,37 @@
+{
+  "assessment": "retry_vs_review_semantics_defined",
+  "statuses": {
+    "ready": [
+      "chapter processed",
+      "graph usable",
+      "no blocking warnings"
+    ],
+    "ready_with_warnings": [
+      "chapter processed",
+      "graph usable",
+      "minor non-blocking warnings"
+    ],
+    "needs_review": [
+      "technically processed",
+      "usable but suspicious, thin, or author review needed"
+    ],
+    "needs_retry": [
+      "recoverable technical failure",
+      "incomplete output",
+      "invalid JSON not recovered",
+      "provider/auth/timeout",
+      "wrong-chapter patch not recovered",
+      "missing reduction",
+      "chapter not processed"
+    ],
+    "failed": [
+      "not processed or unsafe to continue without intervention"
+    ]
+  },
+  "principles": [
+    "low-density does not automatically mean retry",
+    "thin semantic result does not automatically mean retry",
+    "valid reduction with warnings should tend to review or ready_with_warnings",
+    "retry reserved for technical or incomplete failures"
+  ]
+}

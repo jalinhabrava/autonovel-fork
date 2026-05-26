@@ -1,0 +1,143 @@
+{
+  "assessment": "overview_not_aligned_with_writer_outcome",
+  "current_overview": "project summary/health/canon counters rely on obsidian_import primaries/review_queue and can show empty/0 for ingestion_graph-only projects",
+  "sp087_writer_outcome": {
+    "status": "success_with_retry_available",
+    "total_chapters": 20,
+    "chapters_ready": 6,
+    "chapters_needing_retry": 13,
+    "chapters_needing_review": 1,
+    "chapters_failed": 0,
+    "affected_chapters": [
+      {
+        "chapter_id": "ch_002",
+        "chapter_label": "Chapter 2",
+        "status": "needs_review",
+        "reason_label": "manual_review_recommended",
+        "user_message": "This chapter is ready to review before continuing."
+      },
+      {
+        "chapter_id": "ch_004",
+        "chapter_label": "Chapter 4",
+        "status": "needs_retry",
+        "reason_label": "chapter_needs_second_pass",
+        "user_message": "This chapter needs another pass before final review."
+      },
+      {
+        "chapter_id": "ch_005",
+        "chapter_label": "Chapter 5",
+        "status": "needs_retry",
+        "reason_label": "chapter_needs_second_pass",
+        "user_message": "This chapter needs another pass before final review."
+      },
+      {
+        "chapter_id": "ch_006",
+        "chapter_label": "Chapter 6",
+        "status": "needs_retry",
+        "reason_label": "chapter_needs_second_pass",
+        "user_message": "This chapter needs another pass before final review."
+      },
+      {
+        "chapter_id": "ch_007",
+        "chapter_label": "Chapter 7",
+        "status": "needs_retry",
+        "reason_label": "chapter_needs_second_pass",
+        "user_message": "This chapter needs another pass before final review."
+      },
+      {
+        "chapter_id": "ch_008",
+        "chapter_label": "Chapter 8",
+        "status": "needs_retry",
+        "reason_label": "chapter_needs_second_pass",
+        "user_message": "This chapter needs another pass before final review."
+      },
+      {
+        "chapter_id": "ch_009",
+        "chapter_label": "Chapter 9",
+        "status": "needs_retry",
+        "reason_label": "chapter_needs_second_pass",
+        "user_message": "This chapter needs another pass before final review."
+      },
+      {
+        "chapter_id": "ch_011",
+        "chapter_label": "Chapter 11",
+        "status": "needs_retry",
+        "reason_label": "chapter_needs_second_pass",
+        "user_message": "This chapter needs another pass before final review."
+      },
+      {
+        "chapter_id": "ch_012",
+        "chapter_label": "Chapter 12",
+        "status": "needs_retry",
+        "reason_label": "chapter_needs_second_pass",
+        "user_message": "This chapter needs another pass before final review."
+      },
+      {
+        "chapter_id": "ch_013",
+        "chapter_label": "Chapter 13",
+        "status": "needs_retry",
+        "reason_label": "chapter_needs_second_pass",
+        "user_message": "This chapter needs another pass before final review."
+      },
+      {
+        "chapter_id": "ch_015",
+        "chapter_label": "Chapter 15",
+        "status": "needs_retry",
+        "reason_label": "chapter_needs_second_pass",
+        "user_message": "This chapter needs another pass before final review."
+      },
+      {
+        "chapter_id": "ch_017",
+        "chapter_label": "Chapter 17",
+        "status": "needs_retry",
+        "reason_label": "chapter_needs_second_pass",
+        "user_message": "This chapter needs another pass before final review."
+      },
+      {
+        "chapter_id": "ch_018",
+        "chapter_label": "Chapter 18",
+        "status": "needs_retry",
+        "reason_label": "chapter_needs_second_pass",
+        "user_message": "This chapter needs another pass before final review."
+      },
+      {
+        "chapter_id": "ch_020",
+        "chapter_label": "Chapter 20",
+        "status": "needs_retry",
+        "reason_label": "chapter_needs_second_pass",
+        "user_message": "This chapter needs another pass before final review."
+      }
+    ],
+    "primary_action": {
+      "label": "Retry pending chapters",
+      "action_id": "retry_pending_chapters",
+      "scope": "affected_chapters_only"
+    },
+    "secondary_action": {
+      "label": "Later",
+      "action_id": "dismiss"
+    },
+    "user_summary": "20 chapters processed. 6 are ready. 13 need another pass. 1 need review.",
+    "technical_details_hidden_by_default": true
+  },
+  "expected_author_overview": {
+    "chapters_processed": 20,
+    "chapters_ready": 6,
+    "chapters_needing_retry": 13,
+    "chapters_needing_review": 1,
+    "chapters_failed": 0,
+    "graph_node_counts_by_kind": {
+      "character": 20,
+      "concept": 20,
+      "event": 20,
+      "object": 20,
+      "place": 20
+    },
+    "relationship_count": 40,
+    "warning_summary": [
+      "many chapters need second pass under current mapping"
+    ],
+    "cta_status": "retry pending chapters"
+  },
+  "gap": "overview must consume writer outcome + graph summary, not only legacy primary/review counters"
+}

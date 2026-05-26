@@ -1,0 +1,20 @@
+{
+  "assessment": "artifacts_tab_should_be_secondary_debug_surface",
+  "author_value": "low as primary UX; useful only for advanced inspection/export",
+  "debug_value": "high for developers and audit traceability",
+  "recommended_conceptual_role": "Developer artifacts / Debug / Export data",
+  "hide_or_deprioritize": [
+    "raw provider outputs",
+    "raw validation reports",
+    "low-level audits"
+  ],
+  "promote_to_author_screens": [
+    "writer outcome",
+    "chapter status",
+    "review queue",
+    "graph node details",
+    "source/evidence inspection",
+    "relationship browser"
+  ],
+  "implementation_deferred": true
+}

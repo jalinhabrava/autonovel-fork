@@ -1,0 +1,43 @@
+{
+  "assessment": "vaerl_viewer_retry_audit_ready_for_patch",
+  "recommended_next_phase": "Phase 1.3.M-b5c-4r — Patch VaERL projection and retry/review mapping before targeted rerun",
+  "must_fix_before_retry": [
+    "retry vs review mapping",
+    "graph projection must preserve real labels/facts/relations in runtime private output",
+    "writer overview must consume writer outcome"
+  ],
+  "must_fix_before_full_source": [
+    "author-facing VaERL viewer contract",
+    "node detail evidence/facts/aliases",
+    "relationship projection from real reductions",
+    "artifacts demoted to debug"
+  ],
+  "reuse_from_existing_viewer_obsidian_path": [
+    "obsidian_import canonical entities",
+    "markdown notes",
+    "tags",
+    "wikilinks",
+    "note_path",
+    "review_queue",
+    "graph filters",
+    "node detail/canon navigation"
+  ],
+  "remove_or_deprecate": [
+    "runtime synthetic labels",
+    "generic Character 001 projections",
+    "artifacts as primary author UX",
+    "automatic retry for low-density valid output"
+  ],
+  "sp087_13_retries_likely_true_retries": false,
+  "revised_estimate": {
+    "ready": 6,
+    "ready_with_warnings": 1,
+    "needs_review": 13,
+    "needs_retry": 0,
+    "failed": 0
+  },
+  "viewer_can_be_patched_incrementally": true,
+  "graph_projection_must_be_replaced": true,
+  "provider_calls": "NO",
+  "write_back": "NO"
+}

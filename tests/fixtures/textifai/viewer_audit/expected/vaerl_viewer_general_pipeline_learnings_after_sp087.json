@@ -1,0 +1,18 @@
+{
+  "assessment": "vaerl_viewer_general_pipeline_learnings_ready",
+  "learnings": [
+    "viewer is author-facing VaERL knowledge manager, not debug viewer",
+    "Obsidian-inspired graph/notes/tags/backlinks remain valuable",
+    "runtime real labels must be preserved outside repo",
+    "synthetic labels only for fixtures/tests",
+    "retry/review mapping must separate technical failure from semantic thinness",
+    "graph projection contract needs real labels/facts/evidence",
+    "node detail must become main author value surface"
+  ],
+  "next_core_work": [
+    "VaERL projection patch",
+    "status mapping patch",
+    "overview outcome integration",
+    "relationship projection from real reductions"
+  ]
+}

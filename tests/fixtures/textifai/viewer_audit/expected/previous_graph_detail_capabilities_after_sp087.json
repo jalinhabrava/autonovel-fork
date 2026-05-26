@@ -1,0 +1,39 @@
+{
+  "assessment": "previous_graph_detail_capabilities_reusable",
+  "existing_functionality": [
+    "obsidian_import canonical entities",
+    "markdown notes with frontmatter tags",
+    "wikilinks/backlink-like navigation",
+    "entity relationships to graph edges",
+    "review queue context",
+    "canon and graph cross-navigation",
+    "artifact inspection"
+  ],
+  "what_displayed_well": [
+    "canonical names like Sera/Ren in tests and older run artifacts",
+    "aliases",
+    "summaries",
+    "relationships with facts",
+    "tags",
+    "note_path linked markdown detail",
+    "review state"
+  ],
+  "node_representation": "entity:<slug> with label canonical_name/preferred_slug, kind entity_kind, role primary/review, tags and note_path",
+  "detail_representation": "graphNodeSummary + entityDetail + canonicalization visibility + markdown note if note_path exists",
+  "md_connection": "_guess_note_path plus read_note frontmatter, markdown and wikilinks",
+  "tag_representation": "frontmatter tags and graph tags normalize to #kind/#role/#status",
+  "relationship_representation": "entity.relationships target/type/facts create graph edges and relationship detail list",
+  "review_context": "review queue tab and Open Review Context actions",
+  "reuse": [
+    "obsidian_import as author-facing projection",
+    "markdown notes",
+    "review queue",
+    "graph filters",
+    "node detail shell",
+    "canon/review navigation"
+  ],
+  "discard_or_deprioritize": [
+    "synthetic label projection for runtime",
+    "raw artifacts as primary author experience"
+  ]
+}
