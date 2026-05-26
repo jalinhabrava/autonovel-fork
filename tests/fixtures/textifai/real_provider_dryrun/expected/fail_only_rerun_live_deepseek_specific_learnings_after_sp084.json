@@ -1,0 +1,16 @@
+{
+  "assessment": "fail_only_rerun_passed_with_review_warnings",
+  "deepseek_specific_learnings": {
+    "retry_strategies_used": [
+      "same_model_same_profile",
+      "compact_reduction",
+      "patch_continuation",
+      "rerun_chapter"
+    ],
+    "flash_behavior": "Flash resolved both retried chapters with high scoring final reductions.",
+    "pro_behavior": "Pro improved ch_106 strongly and improved ch_115 materially, but ch_115 kept low_objects warning.",
+    "pro_compact_low_density_handling": "compact reduction plus patch continuation remained useful on both chapters.",
+    "reasoning_pressure_observed": false
+  },
+  "private_packet_root": "/tmp/textifai_private_provider_runs/sp085_fail_only_rerun_live/20260526T070331Z"
+}

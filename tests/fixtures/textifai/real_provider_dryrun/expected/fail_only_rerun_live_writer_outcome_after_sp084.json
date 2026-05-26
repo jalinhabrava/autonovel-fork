@@ -1,0 +1,30 @@
+{
+  "user_ingestion_outcome": {
+    "status": "success_with_warnings",
+    "total_chapters": 4,
+    "chapters_ready": 3,
+    "chapters_needing_retry": 0,
+    "chapters_needing_review": 1,
+    "chapters_failed": 0,
+    "affected_chapters": [
+      {
+        "chapter_id": "ch_115",
+        "chapter_label": "Chapter 115",
+        "status": "needs_review",
+        "reason_label": "manual_review_recommended",
+        "user_message": "This chapter is complete but should be reviewed once before finalizing."
+      }
+    ],
+    "primary_action": {
+      "label": "Continue / Review results",
+      "action_id": "continue_or_review_results",
+      "scope": "affected_chapters_only"
+    },
+    "secondary_action": {
+      "label": "Close",
+      "action_id": "close"
+    },
+    "user_summary": "4 chapters processed. 3 are ready. 1 needs review.",
+    "technical_details_hidden_by_default": true
+  }
+}

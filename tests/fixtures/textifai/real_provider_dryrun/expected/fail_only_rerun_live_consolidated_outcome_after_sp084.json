@@ -1,0 +1,39 @@
+{
+  "assessment": "fail_only_rerun_passed_with_review_warnings",
+  "previous_sp083_outcome": {
+    "total_chapters": 4,
+    "ready_before": 2,
+    "retry_before": 2,
+    "affected_chapters": [
+      "ch_106",
+      "ch_115"
+    ]
+  },
+  "retry_attempted_chapters": [
+    "ch_106",
+    "ch_115"
+  ],
+  "retry_results": {
+    "ch_106": {
+      "flash_score": 108.5,
+      "pro_score": 107.0,
+      "final_status": "ready",
+      "retry_succeeded": true,
+      "follow_up_action": "none"
+    },
+    "ch_115": {
+      "flash_score": 104.0,
+      "pro_score": 76.5,
+      "final_status": "needs_review",
+      "retry_succeeded": true,
+      "follow_up_action": "manual_review_recommended"
+    }
+  },
+  "final_chapters_ready": 3,
+  "final_chapters_needing_retry": 0,
+  "final_chapters_needing_review": 1,
+  "final_chapters_failed": 0,
+  "graph_completion_status": "complete_with_review_warnings",
+  "full_source_phase_a_allowed": true,
+  "no_fake_success": true
+}

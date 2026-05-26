@@ -1,0 +1,12 @@
+{
+  "assessment": "fail_only_rerun_passed_with_review_warnings",
+  "general_pipeline_learnings": {
+    "affected_only_retry_workflow_validated_live": true,
+    "successful_chapters_not_reprocessed": true,
+    "consolidated_outcome_after_retry_validated": true,
+    "writer_facing_status_update_validated": true,
+    "retry_cta_can_clear_retry_backlog_without_full_rerun": true,
+    "phase_a_readiness_can_be_decided_without_write_back": true
+  },
+  "private_packet_root": "/tmp/textifai_private_provider_runs/sp085_fail_only_rerun_live/20260526T070331Z"
+}

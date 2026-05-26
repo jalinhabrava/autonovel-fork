@@ -1334,6 +1334,89 @@ class RealProviderDryRunGuardsTests(unittest.TestCase):
         self.assertIn("general_pipeline_learnings", general)
         self.assertIn("deepseek_specific_learnings", deepseek)
 
+    def test_fail_only_rerun_live_reports_parse_scope_and_writer_privacy(self):
+        plan = json.loads((FIXTURE_ROOT / "fail_only_rerun_live_execution_plan_after_sp084.json").read_text(encoding="utf-8"))
+        internal = json.loads((FIXTURE_ROOT / "fail_only_rerun_live_internal_results_after_sp084.json").read_text(encoding="utf-8"))
+        consolidated = json.loads((FIXTURE_ROOT / "fail_only_rerun_live_consolidated_outcome_after_sp084.json").read_text(encoding="utf-8"))
+        writer = json.loads((FIXTURE_ROOT / "fail_only_rerun_live_writer_outcome_after_sp084.json").read_text(encoding="utf-8"))
+        readiness = json.loads((FIXTURE_ROOT / "full_source_phase_a_readiness_after_sp084.json").read_text(encoding="utf-8"))
+        general = json.loads((FIXTURE_ROOT / "fail_only_rerun_live_general_pipeline_learnings_after_sp084.json").read_text(encoding="utf-8"))
+        deepseek = json.loads((FIXTURE_ROOT / "fail_only_rerun_live_deepseek_specific_learnings_after_sp084.json").read_text(encoding="utf-8"))
+
+        valid_enum = {
+            "fail_only_rerun_passed_ready_for_full_source_phase_a",
+            "fail_only_rerun_passed_with_review_warnings",
+            "fail_only_rerun_partial_needs_patch",
+            "fail_only_rerun_failed_but_debuggable",
+            "fail_only_rerun_blocked",
+        }
+        for payload in (plan, internal, consolidated, writer, readiness, general, deepseek):
+            text = json.dumps(payload, ensure_ascii=False)
+            self.assertNotIn("sk-", text)
+            self.assertNotIn("Authorization: Bearer", text)
+            self.assertNotIn("CHUNK_TEXT:", text)
+
+        self.assertIn(plan["assessment"], valid_enum)
+        self.assertIn(consolidated["assessment"], valid_enum)
+        self.assertLessEqual(plan["planned_total_calls"], 24)
+        self.assertTrue(plan["fits_cap"])
+        self.assertEqual(plan["affected_chapters"], ["ch_106", "ch_115"])
+        self.assertEqual(set(plan["excluded_successful_chapters"]), {"ch_097", "ch_114"})
+        self.assertEqual(set(internal["retried_chapters"]), {"ch_106", "ch_115"})
+        self.assertEqual(set(internal["excluded_chapters"]), {"ch_097", "ch_114"})
+        self.assertLessEqual(internal["provider_calls_actual"], 24)
+
+        self.assertTrue(consolidated["no_fake_success"])
+        self.assertEqual(consolidated["final_chapters_needing_retry"], 0)
+        self.assertGreaterEqual(consolidated["final_chapters_ready"], 2)
+        self.assertTrue(readiness["fail_only_retry_executed"])
+        self.assertTrue(readiness["consolidated_outcome_acceptable"])
+        self.assertIn("recommended_phase_a_cap", readiness)
+
+        writer_payload = writer["user_ingestion_outcome"]
+        self.assertEqual(writer_payload["total_chapters"], 4)
+        self.assertEqual(writer_payload["chapters_needing_retry"], 0)
+        self.assertIn(writer_payload["status"], {"success", "success_with_warnings", "success_with_retry_available", "partial_failure", "failed"})
+        for chapter in writer_payload.get("affected_chapters", []):
+            self.assertTrue(chapter["chapter_id"])
+            self.assertTrue(chapter["chapter_label"])
+            self.assertIn(chapter["status"], {"ready", "ready_with_warnings", "needs_retry", "needs_review", "failed"})
+            self.assertIn(
+                chapter["reason_label"],
+                {
+                    "analysis_incomplete",
+                    "temporary_model_error",
+                    "chapter_needs_second_pass",
+                    "chapter_processed_with_warnings",
+                    "manual_review_recommended",
+                },
+            )
+
+        writer_text = json.dumps(writer, ensure_ascii=False).replace("temporary_model_error", "temporary_error")
+        for forbidden in (
+            "chunk",
+            "reduction",
+            "parseable",
+            "source_ref",
+            "provider",
+            "finish_reason",
+            "JSON",
+            "continuation",
+            "patch",
+            "model",
+            "profile",
+            "token",
+            "API",
+            "telemetry",
+            "run_id",
+            "failure_mode",
+        ):
+            self.assertNotIn(forbidden, writer_text)
+
+        self.assertTrue(str(internal.get("private_packet_root", "")).startswith("/tmp/textifai_private_provider_runs/"))
+        self.assertIn("general_pipeline_learnings", general)
+        self.assertIn("deepseek_specific_learnings", deepseek)
+
     def test_profiled_runtime_reports_record_safe_not_executed_state(self):
         summary = json.loads((FIXTURE_ROOT / "deepseek_ch002_profiled_runtime_summary_after_sp061.json").read_text(encoding="utf-8"))
         generic = json.loads((FIXTURE_ROOT / "deepseek_ch002_profiled_vs_generic_report.json").read_text(encoding="utf-8"))

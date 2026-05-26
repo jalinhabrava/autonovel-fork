@@ -1,0 +1,25 @@
+{
+  "assessment": "fail_only_rerun_passed_with_review_warnings",
+  "fail_only_retry_executed": true,
+  "consolidated_outcome_acceptable": true,
+  "recommended_phase_a_scope": "first 24 chapters flash-only, with pro only on flagged high-risk chapters after review",
+  "recommended_phase_a_cap": 96,
+  "stop_conditions": [
+    "stop batch if planned calls exceed cap",
+    "stop batch if continuation reserve drops below 10 percent",
+    "stop before any automatic write-back"
+  ],
+  "recommended_model_strategy": "flash_only_then_targeted_pro",
+  "fail_only_retry_after_phase_a": true,
+  "cost_call_risk_notes": [
+    "flash-only keeps Phase A bounded",
+    "full flash+pro on all chapters remains high-cost",
+    "affected-only retry remains required after each batch"
+  ],
+  "private_packet_requirements": [
+    "per-call private artifacts",
+    "writer-facing outcome snapshot",
+    "internal retry plan and consolidated outcome notes"
+  ],
+  "writer_facing_outcome_requirement": "simple chapter counts plus retry/review CTA only"
+}

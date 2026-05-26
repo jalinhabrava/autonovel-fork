@@ -1,0 +1,146 @@
+{
+  "assessment": "fail_only_rerun_passed_with_review_warnings",
+  "private_packet_root": "/tmp/textifai_private_provider_runs/sp085_fail_only_rerun_live/20260526T070331Z",
+  "retried_chapters": [
+    "ch_106",
+    "ch_115"
+  ],
+  "excluded_chapters": [
+    "ch_097",
+    "ch_114"
+  ],
+  "provider_calls_actual": 19,
+  "retry_strategies_used": [
+    "same_model_same_profile",
+    "compact_reduction",
+    "patch_continuation",
+    "rerun_chapter"
+  ],
+  "per_chapter_model_status": [
+    {
+      "chapter_id": "ch_106",
+      "run_id": "ch_106__deepseek_v4_flash",
+      "model": "deepseek-v4-flash",
+      "profile_id": "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+      "parseable_json": true,
+      "validation_ok": true,
+      "score": 108.5,
+      "thin_warnings": [
+        "model_profile_experimental"
+      ],
+      "continuation_status": "patch_merged",
+      "patch_chapter_validation": {
+        "valid": true,
+        "failure_mode": null,
+        "expected_chapter_id": "ch_106",
+        "chapter_ids_seen": [],
+        "chunk_ids_seen": [],
+        "metadata_chapter_id": null,
+        "continuation_for_chapter_id": null
+      },
+      "retry_succeeded": true
+    },
+    {
+      "chapter_id": "ch_106",
+      "run_id": "ch_106__deepseek_v4_pro",
+      "model": "deepseek-v4-pro",
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "parseable_json": true,
+      "validation_ok": true,
+      "score": 107.0,
+      "thin_warnings": [
+        "model_profile_experimental"
+      ],
+      "continuation_status": "patch_merged",
+      "patch_chapter_validation": {
+        "valid": true,
+        "failure_mode": null,
+        "expected_chapter_id": "ch_106",
+        "chapter_ids_seen": [],
+        "chunk_ids_seen": [],
+        "metadata_chapter_id": null,
+        "continuation_for_chapter_id": null
+      },
+      "retry_succeeded": true
+    },
+    {
+      "chapter_id": "ch_115",
+      "run_id": "ch_115__deepseek_v4_flash",
+      "model": "deepseek-v4-flash",
+      "profile_id": "deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1",
+      "parseable_json": true,
+      "validation_ok": true,
+      "score": 104.0,
+      "thin_warnings": [
+        "model_profile_experimental"
+      ],
+      "continuation_status": "patch_merged",
+      "patch_chapter_validation": {
+        "valid": true,
+        "failure_mode": null,
+        "expected_chapter_id": "ch_115",
+        "chapter_ids_seen": [],
+        "chunk_ids_seen": [],
+        "metadata_chapter_id": null,
+        "continuation_for_chapter_id": null
+      },
+      "retry_succeeded": true
+    },
+    {
+      "chapter_id": "ch_115",
+      "run_id": "ch_115__deepseek_v4_pro",
+      "model": "deepseek-v4-pro",
+      "profile_id": "deepseek-v4-pro:bootstrap_chapter_extraction:balanced_kb_v1",
+      "parseable_json": true,
+      "validation_ok": true,
+      "score": 76.5,
+      "thin_warnings": [
+        "low_objects_count",
+        "model_profile_experimental"
+      ],
+      "continuation_status": "patch_merged",
+      "patch_chapter_validation": {
+        "valid": true,
+        "failure_mode": null,
+        "expected_chapter_id": "ch_115",
+        "chapter_ids_seen": [],
+        "chunk_ids_seen": [],
+        "metadata_chapter_id": null,
+        "continuation_for_chapter_id": null
+      },
+      "retry_succeeded": true
+    }
+  ],
+  "technical_failure_modes": [],
+  "source_ref_coverage": 1.0,
+  "truncation_continuation": {
+    "triggered_continuation_count": 4,
+    "continuation_problem_count": 0
+  },
+  "patch_validation": {
+    "wrong_chapter_merge_count": 0,
+    "wrong_chapter_output_seen": false
+  },
+  "thin_diagnostics": {
+    "chapters_needing_review": [
+      "ch_115"
+    ],
+    "reason": "low_objects_count remained on pro reduction for ch_115"
+  },
+  "retry_outcome": {
+    "ch_106": {
+      "flash_score": 108.5,
+      "pro_score": 107.0,
+      "final_status": "ready",
+      "retry_succeeded": true,
+      "follow_up_action": "none"
+    },
+    "ch_115": {
+      "flash_score": 104.0,
+      "pro_score": 76.5,
+      "final_status": "needs_review",
+      "retry_succeeded": true,
+      "follow_up_action": "manual_review_recommended"
+    }
+  }
+}
