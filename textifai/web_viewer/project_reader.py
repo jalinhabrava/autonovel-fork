@@ -83,9 +83,21 @@ class ProjectCatalog:
         obsidian_import = _read_json(system / "obsidian_import.json") if system else None
         review_queue = _read_json(system / "review_queue.json") if system else None
         invariants = _read_json(system / "semantic_invariants_audit.json") if system else None
+        ingestion_graph = _read_json(system / "ingestion_graph.json") if system else None
         entities = obsidian_import.get("entities") if isinstance(obsidian_import, dict) else []
         chapters = obsidian_import.get("chapters") if isinstance(obsidian_import, dict) else []
         primary_count = sum(1 for item in entities or [] if _is_primary(item))
+        graph_summary = {}
+        writer_outcome = {}
+        if isinstance(ingestion_graph, dict):
+            adapted = adapt_ingestion_graph_to_viewer_graph(ingestion_graph)
+            metadata = adapted.get("metadata") if isinstance(adapted, dict) else {}
+            if isinstance(metadata, dict):
+                graph_summary = metadata.get("graph_summary") if isinstance(metadata.get("graph_summary"), dict) else {}
+                writer_outcome = metadata.get("writer_outcome") if isinstance(metadata.get("writer_outcome"), dict) else {}
+        chapter_count = int(writer_outcome.get("total_chapters") or len(chapters or []) or len((ingestion_graph or {}).get("metadata", {}).get("chapters") or []))
+        synthetic_label_count = graph_summary.get("synthetic_label_count")
+        recommended = bool(graph_summary) and synthetic_label_count == 0 and str(project.name).endswith("sp089")
         return {
             "project_id": project.project_id,
             "name": project.name,
@@ -94,12 +106,16 @@ class ProjectCatalog:
             "system_root": str(system) if system else None,
             "mtime": project.root.stat().st_mtime if project.root.exists() else None,
             "work": obsidian_import.get("work") if isinstance(obsidian_import, dict) else {},
-            "chapter_count": len(chapters or []),
+            "chapter_count": chapter_count,
             "entity_count": len(entities or []),
             "primary_count": primary_count,
             "review_count": max(len(entities or []) - primary_count, 0),
             "review_queue_count": review_queue.get("item_count") if isinstance(review_queue, dict) else None,
             "invariants_status": invariants.get("status") if isinstance(invariants, dict) else None,
+            "has_ingestion_graph": isinstance(ingestion_graph, dict),
+            "graph_summary": graph_summary,
+            "writer_outcome": writer_outcome,
+            "recommended": recommended,
         }
 
 
@@ -621,9 +637,10 @@ def _graph_chapter_payload(chapter: dict[str, Any]) -> dict[str, Any]:
 
 def _project_from_candidate(path: Path) -> ProjectRef | None:
     system = path / "99_System"
-    if system.exists() and ((system / "obsidian_import.json").exists() or (system / "review_queue.json").exists()):
+    has_system_artifacts = lambda root: any((root / name).exists() for name in ("obsidian_import.json", "review_queue.json", "ingestion_graph.json"))
+    if system.exists() and has_system_artifacts(system):
         return ProjectRef(project_id=_project_id(path), name=path.name, root=path, system_root=system, kind="vault_or_run")
-    if path.name == "99_System" and ((path / "obsidian_import.json").exists() or (path / "review_queue.json").exists()):
+    if path.name == "99_System" and has_system_artifacts(path):
         root = path.parent
         return ProjectRef(project_id=_project_id(root), name=root.name, root=root, system_root=path, kind="system_run")
     return None

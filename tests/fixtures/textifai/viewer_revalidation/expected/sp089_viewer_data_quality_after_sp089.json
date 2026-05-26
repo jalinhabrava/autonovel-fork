@@ -1,0 +1,49 @@
+{
+  "assessment": "sp089_viewer_data_quality_ready_for_manual_review",
+  "overview_fields_present": [
+    "chapters_failed",
+    "chapters_needing_retry",
+    "chapters_needing_review",
+    "chapters_processed",
+    "chapters_ready",
+    "chapters_ready_with_warnings",
+    "node_counts_by_kind",
+    "primary_action",
+    "relationship_count",
+    "secondary_action",
+    "synthetic_label_count",
+    "user_summary",
+    "warning_summary"
+  ],
+  "graph_real_labels_present": true,
+  "synthetic_labels_count": 0,
+  "node_detail_fields_present": [
+    "aliases",
+    "canonical_label",
+    "chapter_ids",
+    "entity",
+    "evidence_refs",
+    "facts",
+    "id",
+    "kind",
+    "label",
+    "note_path",
+    "role",
+    "source_refs",
+    "status",
+    "summary",
+    "surface_forms",
+    "tags"
+  ],
+  "relationship_label_quality_summary": {
+    "edge_count": 91,
+    "edges_with_real_labels": 91,
+    "edges_missing_label": 0
+  },
+  "missing_data_counts": {
+    "nodes_without_aliases": 430,
+    "nodes_without_facts": 54,
+    "nodes_without_source_refs": 54,
+    "nodes_without_relationships": 346
+  }
+}

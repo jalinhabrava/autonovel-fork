@@ -1369,3 +1369,8 @@ button:hover, button.active {
   }
   .sidebar { border-right: 0; border-bottom: 1px solid var(--line); max-height: 42vh; }
 }
+
+.open-project-panel { margin-bottom: 12px; }
+.open-project-list { display: grid; gap: 8px; }
+.project-card-header { display: flex; gap: 8px; align-items: start; justify-content: space-between; }
+.project-card-actions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }

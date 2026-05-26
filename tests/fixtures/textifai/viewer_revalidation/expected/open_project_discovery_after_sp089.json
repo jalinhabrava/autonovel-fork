@@ -1,0 +1,21 @@
+{
+  "assessment": "open_project_discovery_ready",
+  "projects_found": [
+    {
+      "name": "viewer_project",
+      "project_id": "tmp__textifai_private_provider_runs__sp087_twenty_chapter_e2e_viewer__20260526T100011Z__20260526T100049Z__viewer_project",
+      "synthetic_labels_count": 100
+    },
+    {
+      "name": "viewer_project_sp089",
+      "project_id": "tmp__textifai_private_provider_runs__sp087_twenty_chapter_e2e_viewer__20260526T100011Z__20260526T100049Z__viewer_project_sp089",
+      "synthetic_labels_count": 0
+    }
+  ],
+  "active_project": "tmp__textifai_private_provider_runs__sp087_twenty_chapter_e2e_viewer__20260526T100011Z__20260526T100049Z__viewer_project_sp089",
+  "old_project_visible": true,
+  "patched_project_visible": true,
+  "ambiguity_risk": "medium_before_patch_low_after_patch",
+  "open_project_available": true,
+  "recommended_ux": "default to recommended patched project and expose explicit Open Project panel"
+}

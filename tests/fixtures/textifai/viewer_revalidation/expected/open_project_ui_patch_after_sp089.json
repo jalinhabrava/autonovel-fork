@@ -1,0 +1,26 @@
+{
+  "assessment": "open_project_ui_patch_ready",
+  "files_changed": [
+    "textifai/web_viewer/project_reader.py",
+    "textifai/web_viewer/static/app.js",
+    "textifai/web_viewer/static/styles.css"
+  ],
+  "ux_behavior": [
+    "visible Open Project / Abrir proyecto panel",
+    "shows active project",
+    "shows recommended project",
+    "shows project counts and synthetic label count",
+    "Open button switches current project"
+  ],
+  "security_constraints": [
+    "read-only",
+    "project discovery restricted to served roots",
+    "no arbitrary filesystem browsing",
+    "no shell interpolation",
+    "no write-back"
+  ],
+  "limitations": [
+    "browser needs refresh to load patched JS if old page already open"
+  ],
+  "arbitrary_filesystem_browsing": false
+}

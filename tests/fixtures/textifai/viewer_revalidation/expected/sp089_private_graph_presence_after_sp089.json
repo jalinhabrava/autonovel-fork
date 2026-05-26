@@ -1,0 +1,22 @@
+{
+  "assessment": "sp089_private_graph_found_and_parsed",
+  "graph_found": true,
+  "private_path": "/tmp/textifai_private_provider_runs/sp087_twenty_chapter_e2e_viewer/20260526T100011Z/20260526T100049Z/viewer_project_sp089/99_System/ingestion_graph.json",
+  "node_count": 430,
+  "edge_count": 91,
+  "synthetic_labels_count": 0,
+  "real_labels_present": true,
+  "source_refs_present": true,
+  "aliases_presence_summary": {
+    "nodes_with_aliases": 0,
+    "nodes_without_aliases": 430
+  },
+  "facts_presence_summary": {
+    "nodes_with_facts": 376,
+    "nodes_without_facts": 54
+  },
+  "evidence_presence_summary": {
+    "nodes_with_evidence": 0
+  },
+  "real_labels_listed_in_repo": false
+}

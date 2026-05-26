@@ -1,0 +1,28 @@
+{
+  "assessment": "manual_viewer_server_started_for_sp089_revalidation",
+  "server_started": true,
+  "host": "0.0.0.0",
+  "port": 8870,
+  "local_url": "http://127.0.0.1:8870",
+  "project_root": "/tmp/textifai_private_provider_runs/sp087_twenty_chapter_e2e_viewer/20260526T100011Z/20260526T100049Z",
+  "active_project_id": "tmp__textifai_private_provider_runs__sp087_twenty_chapter_e2e_viewer__20260526T100011Z__20260526T100049Z__viewer_project_sp089",
+  "recommended_project_id": "tmp__textifai_private_provider_runs__sp087_twenty_chapter_e2e_viewer__20260526T100011Z__20260526T100049Z__viewer_project_sp089",
+  "command_used": [
+    "/home/david/.local/bin/uv",
+    "run",
+    "python",
+    "-m",
+    "textifai.web_viewer.server",
+    "--root",
+    "/tmp/textifai_private_provider_runs/sp087_twenty_chapter_e2e_viewer/20260526T100011Z/20260526T100049Z",
+    "--host",
+    "0.0.0.0",
+    "--port",
+    "8870"
+  ],
+  "pid": 1135997,
+  "log_path": "/tmp/textifai_private_provider_runs/sp090_manual_viewer_revalidation/server_8870.log",
+  "stop_command": "kill 1135997",
+  "old_server_stopped": true,
+  "reason_if_not_stopped": ""
+}

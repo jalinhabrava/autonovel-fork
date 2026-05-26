@@ -1,0 +1,5 @@
+{
+  "assessment": "viewer_manual_revalidation_passed_with_minor_warnings",
+  "recommended_next_phase": "Phase 1.3.M-b5c-4t — Author-facing Viewer Quality Patch or Manual 20-chapter Story Map Review",
+  "reason": "patched project is discoverable, endpoints return real labels, overview shows outcome, detail payload is useful; minor warnings remain for missing refs on subset of nodes"
+}

@@ -32,6 +32,7 @@ const state = {
   },
   compareView: { baseId: "", candidateId: "", loading: false, result: null, error: "" },
   reviewView: { severity: "", reviewType: "", query: "", sortBy: "severity_desc", quickFilter: "all", candidate: "" },
+  autoOpenedRecommendedProject: false,
 };
 
 const RECOMMENDED_ACTION_VIEWER_ACTIONS = {
@@ -136,6 +137,16 @@ async function loadProjects() {
   const data = await api("/api/projects");
   state.projects = data.projects || [];
   renderProjects();
+  const recommended = state.projects.find((project) => project.recommended) || state.projects[0] || null;
+  const currentStillExists = state.currentId && state.projects.some((project) => project.project_id === state.currentId);
+  if (!currentStillExists && recommended) {
+    await selectProject(recommended.project_id, { preserveNotice: true });
+    return;
+  }
+  if (!state.autoOpenedRecommendedProject && recommended && state.currentId !== recommended.project_id) {
+    state.autoOpenedRecommendedProject = true;
+    await selectProject(recommended.project_id, { notice: `Opened recommended project ${recommended.name} for manual review.` });
+  }
 }
 
 async function loadIngestionConfig() {
@@ -164,19 +175,47 @@ async function loadIngestionJobs() {
 }
 
 function renderProjects() {
-  $("project-list").innerHTML = state.projects.map((project) => `
-    <div class="project-card ${project.project_id === state.currentId ? "active" : ""}" data-project="${project.project_id}">
-      <strong>${escapeHtml(project.name)}</strong>
-      <small>${escapeHtml(project.kind)} · ${fmtCount(project.primary_count)} primaries · ${fmtCount(project.review_queue_count)} review items</small>
-      <small>${escapeHtml(project.invariants_status || "no invariant audit")}</small>
+  $("project-list").innerHTML = `
+    <div class="panel open-project-panel">
+      <p class="eyebrow">Open Project / Abrir proyecto</p>
+      <p class="muted">Choose inspected project under served root. Read-only. No arbitrary filesystem browsing.</p>
+      <div class="open-project-list">
+        ${state.projects.map((project) => {
+          const graphSummary = project.graph_summary || {};
+          const writerOutcome = project.writer_outcome || {};
+          const active = project.project_id === state.currentId;
+          const rootLabel = String(project.root || "").split('/').slice(-2).join('/');
+          return `
+            <div class="project-card ${active ? "active" : ""}" data-project="${escapeHtml(project.project_id)}">
+              <div class="project-card-header">
+                <strong>${escapeHtml(project.name)}</strong>
+                <div class="project-card-actions">
+                  ${project.recommended ? `<span class="badge inspectable-badge">recommended</span>` : ""}
+                  ${active ? `<span class="badge">active</span>` : `<button type="button" class="inline-action" data-open-project="${escapeHtml(project.project_id)}">Open</button>`}
+                </div>
+              </div>
+              <small>${escapeHtml(project.kind)} · ${escapeHtml(rootLabel || project.name)}</small>
+              <small>chapters ${escapeHtml(fmtCount(project.chapter_count))} · nodes ${escapeHtml(fmtCount(graphSummary.node_count ?? "—"))} · edges ${escapeHtml(fmtCount(graphSummary.edge_count ?? "—"))}</small>
+              <small>ready ${escapeHtml(fmtCount(writerOutcome.chapters_ready ?? "—"))} · review ${escapeHtml(fmtCount(writerOutcome.chapters_needing_review ?? "—"))} · retry ${escapeHtml(fmtCount(writerOutcome.chapters_needing_retry ?? "—"))}</small>
+              <small>synthetic labels ${escapeHtml(fmtCount(graphSummary.synthetic_label_count ?? "—"))}</small>
+            </div>
+          `;
+        }).join("")}
+      </div>
     </div>
-  `).join("");
+  `;
   document.querySelectorAll("[data-project]").forEach((node) => {
     node.addEventListener("click", () => selectProject(node.dataset.project));
   });
+  document.querySelectorAll("[data-open-project]").forEach((node) => {
+    node.addEventListener("click", (event) => {
+      event.stopPropagation();
+      selectProject(node.dataset.openProject, { notice: `Opened project ${node.dataset.openProject}` });
+    });
+  });
 }
 
-async function selectProject(projectId) {
+async function selectProject(projectId, options = {}) {
   state.currentId = projectId;
   state.current = await api(`/api/projects/${encodeURIComponent(projectId)}`);
   state.selectedGraphNodeId = null;
@@ -186,6 +225,8 @@ async function selectProject(projectId) {
   state.compareView = { baseId: projectId, candidateId: state.compareView.candidateId || "", loading: false, result: null, error: "" };
   state.hiddenGraphTags = new Set();
   state.reviewView = { severity: "", reviewType: "", query: "", sortBy: "severity_desc", quickFilter: "all", candidate: "" };
+  if (options.notice) setNavNotice(options.notice, "info");
+  else if (!options.preserveNotice) state.navNotice = null;
   resetGraphViewBox();
   $("graph-kind-filter").dataset.ready = "";
   renderProjects();

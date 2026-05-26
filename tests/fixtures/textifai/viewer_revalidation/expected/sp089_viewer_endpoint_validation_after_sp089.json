@@ -1,0 +1,13 @@
+{
+  "assessment": "sp089_viewer_endpoints_validated",
+  "root_status": 200,
+  "projects_status": 200,
+  "project_detail_status": 200,
+  "graph_status": 200,
+  "project_id": "tmp__textifai_private_provider_runs__sp087_twenty_chapter_e2e_viewer__20260526T100011Z__20260526T100049Z__viewer_project_sp089",
+  "node_count": 430,
+  "edge_count": 91,
+  "synthetic_labels_count": 0,
+  "real_labels_present": true,
+  "useful_detail_payload_present": true
+}
