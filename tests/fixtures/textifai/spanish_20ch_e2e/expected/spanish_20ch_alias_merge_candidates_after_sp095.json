@@ -1,0 +1,18 @@
+{
+  "assessment": "spanish_20ch_alias_merge_candidates_ready",
+  "automatic_redirects_applied": {
+    "count": 32,
+    "examples_redacted": true
+  },
+  "review_only_candidates": {
+    "count": 160,
+    "examples_redacted": true
+  },
+  "rejected_unsafe_merges": [
+    {
+      "pattern": "descriptive role phrases",
+      "reason": "can represent different entities depending on chapter context"
+    }
+  ],
+  "private_report": "docs/handoffs/private/safepoint-096_vaerl-entity-quality-viewer-ux-patch/alias_merge_candidates_private.md"
+}

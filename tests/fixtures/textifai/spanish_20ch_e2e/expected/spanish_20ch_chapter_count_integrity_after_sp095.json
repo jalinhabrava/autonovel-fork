@@ -1,0 +1,12 @@
+{
+  "assessment": "spanish_20ch_chapter_count_integrity_ready",
+  "selected_count": 20,
+  "represented_count_before": 19,
+  "represented_count_after": 20,
+  "missing_before": [
+    "ch_019"
+  ],
+  "missing_after": [],
+  "ch_019_status": "needs_retry",
+  "failure_reason_sanitized": "wrong-chapter patch continuation caused chapter-level reliability failure"
+}

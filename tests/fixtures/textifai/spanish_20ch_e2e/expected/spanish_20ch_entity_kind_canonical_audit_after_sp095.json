@@ -1,0 +1,24 @@
+{
+  "assessment": "spanish_20ch_entity_kind_canonical_audit_ready",
+  "duplicate_label_group_count": 65,
+  "character_duplicate_group_count": 32,
+  "review_only_candidate_count": 20,
+  "character_preference_examples": {
+    "Ren": {
+      "preferred_kind": "character",
+      "available_kinds": [
+        "character",
+        "concept"
+      ]
+    },
+    "Sera": {
+      "preferred_kind": "character",
+      "available_kinds": [
+        "character",
+        "concept"
+      ]
+    }
+  },
+  "examples_redacted": true,
+  "private_report": "docs/handoffs/private/safepoint-096_vaerl-entity-quality-viewer-ux-patch/entity_kind_canonical_private.md"
+}

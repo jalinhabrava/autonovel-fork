@@ -1,0 +1,17 @@
+{
+  "assessment": "viewer_kind_color_legend_patch_ready",
+  "kind_colors": {
+    "character": "#247c7a",
+    "place": "#4f8f4f",
+    "event": "#d5793a",
+    "object": "#a9782b",
+    "concept": "#6c6f93",
+    "chapter": "#7f7a6a",
+    "review": "#b45b35"
+  },
+  "status_border_treatment": {
+    "needs_review": "#d59a2f",
+    "needs_retry": "#a23b55",
+    "ready": "#247c7a"
+  }
+}

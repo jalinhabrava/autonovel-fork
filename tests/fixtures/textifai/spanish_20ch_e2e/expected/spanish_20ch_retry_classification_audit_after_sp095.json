@@ -1,0 +1,396 @@
+{
+  "assessment": "spanish_20ch_retry_classification_audit_ready",
+  "chapters": [
+    {
+      "chapter_id": "ch_001",
+      "previous_status": "needs_retry",
+      "technical_signals": [],
+      "semantic_quality_signals": [
+        "manual_semantic_review_recommended"
+      ],
+      "recommended_status": "needs_review",
+      "reason": "valid_output_with_quality_or_consistency_warning",
+      "confidence": 0.72,
+      "true_retry": false,
+      "needs_review": true
+    },
+    {
+      "chapter_id": "ch_002",
+      "previous_status": "needs_retry",
+      "technical_signals": [],
+      "semantic_quality_signals": [
+        "manual_semantic_review_recommended"
+      ],
+      "recommended_status": "needs_review",
+      "reason": "valid_output_with_quality_or_consistency_warning",
+      "confidence": 0.72,
+      "true_retry": false,
+      "needs_review": true
+    },
+    {
+      "chapter_id": "ch_003",
+      "previous_status": "ready",
+      "technical_signals": [],
+      "semantic_quality_signals": [
+        "manual_semantic_review_recommended"
+      ],
+      "recommended_status": "ready_with_warnings",
+      "reason": "valid_output_no_blocking_technical_failure",
+      "confidence": 0.66,
+      "true_retry": false,
+      "needs_review": false
+    },
+    {
+      "chapter_id": "ch_004",
+      "previous_status": "needs_retry",
+      "technical_signals": [],
+      "semantic_quality_signals": [
+        "manual_semantic_review_recommended"
+      ],
+      "recommended_status": "needs_review",
+      "reason": "valid_output_with_quality_or_consistency_warning",
+      "confidence": 0.72,
+      "true_retry": false,
+      "needs_review": true
+    },
+    {
+      "chapter_id": "ch_005",
+      "previous_status": "needs_retry",
+      "technical_signals": [],
+      "semantic_quality_signals": [
+        "manual_semantic_review_recommended"
+      ],
+      "recommended_status": "needs_review",
+      "reason": "valid_output_with_quality_or_consistency_warning",
+      "confidence": 0.72,
+      "true_retry": false,
+      "needs_review": true
+    },
+    {
+      "chapter_id": "ch_006",
+      "previous_status": "needs_retry",
+      "technical_signals": [],
+      "semantic_quality_signals": [
+        "manual_semantic_review_recommended"
+      ],
+      "recommended_status": "needs_review",
+      "reason": "valid_output_with_quality_or_consistency_warning",
+      "confidence": 0.72,
+      "true_retry": false,
+      "needs_review": true
+    },
+    {
+      "chapter_id": "ch_007",
+      "previous_status": "needs_retry",
+      "technical_signals": [],
+      "semantic_quality_signals": [
+        "manual_semantic_review_recommended"
+      ],
+      "recommended_status": "needs_review",
+      "reason": "valid_output_with_quality_or_consistency_warning",
+      "confidence": 0.72,
+      "true_retry": false,
+      "needs_review": true
+    },
+    {
+      "chapter_id": "ch_008",
+      "previous_status": "needs_retry",
+      "technical_signals": [],
+      "semantic_quality_signals": [
+        "manual_semantic_review_recommended"
+      ],
+      "recommended_status": "needs_review",
+      "reason": "valid_output_with_quality_or_consistency_warning",
+      "confidence": 0.72,
+      "true_retry": false,
+      "needs_review": true
+    },
+    {
+      "chapter_id": "ch_009",
+      "previous_status": "needs_retry",
+      "technical_signals": [],
+      "semantic_quality_signals": [
+        "manual_semantic_review_recommended"
+      ],
+      "recommended_status": "needs_review",
+      "reason": "valid_output_with_quality_or_consistency_warning",
+      "confidence": 0.72,
+      "true_retry": false,
+      "needs_review": true
+    },
+    {
+      "chapter_id": "ch_010",
+      "previous_status": "needs_retry",
+      "technical_signals": [],
+      "semantic_quality_signals": [
+        "manual_semantic_review_recommended"
+      ],
+      "recommended_status": "needs_review",
+      "reason": "valid_output_with_quality_or_consistency_warning",
+      "confidence": 0.72,
+      "true_retry": false,
+      "needs_review": true
+    },
+    {
+      "chapter_id": "ch_011",
+      "previous_status": "needs_retry",
+      "technical_signals": [],
+      "semantic_quality_signals": [
+        "manual_semantic_review_recommended"
+      ],
+      "recommended_status": "needs_review",
+      "reason": "valid_output_with_quality_or_consistency_warning",
+      "confidence": 0.72,
+      "true_retry": false,
+      "needs_review": true
+    },
+    {
+      "chapter_id": "ch_012",
+      "previous_status": "needs_retry",
+      "technical_signals": [],
+      "semantic_quality_signals": [
+        "manual_semantic_review_recommended"
+      ],
+      "recommended_status": "needs_review",
+      "reason": "valid_output_with_quality_or_consistency_warning",
+      "confidence": 0.72,
+      "true_retry": false,
+      "needs_review": true
+    },
+    {
+      "chapter_id": "ch_013",
+      "previous_status": "needs_retry",
+      "technical_signals": [],
+      "semantic_quality_signals": [
+        "manual_semantic_review_recommended"
+      ],
+      "recommended_status": "needs_review",
+      "reason": "valid_output_with_quality_or_consistency_warning",
+      "confidence": 0.72,
+      "true_retry": false,
+      "needs_review": true
+    },
+    {
+      "chapter_id": "ch_014",
+      "previous_status": "ready",
+      "technical_signals": [],
+      "semantic_quality_signals": [
+        "manual_semantic_review_recommended"
+      ],
+      "recommended_status": "ready_with_warnings",
+      "reason": "valid_output_no_blocking_technical_failure",
+      "confidence": 0.66,
+      "true_retry": false,
+      "needs_review": false
+    },
+    {
+      "chapter_id": "ch_015",
+      "previous_status": "needs_retry",
+      "technical_signals": [],
+      "semantic_quality_signals": [
+        "manual_semantic_review_recommended"
+      ],
+      "recommended_status": "needs_review",
+      "reason": "valid_output_with_quality_or_consistency_warning",
+      "confidence": 0.72,
+      "true_retry": false,
+      "needs_review": true
+    },
+    {
+      "chapter_id": "ch_016",
+      "previous_status": "needs_retry",
+      "technical_signals": [],
+      "semantic_quality_signals": [
+        "manual_semantic_review_recommended"
+      ],
+      "recommended_status": "needs_review",
+      "reason": "valid_output_with_quality_or_consistency_warning",
+      "confidence": 0.72,
+      "true_retry": false,
+      "needs_review": true
+    },
+    {
+      "chapter_id": "ch_017",
+      "previous_status": "ready",
+      "technical_signals": [],
+      "semantic_quality_signals": [
+        "manual_semantic_review_recommended"
+      ],
+      "recommended_status": "ready_with_warnings",
+      "reason": "valid_output_no_blocking_technical_failure",
+      "confidence": 0.66,
+      "true_retry": false,
+      "needs_review": false
+    },
+    {
+      "chapter_id": "ch_018",
+      "previous_status": "needs_retry",
+      "technical_signals": [],
+      "semantic_quality_signals": [
+        "manual_semantic_review_recommended"
+      ],
+      "recommended_status": "needs_review",
+      "reason": "valid_output_with_quality_or_consistency_warning",
+      "confidence": 0.72,
+      "true_retry": false,
+      "needs_review": true
+    },
+    {
+      "chapter_id": "ch_019",
+      "previous_status": "needs_retry",
+      "technical_signals": [
+        "finish_reason_length",
+        "valid_json_wrong_chapter",
+        "parseable_json_false"
+      ],
+      "semantic_quality_signals": [],
+      "recommended_status": "needs_retry",
+      "reason": "technical_failure_or_unreliable_output",
+      "confidence": 0.92,
+      "true_retry": true,
+      "needs_review": false
+    },
+    {
+      "chapter_id": "ch_020",
+      "previous_status": "needs_retry",
+      "technical_signals": [],
+      "semantic_quality_signals": [
+        "manual_semantic_review_recommended"
+      ],
+      "recommended_status": "needs_review",
+      "reason": "valid_output_with_quality_or_consistency_warning",
+      "confidence": 0.72,
+      "true_retry": false,
+      "needs_review": true
+    }
+  ],
+  "summary": {
+    "total": 20,
+    "needs_retry": 1,
+    "needs_review": 16,
+    "ready_with_warnings": 3
+  },
+  "writer_outcome": {
+    "status": "success_with_retry_available",
+    "total_chapters": 20,
+    "chapters_ready": 0,
+    "chapters_ready_with_warnings": 3,
+    "chapters_needing_review": 16,
+    "chapters_needing_retry": 1,
+    "chapters_failed": 0,
+    "affected_chapters": [
+      {
+        "chapter_id": "ch_001",
+        "chapter_label": "Chapter 001",
+        "status": "needs_review",
+        "reason_label": "valid_output_with_quality_or_consistency_warning"
+      },
+      {
+        "chapter_id": "ch_002",
+        "chapter_label": "Chapter 002",
+        "status": "needs_review",
+        "reason_label": "valid_output_with_quality_or_consistency_warning"
+      },
+      {
+        "chapter_id": "ch_004",
+        "chapter_label": "Chapter 004",
+        "status": "needs_review",
+        "reason_label": "valid_output_with_quality_or_consistency_warning"
+      },
+      {
+        "chapter_id": "ch_005",
+        "chapter_label": "Chapter 005",
+        "status": "needs_review",
+        "reason_label": "valid_output_with_quality_or_consistency_warning"
+      },
+      {
+        "chapter_id": "ch_006",
+        "chapter_label": "Chapter 006",
+        "status": "needs_review",
+        "reason_label": "valid_output_with_quality_or_consistency_warning"
+      },
+      {
+        "chapter_id": "ch_007",
+        "chapter_label": "Chapter 007",
+        "status": "needs_review",
+        "reason_label": "valid_output_with_quality_or_consistency_warning"
+      },
+      {
+        "chapter_id": "ch_008",
+        "chapter_label": "Chapter 008",
+        "status": "needs_review",
+        "reason_label": "valid_output_with_quality_or_consistency_warning"
+      },
+      {
+        "chapter_id": "ch_009",
+        "chapter_label": "Chapter 009",
+        "status": "needs_review",
+        "reason_label": "valid_output_with_quality_or_consistency_warning"
+      },
+      {
+        "chapter_id": "ch_010",
+        "chapter_label": "Chapter 010",
+        "status": "needs_review",
+        "reason_label": "valid_output_with_quality_or_consistency_warning"
+      },
+      {
+        "chapter_id": "ch_011",
+        "chapter_label": "Chapter 011",
+        "status": "needs_review",
+        "reason_label": "valid_output_with_quality_or_consistency_warning"
+      },
+      {
+        "chapter_id": "ch_012",
+        "chapter_label": "Chapter 012",
+        "status": "needs_review",
+        "reason_label": "valid_output_with_quality_or_consistency_warning"
+      },
+      {
+        "chapter_id": "ch_013",
+        "chapter_label": "Chapter 013",
+        "status": "needs_review",
+        "reason_label": "valid_output_with_quality_or_consistency_warning"
+      },
+      {
+        "chapter_id": "ch_015",
+        "chapter_label": "Chapter 015",
+        "status": "needs_review",
+        "reason_label": "valid_output_with_quality_or_consistency_warning"
+      },
+      {
+        "chapter_id": "ch_016",
+        "chapter_label": "Chapter 016",
+        "status": "needs_review",
+        "reason_label": "valid_output_with_quality_or_consistency_warning"
+      },
+      {
+        "chapter_id": "ch_018",
+        "chapter_label": "Chapter 018",
+        "status": "needs_review",
+        "reason_label": "valid_output_with_quality_or_consistency_warning"
+      },
+      {
+        "chapter_id": "ch_019",
+        "chapter_label": "Chapter 019",
+        "status": "needs_retry",
+        "reason_label": "technical_failure_or_unreliable_output"
+      },
+      {
+        "chapter_id": "ch_020",
+        "chapter_label": "Chapter 020",
+        "status": "needs_review",
+        "reason_label": "valid_output_with_quality_or_consistency_warning"
+      }
+    ],
+    "primary_action": {
+      "label": "Retry pending chapters",
+      "action_id": "retry_pending_chapters",
+      "scope": "affected_chapters_only"
+    },
+    "secondary_action": {
+      "label": "Later",
+      "action_id": "dismiss"
+    },
+    "user_summary": "0 de 20 capítulos listos. 1 requieren retry técnico y 16 requieren revisión."
+  }
+}

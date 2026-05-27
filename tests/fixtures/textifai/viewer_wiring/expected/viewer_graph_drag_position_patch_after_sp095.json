@@ -1,0 +1,7 @@
+{
+  "assessment": "viewer_graph_drag_position_patch_ready",
+  "drag_enabled": true,
+  "pin_on_drag": true,
+  "local_storage_persistence": true,
+  "reset_clears_positions": true
+}

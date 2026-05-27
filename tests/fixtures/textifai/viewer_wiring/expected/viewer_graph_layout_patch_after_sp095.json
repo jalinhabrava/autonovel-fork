@@ -1,0 +1,9 @@
+{
+  "assessment": "viewer_graph_layout_patch_ready",
+  "changes": [
+    "stronger_center_force",
+    "character_and_high_degree_centering",
+    "label_visibility_threshold",
+    "edge_labels_contextual"
+  ]
+}

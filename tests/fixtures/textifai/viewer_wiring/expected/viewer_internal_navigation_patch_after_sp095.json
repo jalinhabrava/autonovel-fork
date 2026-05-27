@@ -1,0 +1,7 @@
+{
+  "assessment": "viewer_internal_navigation_patch_ready",
+  "back_button": true,
+  "forward_button": true,
+  "recent_nodes": true,
+  "browser_history_not_required_for_node_navigation": true
+}

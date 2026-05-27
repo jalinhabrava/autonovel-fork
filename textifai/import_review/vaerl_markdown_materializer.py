@@ -19,6 +19,16 @@ KIND_FOLDERS = {
 }
 REQUIRED_FOLDERS = ['Characters', 'Places', 'Events', 'Objects', 'Concepts', 'Chapters', 'Reviews', 'System']
 
+KIND_PREFERENCE = {
+    'character': 0,
+    'place': 1,
+    'object': 2,
+    'event': 3,
+    'concept': 4,
+    'chapter': 5,
+    'review': 6,
+}
+
 
 @dataclass(frozen=True)
 class MaterializedNote:
@@ -34,6 +44,13 @@ class MaterializedNote:
     chapter_ids: list[str]
     source_refs: list[dict[str, Any]]
     wikilinks: list[str]
+
+@dataclass(frozen=True)
+class EntityNoteSpec:
+    entity: Mapping[str, Any]
+    kind: str
+    label: str
+    note_path: str
 
 
 def materialize_vaerl_markdown(
@@ -53,17 +70,23 @@ def materialize_vaerl_markdown(
         for folder in REQUIRED_FOLDERS:
             _safe_join(output_root, folder).mkdir(parents=True, exist_ok=True)
 
-    label_to_path: dict[str, str] = {}
+    entity_specs: list[EntityNoteSpec] = []
     for entity in entities:
         kind = _normalize_kind(entity.get('kind') or entity.get('entity_kind'))
         label = _pick_label(entity)
-        note_path = _note_path(kind, label, used_paths)
-        for label_value in [label, *_string_list(entity.get('aliases')), *_string_list(entity.get('surface_forms'))]:
-            if label_value:
-                label_to_path[_link_key(label_value)] = note_path
+        entity_specs.append(
+            EntityNoteSpec(
+                entity=entity,
+                kind=kind,
+                label=label,
+                note_path=_note_path(kind, label, used_paths),
+            )
+        )
 
-    for entity in entities:
-        notes.append(_materialize_entity(entity, label_to_path=label_to_path, used_paths=used_paths))
+    label_to_path = _build_label_to_path(entity_specs)
+
+    for spec in entity_specs:
+        notes.append(_materialize_entity(spec, label_to_path=label_to_path))
     for chapter in chapters:
         notes.append(_materialize_chapter(chapter, label_to_path=label_to_path, used_paths=used_paths))
     if reviews:
@@ -80,10 +103,11 @@ def materialize_vaerl_markdown(
     return _manifest(notes, output_root)
 
 
-def _materialize_entity(entity: Mapping[str, Any], *, label_to_path: Mapping[str, str], used_paths: Counter[str]) -> MaterializedNote:
-    kind = _normalize_kind(entity.get('kind') or entity.get('entity_kind'))
-    label = _pick_label(entity)
-    note_path = _note_path(kind, label, used_paths)
+def _materialize_entity(spec: EntityNoteSpec, *, label_to_path: Mapping[str, str]) -> MaterializedNote:
+    entity = spec.entity
+    kind = spec.kind
+    label = spec.label
+    note_path = spec.note_path
     relationships = [item for item in _as_list(entity.get('relationships')) if isinstance(item, Mapping)]
     wikilinks: list[str] = []
     for rel in relationships:
@@ -105,6 +129,43 @@ def _materialize_entity(entity: Mapping[str, Any], *, label_to_path: Mapping[str
         source_refs=_source_refs(entity.get('source_refs')),
         wikilinks=_dedupe(wikilinks),
     )
+
+def _build_label_to_path(entity_specs: Sequence[EntityNoteSpec]) -> dict[str, str]:
+    candidates: dict[str, list[tuple[tuple[int, int, int, int, str], str]]] = {}
+    for spec in entity_specs:
+        entity = spec.entity
+        rel_count = len([item for item in _as_list(entity.get('relationships')) if isinstance(item, Mapping)])
+        fact_count = len(_string_list(entity.get('facts') or entity.get('key_facts')))
+        character_signals = _character_signal_score(entity, spec.kind)
+        priority = KIND_PREFERENCE.get(spec.kind, 99)
+        score = (priority, -character_signals, -rel_count, -fact_count, spec.note_path)
+        for label_value in [spec.label, *_string_list(entity.get('aliases')), *_string_list(entity.get('surface_forms'))]:
+            if not label_value:
+                continue
+            key = _link_key(label_value)
+            candidates.setdefault(key, []).append((score, spec.note_path))
+    label_to_path: dict[str, str] = {}
+    for key, rows in candidates.items():
+        rows.sort(key=lambda row: row[0])
+        label_to_path[key] = rows[0][1]
+    return label_to_path
+
+def _character_signal_score(entity: Mapping[str, Any], kind: str) -> int:
+    score = 0
+    if kind == 'character':
+        score += 4
+    label = _pick_label(entity).casefold()
+    if any(token in label for token in ('san', 'abuelo', 'narrador', 'princesa', 'hija', 'hijo')):
+        score += 1
+    rels = [item for item in _as_list(entity.get('relationships')) if isinstance(item, Mapping)]
+    if rels:
+        score += 1
+    rel_text = ' '.join(str(item.get('type') or item.get('relation_type') or '') for item in rels).casefold()
+    if any(token in rel_text for token in ('guardian', 'daughter', 'grand', 'abuelo', 'narrador', 'protagon')):
+        score += 1
+    if _string_list(entity.get('aliases')):
+        score += 1
+    return score
 
 
 def _materialize_chapter(chapter: Mapping[str, Any], *, label_to_path: Mapping[str, str], used_paths: Counter[str]) -> MaterializedNote:

@@ -1,0 +1,6 @@
+{
+  "assessment": "viewer_writer_outcome_loading_patch_ready",
+  "reads_99_system_writer_outcome": true,
+  "overview_exposes_writer_outcome": true,
+  "writer_outcome_status": "success_with_retry_available"
+}

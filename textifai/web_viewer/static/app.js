@@ -8,11 +8,16 @@ const state = {
   graphViewBox: { x: 0, y: 0, width: 1200, height: 720 },
   graphPan: null,
   graphDidPan: false,
+  graphDidDragNode: false,
+  graphDrag: null,
   hiddenGraphTags: new Set(),
   wikiFilters: { query: "", kind: "", tag: "", status: "" },
   selectedCanonEntityKey: null,
   selectedReviewItemId: null,
   navNotice: null,
+  viewerNavBack: [],
+  viewerNavForward: [],
+  viewerRecent: [],
   ingestionConfig: null,
   ingestionConfigError: "",
   ingestionWizard: {
@@ -110,6 +115,24 @@ const VIEWER_ACTION_DESCRIPTORS = {
     safetyWarning: "Read-only. No suppression happens here.",
     futureWritebackTarget: "reject/noise suppression",
   },
+};
+
+const KIND_COLORS = {
+  character: "#247c7a",
+  place: "#4f8f4f",
+  event: "#d5793a",
+  object: "#a9782b",
+  concept: "#6c6f93",
+  chapter: "#7f7a6a",
+  review: "#b45b35",
+  unresolved: "#a23b55",
+};
+
+const STATUS_BORDERS = {
+  ready: "#247c7a",
+  needs_review: "#d59a2f",
+  needs_retry: "#a23b55",
+  failed: "#7b1f2a",
 };
 
 const $ = (id) => document.getElementById(id);
@@ -227,6 +250,9 @@ async function selectProject(projectId, options = {}) {
   state.hiddenGraphTags = new Set();
   state.wikiFilters = { query: "", kind: "", tag: "", status: "" };
   state.reviewView = { severity: "", reviewType: "", query: "", sortBy: "severity_desc", quickFilter: "all", candidate: "" };
+  state.viewerNavBack = [];
+  state.viewerNavForward = [];
+  state.viewerRecent = [];
   if (options.notice) setNavNotice(options.notice, "info");
   else if (!options.preserveNotice) state.navNotice = null;
   resetGraphViewBox();
@@ -262,6 +288,77 @@ function setNavNotice(message, level = "info") {
 function renderNavNotice() {
   if (!state.navNotice || !state.navNotice.message) return "";
   return `<div class="nav-notice ${escapeHtml(state.navNotice.level || "info")}">${escapeHtml(state.navNotice.message)}</div>`;
+}
+
+function navEntry({ nodeId = null, notePath = null } = {}) {
+  return { nodeId, notePath };
+}
+
+function pushViewerNav(entry) {
+  const previous = state.viewerNavBack[state.viewerNavBack.length - 1] || null;
+  if (previous && previous.nodeId === entry.nodeId && previous.notePath === entry.notePath) return;
+  state.viewerNavBack.push(entry);
+  if (state.viewerNavBack.length > 48) state.viewerNavBack = state.viewerNavBack.slice(-48);
+}
+
+function rememberRecentNode(node) {
+  if (!node || !node.id) return;
+  state.viewerRecent = [node, ...state.viewerRecent.filter((item) => item.id !== node.id)].slice(0, 12);
+}
+
+function graphPositionsStorageKey() {
+  return `textifai.graph.positions.${state.currentId || "unknown"}`;
+}
+
+function loadGraphPositions() {
+  try {
+    const raw = localStorage.getItem(graphPositionsStorageKey());
+    const parsed = raw ? JSON.parse(raw) : {};
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch (_error) {
+    return {};
+  }
+}
+
+function persistGraphPositions(byId) {
+  try {
+    const payload = Object.fromEntries(Object.values(byId).map((node) => [node.id, { x: node.x, y: node.y }]));
+    localStorage.setItem(graphPositionsStorageKey(), JSON.stringify(payload));
+  } catch (_error) {
+    // best effort
+  }
+}
+
+function clearGraphPositions() {
+  try {
+    localStorage.removeItem(graphPositionsStorageKey());
+  } catch (_error) {
+    // best effort
+  }
+}
+
+function viewerNavBack() {
+  if (state.viewerNavBack.length < 2) return;
+  const current = state.viewerNavBack.pop();
+  state.viewerNavForward.push(current);
+  const previous = state.viewerNavBack[state.viewerNavBack.length - 1];
+  applyViewerNavEntry(previous, { pushHistory: false });
+}
+
+function viewerNavForward() {
+  const next = state.viewerNavForward.pop();
+  if (!next) return;
+  state.viewerNavBack.push(next);
+  applyViewerNavEntry(next, { pushHistory: false });
+}
+
+function applyViewerNavEntry(entry, { pushHistory = false } = {}) {
+  if (!entry) return;
+  if (entry.nodeId) {
+    selectGraphNode(entry.nodeId, { pushHistory, renderDetail: true });
+  } else if (entry.notePath) {
+    openGraphNote(entry.notePath, state.selectedGraphNodeId, { pushHistory });
+  }
 }
 
 function renderOverview() {
@@ -2088,7 +2185,7 @@ function findGraphNodeByTerm(term) {
   const key = normalizeKey(term);
   if (!key) return null;
   const graph = state.current && state.current.graph ? state.current.graph : { nodes: [] };
-  return (graph.nodes || []).find((node) => {
+  const matches = (graph.nodes || []).filter((node) => {
     const entity = node.entity || {};
     const chapter = node.chapter || {};
     const aliases = entity.aliases || [];
@@ -2104,7 +2201,28 @@ function findGraphNodeByTerm(term) {
       normalizeKey(chapter.chapter_title_original || chapter.chapter_title_canonical || "") === key ||
       aliases.some((alias) => normalizeKey(alias) === key)
     );
-  }) || null;
+  });
+  if (!matches.length) return null;
+  matches.sort((a, b) => graphNodePreferenceScore(b) - graphNodePreferenceScore(a));
+  return matches[0];
+}
+
+function graphNodePreferenceScore(node) {
+  const kind = String(node.kind || "");
+  const degree = Number(node.degree || 0);
+  const kindScore = {
+    character: 400,
+    place: 320,
+    object: 280,
+    event: 240,
+    concept: 180,
+    chapter: 120,
+    review: 80,
+    unresolved: 0,
+  }[kind] || 40;
+  const hasSummary = node.entity && node.entity.summary ? 20 : 0;
+  const hasFacts = node.entity && (node.entity.facts || node.entity.key_facts || []).length ? 15 : 0;
+  return kindScore + Math.min(degree, 60) + hasSummary + hasFacts;
 }
 
 function findReviewItemsByTerm(term) {
@@ -3161,26 +3279,31 @@ function drawForceGraph(nodes, edges) {
     <g class="nodes">
     ${Object.values(byId).map((node) => `
       <g class="node ${node.id === state.selectedGraphNodeId ? "selected" : ""}" data-node="${escapeHtml(node.id)}" transform="translate(${node.x}, ${node.y})">
-        <circle r="${graphNodeRadius(node)}" fill="${nodeColor(node)}"></circle>
-        <text x="${graphNodeRadius(node) + 4}" y="4">${escapeHtml(node.label)}</text>
+        <circle r="${graphNodeRadius(node)}" fill="${nodeColor(node)}" stroke="${nodeStatusBorder(node)}"></circle>
+        <text class="node-label ${showNodeLabel(node) ? "" : "is-muted"}" x="${graphNodeRadius(node) + 4}" y="4">${escapeHtml(node.label)}</text>
       </g>
     `).join("")}
     </g>
   `;
   const edgeLayer = svg.querySelector(".edges");
-  edgeLayer.innerHTML = edges.map((edge, index) => `<g class="edge-group" data-edge-group="${index}"><line class="edge" data-edge="${index}"><title>${escapeHtml(edge.label || edge.type || "")}</title></line><text class="edge-label">${escapeHtml(edge.label || edge.type || "")}</text></g>`).join("");
+  edgeLayer.innerHTML = edges.map((edge, index) => `<g class="edge-group" data-edge-group="${index}"><line class="edge" data-edge="${index}"><title>${escapeHtml(edge.label || edge.type || "")}</title></line><text class="edge-label hidden">${escapeHtml(edge.label || edge.type || "")}</text></g>`).join("");
   applyGraphViewBox();
   bindGraphViewportHandlers(svg);
 
   svg.querySelectorAll("[data-node]").forEach((nodeEl) => {
+    const node = byId[nodeEl.dataset.node];
+    bindNodeDrag(nodeEl, node, byId, svg);
     nodeEl.addEventListener("click", (event) => {
       event.stopPropagation();
+      if (state.graphDidDragNode) {
+        state.graphDidDragNode = false;
+        return;
+      }
       if (state.graphDidPan) {
         state.graphDidPan = false;
         return;
       }
-      const node = byId[nodeEl.dataset.node];
-      selectGraphNode(node.id);
+      selectGraphNode(node.id, { pushHistory: true });
     });
   });
 
@@ -3198,16 +3321,19 @@ function drawForceGraph(nodes, edges) {
 }
 
 function seedGraphPositions(nodes, width, height) {
+  const persisted = loadGraphPositions();
   return Object.fromEntries(nodes.map((node, index) => {
     const previous = node._position || {};
+    const saved = persisted[node.id] || {};
     const angle = (index / Math.max(nodes.length, 1)) * Math.PI * 2;
     const radius = 180 + (index % 7) * 28;
     return [node.id, {
       ...node,
-      x: previous.x === undefined ? width / 2 + Math.cos(angle) * radius : previous.x,
-      y: previous.y === undefined ? height / 2 + Math.sin(angle) * radius : previous.y,
+      x: saved.x ?? (previous.x === undefined ? width / 2 + Math.cos(angle) * radius : previous.x),
+      y: saved.y ?? (previous.y === undefined ? height / 2 + Math.sin(angle) * radius : previous.y),
       vx: previous.vx === undefined ? 0 : previous.vx,
       vy: previous.vy === undefined ? 0 : previous.vy,
+      pinned: Boolean(saved.pinned),
     }];
   }));
 }
@@ -3245,12 +3371,16 @@ function runForceTick(byId, edges, width, height, tick) {
     b.vy -= fy;
   }
   for (const node of nodes) {
-    node.vx += (width / 2 - node.x) * 0.0008 * cooling;
-    node.vy += (height / 2 - node.y) * 0.0008 * cooling;
+    if (state.graphDrag && state.graphDrag.nodeId === node.id) continue;
+    const gravity = node.kind === "character" ? 0.0018 : Number(node.degree || 0) >= 8 ? 0.0014 : 0.0011;
+    node.vx += (width / 2 - node.x) * gravity * cooling;
+    node.vy += (height / 2 - node.y) * gravity * cooling;
     node.vx *= 0.86;
     node.vy *= 0.86;
-    node.x = Math.max(30, Math.min(width - 180, node.x + node.vx));
-    node.y = Math.max(30, Math.min(height - 30, node.y + node.vy));
+    if (!node.pinned) {
+      node.x = Math.max(36, Math.min(width - 36, node.x + node.vx));
+      node.y = Math.max(36, Math.min(height - 36, node.y + node.vy));
+    }
   }
 }
 
@@ -3272,29 +3402,75 @@ function updateGraphDom(svg, byId, edges) {
     if (!label) return;
     label.setAttribute("x", (a.x + b.x) / 2);
     label.setAttribute("y", (a.y + b.y) / 2 - 4);
+    label.classList.toggle("hidden", !state.selectedGraphNodeId || (edge.source !== state.selectedGraphNodeId && edge.target !== state.selectedGraphNodeId));
   });
   svg.querySelectorAll("[data-node]").forEach((nodeEl) => {
     const node = byId[nodeEl.dataset.node];
     if (!node) return;
     nodeEl.setAttribute("transform", `translate(${node.x}, ${node.y})`);
     nodeEl.classList.toggle("selected", node.id === state.selectedGraphNodeId);
+    const text = nodeEl.querySelector(".node-label");
+    if (text) text.classList.toggle("is-muted", !showNodeLabel(node));
   });
 }
 
 function graphNodeRadius(node) {
   const degree = Number(node.degree || 0);
-  const base = node.role === "chapter" ? 8 : node.role === "review" ? 9 : 11;
-  return Math.max(base, Math.min(base + degree * 1.4, 22));
+  const base = node.kind === "character" ? 13 : node.role === "chapter" ? 8 : node.role === "review" ? 10 : 11;
+  return Math.max(base, Math.min(base + degree * 1.45, 26));
 }
 
-function selectGraphNode(nodeId) {
+function showNodeLabel(node) {
+  return node.id === state.selectedGraphNodeId || node.kind === "character" || Number(node.degree || 0) >= 5;
+}
+
+function bindNodeDrag(nodeEl, node, byId, svg) {
+  if (!node) return;
+  nodeEl.onpointerdown = (event) => {
+    event.stopPropagation();
+    nodeEl.setPointerCapture(event.pointerId);
+    state.graphDrag = { pointerId: event.pointerId, nodeId: node.id, start: clientToGraphPoint(svg, event.clientX, event.clientY), x: node.x, y: node.y };
+    state.graphDidDragNode = false;
+  };
+  nodeEl.onpointermove = (event) => {
+    if (!state.graphDrag || state.graphDrag.pointerId !== event.pointerId || state.graphDrag.nodeId !== node.id) return;
+    const point = clientToGraphPoint(svg, event.clientX, event.clientY);
+    node.x = state.graphDrag.x + (point.x - state.graphDrag.start.x);
+    node.y = state.graphDrag.y + (point.y - state.graphDrag.start.y);
+    node.vx = 0;
+    node.vy = 0;
+    node.pinned = true;
+    state.graphDidDragNode = true;
+    updateGraphDom(svg, byId, (state.current.graph || {}).edges || []);
+  };
+  nodeEl.onpointerup = (event) => finishNodeDrag(nodeEl, event.pointerId, byId);
+  nodeEl.onpointercancel = (event) => finishNodeDrag(nodeEl, event.pointerId, byId);
+}
+
+function finishNodeDrag(nodeEl, pointerId, byId) {
+  if (!state.graphDrag || state.graphDrag.pointerId !== pointerId) return;
+  try {
+    nodeEl.releasePointerCapture(pointerId);
+  } catch (_error) {
+    // Browsers may release capture automatically.
+  }
+  persistGraphPositions(byId);
+  state.graphDrag = null;
+}
+
+function selectGraphNode(nodeId, { pushHistory = false, renderDetail = true } = {}) {
+  if (pushHistory) {
+    pushViewerNav(navEntry({ nodeId: state.selectedGraphNodeId }));
+    state.viewerNavForward = [];
+  }
   state.selectedGraphNodeId = nodeId;
   const graph = state.current && state.current.graph ? state.current.graph : { nodes: [] };
   const node = (graph.nodes || []).find((item) => item.id === nodeId);
   if (!node) return;
   const entity = node.entity || {};
   if (Object.keys(entity).length) state.selectedCanonEntityKey = canonEntityKey(entity);
-  renderGraphNodeDetail(node);
+  rememberRecentNode({ id: node.id, label: node.label, kind: node.kind, note_path: node.note_path });
+  if (renderDetail) renderGraphNodeDetail(node);
   document.querySelectorAll("[data-node]").forEach((nodeEl) => nodeEl.classList.toggle("selected", nodeEl.dataset.node === nodeId));
 }
 
@@ -3308,23 +3484,32 @@ async function renderGraphNodeDetail(node) {
   bindCanonicalizationInteractions();
 }
 
-async function openGraphNote(path, nodeId = null) {
+async function openGraphNote(path, nodeId = null, { pushHistory = true } = {}) {
+  if (pushHistory) {
+    pushViewerNav(navEntry({ nodeId: state.selectedGraphNodeId, notePath: path }));
+    state.viewerNavForward = [];
+  }
   if (nodeId) state.selectedGraphNodeId = nodeId;
   const data = await api(`/api/projects/${encodeURIComponent(state.currentId)}/note?path=${encodeURIComponent(path)}`);
   const backlinks = data.backlinks || [];
   const outgoing = data.outgoing_wikilinks || [];
   const local = data.local_graph || {};
+  const markdownText = String(data.markdown || "");
+  const hasSummary = markdownText.includes("## Summary");
+  const hasFacts = markdownText.includes("## Facts");
   $("graph-detail").innerHTML = `
     ${graphNodeSummary((state.current.graph.nodes || []).find((item) => item.id === state.selectedGraphNodeId) || {})}
     <hr />
     <h3>${escapeHtml(data.path)}</h3>
     <p class="muted">Degree ${escapeHtml(fmtCount(data.degree || 0))} · backlinks ${escapeHtml(fmtCount(backlinks.length))} · outgoing ${escapeHtml(fmtCount(outgoing.length))}</p>
+    ${hasSummary ? "" : `<p class="note-fallback">No summary yet. This node may need enrichment.</p>`}
+    ${hasFacts ? "" : `<p class="muted">Facts are thin or missing for this note.</p>`}
     <p>${(data.tags || []).map((tag) => `<span class="badge tag-badge">${escapeHtml(tag)}</span>`).join("")}</p>
     ${backlinks.length ? `<details><summary>Backlinks</summary><ul>${backlinks.map((item) => `<li><a href="#" class="wikilink" data-wikilink="${escapeHtml(item)}">${escapeHtml(item)}</a></li>`).join("")}</ul></details>` : ""}
     ${outgoing.length ? `<details><summary>Outgoing links</summary><ul>${outgoing.map((item) => `<li><a href="#" class="wikilink" data-wikilink="${escapeHtml(item.target || item.label || "")}">[[${escapeHtml(item.label || item.target || "")}]]</a></li>`).join("")}</ul></details>` : ""}
     ${(local.nodes || []).length ? `<details><summary>Local graph</summary><p class="muted">Nodes ${escapeHtml(fmtCount((local.nodes || []).length))} · edges ${escapeHtml(fmtCount((local.edges || []).length))}</p></details>` : ""}
     <details><summary>Frontmatter</summary><pre class="frontmatter">${escapeHtml(JSON.stringify(data.frontmatter || {}, null, 2))}</pre></details>
-    <article class="markdown">${renderMarkdown(data.markdown || "")}</article>
+    <article class="markdown">${renderMarkdown(markdownText)}</article>
   `;
   attachWikiLinkHandlers($("graph-detail"));
   bindGraphDetailNavigation();
@@ -3341,15 +3526,18 @@ function graphNodeSummary(node) {
   return `
     ${renderNavNotice()}
     <h3>${escapeHtml(node.label || "Unresolved")}</h3>
-    <p><span class="badge">${escapeHtml(node.kind || "unknown")}</span> <span class="badge">${escapeHtml(node.role || "unknown")}</span></p>
+    <p><span class="badge kind-badge kind-${escapeHtml(String(node.kind || 'unknown').toLowerCase())}">${escapeHtml(node.kind || "unknown")}</span> <span class="badge">${escapeHtml(node.role || "unknown")}</span></p>
     ${(node.tags || []).length ? `<p>${(node.tags || []).map((tag) => `<span class="badge tag-badge">${escapeHtml(tag)}</span>`).join("")}</p>` : ""}
     <p class="muted">Degree ${escapeHtml(fmtCount(node.degree || 0))} · backlinks ${escapeHtml(fmtCount((node.backlinks || []).length))} · outgoing ${escapeHtml(fmtCount((node.outgoing_wikilinks || []).length))}</p>
     <p class="muted">${escapeHtml(node.id || "")}</p>
     <div class="nav-actions">
+      <button type="button" data-graph-nav-back ${state.viewerNavBack.length < 2 ? "disabled" : ""}>Back</button>
+      <button type="button" data-graph-nav-forward ${state.viewerNavForward.length < 1 ? "disabled" : ""}>Forward</button>
       ${canonLabel ? `<button type="button" data-graph-open-canon="${escapeHtml(canonLabel)}">Open in Canon</button>` : ""}
       ${reviewLabel ? `<button type="button" data-graph-open-review="${escapeHtml(reviewLabel)}">Open Review Context</button>` : ""}
       ${node.note_path ? `<button type="button" data-graph-open-note="${escapeHtml(node.note_path)}">Open note</button>` : ""}
     </div>
+    ${state.viewerRecent.length ? `<p class="muted">Recent: ${state.viewerRecent.slice(0, 6).map((row) => `<button type="button" class="inline-action" data-graph-recent="${escapeHtml(row.id)}">${escapeHtml(row.label || row.id)}</button>`).join(" ")}</p>` : ""}
     ${node.note_path
       ? `<p class="muted">${escapeHtml(node.note_path)}</p>`
       : hasVaerlDetail
@@ -3363,6 +3551,14 @@ function graphNodeSummary(node) {
 }
 
 function bindGraphDetailNavigation() {
+  document.querySelectorAll("[data-graph-nav-back]").forEach((node) => node.addEventListener("click", viewerNavBack));
+  document.querySelectorAll("[data-graph-nav-forward]").forEach((node) => node.addEventListener("click", viewerNavForward));
+  document.querySelectorAll("[data-graph-recent]").forEach((node) => {
+    node.addEventListener("click", () => {
+      const nodeId = node.dataset.graphRecent || "";
+      if (nodeId) selectGraphNode(nodeId, { pushHistory: true });
+    });
+  });
   document.querySelectorAll("[data-graph-open-canon]").forEach((node) => {
     node.addEventListener("click", () => {
       const term = node.dataset.graphOpenCanon || "";
@@ -3546,8 +3742,10 @@ function chapterDetail(chapter) {
 }
 
 function resetGraphViewBox() {
+  clearGraphPositions();
   state.graphViewBox = { x: 0, y: 0, width: 1200, height: 720 };
   applyGraphViewBox();
+  if (state.activeView === "graph") renderGraph();
 }
 
 function applyGraphViewBox() {
@@ -3624,11 +3822,16 @@ function clientToGraphPoint(svg, clientX, clientY) {
 }
 
 function nodeColor(node) {
-  if (node.role === "primary") return "#1d6f68";
-  if (node.role === "review") return "#b45b35";
-  if (node.role === "chapter") return "#8b7b52";
-  if (node.kind === "unresolved") return "#a23b55";
-  return "#5b6577";
+  return kindColor(node.kind);
+}
+
+function kindColor(kind) {
+  return KIND_COLORS[String(kind || "concept")] || KIND_COLORS.concept;
+}
+
+function nodeStatusBorder(node) {
+  const status = node.frontmatter?.review_state || node.frontmatter?.status || node.visual?.status || "ready";
+  return node.visual?.status_border || STATUS_BORDERS[status] || "#fffaf0";
 }
 
 globalThis.__TEXTIFAI_REVIEW_ACTIONS__ = {

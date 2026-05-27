@@ -1156,6 +1156,12 @@ button:hover, button.active {
   background: var(--accent);
 }
 .legend-dot.low { background: #8fb3af; }
+.legend-dot.kind-character { background: #247c7a; }
+.legend-dot.kind-place { background: #4f8f4f; }
+.legend-dot.kind-event { background: #d5793a; }
+.legend-dot.kind-object { background: #a9782b; }
+.legend-dot.kind-concept { background: #6c6f93; }
+.legend-dot.kind-review { background: #b45b35; }
 .graph-zoom-controls {
   display: flex;
   gap: 8px;
@@ -1215,11 +1221,21 @@ button:hover, button.active {
 .node { cursor: pointer; }
 .node circle { stroke: white; stroke-width: 2; }
 .node text { font-size: 12px; paint-order: stroke; stroke: #fffaf0; stroke-width: 4px; fill: var(--ink); }
+.node .node-label.is-muted { opacity: 0.26; }
+.edge-label.hidden { display: none; }
 .node.selected circle {
   stroke: #211f1a;
   stroke-width: 4;
   filter: drop-shadow(0 0 8px rgba(29, 111, 104, 0.42));
 }
+
+.kind-badge.kind-character { background: rgba(36, 124, 122, 0.15); }
+.kind-badge.kind-place { background: rgba(79, 143, 79, 0.15); }
+.kind-badge.kind-event { background: rgba(213, 121, 58, 0.15); }
+.kind-badge.kind-object { background: rgba(169, 120, 43, 0.15); }
+.kind-badge.kind-concept { background: rgba(108, 111, 147, 0.15); }
+.kind-badge.kind-chapter { background: rgba(127, 122, 106, 0.15); }
+.kind-badge.kind-review { background: rgba(180, 91, 53, 0.18); }
 .graph-detail {
   max-height: 68vh;
   overflow: auto;

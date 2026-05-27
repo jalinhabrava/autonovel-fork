@@ -1,0 +1,16 @@
+{
+  "assessment": "spanish_20ch_graph_link_resolution_audit_ready",
+  "before_unresolved_links": 401,
+  "after_unresolved_links": 40,
+  "before_orphan_notes": 283,
+  "after_orphan_notes": 38,
+  "root_cause": "label_to_path pre-dedupe mismatch produced stale wikilink targets",
+  "fixes_applied": [
+    "materializer_final_path_map_after_dedupe",
+    "character_preference_for_duplicate_labels"
+  ],
+  "remaining_unresolved_categories": [
+    "cross-note references not materialized as notes",
+    "legacy path labels"
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "assessment": "spanish_20ch_node_bio_enrichment_contract_ready",
+  "provider_calls_executed": false,
+  "contract": {
+    "input_fields": [
+      "canonical_label",
+      "kind",
+      "facts",
+      "relationships",
+      "chapter_ids",
+      "source_refs",
+      "evidence_refs",
+      "review_state"
+    ],
+    "output_fields": [
+      "bio_short",
+      "role",
+      "traits",
+      "key_relationships",
+      "chapter_range",
+      "evidence_refs",
+      "confidence",
+      "review_status"
+    ],
+    "empty_state_message": "No summary yet. This node may need enrichment."
+  }
+}

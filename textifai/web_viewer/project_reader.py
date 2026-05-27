@@ -10,6 +10,24 @@ from vault.schema import slugify
 from textifai.import_review.markdown_graph_index import build_markdown_graph_index, local_graph
 from textifai.import_review.viewer_graph_adapter import adapt_ingestion_graph_to_viewer_graph
 
+KIND_VISUALS = {
+    "character": {"color": "#247c7a", "label": "Character"},
+    "place": {"color": "#4f8f4f", "label": "Place"},
+    "event": {"color": "#d5793a", "label": "Event"},
+    "object": {"color": "#a9782b", "label": "Object"},
+    "concept": {"color": "#6c6f93", "label": "Concept"},
+    "chapter": {"color": "#7f7a6a", "label": "Chapter"},
+    "review": {"color": "#b45b35", "label": "Review"},
+    "unresolved": {"color": "#a23b55", "label": "Needs attention"},
+}
+
+STATUS_VISUALS = {
+    "ready": {"border": "#247c7a", "label": "Ready"},
+    "needs_review": {"border": "#d59a2f", "label": "Needs review"},
+    "needs_retry": {"border": "#a23b55", "label": "Needs retry"},
+    "failed": {"border": "#7b1f2a", "label": "Failed"},
+}
+
 
 VISIBLE_ARTIFACTS = [
     "novel_index.json",
@@ -93,13 +111,14 @@ class ProjectCatalog:
         chapters = obsidian_import.get("chapters") if isinstance(obsidian_import, dict) else []
         primary_count = sum(1 for item in entities or [] if _is_primary(item))
         graph_summary = {}
-        writer_outcome = {}
+        writer_outcome = _read_writer_outcome(project)
         if isinstance(ingestion_graph, dict):
             adapted = adapt_ingestion_graph_to_viewer_graph(ingestion_graph)
             metadata = adapted.get("metadata") if isinstance(adapted, dict) else {}
             if isinstance(metadata, dict):
                 graph_summary = metadata.get("graph_summary") if isinstance(metadata.get("graph_summary"), dict) else {}
-                writer_outcome = metadata.get("writer_outcome") if isinstance(metadata.get("writer_outcome"), dict) else {}
+                if not writer_outcome:
+                    writer_outcome = metadata.get("writer_outcome") if isinstance(metadata.get("writer_outcome"), dict) else {}
         if not graph_summary and isinstance(markdown_index, dict):
             graph_summary = {
                 "node_count": len(markdown_index.get("nodes") or []),
@@ -143,7 +162,9 @@ def read_project(project: ProjectRef) -> dict[str, Any]:
     markdown_manifest = read_markdown_manifest(project) or {}
     markdown_graph_index = read_markdown_graph_index(project) or {}
     graph_metadata = graph.get("metadata") if isinstance(graph, dict) else {}
-    writer_outcome = graph_metadata.get("writer_outcome") if isinstance(graph_metadata, dict) and isinstance(graph_metadata.get("writer_outcome"), dict) else {}
+    writer_outcome = _read_writer_outcome(project)
+    if not writer_outcome:
+        writer_outcome = graph_metadata.get("writer_outcome") if isinstance(graph_metadata, dict) and isinstance(graph_metadata.get("writer_outcome"), dict) else {}
     graph_summary = graph_metadata.get("graph_summary") if isinstance(graph_metadata, dict) and isinstance(graph_metadata.get("graph_summary"), dict) else {}
     overview = {
         "chapters_processed": writer_outcome.get("total_chapters") or len(graph_metadata.get("chapters") or canon.get("chapters") or []) or sum(1 for note in markdown_manifest.get("notes", []) if isinstance(note, dict) and str(note.get("kind") or "") == "chapter"),
@@ -792,6 +813,7 @@ def _build_graph_from_markdown_index(project: ProjectRef) -> dict[str, Any] | No
             "frontmatter": frontmatter,
             "backlinks": note.get("backlinks") or [],
             "outgoing_wikilinks": note.get("outgoing_wikilinks") or [],
+            "visual": _node_visual(kind, frontmatter),
         })
     edges = [
         {
@@ -820,7 +842,33 @@ def _build_graph_from_markdown_index(project: ProjectRef) -> dict[str, Any] | No
                 "unresolved_link_count": len(markdown_index.get("unresolved_links") or []),
                 "tags": markdown_index.get("tags") or [],
             },
+            "visuals": {
+                "kind_colors": KIND_VISUALS,
+                "status_borders": STATUS_VISUALS,
+            },
         },
+    }
+
+def _read_writer_outcome(project: ProjectRef) -> dict[str, Any]:
+    candidates: list[Path] = []
+    if project.system_root:
+        candidates.append(project.system_root / "writer_outcome.json")
+    candidates.extend([
+        project.root / "99_System" / "writer_outcome.json",
+        project.root / "System" / "writer_outcome.json",
+    ])
+    for path in candidates:
+        payload = _read_json(path)
+        if isinstance(payload, dict) and payload:
+            return payload
+    return {}
+
+def _node_visual(kind: str, frontmatter: dict[str, Any]) -> dict[str, Any]:
+    status = str(frontmatter.get("review_state") or frontmatter.get("status") or "ready")
+    return {
+        "kind_color": KIND_VISUALS.get(kind, KIND_VISUALS["concept"])["color"],
+        "status_border": STATUS_VISUALS.get(status, STATUS_VISUALS["ready"])["border"],
+        "status": status,
     }
 
 
