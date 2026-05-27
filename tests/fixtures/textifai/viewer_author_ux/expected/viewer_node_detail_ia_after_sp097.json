@@ -1,0 +1,15 @@
+{
+  "assessment": "viewer_node_detail_ia_ready",
+  "facts_precede_technical": true,
+  "relationships_renamed_author_facing": true,
+  "section_order": [
+    "summary",
+    "facts",
+    "story_relationships",
+    "appearances_evidence",
+    "markdown_links",
+    "technical_details"
+  ],
+  "summary_precedes_technical": true,
+  "technical_details_collapsed": true
+}

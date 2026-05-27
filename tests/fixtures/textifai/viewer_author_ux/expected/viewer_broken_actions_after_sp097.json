@@ -1,0 +1,7 @@
+{
+  "assessment": "viewer_broken_actions_ready",
+  "no_placeholder_buttons_in_primary_detail": true,
+  "open_in_canon_conditioned": true,
+  "open_note_conditioned_or_renamed": true,
+  "open_review_context_conditioned": true
+}

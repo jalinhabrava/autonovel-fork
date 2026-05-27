@@ -1,0 +1,17 @@
+{
+  "Ren_redirect": {
+    "from": "Concepts/Ren.md",
+    "to": "Characters/Ren.md"
+  },
+  "Sera_redirect": {
+    "from": "Concepts/Sera.md",
+    "to": "Characters/Sera.md"
+  },
+  "assessment": "viewer_canonical_node_resolution_ready",
+  "backlinks_resolve": true,
+  "detail_resolves": true,
+  "graph_click_resolves": true,
+  "redirects_count": 64,
+  "search_resolves": true,
+  "wiki_resolves": true
+}

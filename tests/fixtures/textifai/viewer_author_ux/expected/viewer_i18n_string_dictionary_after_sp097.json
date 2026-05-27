@@ -1,0 +1,11 @@
+{
+  "assessment": "viewer_i18n_string_dictionary_ready",
+  "default_locale_strategy": "work.language -> navigator.language -> en",
+  "hardcoded_primary_strings_remaining": [],
+  "key_count": 486,
+  "locales": [
+    "en",
+    "es"
+  ],
+  "missing_keys": []
+}

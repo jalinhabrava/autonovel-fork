@@ -3,6 +3,7 @@ const state = {
   current: null,
   currentId: null,
   currentVisibleGraph: null,
+  locale: "en",
   activeView: "overview",
   selectedGraphNodeId: null,
   graphAnimation: null,
@@ -40,6 +41,133 @@ const state = {
   compareView: { baseId: "", candidateId: "", loading: false, result: null, error: "" },
   reviewView: { severity: "", reviewType: "", query: "", sortBy: "severity_desc", quickFilter: "all", candidate: "" },
   autoOpenedRecommendedProject: false,
+};
+
+const I18N = {
+  en: {
+    appTitle: "TextifAI Viewer",
+    brandSubtitle: "Author knowledge workspace",
+    refresh: "Refresh",
+    currentProject: "Current project",
+    selectProject: "Select project",
+    readOnlyPreview: "Read-only preview",
+    overview: "Overview",
+    wiki: "Wiki",
+    canon: "Canon",
+    review: "Review",
+    graph: "Graph",
+    artifacts: "Technical details",
+    projectPanelTitle: "Story workspace",
+    projectPanelSubtitle: "Choose the narrative project to review.",
+    active: "active",
+    open: "Open",
+    authorProject: "Author project",
+    technicalArtifact: "Technical artifact",
+    technicalDetails: "Technical details",
+    chapters: "chapters",
+    nodes: "nodes",
+    edges: "edges",
+    ready: "ready",
+    needsReview: "review",
+    retry: "retry",
+    wikiSubtitle: "Read-only Markdown notes projected from VaERL.",
+    searchNotes: "Search notes",
+    allKinds: "All kinds",
+    allTags: "All tags",
+    allStatus: "All status",
+    hideSystem: "Hide system",
+    hideReview: "Hide review",
+    hideChapters: "Hide chapters",
+    localGraph: "Local graph",
+    resetLayout: "Reset layout",
+    selectNode: "Select a node to inspect.",
+    summary: "Bio / Summary",
+    facts: "Key facts",
+    storyRelationships: "Story relationships",
+    appearancesEvidence: "Appearances / evidence",
+    markdownLinks: "Markdown links",
+    backlinks: "Notes linking here",
+    outgoingLinks: "Outgoing Markdown links",
+    localGraphSummary: "Local graph",
+    noSummary: "No summary yet. This node may need enrichment.",
+    noFacts: "Facts are thin or missing for this note.",
+    duplicateRedirected: "Duplicate note redirected to canonical node.",
+    viewInWiki: "View in wiki",
+    openReview: "Open review",
+    reviewUnavailable: "No review item available for this node.",
+    back: "Back",
+    forward: "Forward",
+    recent: "Recent",
+    degree: "Degree",
+    kindCharacter: "character",
+    kindPlace: "place",
+    kindEvent: "event",
+    kindObject: "object",
+    kindConcept: "concept",
+    kindReview: "review",
+  },
+  es: {
+    appTitle: "Visor TextifAI",
+    brandSubtitle: "Workspace narrativo para autores",
+    refresh: "Actualizar",
+    currentProject: "Proyecto actual",
+    selectProject: "Selecciona proyecto",
+    readOnlyPreview: "Vista de solo lectura",
+    overview: "Resumen",
+    wiki: "Wiki",
+    canon: "Canon",
+    review: "Revisión",
+    graph: "Grafo",
+    artifacts: "Detalles técnicos",
+    projectPanelTitle: "Workspace narrativo",
+    projectPanelSubtitle: "Elige el proyecto narrativo para revisar.",
+    active: "activo",
+    open: "Abrir",
+    authorProject: "Proyecto de autor",
+    technicalArtifact: "Artefacto técnico",
+    technicalDetails: "Detalles técnicos",
+    chapters: "capítulos",
+    nodes: "nodos",
+    edges: "relaciones",
+    ready: "listo",
+    needsReview: "revisión",
+    retry: "reintento",
+    wikiSubtitle: "Notas Markdown de solo lectura proyectadas desde VaERL.",
+    searchNotes: "Buscar notas",
+    allKinds: "Todos los tipos",
+    allTags: "Todas las etiquetas",
+    allStatus: "Todos los estados",
+    hideSystem: "Ocultar sistema",
+    hideReview: "Ocultar revisión",
+    hideChapters: "Ocultar capítulos",
+    localGraph: "Grafo local",
+    resetLayout: "Reiniciar layout",
+    selectNode: "Selecciona un nodo para revisar.",
+    summary: "Bio / Resumen",
+    facts: "Datos clave",
+    storyRelationships: "Relaciones narrativas",
+    appearancesEvidence: "Apariciones / evidencia",
+    markdownLinks: "Enlaces Markdown",
+    backlinks: "Notas que enlazan aquí",
+    outgoingLinks: "Enlaces Markdown salientes",
+    localGraphSummary: "Grafo local",
+    noSummary: "Aún no hay resumen. Este nodo puede necesitar enriquecimiento.",
+    noFacts: "Los datos clave faltan o son escasos para esta nota.",
+    duplicateRedirected: "Nota duplicada redirigida al nodo canónico.",
+    viewInWiki: "Ver en wiki",
+    openReview: "Abrir revisión",
+    reviewUnavailable: "No hay elemento de revisión para este nodo.",
+    back: "Atrás",
+    forward: "Adelante",
+    recent: "Recientes",
+    degree: "Grado",
+    kindCharacter: "personaje",
+    kindPlace: "lugar",
+    kindEvent: "evento",
+    kindObject: "objeto",
+    kindConcept: "concepto",
+    kindReview: "revisión",
+  },
 };
 
 const RECOMMENDED_ACTION_VIEWER_ACTIONS = {
@@ -156,13 +284,70 @@ function fmtCount(value) {
   return value === null || value === undefined ? "—" : String(value);
 }
 
+function t(key, vars = {}) {
+  const locale = I18N[state.locale] ? state.locale : "en";
+  const fallback = I18N.en[key] || key;
+  const template = I18N[locale][key] || fallback;
+  return String(template).replace(/\{(\w+)\}/g, (_match, name) => String(vars[name] ?? ""));
+}
+
+function detectLocale(project = null) {
+  const workLanguage = String(project?.work?.language || project?.work?.primary_language || "").toLowerCase();
+  if (workLanguage.startsWith("es")) return "es";
+  if (workLanguage.startsWith("en")) return "en";
+  const navLanguage = String(navigator.language || "en").toLowerCase();
+  if (navLanguage.startsWith("es")) return "es";
+  return "en";
+}
+
+function applyStaticTranslations() {
+  document.documentElement.lang = state.locale;
+  document.title = t('appTitle');
+  $("brand-title").textContent = t('appTitle');
+  $("brand-subtitle").textContent = t('brandSubtitle');
+  $("refresh-projects").textContent = t('refresh');
+  $("current-project-eyebrow").textContent = t('currentProject');
+  $("project-title").textContent = state.current ? $("project-title").textContent : t('selectProject');
+  if (!state.current) $("project-meta").textContent = t('readOnlyPreview');
+  $("tab-overview").textContent = t('overview');
+  $("tab-notes").textContent = t('wiki');
+  $("tab-canon").textContent = t('canon');
+  $("tab-review").textContent = t('review');
+  $("tab-graph").textContent = t('graph');
+  $("tab-artifacts").textContent = t('artifacts');
+  $("wiki-title").textContent = t('wiki');
+  $("wiki-subtitle").textContent = t('wikiSubtitle');
+  $("note-filter").placeholder = t('searchNotes');
+  $("label-hide-system").textContent = t('hideSystem');
+  $("label-hide-review").textContent = t('hideReview');
+  $("label-hide-chapters").textContent = t('hideChapters');
+  $("label-local-graph").textContent = t('localGraph');
+  $("legend-character").textContent = t('kindCharacter');
+  $("legend-place").textContent = t('kindPlace');
+  $("legend-event").textContent = t('kindEvent');
+  $("legend-object").textContent = t('kindObject');
+  $("legend-concept").textContent = t('kindConcept');
+  $("legend-review").textContent = t('kindReview');
+  $("graph-zoom-reset").textContent = t('resetLayout');
+  if (!state.current) $("graph-detail").textContent = t('selectNode');
+}
+
+function preferredProject(projects) {
+  return projects.find((project) => String(project.name || '') === 'viewer_project')
+    || projects.find((project) => project.recommended)
+    || projects[0]
+    || null;
+}
+
 async function loadProjects() {
   await loadIngestionConfig();
   await loadIngestionJobs();
   const data = await api("/api/projects");
   state.projects = data.projects || [];
+  state.locale = detectLocale(preferredProject(state.projects));
+  applyStaticTranslations();
   renderProjects();
-  const recommended = state.projects.find((project) => project.recommended) || state.projects[0] || null;
+  const recommended = preferredProject(state.projects);
   const currentStillExists = state.currentId && state.projects.some((project) => project.project_id === state.currentId);
   if (!currentStillExists && recommended) {
     await selectProject(recommended.project_id, { preserveNotice: true });
@@ -200,29 +385,36 @@ async function loadIngestionJobs() {
 }
 
 function renderProjects() {
+  const sortedProjects = [...state.projects].sort((a, b) => {
+    const aPreferred = String(a.name || '') === 'viewer_project' ? 1 : 0;
+    const bPreferred = String(b.name || '') === 'viewer_project' ? 1 : 0;
+    return bPreferred - aPreferred || String(a.name || '').localeCompare(String(b.name || ''));
+  });
   $("project-list").innerHTML = `
     <div class="panel open-project-panel">
-      <p class="eyebrow">Open Project / Abrir proyecto</p>
-      <p class="muted">Choose inspected project under served root. Read-only. No arbitrary filesystem browsing.</p>
+      <p class="eyebrow">${escapeHtml(t('projectPanelTitle'))}</p>
+      <p class="muted">${escapeHtml(t('projectPanelSubtitle'))}</p>
       <div class="open-project-list">
-        ${state.projects.map((project) => {
+        ${sortedProjects.map((project) => {
           const graphSummary = project.graph_summary || {};
           const writerOutcome = project.writer_outcome || {};
           const active = project.project_id === state.currentId;
-          const rootLabel = String(project.root || "").split('/').slice(-2).join('/');
+          const isPreferred = String(project.name || '') === 'viewer_project';
+          const title = project.work?.title || project.name;
+          const language = project.work?.language || '—';
           return `
             <div class="project-card ${active ? "active" : ""}" data-project="${escapeHtml(project.project_id)}">
               <div class="project-card-header">
-                <strong>${escapeHtml(project.name)}</strong>
+                <strong>${escapeHtml(title)}</strong>
                 <div class="project-card-actions">
-                  ${project.recommended ? `<span class="badge inspectable-badge">recommended</span>` : ""}
-                  ${active ? `<span class="badge">active</span>` : `<button type="button" class="inline-action" data-open-project="${escapeHtml(project.project_id)}">Open</button>`}
+                  ${isPreferred ? `<span class="badge inspectable-badge">${escapeHtml(t('authorProject'))}</span>` : `<span class="badge warning-badge">${escapeHtml(t('technicalArtifact'))}</span>`}
+                  ${active ? `<span class="badge">${escapeHtml(t('active'))}</span>` : `<button type="button" class="inline-action" data-open-project="${escapeHtml(project.project_id)}">${escapeHtml(t('open'))}</button>`}
                 </div>
               </div>
-              <small>${escapeHtml(project.kind)} · ${escapeHtml(rootLabel || project.name)}</small>
-              <small>chapters ${escapeHtml(fmtCount(project.chapter_count))} · nodes ${escapeHtml(fmtCount(graphSummary.node_count ?? "—"))} · edges ${escapeHtml(fmtCount(graphSummary.edge_count ?? "—"))}</small>
-              <small>ready ${escapeHtml(fmtCount(writerOutcome.chapters_ready ?? "—"))} · review ${escapeHtml(fmtCount(writerOutcome.chapters_needing_review ?? "—"))} · retry ${escapeHtml(fmtCount(writerOutcome.chapters_needing_retry ?? "—"))}</small>
-              <small>synthetic labels ${escapeHtml(fmtCount(graphSummary.synthetic_label_count ?? "—"))}</small>
+              <small>${escapeHtml(language)}</small>
+              <small>${escapeHtml(t('chapters'))} ${escapeHtml(fmtCount(project.chapter_count))} · ${escapeHtml(t('nodes'))} ${escapeHtml(fmtCount(graphSummary.node_count ?? "—"))} · ${escapeHtml(t('edges'))} ${escapeHtml(fmtCount(graphSummary.edge_count ?? "—"))}</small>
+              <small>${escapeHtml(t('ready'))} ${escapeHtml(fmtCount(writerOutcome.chapters_ready ?? "—"))} · ${escapeHtml(t('needsReview'))} ${escapeHtml(fmtCount(writerOutcome.chapters_needing_review ?? "—"))} · ${escapeHtml(t('retry'))} ${escapeHtml(fmtCount(writerOutcome.chapters_needing_retry ?? "—"))}</small>
+              <details><summary>${escapeHtml(t('technicalDetails'))}</summary><small>${escapeHtml(project.kind)} · ${escapeHtml(project.root || '')}</small><small>${escapeHtml(project.project_id || '')}</small></details>
             </div>
           `;
         }).join("")}
@@ -235,7 +427,7 @@ function renderProjects() {
   document.querySelectorAll("[data-open-project]").forEach((node) => {
     node.addEventListener("click", (event) => {
       event.stopPropagation();
-      selectProject(node.dataset.openProject, { notice: `Opened project ${node.dataset.openProject}` });
+      selectProject(node.dataset.openProject, { notice: `${t('open')}: ${node.dataset.openProject}` });
     });
   });
 }
@@ -243,6 +435,8 @@ function renderProjects() {
 async function selectProject(projectId, options = {}) {
   state.currentId = projectId;
   state.current = await api(`/api/projects/${encodeURIComponent(projectId)}`);
+  state.locale = detectLocale(state.current?.project || preferredProject(state.projects));
+  applyStaticTranslations();
   state.selectedGraphNodeId = null;
   state.selectedCanonEntityKey = null;
   state.selectedReviewItemId = null;
@@ -254,6 +448,7 @@ async function selectProject(projectId, options = {}) {
   state.viewerNavBack = [];
   state.viewerNavForward = [];
   state.viewerRecent = [];
+  if (state.current && state.current.graph) state.current.graphDetailPath = "";
   if (options.notice) setNavNotice(options.notice, "info");
   else if (!options.preserveNotice) state.navNotice = null;
   resetGraphViewBox();
@@ -264,9 +459,8 @@ async function selectProject(projectId, options = {}) {
 
 function renderCurrentProject() {
   const project = state.current.project;
-  const canon = state.current.canon;
-  $("project-title").textContent = project.name;
-  $("project-meta").textContent = `${project.kind} · ${project.root}`;
+  $("project-title").textContent = project.work?.title || project.name || t('selectProject');
+  $("project-meta").textContent = t('readOnlyPreview');
   renderOverview();
   renderNotes();
   renderCanon();
@@ -321,6 +515,10 @@ function loadGraphPositions() {
   }
 }
 
+function hasPersistedGraphPositions() {
+  return Object.keys(loadGraphPositions()).length > 0;
+}
+
 function persistGraphPositions(byId) {
   try {
     const payload = Object.fromEntries(Object.values(byId).map((node) => [node.id, { x: node.x, y: node.y }]));
@@ -336,6 +534,36 @@ function clearGraphPositions() {
   } catch (_error) {
     // best effort
   }
+}
+
+function hashFloat(value) {
+  const text = String(value || '');
+  let hash = 2166136261;
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return ((hash >>> 0) % 10000) / 10000;
+}
+
+function autoFitGraphViewBox(byId, { padding = 120 } = {}) {
+  const nodes = Object.values(byId || {});
+  if (!nodes.length) return;
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const node of nodes) {
+    const radius = graphNodeRadius(node);
+    minX = Math.min(minX, node.x - radius);
+    minY = Math.min(minY, node.y - radius);
+    maxX = Math.max(maxX, node.x + radius);
+    maxY = Math.max(maxY, node.y + radius);
+  }
+  state.graphViewBox = {
+    x: minX - padding,
+    y: minY - padding,
+    width: Math.max(640, (maxX - minX) + padding * 2),
+    height: Math.max(420, (maxY - minY) + padding * 2),
+  };
+  applyGraphViewBox();
 }
 
 function viewerNavBack() {
@@ -2028,7 +2256,8 @@ function renderNotes() {
 }
 
 async function openNote(path) {
-  const data = await api(`/api/projects/${encodeURIComponent(state.currentId)}/note?path=${encodeURIComponent(path)}`);
+  const canonicalPath = resolveCanonicalNotePath(path);
+  const data = await api(`/api/projects/${encodeURIComponent(state.currentId)}/note?path=${encodeURIComponent(canonicalPath)}`);
   const backlinks = data.backlinks || [];
   const outgoing = data.outgoing_wikilinks || [];
   const local = data.local_graph || {};
@@ -2043,8 +2272,8 @@ async function openNote(path) {
     <article class="markdown">${renderMarkdown(data.markdown || "")}</article>
   `;
   attachWikiLinkHandlers($("note-detail"));
-  selectGraphNodeByNotePath(path, { render: false });
-  highlightNote(path);
+  selectGraphNodeByNotePath(canonicalPath, { render: false });
+  highlightNote(canonicalPath);
 }
 
 function renderMarkdown(markdown) {
@@ -2090,7 +2319,7 @@ function navigateWikiLink(target) {
   const resolved = resolveWikiLink(target);
   if (!resolved) return;
   if (resolved.nodeId) {
-    state.selectedGraphNodeId = resolved.nodeId;
+    state.selectedGraphNodeId = resolveCanonicalNodeId(resolved.nodeId) || resolved.nodeId;
   }
   if (resolved.notePath) {
     if (state.activeView === "graph") {
@@ -2121,9 +2350,11 @@ function resolveWikiLink(rawTarget) {
     normalizeKey(lastPathPartWithoutMd(item.path)) === key
   );
   if (!node && !note) return null;
+  const nodeId = (node && (node.canonical_node_id || node.id)) || findNodeIdByNotePath(note && note.path);
+  const notePath = resolveCanonicalNotePath((node && (node.canonical_note_path || node.note_path)) || (note && note.path) || null);
   return {
-    nodeId: (node && node.id) || findNodeIdByNotePath(note && note.path),
-    notePath: (node && node.note_path) || (note && note.path) || null,
+    nodeId,
+    notePath,
   };
 }
 
@@ -2139,10 +2370,11 @@ function normalizeKey(value) {
 
 function findNodeIdByNotePath(path) {
   if (!path) return null;
-  const key = normalizeKey(path);
+  const canonicalPath = resolveCanonicalNotePath(path);
+  const key = normalizeKey(canonicalPath);
   const graph = state.current && state.current.graph ? state.current.graph : { nodes: [] };
-  const node = (graph.nodes || []).find((item) => normalizeKey(item.note_path || "") === key);
-  return node ? node.id : null;
+  const node = (graph.nodes || []).find((item) => normalizeKey(item.note_path || "") === key || normalizeKey(item.canonical_note_path || "") === key);
+  return node ? (node.canonical_node_id || node.id) : null;
 }
 
 function lastPathPartWithoutMd(value) {
@@ -2205,7 +2437,10 @@ function findGraphNodeByTerm(term) {
   });
   if (!matches.length) return null;
   matches.sort((a, b) => graphNodePreferenceScore(b) - graphNodePreferenceScore(a));
-  return matches[0];
+  const best = matches[0];
+  const canonicalId = resolveCanonicalNodeId(best.canonical_node_id || best.id || best.note_path || best.label);
+  if (!canonicalId) return best;
+  return (graph.nodes || []).find((node) => node.id === canonicalId) || best;
 }
 
 function graphNodePreferenceScore(node) {
@@ -2257,7 +2492,7 @@ function navigateToGraphTerm(term, { from = "Viewer" } = {}) {
     if (state.activeView === "review") renderReview();
     return false;
   }
-  state.selectedGraphNodeId = node.id;
+  state.selectedGraphNodeId = node.canonical_node_id || node.id;
   const entity = node.entity || {};
   if (Object.keys(entity).length) state.selectedCanonEntityKey = canonEntityKey(entity);
   setNavNotice(`${from}: opened "${node.label || node.id}" in graph.`, "success");
@@ -3211,8 +3446,8 @@ function renderGraph() {
   const tags = [...new Set(graph.nodes.flatMap((node) => node.tags || []))].sort();
   const statuses = [...new Set(graph.nodes.map((node) => node.frontmatter?.review_state || node.frontmatter?.status || node.role).filter(Boolean))].sort();
   if (!$("graph-kind-filter").dataset.ready) {
-    $("graph-kind-filter").innerHTML = `<option value="">all kinds</option>${kinds.map((kind) => `<option value="${escapeHtml(kind)}">${escapeHtml(kind)}</option>`).join("")}`;
-    $("graph-status-filter").innerHTML = `<option value="">all status</option>${statuses.map((status) => `<option value="${escapeHtml(status)}">${escapeHtml(status)}</option>`).join("")}`;
+    $("graph-kind-filter").innerHTML = `<option value="">${escapeHtml(t('allKinds'))}</option>${kinds.map((kind) => `<option value="${escapeHtml(kind)}">${escapeHtml(kind)}</option>`).join("")}`;
+    $("graph-status-filter").innerHTML = `<option value="">${escapeHtml(t('allStatus'))}</option>${statuses.map((status) => `<option value="${escapeHtml(status)}">${escapeHtml(status)}</option>`).join("")}`;
     $("graph-kind-filter").dataset.ready = "1";
     $("graph-kind-filter").onchange = renderGraph;
     $("graph-status-filter").onchange = renderGraph;
@@ -3257,6 +3492,7 @@ function normalizeGraphData(rawGraph) {
   });
   const nodeIds = new Set(nodes.map((node) => node.id));
   const canonical_redirects = graph.canonical_redirects && typeof graph.canonical_redirects === "object" ? graph.canonical_redirects : {};
+  const canonical_note_redirects = graph.canonical_note_redirects && typeof graph.canonical_note_redirects === "object" ? graph.canonical_note_redirects : {};
   const edges = rawEdges
     .map((edge) => {
       const safeEdge = edge && typeof edge === "object" ? edge : {};
@@ -3274,9 +3510,30 @@ function normalizeGraphData(rawGraph) {
     ...graph,
     graph_contract_version: Number(graph.graph_contract_version || graph.metadata?.graph_contract_version || 2),
     canonical_redirects,
+    canonical_note_redirects,
     nodes,
     edges,
   };
+}
+
+function resolveCanonicalNodeId(idOrPathOrLabel) {
+  const graph = state.current && state.current.graph ? state.current.graph : { nodes: [], canonical_redirects: {} };
+  const redirects = graph.canonical_redirects || {};
+  const noteRedirects = graph.canonical_note_redirects || {};
+  const raw = String(idOrPathOrLabel || "");
+  if (!raw) return null;
+  const byPath = noteRedirects[raw] || raw;
+  const direct = redirects[raw] || byPath;
+  if ((graph.nodes || []).some((node) => node.id === direct)) return direct;
+  const pathNode = (graph.nodes || []).find((node) => String(node.note_path || "") === byPath || String(node.canonical_note_path || "") === byPath);
+  if (pathNode) return pathNode.canonical_node_id || pathNode.id;
+  const match = findGraphNodeByTerm(raw);
+  return match ? (match.canonical_node_id || match.id) : null;
+}
+
+function resolveCanonicalNotePath(path) {
+  const graph = state.current && state.current.graph ? state.current.graph : { canonical_note_redirects: {} };
+  return (graph.canonical_note_redirects || {})[String(path || "")] || String(path || "");
 }
 
 function edgeIdFor(edge) {
@@ -3328,7 +3585,7 @@ function renderGraphTagFilter(tags) {
   if (!container) return;
   const activeCount = state.hiddenGraphTags.size;
   container.innerHTML = `
-    <span class="tag-filter-label">Hide tags</span>
+    <span class="tag-filter-label">${escapeHtml(t('allTags'))}</span>
     ${tags.map((tag) => `
       <button type="button" class="tag-chip ${state.hiddenGraphTags.has(tag) ? "active" : ""}" data-graph-tag="${escapeHtml(tag)}">${escapeHtml(tag)}</button>
     `).join("")}
@@ -3368,6 +3625,7 @@ function drawForceGraph(visibleGraph) {
     updateGraphDom(svg, visibleGraph, layoutState);
     tick += 1;
     if (tick < 180) state.graphAnimation = requestAnimationFrame(step);
+    else if (!hasPersistedGraphPositions()) autoFitGraphViewBox(layoutState.byId, { padding: 120 });
   };
   step();
   if (state.selectedGraphNodeId && byId[state.selectedGraphNodeId]) {
@@ -3394,6 +3652,16 @@ function bindGraphInteractions(svg, visibleGraph, layoutState) {
   const byId = layoutState.byId;
   const edgeLayer = svg.querySelector(".edges");
   edgeLayer.innerHTML = visibleGraph.edges.map((edge) => `<g class="edge-group" data-edge-group-id="${escapeHtml(edge.id)}"><line class="edge" data-edge-id="${escapeHtml(edge.id)}"><title>${escapeHtml(edge.label || edge.type || "")}</title></line><text class="edge-label hidden">${escapeHtml(edge.label || edge.type || "")}</text></g>`).join("");
+  edgeLayer.querySelectorAll("[data-edge-group-id]").forEach((groupEl) => {
+    groupEl.addEventListener('pointerenter', () => {
+      const label = groupEl.querySelector('.edge-label');
+      if (label) label.classList.remove('hidden');
+    });
+    groupEl.addEventListener('pointerleave', () => {
+      const label = groupEl.querySelector('.edge-label');
+      if (label) label.classList.add('hidden');
+    });
+  });
   svg.querySelectorAll("[data-node]").forEach((nodeEl) => {
     const node = byId[nodeEl.dataset.node];
     bindNodeDrag(nodeEl, node, layoutState, svg);
@@ -3426,12 +3694,15 @@ function seedGraphPositions(nodes, width, height) {
   return Object.fromEntries(nodes.map((node, index) => {
     const previous = node._position || {};
     const saved = persisted[node.id] || {};
-    const angle = (index / Math.max(nodes.length, 1)) * Math.PI * 2;
-    const radius = 180 + (index % 7) * 28;
+    const angle = index * 2.399963229728653;
+    const radius = 96 + Math.sqrt(index + 1) * 27;
+    const jitterSeed = hashFloat(node.id || `${index}`);
+    const jitterX = (jitterSeed - 0.5) * 44;
+    const jitterY = (hashFloat(`${node.id || index}:y`) - 0.5) * 44;
     return [node.id, {
       ...node,
-      x: saved.x ?? (previous.x === undefined ? width / 2 + Math.cos(angle) * radius : previous.x),
-      y: saved.y ?? (previous.y === undefined ? height / 2 + Math.sin(angle) * radius : previous.y),
+      x: saved.x ?? (previous.x === undefined ? width / 2 + Math.cos(angle) * radius + jitterX : previous.x),
+      y: saved.y ?? (previous.y === undefined ? height / 2 + Math.sin(angle) * radius + jitterY : previous.y),
       vx: previous.vx === undefined ? 0 : previous.vx,
       vy: previous.vy === undefined ? 0 : previous.vy,
       pinned: Boolean(saved.pinned),
@@ -3448,7 +3719,7 @@ function runForceTick(byId, edges, width, height, tick) {
       const dx = a.x - b.x || 0.01;
       const dy = a.y - b.y || 0.01;
       const dist2 = dx * dx + dy * dy;
-      const minDistance = graphNodeRadius(a) + graphNodeRadius(b) + 22;
+      const minDistance = graphNodeRadius(a) + graphNodeRadius(b) + 26;
       const force = Math.min((4500 + minDistance * 120) / dist2, 3.2) * cooling;
       a.vx += dx * force * 0.012;
       a.vy += dy * force * 0.012;
@@ -3462,7 +3733,7 @@ function runForceTick(byId, edges, width, height, tick) {
     const dx = b.x - a.x;
     const dy = b.y - a.y;
     const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-    const desired = Math.max(120, graphNodeRadius(a) + graphNodeRadius(b) + 68);
+      const desired = Math.max(128, graphNodeRadius(a) + graphNodeRadius(b) + 72);
     const force = (dist - desired) * 0.006 * cooling;
     const fx = (dx / dist) * force;
     const fy = (dy / dist) * force;
@@ -3473,14 +3744,19 @@ function runForceTick(byId, edges, width, height, tick) {
   }
   for (const node of nodes) {
     if (state.graphDrag && state.graphDrag.nodeId === node.id) continue;
-    const gravity = node.kind === "character" ? 0.0018 : Number(node.degree || 0) >= 8 ? 0.0014 : 0.0011;
+    const gravity = node.kind === "character" ? 0.0022 : Number(node.degree || 0) >= 8 ? 0.0017 : 0.00125;
     node.vx += (width / 2 - node.x) * gravity * cooling;
     node.vy += (height / 2 - node.y) * gravity * cooling;
     node.vx *= 0.86;
     node.vy *= 0.86;
     if (!node.pinned) {
-      node.x = Math.max(36, Math.min(width - 36, node.x + node.vx));
-      node.y = Math.max(36, Math.min(height - 36, node.y + node.vy));
+      const margin = Math.max(40, graphNodeRadius(node) + 16);
+      const nextX = node.x + node.vx;
+      const nextY = node.y + node.vy;
+      node.x = Math.max(margin, Math.min(width - margin, nextX));
+      node.y = Math.max(margin, Math.min(height - margin, nextY));
+      if (node.x === margin || node.x === width - margin) node.vx *= -0.25;
+      if (node.y === margin || node.y === height - margin) node.vy *= -0.25;
     }
   }
 }
@@ -3510,7 +3786,7 @@ function updateGraphDom(svg, visibleGraph, layoutState) {
     if (!label) return;
     label.setAttribute("x", (a.x + b.x) / 2);
     label.setAttribute("y", (a.y + b.y) / 2 - 4);
-    label.classList.toggle("hidden", !state.selectedGraphNodeId || (edge.source !== state.selectedGraphNodeId && edge.target !== state.selectedGraphNodeId));
+    label.classList.add("hidden");
   });
   svg.querySelectorAll("[data-node]").forEach((nodeEl) => {
     const node = byId[nodeEl.dataset.node];
@@ -3568,24 +3844,26 @@ function finishNodeDrag(nodeEl, pointerId, byId) {
 }
 
 function selectGraphNode(nodeId, { pushHistory = false, renderDetail = true } = {}) {
+  const canonicalNodeId = resolveCanonicalNodeId(nodeId) || nodeId;
   if (pushHistory) {
     pushViewerNav(navEntry({ nodeId: state.selectedGraphNodeId }));
     state.viewerNavForward = [];
   }
-  state.selectedGraphNodeId = nodeId;
+  state.selectedGraphNodeId = canonicalNodeId;
   const graph = state.current && state.current.graph ? state.current.graph : { nodes: [] };
-  const node = (graph.nodes || []).find((item) => item.id === nodeId);
+  const node = (graph.nodes || []).find((item) => item.id === canonicalNodeId);
   if (!node) return;
   const entity = node.entity || {};
   if (Object.keys(entity).length) state.selectedCanonEntityKey = canonEntityKey(entity);
   rememberRecentNode({ id: node.id, label: node.label, kind: node.kind, note_path: node.note_path });
   if (renderDetail) renderGraphNodeDetail(node);
-  document.querySelectorAll("[data-node]").forEach((nodeEl) => nodeEl.classList.toggle("selected", nodeEl.dataset.node === nodeId));
+  document.querySelectorAll("[data-node]").forEach((nodeEl) => nodeEl.classList.toggle("selected", nodeEl.dataset.node === canonicalNodeId));
 }
 
 async function renderGraphNodeDetail(node) {
-  if (node.note_path) {
-    await openGraphNote(node.note_path, node.id);
+  const canonicalNotePath = resolveCanonicalNotePath(node.canonical_note_path || node.note_path || "");
+  if (canonicalNotePath) {
+    await openGraphNote(canonicalNotePath, node.canonical_node_id || node.id);
     return;
   }
   $("graph-detail").innerHTML = graphNodeSummary(node);
@@ -3593,32 +3871,79 @@ async function renderGraphNodeDetail(node) {
   bindCanonicalizationInteractions();
 }
 
+function parseMarkdownSections(markdownText) {
+  const sections = { summary: "", facts: [], relationships: [], evidence: [] };
+  let current = "";
+  for (const rawLine of String(markdownText || "").split(/\r?\n/)) {
+    const line = rawLine.trim();
+    const heading = line.match(/^##\s+(.+)$/);
+    if (heading) {
+      const key = normalizeKey(heading[1]);
+      current = key.includes("summary") ? "summary"
+        : key.includes("fact") ? "facts"
+        : key.includes("relationship") ? "relationships"
+        : key.includes("evidence") ? "evidence"
+        : "";
+      continue;
+    }
+    if (!current || !line || line.startsWith("<!--")) continue;
+    const cleaned = line.replace(/^[-*]\s+/, "").replace(/\[\[([^\]|]+)(?:\|[^\]]+)?\]\]/g, "$1").trim();
+    if (!cleaned) continue;
+    if (current === "summary") sections.summary = [sections.summary, cleaned].filter(Boolean).join(" ");
+    else sections[current].push(cleaned);
+  }
+  return sections;
+}
+
 async function openGraphNote(path, nodeId = null, { pushHistory = true } = {}) {
+  const canonicalPath = resolveCanonicalNotePath(path);
+  const canonicalNodeId = resolveCanonicalNodeId(nodeId || canonicalPath) || nodeId;
   if (pushHistory) {
-    pushViewerNav(navEntry({ nodeId: state.selectedGraphNodeId, notePath: path }));
+    pushViewerNav(navEntry({ nodeId: state.selectedGraphNodeId, notePath: canonicalPath }));
     state.viewerNavForward = [];
   }
-  if (nodeId) state.selectedGraphNodeId = nodeId;
-  const data = await api(`/api/projects/${encodeURIComponent(state.currentId)}/note?path=${encodeURIComponent(path)}`);
+  if (canonicalNodeId) state.selectedGraphNodeId = canonicalNodeId;
+  state.current.graphDetailPath = canonicalPath;
+  const data = await api(`/api/projects/${encodeURIComponent(state.currentId)}/note?path=${encodeURIComponent(canonicalPath)}`);
   const backlinks = data.backlinks || [];
   const outgoing = data.outgoing_wikilinks || [];
   const local = data.local_graph || {};
   const markdownText = String(data.markdown || "");
-  const hasSummary = markdownText.includes("## Summary");
-  const hasFacts = markdownText.includes("## Facts");
+  const sections = parseMarkdownSections(markdownText);
+  const hasSummary = Boolean(sections.summary);
+  const hasFacts = sections.facts.length > 0;
+  const hasRelationships = sections.relationships.length > 0;
+  const hasEvidence = sections.evidence.length > 0;
+  const chapterIds = data.frontmatter?.chapter_ids || [];
+  const summaryNode = (state.current.graph.nodes || []).find((item) => item.id === state.selectedGraphNodeId) || {};
+  const showReviewAction = findReviewItemsByTerm(summaryNode.label || "").length > 0;
+  const canonicalPathChanged = canonicalPath !== String(path || "");
   $("graph-detail").innerHTML = `
-    ${graphNodeSummary((state.current.graph.nodes || []).find((item) => item.id === state.selectedGraphNodeId) || {})}
+    ${graphNodeSummary(summaryNode)}
     <hr />
-    <h3>${escapeHtml(data.path)}</h3>
-    <p class="muted">Degree ${escapeHtml(fmtCount(data.degree || 0))} · backlinks ${escapeHtml(fmtCount(backlinks.length))} · outgoing ${escapeHtml(fmtCount(outgoing.length))}</p>
-    ${hasSummary ? "" : `<p class="note-fallback">No summary yet. This node may need enrichment.</p>`}
-    ${hasFacts ? "" : `<p class="muted">Facts are thin or missing for this note.</p>`}
+    ${canonicalPathChanged ? `<p class="muted">${escapeHtml(t('duplicateRedirected'))}</p>` : ""}
+    <h3>${escapeHtml(data.title || data.path || summaryNode.label || '')}</h3>
+    <p class="muted">${escapeHtml(t('degree'))} ${escapeHtml(fmtCount(data.degree || 0))}</p>
     <p>${(data.tags || []).map((tag) => `<span class="badge tag-badge">${escapeHtml(tag)}</span>`).join("")}</p>
-    ${backlinks.length ? `<details><summary>Backlinks</summary><ul>${backlinks.map((item) => `<li><a href="#" class="wikilink" data-wikilink="${escapeHtml(item)}">${escapeHtml(item)}</a></li>`).join("")}</ul></details>` : ""}
-    ${outgoing.length ? `<details><summary>Outgoing links</summary><ul>${outgoing.map((item) => `<li><a href="#" class="wikilink" data-wikilink="${escapeHtml(item.target || item.label || "")}">[[${escapeHtml(item.label || item.target || "")}]]</a></li>`).join("")}</ul></details>` : ""}
-    ${(local.nodes || []).length ? `<details><summary>Local graph</summary><p class="muted">Nodes ${escapeHtml(fmtCount((local.nodes || []).length))} · edges ${escapeHtml(fmtCount((local.edges || []).length))}</p></details>` : ""}
-    <details><summary>Frontmatter</summary><pre class="frontmatter">${escapeHtml(JSON.stringify(data.frontmatter || {}, null, 2))}</pre></details>
-    <article class="markdown">${renderMarkdown(markdownText)}</article>
+    <h4>${escapeHtml(t('summary'))}</h4>
+    ${hasSummary ? `<p>${escapeHtml(sections.summary)}</p>` : `<p class="note-fallback">${escapeHtml(t('noSummary'))}</p>`}
+    <h4>${escapeHtml(t('facts'))}</h4>
+    ${hasFacts ? `<ul>${sections.facts.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : `<p class="muted">${escapeHtml(t('noFacts'))}</p>`}
+    <h4>${escapeHtml(t('storyRelationships'))}</h4>
+    ${hasRelationships ? `<ul>${sections.relationships.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : `<p class="muted">—</p>`}
+    <h4>${escapeHtml(t('appearancesEvidence'))}</h4>
+    ${hasEvidence ? `<ul>${sections.evidence.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : `<p class="muted">${chapterIds.length ? chapterIds.map((item) => escapeHtml(item)).join(', ') : '—'}</p>`}
+    <h4>${escapeHtml(t('markdownLinks'))}</h4>
+    ${backlinks.length ? `<details><summary>${escapeHtml(t('backlinks'))}</summary><ul>${backlinks.map((item) => `<li><a href="#" class="wikilink" data-wikilink="${escapeHtml(item)}">${escapeHtml(item)}</a></li>`).join("")}</ul></details>` : ""}
+    ${outgoing.length ? `<details><summary>${escapeHtml(t('outgoingLinks'))}</summary><ul>${outgoing.map((item) => `<li><a href="#" class="wikilink" data-wikilink="${escapeHtml(item.target || item.label || "")}">[[${escapeHtml(item.label || item.target || "")}]]</a></li>`).join("")}</ul></details>` : ""}
+    ${showReviewAction ? `<div class="nav-actions"><button type="button" data-graph-open-review="${escapeHtml(summaryNode.label || '')}">${escapeHtml(t('openReview'))}</button></div>` : `<p class="muted">${escapeHtml(t('reviewUnavailable'))}</p>`}
+    <details>
+      <summary>${escapeHtml(t('technicalDetails'))}</summary>
+      <p class="muted">${escapeHtml(data.path || '')}</p>
+      ${(local.nodes || []).length ? `<p class="muted">${escapeHtml(t('localGraphSummary'))}: ${escapeHtml(fmtCount((local.nodes || []).length))} / ${escapeHtml(fmtCount((local.edges || []).length))}</p>` : ""}
+      <pre class="frontmatter">${escapeHtml(JSON.stringify(data.frontmatter || {}, null, 2))}</pre>
+      <details><summary>Markdown</summary><article class="markdown">${renderMarkdown(markdownText)}</article></details>
+    </details>
   `;
   attachWikiLinkHandlers($("graph-detail"));
   bindGraphDetailNavigation();
@@ -3632,27 +3957,30 @@ function graphNodeSummary(node) {
   const hasVaerlDetail = Object.keys(entity).length || Object.keys(chapter).length;
   const canonLabel = Object.keys(entity).length ? (entity.canonical_name || entity.preferred_slug || node.label || "") : "";
   const reviewLabel = entity.canonical_name || entity.preferred_slug || node.label || chapter.chapter_id || "";
+  const hasReviewContext = reviewLabel ? findReviewItemsByTerm(reviewLabel).length > 0 : false;
+  const canonicalNodeId = node.canonical_node_id || node.id;
+  const canonicalNotePath = resolveCanonicalNotePath(node.canonical_note_path || node.note_path || "");
+  const showOpenNote = canonicalNotePath && canonicalNotePath !== String(state.current?.graphDetailPath || "");
   return `
     ${renderNavNotice()}
     <h3>${escapeHtml(node.label || "Unresolved")}</h3>
     <p><span class="badge kind-badge kind-${escapeHtml(String(node.kind || 'unknown').toLowerCase())}">${escapeHtml(node.kind || "unknown")}</span> <span class="badge">${escapeHtml(node.role || "unknown")}</span></p>
     ${(node.tags || []).length ? `<p>${(node.tags || []).map((tag) => `<span class="badge tag-badge">${escapeHtml(tag)}</span>`).join("")}</p>` : ""}
-    <p class="muted">Degree ${escapeHtml(fmtCount(node.degree || 0))} · backlinks ${escapeHtml(fmtCount((node.backlinks || []).length))} · outgoing ${escapeHtml(fmtCount((node.outgoing_wikilinks || []).length))}</p>
-    <p class="muted">${escapeHtml(node.id || "")}</p>
+    <p class="muted">${escapeHtml(t('degree'))} ${escapeHtml(fmtCount(node.degree || 0))} · ${escapeHtml(t('backlinks'))} ${escapeHtml(fmtCount((node.backlinks || []).length))}</p>
     <div class="nav-actions">
-      <button type="button" data-graph-nav-back ${state.viewerNavBack.length < 2 ? "disabled" : ""}>Back</button>
-      <button type="button" data-graph-nav-forward ${state.viewerNavForward.length < 1 ? "disabled" : ""}>Forward</button>
+      <button type="button" data-graph-nav-back ${state.viewerNavBack.length < 2 ? "disabled" : ""}>${escapeHtml(t('back'))}</button>
+      <button type="button" data-graph-nav-forward ${state.viewerNavForward.length < 1 ? "disabled" : ""}>${escapeHtml(t('forward'))}</button>
       ${canonLabel ? `<button type="button" data-graph-open-canon="${escapeHtml(canonLabel)}">Open in Canon</button>` : ""}
-      ${reviewLabel ? `<button type="button" data-graph-open-review="${escapeHtml(reviewLabel)}">Open Review Context</button>` : ""}
-      ${node.note_path ? `<button type="button" data-graph-open-note="${escapeHtml(node.note_path)}">Open note</button>` : ""}
+      ${hasReviewContext ? `<button type="button" data-graph-open-review="${escapeHtml(reviewLabel)}">${escapeHtml(t('openReview'))}</button>` : ""}
+      ${showOpenNote ? `<button type="button" data-graph-open-note="${escapeHtml(canonicalNotePath)}">${escapeHtml(t('viewInWiki'))}</button>` : ""}
     </div>
-    ${state.viewerRecent.length ? `<p class="muted">Recent: ${state.viewerRecent.slice(0, 6).map((row) => `<button type="button" class="inline-action" data-graph-recent="${escapeHtml(row.id)}">${escapeHtml(row.label || row.id)}</button>`).join(" ")}</p>` : ""}
-    ${node.note_path
-      ? `<p class="muted">${escapeHtml(node.note_path)}</p>`
+    ${state.viewerRecent.length ? `<p class="muted">${escapeHtml(t('recent'))}: ${state.viewerRecent.slice(0, 6).map((row) => `<button type="button" class="inline-action" data-graph-recent="${escapeHtml(row.id)}">${escapeHtml(row.label || row.id)}</button>`).join(" ")}</p>` : ""}
+    ${canonicalNotePath
+      ? `<p class="muted">${escapeHtml(canonicalNodeId !== node.id ? t('duplicateRedirected') : '')}</p>`
       : hasVaerlDetail
         ? `<p class="note-fallback">No Markdown note found. Showing VaERL data from <code>obsidian_import.json</code>.</p>`
         : `<p class="muted">No materialized note or VaERL detail for this node.</p>`}
-    ${Object.keys(frontmatter).length ? `<details><summary>Note metadata</summary><pre class="frontmatter">${escapeHtml(JSON.stringify(frontmatter, null, 2))}</pre></details>` : ""}
+    ${Object.keys(frontmatter).length ? `<details><summary>${escapeHtml(t('technicalDetails'))}</summary><pre class="frontmatter">${escapeHtml(JSON.stringify(frontmatter, null, 2))}</pre></details>` : ""}
     ${Object.keys(entity).length ? entityDetail(entity) : ""}
     ${Object.keys(entity).length ? renderCanonicalizationVisibility(entity, { source: "graph" }) : ""}
     ${Object.keys(chapter).length ? chapterDetail(chapter) : ""}
@@ -3852,6 +4180,7 @@ function chapterDetail(chapter) {
 
 function resetGraphViewBox() {
   clearGraphPositions();
+  if (state.current && state.current.graph) state.current.graphDetailPath = "";
   state.graphViewBox = { x: 0, y: 0, width: 1200, height: 720 };
   applyGraphViewBox();
   if (state.activeView === "graph") renderGraph();

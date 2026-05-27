@@ -10,6 +10,17 @@ from vault.schema import slugify
 from textifai.import_review.markdown_graph_index import build_markdown_graph_index, local_graph
 from textifai.import_review.viewer_graph_adapter import adapt_ingestion_graph_to_viewer_graph
 
+CANONICAL_KIND_PRIORITY = {
+    "character": 700,
+    "place": 600,
+    "object": 500,
+    "event": 400,
+    "concept": 300,
+    "review": 200,
+    "chapter": 100,
+    "unresolved": 0,
+}
+
 KIND_VISUALS = {
     "character": {"color": "#247c7a", "label": "Character"},
     "place": {"color": "#4f8f4f", "label": "Place"},
@@ -822,6 +833,17 @@ def _build_graph_from_markdown_index(project: ProjectRef) -> dict[str, Any] | No
             "outgoing_wikilinks": note.get("outgoing_wikilinks") or [],
             "visual": visual,
         })
+    canonical_redirects, canonical_note_redirects = _build_canonical_redirect_maps(nodes)
+    nodes_by_id = {str(node.get("id") or ""): node for node in nodes}
+    for node in nodes:
+        node_id = str(node.get("id") or "")
+        canonical_node_id = canonical_redirects.get(node_id, node_id)
+        canonical_node = nodes_by_id.get(canonical_node_id) or node
+        node["canonical_node_id"] = canonical_node_id
+        node["canonical_note_path"] = str(canonical_node.get("note_path") or canonical_node.get("id") or "")
+        if canonical_node_id != node_id:
+            node["canonical_redirected"] = True
+            node["canonical_redirect_reason"] = "exact_label_cross_kind"
     node_ids = {str(node.get("id") or "") for node in nodes}
     edges: list[dict[str, Any]] = []
     seen_edge_ids: dict[str, int] = {}
@@ -846,11 +868,13 @@ def _build_graph_from_markdown_index(project: ProjectRef) -> dict[str, Any] | No
         "nodes": nodes,
         "edges": edges,
         "graph_contract_version": 2,
-        "canonical_redirects": markdown_index.get("canonical_redirects") or {},
+        "canonical_redirects": canonical_redirects,
+        "canonical_note_redirects": canonical_note_redirects,
         "metadata": {
             "graph_contract_version": 2,
             "source": "markdown_graph_index",
-            "canonical_redirects": markdown_index.get("canonical_redirects") or {},
+            "canonical_redirects": canonical_redirects,
+            "canonical_note_redirects": canonical_note_redirects,
             "local_graph": {
                 "endpoint_contract": "edge.source and edge.target are node.id values",
                 "preserve_valid_endpoints": True,
@@ -903,6 +927,48 @@ def _node_visual(kind: str, frontmatter: dict[str, Any], *, degree: int = 0, rol
 def _edge_id(source: Any, target: Any, label: Any) -> str:
     raw = f"{source or ''}::{label or 'edge'}::{target or ''}"
     return "edge:" + slugify(raw).strip("_")
+
+
+def _build_canonical_redirect_maps(nodes: list[dict[str, Any]]) -> tuple[dict[str, str], dict[str, str]]:
+    groups: dict[str, list[dict[str, Any]]] = {}
+    for node in nodes:
+        key = _key(node.get("label") or node.get("id") or "")
+        if not key:
+            continue
+        groups.setdefault(key, []).append(node)
+
+    canonical_redirects: dict[str, str] = {}
+    canonical_note_redirects: dict[str, str] = {}
+    for entries in groups.values():
+        if len(entries) < 2:
+            continue
+        kinds = {str(item.get("kind") or "") for item in entries}
+        if "chapter" in kinds:
+            continue
+        target = sorted(
+            entries,
+            key=lambda item: (
+                CANONICAL_KIND_PRIORITY.get(str(item.get("kind") or ""), 0),
+                1 if str(item.get("id") or "").startswith("Characters/") else 0,
+                int(item.get("degree") or 0),
+            ),
+            reverse=True,
+        )[0]
+        target_id = str(target.get("id") or "")
+        target_kind = str(target.get("kind") or "")
+        target_path = str(target.get("note_path") or target_id)
+        for node in entries:
+            node_id = str(node.get("id") or "")
+            node_kind = str(node.get("kind") or "")
+            node_path = str(node.get("note_path") or node_id)
+            if not node_id or node_id == target_id:
+                continue
+            if node_kind == target_kind:
+                continue
+            canonical_redirects[node_id] = target_id
+            if node_path and target_path and node_path != target_path:
+                canonical_note_redirects[node_path] = target_path
+    return canonical_redirects, canonical_note_redirects
 
 
 def _build_graph_from_ingestion_artifact(project: ProjectRef) -> dict[str, Any] | None:

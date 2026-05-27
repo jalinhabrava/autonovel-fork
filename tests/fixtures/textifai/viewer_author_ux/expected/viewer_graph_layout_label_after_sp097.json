@@ -1,0 +1,8 @@
+{
+  "assessment": "viewer_graph_layout_label_ready",
+  "auto_fit_with_padding": true,
+  "center_bias_for_characters_and_hubs": true,
+  "edge_labels_hidden_by_default": true,
+  "persisted_positions_reset_supported": true,
+  "selected_or_hover_reveals_labels": true
+}

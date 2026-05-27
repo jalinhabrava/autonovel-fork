@@ -1,0 +1,23 @@
+{
+  "assessment": "open_design_tooling_status_ready",
+  "codex_cli_found": true,
+  "install_required_for_actual_skills": true,
+  "local_docs_used": [
+    "docs/textifai-design-direction.md",
+    "docs/textifai-ui-review-checklist.md",
+    "docs/textifai-open-design-codex-setup.md"
+  ],
+  "no_runtime_dependency": true,
+  "node_version": "v22.22.2",
+  "open_design_mcp_available": false,
+  "recommended_skills_conceptual": [
+    "design-review",
+    "web-design-guidelines",
+    "dashboard",
+    "platform-design"
+  ],
+  "repo_exists": false,
+  "repo_path": "/tmp/textifai_dev_tools/open-design",
+  "skills_cli_found": false,
+  "user_approval_required_for_global_skill_install": true
+}
