@@ -1,0 +1,21 @@
+{
+  "assessment": "open_design_viewer_redesign_review_ready_for_sp100_planning",
+  "product_decision": "Current SP-098 viewer is directionally right but visually/IA insufficient; stop incremental polish and redesign layout system before next UI patch.",
+  "next_phase": "SP-100 Author Workspace Redesign with explicit d3-force dependency ACK or a no-dependency fallback if dependency rejected.",
+  "must_not_do": [
+    "Do not keep exposing markdown_vault as author project",
+    "Do not ship graph rails as acceptable default",
+    "Do not keep ambiguous Open Review Context/Open note actions",
+    "Do not rely on Open Design at runtime"
+  ],
+  "private_handoff": "docs/handoffs/private/safepoint-099_open-design-viewer-redesign/decision_handoff_private.md",
+  "valid_decisions": [
+    "open_design_viewer_redesign_review_ready_for_sp100_planning",
+    "open_design_viewer_review_partial_needs_followup",
+    "open_design_viewer_review_blocked"
+  ],
+  "provider_calls": false,
+  "write_back": false,
+  "package_changes": false,
+  "runtime_dependency_added": false
+}

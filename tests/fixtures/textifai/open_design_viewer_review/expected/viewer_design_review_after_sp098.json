@@ -1,0 +1,68 @@
+{
+  "assessment": "viewer_needs_redesign_before_more_ui_patches",
+  "review_basis": [
+    "SP-098 handoff",
+    "viewer static source",
+    "project_reader source",
+    "TextifAI design docs",
+    "Open Design repo/docs patterns"
+  ],
+  "dashboard_overview": {
+    "current_issue": "Overview exists but competes with ingestion/dev panels and does not behave like author home.",
+    "recommendation": "Convert to story operations dashboard: health cards, chapter status, canonical entities needing review, graph health, next best action."
+  },
+  "project_selector": {
+    "current_issue": "Still exposes multiple runtime artifacts and technical project cards; markdown_vault remains visible as peer choice.",
+    "recommendation": "Single default workspace header with compact project switcher. Show markdown_vault only under Dev artifacts drawer."
+  },
+  "global_graph": {
+    "current_issue": "SVG force approximation still creates rails, edge density, weak initial composition, and graph-first screen feels tool-like.",
+    "recommendation": "Graph canvas/card with clear mode bar, filters, legend, selected-node dock, no edge labels by default, fit-to-content and stable hub-centered layout."
+  },
+  "local_graph": {
+    "current_issue": "Local graph is checkbox state, not a distinct author mode.",
+    "recommendation": "Make local graph a mode tied to selected node: neighborhood depth, related chapters, narrative relationships first, backlinks secondary."
+  },
+  "wiki_browser": {
+    "current_issue": "Wiki is serviceable but list/detail still file-browser flavored.",
+    "recommendation": "Turn into knowledge browser with kind chips, canonical status, summary preview, backlinks count, and duplicate-redirect hint."
+  },
+  "node_detail_panel": {
+    "current_issue": "IA improved but still leaks degree/path/canonicalization metadata early and actions feel tool-like.",
+    "recommendation": "Narrative card first: role, bio, facts, relationships, appearances/evidence, review state, then collapsed provenance/technical."
+  },
+  "review_queue": {
+    "current_issue": "Review context exists but reads like audit data and button behavior is unclear.",
+    "recommendation": "Author review queue with grouped decisions, impact copy, confidence/evidence chips, and no raw audit unless expanded."
+  },
+  "technical_details_dev_mode": {
+    "current_issue": "Technical details tab still in top nav and visible as primary surface.",
+    "recommendation": "Move Artifacts/System/Frontmatter/paths into explicit Dev mode drawer or secondary tab, disabled by default for author mode."
+  },
+  "i18n_copy": {
+    "current_issue": "Dictionary exists but many strings remain English or technical, especially canon/review/compare surfaces.",
+    "recommendation": "Define primary-copy inventory and fail tests on untranslated nav, controls, empty states, actions, node detail headings."
+  },
+  "future_markdown_editor": {
+    "current_issue": "Read-only state is honest but future edit affordance is not framed as roadmap.",
+    "recommendation": "Use disabled Edit note / Propose canon patch affordance with clear Coming next copy only where meaningful."
+  },
+  "visual_hierarchy": {
+    "current_issue": "Panels have consistent styling but similar weights; primary action and selected context do not dominate.",
+    "recommendation": "Use 3-layer hierarchy: workspace header, active surface, contextual inspector. Reduce badges and muted technical rows."
+  },
+  "spacing_typography": {
+    "current_issue": "Dense badge rows and compact controls make UI feel internal.",
+    "recommendation": "Increase card spacing, use readable prose widths in node detail, reserve monospace/code only for dev details."
+  },
+  "empty_states": {
+    "current_issue": "Some empty states exist but are generic.",
+    "recommendation": "Author-facing empty states should explain narrative meaning and next action, not internal absence."
+  },
+  "cta_clarity": {
+    "current_issue": "Open Review Context/Open in Canon/View in wiki are implementation verbs.",
+    "recommendation": "Replace with Review duplicate, See canon entry, Open note preview, or hide when redundant."
+  },
+  "provider_calls": false,
+  "write_back": false
+}

@@ -1,0 +1,71 @@
+{
+  "assessment": "sp100_redesign_brief_ready_for_approval",
+  "north_star": "Author-facing narrative knowledge workspace, not runtime artifact viewer.",
+  "information_architecture": [
+    "Workspace header with title, language, read-only status, health summary",
+    "Left rail for primary product surfaces: Overview, Graph, Wiki, Review, Canon, Dev",
+    "Main canvas for selected surface",
+    "Right inspector for selected node/note/review item",
+    "Dev details collapsed and separated from author workflow"
+  ],
+  "project_selection": {
+    "default": "viewer_project if present",
+    "author_ui": "Show one active story workspace. Project switcher hidden behind compact menu.",
+    "dev_ui": "Show markdown_vault and runtime root only inside Dev artifacts drawer."
+  },
+  "graph_redesign": {
+    "global_graph": "Primary relationship map with filters, legend, selected node dock, adaptive labels, no edge labels by default.",
+    "local_graph": "Explicit selected-node neighborhood mode, depth control, narrative relation list paired with mini graph.",
+    "layout": "Fit-to-content, padding, hub-centered character bias, collision, stable seed, reset layout, no rail-like grid."
+  },
+  "node_detail_redesign": {
+    "top": [
+      "Name",
+      "kind/status chips",
+      "role",
+      "canonical duplicate notice if needed"
+    ],
+    "body_order": [
+      "Bio/Summary",
+      "Key facts",
+      "Story relationships",
+      "Appearances/Evidence",
+      "Markdown backlinks",
+      "Technical details collapsed"
+    ],
+    "actions": [
+      "Review canon issue when valid",
+      "Open wiki note when not current",
+      "Copy note path only in dev details"
+    ]
+  },
+  "copy_i18n": {
+    "locales": [
+      "es",
+      "en"
+    ],
+    "default_for_spanish_runtime": "es",
+    "rule": "No mixed language in primary UX; dev/audit copy also translated when visible."
+  },
+  "review_queue_redesign": {
+    "author_facing": "Decision queue with grouped duplicates, unresolved links, weak summaries, and chapter issues.",
+    "avoid": "Raw audit dumps as first view."
+  },
+  "future_editor_affordance": {
+    "scope_now": "No write-back.",
+    "copy": "Coming next: edit Markdown note / propose canon patch.",
+    "placement": "Only in node/note inspector when context exists."
+  },
+  "acceptance_criteria": [
+    "Author can identify active story workspace in under 3 seconds.",
+    "markdown_vault is not presented as a normal project in author mode.",
+    "Sera/Ren open character canonical cards with bio/facts.",
+    "Graph initial view has no clipped border nodes and no dominant rails.",
+    "Edge labels hidden until hover/selection/detail.",
+    "Primary UI in Spanish runtime has no English core labels.",
+    "No dead or ambiguous action buttons in primary node detail.",
+    "Technical metadata is collapsed or in Dev mode."
+  ],
+  "provider_calls": false,
+  "write_back": false
+}

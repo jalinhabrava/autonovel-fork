@@ -1,0 +1,55 @@
+{
+  "assessment": "recommend_d3_force_ack_for_sp100",
+  "options": {
+    "custom_svg_continue": {
+      "recommendation": "not preferred",
+      "pros": [
+        "No package change",
+        "Low migration cost",
+        "Keeps current SVG DOM tests"
+      ],
+      "cons": [
+        "Rails and overlap likely persist",
+        "Manual force code debt grows",
+        "Harder local/global graph quality parity"
+      ],
+      "risk": "Medium product risk from continued visual underperformance"
+    },
+    "d3_force_svg": {
+      "recommendation": "preferred",
+      "pros": [
+        "Mature force simulation",
+        "Center/link/charge/collision primitives",
+        "SVG keeps accessible DOM and current interaction model",
+        "Small dependency footprint"
+      ],
+      "cons": [
+        "Requires package.json/package-lock change",
+        "Needs ACK because prior phases forbade dependencies",
+        "Must isolate renderer behind GraphEngine interface"
+      ],
+      "risk": "Low-to-medium implementation risk, lower product UX risk"
+    },
+    "canvas_forcegraph2d": {
+      "recommendation": "defer",
+      "pros": [
+        "Better for very large graphs",
+        "Smooth rendering at scale"
+      ],
+      "cons": [
+        "Bigger architecture shift",
+        "Harder DOM accessibility/testing",
+        "More dependency/runtime assumptions"
+      ],
+      "risk": "Higher migration risk now"
+    }
+  },
+  "recommended_path": "SP-100 should request explicit dependency ACK for d3-force and keep renderer TextifAI-native via GraphEngine interface.",
+  "package_change_needed": [
+    "d3-force"
+  ],
+  "ack_required_before_dependency": true,
+  "textifai_runtime_dependency_on_open_design": false,
+  "provider_calls": false,
+  "write_back": false
+}

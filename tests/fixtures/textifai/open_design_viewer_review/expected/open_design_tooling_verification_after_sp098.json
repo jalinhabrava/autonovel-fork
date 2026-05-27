@@ -1,0 +1,31 @@
+{
+  "assessment": "open_design_tooling_available_with_mcp_session_reload_note",
+  "repo_path": "/tmp/textifai_dev_tools/open-design",
+  "repo_exists": true,
+  "repo_commit": "279da4f3",
+  "node_bin": "/home/david/.nvm/versions/node/v24.16.0/bin/node",
+  "node_major": 24,
+  "pnpm_version": "10.33.2",
+  "daemon_url": "http://127.0.0.1:7457",
+  "daemon_health": {
+    "ok": true,
+    "version": "0.8.0"
+  },
+  "codex_mcp_registered": true,
+  "codex_mcp_name": "open-design",
+  "mcp_available_in_current_tool_namespace": true,
+  "mcp_current_session_reachable": false,
+  "mcp_session_note": "Codex MCP registry sees open-design, but current tool namespace still reported daemon not reachable; restart Codex/app may be needed for live MCP tool process refresh.",
+  "skills_found_examples": [
+    "web-prototype",
+    "dashboard",
+    "critique",
+    "wireframe-sketch",
+    "tweaks"
+  ],
+  "design_systems_available": true,
+  "textifai_runtime_dependency": false,
+  "package_change_required": false,
+  "provider_calls": false,
+  "write_back": false
+}
