@@ -1,0 +1,22 @@
+{
+  "assessment": "spanish_20ch_markdown_graph_index_summary_ready",
+  "node_count": 445,
+  "edge_count": 222,
+  "nodes_by_kind": {
+    "chapter": 19,
+    "character": 66,
+    "concept": 137,
+    "event": 95,
+    "object": 66,
+    "place": 61,
+    "review": 1
+  },
+  "orphan_notes_count": 283,
+  "unresolved_links_count": 401,
+  "degree_distribution_summary": {
+    "min": 0,
+    "max": 26,
+    "median": 0,
+    "avg": 0.9978
+  }
+}

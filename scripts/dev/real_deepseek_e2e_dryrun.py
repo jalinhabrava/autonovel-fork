@@ -71,17 +71,24 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--plan-only", action="store_true")
     parser.add_argument("--report-prefix", default="real_deepseek_e2e")
     parser.add_argument("--report-suffix", default="after_sp074")
+    parser.add_argument("--expected-root", default="")
     parser.add_argument("--include-extra-chapter-longest", action="store_true")
     parser.add_argument("--extra-chapter-scan-limit", type=int, default=6)
     parser.add_argument("--continuation-reserve-per-run", type=int, default=1)
     parser.add_argument("--pro-compact-reduction-mode", action="store_true")
     parser.add_argument("--patch-continuation-mode", action="store_true")
     parser.add_argument("--force-max-chunk-tokens", type=int, default=0)
+    parser.add_argument("--work-title", default="王者の杖")
+    parser.add_argument("--work-language", default="ja")
+    parser.add_argument("--no-artificial-call-cap", action="store_true")
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
+    global EXPECTED_ROOT
     args = build_parser().parse_args(argv)
+    if str(args.expected_root or "").strip():
+        EXPECTED_ROOT = Path(str(args.expected_root)).resolve()
     if not args.no_write_back:
         raise SystemExit("--no-write-back is required")
 
@@ -116,6 +123,9 @@ def main(argv: list[str] | None = None) -> int:
         patch_continuation_mode=bool(args.patch_continuation_mode),
         provider_call_cap=int(args.max_provider_requests),
         force_max_chunk_tokens=max(0, int(args.force_max_chunk_tokens)),
+        work_title=str(args.work_title),
+        work_language=str(args.work_language),
+        no_artificial_call_cap=bool(args.no_artificial_call_cap),
     )
 
     names = _report_names(prefix=args.report_prefix, suffix=args.report_suffix)
@@ -123,10 +133,10 @@ def main(argv: list[str] | None = None) -> int:
     _write_private(packet_root / "execution_plan_private.md", json.dumps(plan["public_plan"], ensure_ascii=False, indent=2))
     _write_private(packet_root / "chunk_plan_private.md", _private_chunk_plan(plan))
 
-    if plan["public_plan"]["planned_provider_call_count"] > args.max_provider_requests:
+    if not args.no_artificial_call_cap and plan["public_plan"]["planned_provider_call_count"] > args.max_provider_requests:
         _write_blocked_reports(names, plan, reason="planned_provider_call_count_exceeds_cap")
         return 2
-    if plan["public_plan"]["planned_provider_call_count_with_continuation_reserve"] > args.max_provider_requests:
+    if not args.no_artificial_call_cap and plan["public_plan"]["planned_provider_call_count_with_continuation_reserve"] > args.max_provider_requests:
         _write_blocked_reports(names, plan, reason="continuation_reserve_exceeds_cap")
         return 2
     if args.plan_only:
@@ -254,6 +264,9 @@ def _build_execution_plan(
     patch_continuation_mode: bool = False,
     provider_call_cap: int = 24,
     force_max_chunk_tokens: int = 0,
+    work_title: str = "王者の杖",
+    work_language: str = "ja",
+    no_artificial_call_cap: bool = False,
 ) -> dict[str, Any]:
     source_hash = hashlib.sha256(source_text.encode("utf-8", errors="replace")).hexdigest()
     runs: list[dict[str, Any]] = []
@@ -338,6 +351,8 @@ def _build_execution_plan(
                 "force_max_chunk_tokens": force_max_chunk_tokens or None,
                 "natural_max_chunk_tokens": natural_max_chunk_tokens,
                 "natural_chunking_threshold_policy": threshold_policy.to_dict() if threshold_policy is not None else None,
+                "work_title": work_title,
+                "work_language": work_language,
             }
             runs.append(run)
             public_runs.append(_public_run_plan(run))
@@ -356,6 +371,9 @@ def _build_execution_plan(
             "planned_continuation_reserve_calls": continuation_reserve,
             "planned_provider_call_count_with_continuation_reserve": call_count + continuation_reserve,
             "provider_call_cap": provider_call_cap,
+            "no_artificial_call_cap": bool(no_artificial_call_cap),
+            "provider_call_cap_policy": "emergency_loop_guard_only" if no_artificial_call_cap else "blocking_cap",
+            "telemetry_only_estimates": bool(no_artificial_call_cap),
             "pro_compact_reduction_mode": bool(pro_compact_reduction_mode),
             "patch_continuation_mode": bool(patch_continuation_mode),
             "compact_reduction_policy": build_pro_compact_reduction_policy() if pro_compact_reduction_mode else None,
@@ -736,8 +754,8 @@ def _call_chunk(
     title_signals = _extract_title_parse_signals(detected.title)
     prompt = (
         f"{CHAPTER_PARTIAL_EXTRACTION_PROMPT}\n\n"
-        f"WORK_TITLE: 王者の杖\n"
-        f"WORK_LANGUAGE: ja\n\n"
+        f"WORK_TITLE: {run.get('work_title') or '王者の杖'}\n"
+        f"WORK_LANGUAGE: {run.get('work_language') or 'ja'}\n\n"
         f"CHAPTER_ID: {run['chapter']['chapter_id']}\n"
         f"CHUNK_ID: {chunk.chunk_id}\n"
         f"CHAPTER_TITLE: {detected.title}\n\n"
@@ -789,8 +807,8 @@ def _call_reduction(
     chunk_metadata = [chunk.to_dict() for chunk in run["chunks"]]
     prompt = (
         f"{CHAPTER_REDUCTION_PROMPT}\n\n"
-        f"WORK_TITLE: 王者の杖\n"
-        f"WORK_LANGUAGE: ja\n\n"
+        f"WORK_TITLE: {run.get('work_title') or '王者の杖'}\n"
+        f"WORK_LANGUAGE: {run.get('work_language') or 'ja'}\n\n"
         f"CHAPTER_ID: {run['chapter']['chapter_id']}\n"
         f"SEQUENCE_INDEX: {run['chapter']['sequence_index']}\n"
         f"CHAPTER_TITLE: {detected.title}\n\n"

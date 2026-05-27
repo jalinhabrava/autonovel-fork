@@ -1,0 +1,13 @@
+{
+  "assessment": "spanish_20ch_viewer_api_validation_ready",
+  "overview_ok": true,
+  "wiki_ok": true,
+  "graph_ok": true,
+  "node_detail_ok": true,
+  "backlinks_ok": true,
+  "tags_ok": true,
+  "local_graph_ok": true,
+  "artifacts_secondary": true,
+  "writer_outcome_visible": true,
+  "readiness": "ready_for_manual_review"
+}

@@ -15,3 +15,4 @@ seed.txt
 typeset/*.pdf
 typeset/chapters_content.tex
 *.pdf
+docs/handoffs/private/

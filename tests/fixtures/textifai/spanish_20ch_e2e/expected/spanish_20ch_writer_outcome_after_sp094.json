@@ -1,0 +1,123 @@
+{
+  "assessment": "spanish_20ch_writer_outcome_ready",
+  "status": "success_with_retry_available",
+  "total_chapters": 20,
+  "chapters_ready": 3,
+  "chapters_ready_with_warnings": 0,
+  "chapters_needing_review": 0,
+  "chapters_needing_retry": 17,
+  "chapters_failed": 0,
+  "affected_chapters": [
+    {
+      "chapter_id": "ch_001",
+      "chapter_label": "Chapter 001",
+      "status": "needs_retry",
+      "reason_label": "chapter_needs_second_pass"
+    },
+    {
+      "chapter_id": "ch_002",
+      "chapter_label": "Chapter 002",
+      "status": "needs_retry",
+      "reason_label": "chapter_needs_second_pass"
+    },
+    {
+      "chapter_id": "ch_004",
+      "chapter_label": "Chapter 004",
+      "status": "needs_retry",
+      "reason_label": "chapter_needs_second_pass"
+    },
+    {
+      "chapter_id": "ch_005",
+      "chapter_label": "Chapter 005",
+      "status": "needs_retry",
+      "reason_label": "chapter_needs_second_pass"
+    },
+    {
+      "chapter_id": "ch_006",
+      "chapter_label": "Chapter 006",
+      "status": "needs_retry",
+      "reason_label": "chapter_needs_second_pass"
+    },
+    {
+      "chapter_id": "ch_007",
+      "chapter_label": "Chapter 007",
+      "status": "needs_retry",
+      "reason_label": "chapter_needs_second_pass"
+    },
+    {
+      "chapter_id": "ch_008",
+      "chapter_label": "Chapter 008",
+      "status": "needs_retry",
+      "reason_label": "chapter_needs_second_pass"
+    },
+    {
+      "chapter_id": "ch_009",
+      "chapter_label": "Chapter 009",
+      "status": "needs_retry",
+      "reason_label": "chapter_needs_second_pass"
+    },
+    {
+      "chapter_id": "ch_010",
+      "chapter_label": "Chapter 010",
+      "status": "needs_retry",
+      "reason_label": "chapter_needs_second_pass"
+    },
+    {
+      "chapter_id": "ch_011",
+      "chapter_label": "Chapter 011",
+      "status": "needs_retry",
+      "reason_label": "chapter_needs_second_pass"
+    },
+    {
+      "chapter_id": "ch_012",
+      "chapter_label": "Chapter 012",
+      "status": "needs_retry",
+      "reason_label": "chapter_needs_second_pass"
+    },
+    {
+      "chapter_id": "ch_013",
+      "chapter_label": "Chapter 013",
+      "status": "needs_retry",
+      "reason_label": "chapter_needs_second_pass"
+    },
+    {
+      "chapter_id": "ch_015",
+      "chapter_label": "Chapter 015",
+      "status": "needs_retry",
+      "reason_label": "chapter_needs_second_pass"
+    },
+    {
+      "chapter_id": "ch_016",
+      "chapter_label": "Chapter 016",
+      "status": "needs_retry",
+      "reason_label": "chapter_needs_second_pass"
+    },
+    {
+      "chapter_id": "ch_018",
+      "chapter_label": "Chapter 018",
+      "status": "needs_retry",
+      "reason_label": "chapter_needs_second_pass"
+    },
+    {
+      "chapter_id": "ch_019",
+      "chapter_label": "Chapter 019",
+      "status": "needs_retry",
+      "reason_label": "chapter_needs_second_pass"
+    },
+    {
+      "chapter_id": "ch_020",
+      "chapter_label": "Chapter 020",
+      "status": "needs_retry",
+      "reason_label": "chapter_needs_second_pass"
+    }
+  ],
+  "primary_cta": {
+    "label": "Retry pending chapters",
+    "action": "retry_pending_chapters"
+  },
+  "secondary_cta": {
+    "label": "Later",
+    "action": "dismiss"
+  },
+  "user_summary": "3 de 20 capítulos listos. 17 requieren segunda pasada."
+}

@@ -1,0 +1,19 @@
+{
+  "assessment": "spanish_20ch_markdown_materialization_summary_ready",
+  "note_count": 445,
+  "notes_by_kind": {
+    "character": 66,
+    "concept": 137,
+    "event": 95,
+    "object": 66,
+    "place": 61,
+    "chapter": 19,
+    "review": 1
+  },
+  "edge_count": 222,
+  "tag_count": 10,
+  "orphan_note_count": 283,
+  "unresolved_link_count": 401,
+  "editable_policy": "Markdown edits create VaERL patch proposals; VaERL remains source of truth until author confirmation.",
+  "viewer_read_only_note": true
+}

@@ -1,0 +1,15 @@
+{
+  "assessment": "spanish_20ch_vaerl_projection_ready",
+  "entity_count": 425,
+  "chapter_count": 19,
+  "review_item_count": 55,
+  "entity_counts_by_kind": {
+    "character": 66,
+    "concept": 137,
+    "event": 95,
+    "object": 66,
+    "place": 61
+  },
+  "needs_review_entity_count": 0,
+  "relationship_count": 84
+}

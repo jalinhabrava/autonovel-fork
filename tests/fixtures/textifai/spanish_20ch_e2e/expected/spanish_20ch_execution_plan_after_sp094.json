@@ -1,0 +1,62 @@
+{
+  "assessment": "spanish_20ch_execution_plan_ready",
+  "source_path": "/home/david/OnT/ESP 王者の杖 .md",
+  "selected_chapters": [
+    "ch_001",
+    "ch_002",
+    "ch_003",
+    "ch_004",
+    "ch_005",
+    "ch_006",
+    "ch_007",
+    "ch_008",
+    "ch_009",
+    "ch_010",
+    "ch_011",
+    "ch_012",
+    "ch_013",
+    "ch_014",
+    "ch_015",
+    "ch_016",
+    "ch_017",
+    "ch_018",
+    "ch_019",
+    "ch_020"
+  ],
+  "strategy": {
+    "provider": "deepseek",
+    "flash_first": {
+      "model": "deepseek-v4-flash",
+      "phase": "bootstrap_chapter_extraction"
+    },
+    "targeted_pro_conditions": [
+      "flash_invalid_or_unrecoverable_output",
+      "repeated_truncation_or_continuation_failure",
+      "critical_chapter_relation_quality_poor",
+      "source_evidence_coverage_poor"
+    ]
+  },
+  "no_artificial_call_cap": true,
+  "telemetry_only_estimates": true,
+  "emergency_loop_guard": {
+    "enabled": true,
+    "max_provider_requests": 5000
+  },
+  "real_stop_conditions": [
+    "source_missing_or_unreadable",
+    "missing_deepseek_api_key",
+    "auth_error",
+    "credit_exhausted",
+    "persistent_rate_limit",
+    "provider_outage",
+    "persistent_timeout",
+    "source_corrupt_or_undetectable_chapters",
+    "unrecoverable_parse_error",
+    "repeated_invalid_continuation",
+    "unexpected_write_back",
+    "user_cancelled"
+  ],
+  "runtime_root": "/tmp/textifai_private_provider_runs/sp095_spanish_20ch_e2e_vaerl_markdown_viewer/20260527T074727Z",
+  "private_runtime_packet_root": "/tmp/textifai_private_provider_runs/sp095_spanish_20ch_e2e_vaerl_markdown_viewer/20260527T074727Z",
+  "private_handoff_root": "/home/david/projects/autonovel-fork/docs/handoffs/private/safepoint-095_spanish-20ch-vaerl-markdown-viewer-preflight"
+}

@@ -1,0 +1,69 @@
+{
+  "assessment": "spanish_source_preflight_completed",
+  "source_path": "/home/david/OnT/ESP 王者の杖 .md",
+  "source_hash": "9c201c8c9373d2e451a5141f601b7152fedc99f2fb6dbae78998ff8007c69beb",
+  "file_size": 836914,
+  "detected_chapter_count": 115,
+  "selected_chapters": [
+    "ch_001",
+    "ch_002",
+    "ch_003",
+    "ch_004",
+    "ch_005",
+    "ch_006",
+    "ch_007",
+    "ch_008",
+    "ch_009",
+    "ch_010",
+    "ch_011",
+    "ch_012",
+    "ch_013",
+    "ch_014",
+    "ch_015",
+    "ch_016",
+    "ch_017",
+    "ch_018",
+    "ch_019",
+    "ch_020"
+  ],
+  "headings_pattern_summary": {
+    "top_detection_signals": [
+      [
+        "isolated_line",
+        20
+      ],
+      [
+        "markdown_heading",
+        19
+      ],
+      [
+        "numeric_prefix",
+        12
+      ]
+    ],
+    "first_selected_char_counts": [
+      4786,
+      6052,
+      5503,
+      3384,
+      3605,
+      4745,
+      2666,
+      1552,
+      4993,
+      5619,
+      4933,
+      5094,
+      4092,
+      7110,
+      148,
+      3187,
+      7201,
+      4396,
+      3352,
+      2691
+    ]
+  },
+  "source_available": true,
+  "blocking_reason": null
+}

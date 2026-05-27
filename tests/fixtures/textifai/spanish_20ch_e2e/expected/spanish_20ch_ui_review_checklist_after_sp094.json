@@ -1,0 +1,20 @@
+{
+  "assessment": "spanish_20ch_ui_review_checklist_ready",
+  "wiki_visible_navigable": true,
+  "graph_visible": true,
+  "local_graph_available": true,
+  "node_size_by_degree": true,
+  "backlinks_visible": true,
+  "tags_visible": true,
+  "node_detail_useful": true,
+  "artifacts_debug_secondary": true,
+  "author_facing_language": true,
+  "open_design_guidance_used": true,
+  "guidance_sources": [
+    "docs/textifai-design-direction.md",
+    "docs/textifai-ui-review-checklist.md",
+    "docs/textifai-open-design-codex-setup.md"
+  ],
+  "graph_node_count": 445,
+  "graph_edge_count": 222
+}

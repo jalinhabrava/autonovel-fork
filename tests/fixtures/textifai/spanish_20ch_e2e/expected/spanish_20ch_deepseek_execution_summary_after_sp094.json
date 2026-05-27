@@ -1,0 +1,18 @@
+{
+  "assessment": "spanish_20ch_provider_run_completed",
+  "provider_calls_executed": true,
+  "command_exit_code": 0,
+  "duration_seconds": 1434.401,
+  "planned_provider_call_count": 40,
+  "planned_with_continuation_reserve": 60,
+  "actual_provider_call_count": null,
+  "retryable_chapter_count": null,
+  "decision_assessment": "real_deepseek_e2e_validation_passed_ready_for_larger_e2e",
+  "provider_block_reason": null,
+  "usage_rows": 20,
+  "provider_packet_dir": "/tmp/textifai_private_provider_runs/sp095_spanish_20ch_e2e_vaerl_markdown_viewer/20260527T074727Z/provider_runs/20260527T074729Z",
+  "blocked_provider": false,
+  "failure_reason": "",
+  "stdout_tail": "rap_chapter_extraction:oer_focus_v1\nrun 33/40 model=deepseek-v4-flash chapter=ch_017 chunk=source_da40c55d14_ch_017_chunk_001 profile=deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1\nrun 34/40 model=deepseek-v4-flash chapter=ch_017 chunk=reduction profile=deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1\nrun 35/40 model=deepseek-v4-flash chapter=ch_018 chunk=source_da40c55d14_ch_018_chunk_001 profile=deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1\nrun 36/40 model=deepseek-v4-flash chapter=ch_018 chunk=reduction profile=deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1\nrun 37/40 model=deepseek-v4-flash chapter=ch_019 chunk=source_da40c55d14_ch_019_chunk_001 profile=deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1\nrun 38/40 model=deepseek-v4-flash chapter=ch_019 chunk=reduction profile=deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1\nrun 40/40 model=deepseek-v4-flash chapter=ch_020 chunk=source_da40c55d14_ch_020_chunk_001 profile=deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1\nrun 41/40 model=deepseek-v4-flash chapter=ch_020 chunk=reduction profile=deepseek-v4-flash:bootstrap_chapter_extraction:oer_focus_v1\n",
+  "stderr_tail": ""
+}

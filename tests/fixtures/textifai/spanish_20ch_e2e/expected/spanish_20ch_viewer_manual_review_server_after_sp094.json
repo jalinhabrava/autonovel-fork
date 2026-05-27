@@ -1,0 +1,18 @@
+{
+  "assessment": "spanish_20ch_viewer_manual_review_server_ready",
+  "server_started": true,
+  "host": "0.0.0.0",
+  "port": 8872,
+  "local_url": "http://127.0.0.1:8872",
+  "project_id": "tmp__textifai_private_provider_runs__sp095_spanish_20ch_e2e_vaerl_markdown_viewer__20260527T074727Z__viewer_project",
+  "root": "/tmp/textifai_private_provider_runs/sp095_spanish_20ch_e2e_vaerl_markdown_viewer/20260527T074727Z/viewer_project",
+  "stop_command": "kill 319731",
+  "endpoint_status": {
+    "/": 200,
+    "/api/projects": 200,
+    "/api/projects/tmp__textifai_private_provider_runs__sp095_spanish_20ch_e2e_vaerl_markdown_viewer__20260527T074727Z__viewer_project": 200,
+    "/api/projects/tmp__textifai_private_provider_runs__sp095_spanish_20ch_e2e_vaerl_markdown_viewer__20260527T074727Z__viewer_project/graph": 200,
+    "/api/projects/tmp__textifai_private_provider_runs__sp095_spanish_20ch_e2e_vaerl_markdown_viewer__20260527T074727Z__viewer_project/note": 200
+  },
+  "manual_review_required": true
+}
