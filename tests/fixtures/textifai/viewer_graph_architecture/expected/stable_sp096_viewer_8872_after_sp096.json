@@ -1,0 +1,28 @@
+{
+  "8872_serves_sp095": false,
+  "8872_serves_sp096": true,
+  "assessment": "stable_sp096_viewer_8872_ready",
+  "bad_edges_count": 0,
+  "endpoint_status": {
+    "/": true,
+    "/api/projects": true,
+    "/api/projects/<project_id>": true,
+    "/api/projects/<project_id>/graph": true,
+    "/api/projects/<project_id>/note": true
+  },
+  "graph_edge_count": 582,
+  "graph_node_count": 446,
+  "host": "0.0.0.0",
+  "local_url": "http://127.0.0.1:8872/",
+  "log_path": "/tmp/textifai_viewer_8872.log",
+  "manual_review_url": "http://127.0.0.1:8872/",
+  "message": "8872 serves SP-096, not SP-095",
+  "pid": 873490,
+  "pid_path": "/tmp/textifai_viewer_8872.pid",
+  "port": 8872,
+  "project_id": "tmp__textifai_private_provider_runs__sp096_vaerl_entity_quality_viewer_ux_patch__20260527T124326Z__viewer_project",
+  "provider_calls": false,
+  "root": "/tmp/textifai_private_provider_runs/sp096_vaerl_entity_quality_viewer_ux_patch/20260527T124326Z/viewer_project",
+  "stop_command": "kill 873490",
+  "write_back": false
+}

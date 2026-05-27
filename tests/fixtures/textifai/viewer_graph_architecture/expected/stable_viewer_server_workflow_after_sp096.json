@@ -1,0 +1,19 @@
+{
+  "assessment": "stable_viewer_server_workflow_ready",
+  "command": "uv run python scripts/dev/textifai_viewer_dev_server.py --root /tmp/textifai_private_provider_runs/sp096_vaerl_entity_quality_viewer_ux_patch/20260527T124326Z --host 0.0.0.0 --port 8872 --project-id-contains sp096_vaerl_entity_quality_viewer_ux_patch --kill-existing-textifai-viewer",
+  "default_port": 8872,
+  "fixed_dev_port": 8872,
+  "log_path": "/tmp/textifai_viewer_8872.log",
+  "pid_path": "/tmp/textifai_viewer_8872.pid",
+  "refuses_non_textifai_process": true,
+  "supports_kill_existing_textifai_viewer": true,
+  "validates_endpoints": [
+    "/",
+    "/api/projects",
+    "/api/projects/<project_id>",
+    "/api/projects/<project_id>/graph",
+    "/api/projects/<project_id>/note"
+  ],
+  "writes_log_file": true,
+  "writes_pid_file": true
+}

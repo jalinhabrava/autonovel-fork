@@ -801,6 +801,9 @@ def _build_graph_from_markdown_index(project: ProjectRef) -> dict[str, Any] | No
         frontmatter = note.get("frontmatter") if isinstance(note.get("frontmatter"), dict) else {}
         kind = str(node.get("kind") or frontmatter.get("kind") or "note")
         role = "chapter" if kind == "chapter" else "review" if kind == "review" or frontmatter.get("review_state") == "needs_review" else "primary"
+        status = str(frontmatter.get("review_state") or frontmatter.get("status") or role or "ready")
+        degree = int(node.get("degree") or note.get("degree") or 0)
+        visual = _node_visual(kind, frontmatter, degree=degree, role=role)
         nodes.append({
             "id": note_path,
             "label": node.get("label") or frontmatter.get("canonical_label") or Path(note_path).stem,
@@ -808,28 +811,50 @@ def _build_graph_from_markdown_index(project: ProjectRef) -> dict[str, Any] | No
             "role": role,
             "tags": node.get("tags") or note.get("tags") or [],
             "note_path": note_path,
-            "degree": node.get("degree") or note.get("degree") or 0,
-            "size": node.get("size") or 1 + int(node.get("degree") or note.get("degree") or 0),
+            "status": status,
+            "review_state": status,
+            "degree": degree,
+            "size": node.get("size") or 1 + degree,
+            "radius": visual["radius"],
+            "color": visual["kind_color"],
             "frontmatter": frontmatter,
             "backlinks": note.get("backlinks") or [],
             "outgoing_wikilinks": note.get("outgoing_wikilinks") or [],
-            "visual": _node_visual(kind, frontmatter),
+            "visual": visual,
         })
-    edges = [
-        {
+    node_ids = {str(node.get("id") or "") for node in nodes}
+    edges: list[dict[str, Any]] = []
+    seen_edge_ids: dict[str, int] = {}
+    for edge in markdown_index.get("edges") or []:
+        if not isinstance(edge, dict) or edge.get("source") not in node_ids or edge.get("target") not in node_ids:
+            continue
+        label = edge.get("label") or "wikilink"
+        base_edge_id = _edge_id(edge.get("source"), edge.get("target"), label)
+        seen_edge_ids[base_edge_id] = seen_edge_ids.get(base_edge_id, 0) + 1
+        edge_id = base_edge_id if seen_edge_ids[base_edge_id] == 1 else f"{base_edge_id}_{seen_edge_ids[base_edge_id]}"
+        edges.append({
+            "id": edge_id,
             "source": edge.get("source"),
             "target": edge.get("target"),
-            "type": edge.get("label") or "wikilink",
-            "label": edge.get("label") or "wikilink",
-        }
-        for edge in markdown_index.get("edges") or []
-        if isinstance(edge, dict) and edge.get("source") and edge.get("target")
-    ]
+            "source_note_path": edge.get("source"),
+            "target_note_path": edge.get("target"),
+            "type": label,
+            "kind": label,
+            "label": label,
+        })
     return {
         "nodes": nodes,
         "edges": edges,
+        "graph_contract_version": 2,
+        "canonical_redirects": markdown_index.get("canonical_redirects") or {},
         "metadata": {
+            "graph_contract_version": 2,
             "source": "markdown_graph_index",
+            "canonical_redirects": markdown_index.get("canonical_redirects") or {},
+            "local_graph": {
+                "endpoint_contract": "edge.source and edge.target are node.id values",
+                "preserve_valid_endpoints": True,
+            },
             "graph_summary": {
                 "node_count": len(nodes),
                 "edge_count": len(edges),
@@ -863,13 +888,21 @@ def _read_writer_outcome(project: ProjectRef) -> dict[str, Any]:
             return payload
     return {}
 
-def _node_visual(kind: str, frontmatter: dict[str, Any]) -> dict[str, Any]:
+def _node_visual(kind: str, frontmatter: dict[str, Any], *, degree: int = 0, role: str = "primary") -> dict[str, Any]:
     status = str(frontmatter.get("review_state") or frontmatter.get("status") or "ready")
+    base = 13 if kind == "character" else 8 if role == "chapter" else 10 if role == "review" else 11
+    radius = max(base, min(base + int(degree or 0) * 1.45, 26))
     return {
         "kind_color": KIND_VISUALS.get(kind, KIND_VISUALS["concept"])["color"],
         "status_border": STATUS_VISUALS.get(status, STATUS_VISUALS["ready"])["border"],
         "status": status,
+        "radius": radius,
     }
+
+
+def _edge_id(source: Any, target: Any, label: Any) -> str:
+    raw = f"{source or ''}::{label or 'edge'}::{target or ''}"
+    return "edge:" + slugify(raw).strip("_")
 
 
 def _build_graph_from_ingestion_artifact(project: ProjectRef) -> dict[str, Any] | None:

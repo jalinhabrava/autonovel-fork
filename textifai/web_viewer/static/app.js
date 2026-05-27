@@ -2,6 +2,7 @@ const state = {
   projects: [],
   current: null,
   currentId: null,
+  currentVisibleGraph: null,
   activeView: "overview",
   selectedGraphNodeId: null,
   graphAnimation: null,
@@ -3199,7 +3200,7 @@ function renderGraph() {
     cancelAnimationFrame(state.graphAnimation);
     state.graphAnimation = null;
   }
-  const graph = state.current.graph || { nodes: [], edges: [] };
+  const graph = normalizeGraphData(state.current.graph || { nodes: [], edges: [] });
   const hideSystem = $("hide-system").checked;
   const hideReview = $("hide-review").checked;
   const hideChapters = $("hide-chapters").checked;
@@ -3218,27 +3219,108 @@ function renderGraph() {
     $("local-graph-mode").onchange = renderGraph;
   }
   renderGraphTagFilter(tags);
+  state.current.graph = graph;
+  state.current.visibleGraph = buildVisibleGraph(graph, {
+    hideSystem,
+    hideReview,
+    hideChapters,
+    localGraphMode,
+    kindFilter,
+    statusFilter,
+    hiddenTags: state.hiddenGraphTags,
+    selectedGraphNodeId: state.selectedGraphNodeId,
+  });
+  state.currentVisibleGraph = state.current.visibleGraph;
+  drawForceGraph(state.current.visibleGraph);
+}
+
+function normalizeGraphData(rawGraph) {
+  const graph = rawGraph && typeof rawGraph === "object" ? rawGraph : {};
+  const rawNodes = Array.isArray(graph.nodes) ? graph.nodes : [];
+  const rawEdges = Array.isArray(graph.edges) ? graph.edges : [];
+  const nodes = rawNodes.map((node) => {
+    const safeNode = node && typeof node === "object" ? node : {};
+    const degree = Number(safeNode.degree || 0);
+    const radius = Number(safeNode.radius || graphNodeRadius(safeNode));
+    const color = safeNode.color || safeNode.visual?.kind_color || kindColor(safeNode.kind);
+    const status = safeNode.review_state || safeNode.status || safeNode.frontmatter?.review_state || safeNode.frontmatter?.status || safeNode.role || "ready";
+    return {
+      ...safeNode,
+      degree,
+      radius,
+      color,
+      status,
+      review_state: status,
+      note_path: safeNode.note_path || safeNode.id,
+      tags: Array.isArray(safeNode.tags) ? safeNode.tags : [],
+    };
+  });
+  const nodeIds = new Set(nodes.map((node) => node.id));
+  const canonical_redirects = graph.canonical_redirects && typeof graph.canonical_redirects === "object" ? graph.canonical_redirects : {};
+  const edges = rawEdges
+    .map((edge) => {
+      const safeEdge = edge && typeof edge === "object" ? edge : {};
+      return {
+        ...safeEdge,
+        id: safeEdge.id || edgeIdFor(safeEdge),
+        source: safeEdge.source,
+        target: safeEdge.target,
+        kind: safeEdge.kind || safeEdge.type || safeEdge.label || "wikilink",
+        label: safeEdge.label || safeEdge.type || safeEdge.kind || "wikilink",
+      };
+    })
+    .filter((edge) => nodeIds.has(edge.source) && nodeIds.has(edge.target));
+  return {
+    ...graph,
+    graph_contract_version: Number(graph.graph_contract_version || graph.metadata?.graph_contract_version || 2),
+    canonical_redirects,
+    nodes,
+    edges,
+  };
+}
+
+function edgeIdFor(edge) {
+  return `edge:${slugify(`${edge.source || ""}::${edge.label || edge.type || edge.kind || "edge"}::${edge.target || ""}`)}`;
+}
+
+function buildVisibleGraph(graph, options) {
+  const {
+    hideSystem,
+    hideReview,
+    hideChapters,
+    localGraphMode,
+    kindFilter,
+    statusFilter,
+    hiddenTags,
+    selectedGraphNodeId,
+  } = options;
   let visibleNodes = graph.nodes.filter((node) => {
     if (hideSystem && node.role === "system") return false;
     if (hideReview && node.role === "review") return false;
     if (hideChapters && node.role === "chapter") return false;
     if (kindFilter && node.kind !== kindFilter) return false;
-    const nodeStatus = node.frontmatter?.review_state || node.frontmatter?.status || node.role || "";
+    const nodeStatus = node.review_state || node.status || node.frontmatter?.review_state || node.frontmatter?.status || node.role || "";
     if (statusFilter && nodeStatus !== statusFilter) return false;
-    if ((node.tags || []).some((tag) => state.hiddenGraphTags.has(tag))) return false;
+    if ((node.tags || []).some((tag) => hiddenTags.has(tag))) return false;
     return true;
   });
-  if (localGraphMode && state.selectedGraphNodeId) {
-    const neighborIds = new Set([state.selectedGraphNodeId]);
+  if (localGraphMode && selectedGraphNodeId) {
+    const neighborIds = new Set([selectedGraphNodeId]);
     for (const edge of graph.edges || []) {
-      if (edge.source === state.selectedGraphNodeId) neighborIds.add(edge.target);
-      if (edge.target === state.selectedGraphNodeId) neighborIds.add(edge.source);
+      if (edge.source === selectedGraphNodeId) neighborIds.add(edge.target);
+      if (edge.target === selectedGraphNodeId) neighborIds.add(edge.source);
     }
     visibleNodes = visibleNodes.filter((node) => neighborIds.has(node.id));
   }
   const visibleIds = new Set(visibleNodes.map((node) => node.id));
-  const visibleEdges = graph.edges.filter((edge) => visibleIds.has(edge.source) && visibleIds.has(edge.target));
-  drawForceGraph(visibleNodes, visibleEdges);
+  const visibleEdges = (graph.edges || []).filter((edge) => visibleIds.has(edge.source) && visibleIds.has(edge.target));
+  return {
+    nodes: visibleNodes,
+    edges: visibleEdges,
+    edgeById: Object.fromEntries(visibleEdges.map((edge) => [edge.id, edge])),
+    nodeById: Object.fromEntries(visibleNodes.map((node) => [node.id, node])),
+    local_graph: { enabled: Boolean(localGraphMode), center_node_id: selectedGraphNodeId || null },
+  };
 }
 
 function renderGraphTagFilter(tags) {
@@ -3269,30 +3351,52 @@ function renderGraphTagFilter(tags) {
   }
 }
 
-function drawForceGraph(nodes, edges) {
+function drawForceGraph(visibleGraph) {
   const svg = $("graph-svg");
   const width = 1200;
   const height = 720;
-  const byId = seedGraphPositions(nodes, width, height);
-  svg.innerHTML = `
-    <g class="edges"></g>
-    <g class="nodes">
-    ${Object.values(byId).map((node) => `
-      <g class="node ${node.id === state.selectedGraphNodeId ? "selected" : ""}" data-node="${escapeHtml(node.id)}" transform="translate(${node.x}, ${node.y})">
-        <circle r="${graphNodeRadius(node)}" fill="${nodeColor(node)}" stroke="${nodeStatusBorder(node)}"></circle>
-        <text class="node-label ${showNodeLabel(node) ? "" : "is-muted"}" x="${graphNodeRadius(node) + 4}" y="4">${escapeHtml(node.label)}</text>
-      </g>
-    `).join("")}
-    </g>
-  `;
-  const edgeLayer = svg.querySelector(".edges");
-  edgeLayer.innerHTML = edges.map((edge, index) => `<g class="edge-group" data-edge-group="${index}"><line class="edge" data-edge="${index}"><title>${escapeHtml(edge.label || edge.type || "")}</title></line><text class="edge-label hidden">${escapeHtml(edge.label || edge.type || "")}</text></g>`).join("");
+  const layoutState = createGraphLayout(visibleGraph, width, height);
+  const byId = layoutState.byId;
+  svg.innerHTML = renderGraphDom(visibleGraph, layoutState);
   applyGraphViewBox();
   bindGraphViewportHandlers(svg);
+  bindGraphInteractions(svg, visibleGraph, layoutState);
 
+  let tick = 0;
+  const step = () => {
+    tickGraph(layoutState, visibleGraph, tick);
+    updateGraphDom(svg, visibleGraph, layoutState);
+    tick += 1;
+    if (tick < 180) state.graphAnimation = requestAnimationFrame(step);
+  };
+  step();
+  if (state.selectedGraphNodeId && byId[state.selectedGraphNodeId]) {
+    renderGraphNodeDetail(byId[state.selectedGraphNodeId]);
+  }
+}
+
+function renderGraphDom(visibleGraph, layoutState) {
+  const byId = layoutState.byId;
+  return `
+    <g class="edges"></g>
+    <g class="nodes">
+      ${Object.values(byId).map((node) => `
+        <g class="node ${node.id === state.selectedGraphNodeId ? "selected" : ""}" data-node="${escapeHtml(node.id)}" transform="translate(${node.x}, ${node.y})">
+        <circle r="${graphNodeRadius(node)}" fill="${nodeColor(node)}" stroke="${nodeStatusBorder(node)}"></circle>
+        <text class="node-label ${showNodeLabel(node) ? "" : "is-muted"}" x="${graphNodeRadius(node) + 4}" y="4">${escapeHtml(node.label)}</text>
+        </g>
+      `).join("")}
+    </g>
+  `;
+}
+
+function bindGraphInteractions(svg, visibleGraph, layoutState) {
+  const byId = layoutState.byId;
+  const edgeLayer = svg.querySelector(".edges");
+  edgeLayer.innerHTML = visibleGraph.edges.map((edge) => `<g class="edge-group" data-edge-group-id="${escapeHtml(edge.id)}"><line class="edge" data-edge-id="${escapeHtml(edge.id)}"><title>${escapeHtml(edge.label || edge.type || "")}</title></line><text class="edge-label hidden">${escapeHtml(edge.label || edge.type || "")}</text></g>`).join("");
   svg.querySelectorAll("[data-node]").forEach((nodeEl) => {
     const node = byId[nodeEl.dataset.node];
-    bindNodeDrag(nodeEl, node, byId, svg);
+    bindNodeDrag(nodeEl, node, layoutState, svg);
     nodeEl.addEventListener("click", (event) => {
       event.stopPropagation();
       if (state.graphDidDragNode) {
@@ -3306,18 +3410,15 @@ function drawForceGraph(nodes, edges) {
       selectGraphNode(node.id, { pushHistory: true });
     });
   });
+}
 
-  let tick = 0;
-  const step = () => {
-    runForceTick(byId, edges, width, height, tick);
-    updateGraphDom(svg, byId, edges);
-    tick += 1;
-    if (tick < 180) state.graphAnimation = requestAnimationFrame(step);
-  };
-  step();
-  if (state.selectedGraphNodeId && byId[state.selectedGraphNodeId]) {
-    renderGraphNodeDetail(byId[state.selectedGraphNodeId]);
-  }
+function createGraphLayout(visibleGraph, width, height) {
+  const byId = seedGraphPositions(visibleGraph.nodes, width, height);
+  return { width, height, byId, warnings: [], edgeWarnings: 0 };
+}
+
+function tickGraph(layoutState, visibleGraph, tick) {
+  runForceTick(layoutState.byId, visibleGraph.edges, layoutState.width, layoutState.height, tick);
 }
 
 function seedGraphPositions(nodes, width, height) {
@@ -3384,18 +3485,25 @@ function runForceTick(byId, edges, width, height, tick) {
   }
 }
 
-function updateGraphDom(svg, byId, edges) {
-  svg.querySelectorAll("[data-edge]").forEach((line) => {
-    const edge = edges[Number(line.dataset.edge)];
+function updateGraphDom(svg, visibleGraph, layoutState) {
+  const byId = layoutState.byId;
+  const edgeById = visibleGraph.edgeById || Object.fromEntries((visibleGraph.edges || []).map((edge) => [edge.id, edge]));
+  svg.querySelectorAll("[data-edge-id]").forEach((line) => {
+    const edge = edgeById[line.dataset.edgeId];
+    if (!edge) return;
     const a = byId[edge.source], b = byId[edge.target];
-    if (!a || !b) return;
+    if (!a || !b) {
+      layoutState.edgeWarnings += 1;
+      return;
+    }
     line.setAttribute("x1", a.x);
     line.setAttribute("y1", a.y);
     line.setAttribute("x2", b.x);
     line.setAttribute("y2", b.y);
   });
-  svg.querySelectorAll("[data-edge-group]").forEach((groupEl) => {
-    const edge = edges[Number(groupEl.dataset.edgeGroup)];
+  svg.querySelectorAll("[data-edge-group-id]").forEach((groupEl) => {
+    const edge = edgeById[groupEl.dataset.edgeGroupId];
+    if (!edge) return;
     const a = byId[edge.source], b = byId[edge.target];
     if (!a || !b) return;
     const label = groupEl.querySelector(".edge-label");
@@ -3415,6 +3523,7 @@ function updateGraphDom(svg, byId, edges) {
 }
 
 function graphNodeRadius(node) {
+  if (Number(node.radius || 0) > 0) return Number(node.radius);
   const degree = Number(node.degree || 0);
   const base = node.kind === "character" ? 13 : node.role === "chapter" ? 8 : node.role === "review" ? 10 : 11;
   return Math.max(base, Math.min(base + degree * 1.45, 26));
@@ -3424,7 +3533,7 @@ function showNodeLabel(node) {
   return node.id === state.selectedGraphNodeId || node.kind === "character" || Number(node.degree || 0) >= 5;
 }
 
-function bindNodeDrag(nodeEl, node, byId, svg) {
+function bindNodeDrag(nodeEl, node, layoutState, svg) {
   if (!node) return;
   nodeEl.onpointerdown = (event) => {
     event.stopPropagation();
@@ -3441,10 +3550,10 @@ function bindNodeDrag(nodeEl, node, byId, svg) {
     node.vy = 0;
     node.pinned = true;
     state.graphDidDragNode = true;
-    updateGraphDom(svg, byId, (state.current.graph || {}).edges || []);
+    updateGraphDom(svg, state.current.visibleGraph || state.currentVisibleGraph || { edges: [] }, layoutState);
   };
-  nodeEl.onpointerup = (event) => finishNodeDrag(nodeEl, event.pointerId, byId);
-  nodeEl.onpointercancel = (event) => finishNodeDrag(nodeEl, event.pointerId, byId);
+  nodeEl.onpointerup = (event) => finishNodeDrag(nodeEl, event.pointerId, layoutState.byId);
+  nodeEl.onpointercancel = (event) => finishNodeDrag(nodeEl, event.pointerId, layoutState.byId);
 }
 
 function finishNodeDrag(nodeEl, pointerId, byId) {
@@ -3827,6 +3936,15 @@ function nodeColor(node) {
 
 function kindColor(kind) {
   return KIND_COLORS[String(kind || "concept")] || KIND_COLORS.concept;
+}
+
+function slugify(value) {
+  return String(value || "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .toLowerCase();
 }
 
 function nodeStatusBorder(node) {

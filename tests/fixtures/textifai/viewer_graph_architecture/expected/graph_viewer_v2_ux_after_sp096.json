@@ -1,0 +1,12 @@
+{
+  "adaptive_labels": true,
+  "assessment": "graph_viewer_v2_ux_ready",
+  "center_force": true,
+  "character_high_degree_centering_bias": true,
+  "collision_no_overlap_reasonable": true,
+  "drag_pin_keeps_edges_attached": true,
+  "edge_labels_contextual": true,
+  "legend_status_intact": true,
+  "link_distance": true,
+  "reset_layout_recomputes": true
+}

@@ -1,0 +1,30 @@
+{
+  "acceptance_criteria": [
+    "8872 serves SP-096",
+    "edges connect by edge.id",
+    "local/global graph valid",
+    "drag keeps lines attached",
+    "no provider calls"
+  ],
+  "assessment": "quartz_obsidian_graph_pattern_adr_ready",
+  "d3_force_future_decision": "Request separate ACK before touching package.json/package-lock.json.",
+  "patterns_adopted": [
+    "global graph",
+    "local graph",
+    "degree radius",
+    "center/repel/link forces",
+    "drag/pin",
+    "zoom/pan",
+    "adaptive labels",
+    "kind/status filters",
+    "recent/internal navigation"
+  ],
+  "patterns_deferred": [
+    "radial graph mode",
+    "D3-force dependency",
+    "canvas renderer",
+    "hover-rich edge cards"
+  ],
+  "why_native_textifai_viewer": "Author canon review needs product-specific statuses, canonical redirects, writer outcome, and future write-back approval.",
+  "why_not_quartz_runtime": "TextifAI viewer must stay first-party and integrated with VaERL/Markdown/editor flows."
+}

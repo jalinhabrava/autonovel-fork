@@ -1,0 +1,11 @@
+{
+  "8872_listening": true,
+  "8872_process_cmd": "david     319771  0.0  0.2 222872 33920 pts/2    Ssl+ 10:20   0:00 uv run python -m textifai.web_viewer.server --root /tmp/textifai_private_provider_runs/sp095_spanish_20ch_e2e_vaerl_markdown_viewer/20260527T074727Z/viewer_project --host 0.0.0.0 --port 8872\ndavid     319774  0.0  0.3 206168 62492 pts/2    S+   10:20   0:04 /home/david/projects/autonovel-fork/.venv/bin/python3 -m textifai.web_viewer.server --root /tmp/textifai_private_provider_runs/sp095_spanish_20ch_e2e_vaerl_markdown_viewer/20260527T074727Z/viewer_project --host 0.0.0.0 --port 8872",
+  "8872_project_id": "tmp__textifai_private_provider_runs__sp095_spanish_20ch_e2e_vaerl_markdown_viewer__20260527T074727Z__viewer_project",
+  "8872_root_detected": "/tmp/textifai_private_provider_runs/sp095_spanish_20ch_e2e_vaerl_markdown_viewer/20260527T074727Z/viewer_project",
+  "8872_serves_sp095_or_sp096": "sp095",
+  "8873_listening": false,
+  "8873_process_cmd": "",
+  "action_needed": "restart fixed port 8872 with SP-096 root",
+  "assessment": "stable_viewer_server_diagnosis_ready"
+}

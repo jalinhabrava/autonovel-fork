@@ -1,0 +1,20 @@
+{
+  "assessment": "native_graph_engine_v2_ready",
+  "external_dependency_added": false,
+  "future_d3_force_candidate": true,
+  "graph_engine_functions": [
+    "normalizeGraphData",
+    "buildVisibleGraph",
+    "createGraphLayout",
+    "tickGraph",
+    "renderGraphDom",
+    "updateGraphDom",
+    "bindGraphInteractions"
+  ],
+  "interaction_strategy": "custom pointer drag/pin, viewBox pan/zoom, localStorage positions",
+  "layout_strategy": "internal force simulation with center, repel, link distance, collision, character/high-degree bias",
+  "limits": [
+    "custom SVG remains less scalable than D3-force/canvas for very large graphs"
+  ],
+  "renderer": "svg"
+}
