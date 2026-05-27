@@ -1,0 +1,13 @@
+{
+  "assessment": "author_workspace_stabilization_ready_for_manual_review",
+  "product_decision": "author_workspace_stabilization_ready_for_manual_review",
+  "manual_review_url": "http://127.0.0.1:8872/",
+  "project_id": "tmp__textifai_private_provider_runs__sp096_vaerl_entity_quality_viewer_ux_patch__20260527T124326Z__viewer_project",
+  "default_node_count": 67,
+  "full_node_count": 446,
+  "locale": "es",
+  "d3_force_active": true,
+  "provider_calls": false,
+  "package_changes": false,
+  "write_back": false
+}

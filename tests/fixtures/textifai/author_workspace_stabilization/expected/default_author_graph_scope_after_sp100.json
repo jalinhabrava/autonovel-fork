@@ -1,0 +1,23 @@
+{
+  "assessment": "author_workspace_stabilization_ready_for_manual_review",
+  "full_node_count": 446,
+  "full_edge_count": 582,
+  "default_node_count": 67,
+  "default_edge_count": 67,
+  "target_range": [
+    40,
+    80
+  ],
+  "hidden_by_default": [
+    "chapters",
+    "review",
+    "system",
+    "redirected_duplicates",
+    "low_degree_entities",
+    "low_degree_concepts"
+  ],
+  "show_all_toggle_present": true,
+  "chapters_hidden_by_default": true,
+  "redirected_duplicates_collapsed": true,
+  "concepts_policy": "show only non-redirected concepts with degree >= 8"
+}

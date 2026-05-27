@@ -1,0 +1,18 @@
+{
+  "assessment": "author_workspace_stabilization_ready_for_manual_review",
+  "d3_force_active": true,
+  "density_root_cause_scope_not_physics": true,
+  "layout_adjustments": [
+    "default author scope",
+    "redirect collapse",
+    "fit after simulation",
+    "labels adaptive"
+  ],
+  "labels_policy": [
+    "selected",
+    "hover",
+    "high-degree",
+    "important characters"
+  ],
+  "no_engine_change": true
+}

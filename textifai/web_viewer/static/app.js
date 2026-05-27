@@ -13,6 +13,7 @@ const state = {
   graphDidPan: false,
   graphDidDragNode: false,
   graphDrag: null,
+  graphShowAllNodes: false,
   hiddenGraphTags: new Set(),
   wikiFilters: { query: "", kind: "", tag: "", status: "" },
   selectedCanonEntityKey: null,
@@ -80,8 +81,14 @@ const I18N = {
     hideReview: "Hide review",
     hideChapters: "Hide chapters",
     localGraph: "Local graph",
+    showAllNodes: "Show all nodes",
     resetLayout: "Reset layout",
+    zoomIn: "Zoom +",
+    zoomOut: "Zoom -",
+    openInCanon: "Open in Canon",
+    clearHiddenTags: "clear {count}",
     selectNode: "Select a node to inspect.",
+    selectArtifact: "Select an artifact.",
     summary: "Bio / Summary",
     facts: "Key facts",
     storyRelationships: "Story relationships",
@@ -153,8 +160,14 @@ const I18N = {
     hideReview: "Ocultar revisión",
     hideChapters: "Ocultar capítulos",
     localGraph: "Grafo local",
+    showAllNodes: "Mostrar todo",
     resetLayout: "Reiniciar layout",
+    zoomIn: "Zoom +",
+    zoomOut: "Zoom -",
+    openInCanon: "Abrir en canon",
+    clearHiddenTags: "limpiar {count}",
     selectNode: "Selecciona un nodo para revisar.",
+    selectArtifact: "Selecciona un artefacto.",
     summary: "Bio / Resumen",
     facts: "Datos clave",
     storyRelationships: "Relaciones narrativas",
@@ -314,13 +327,49 @@ function t(key, vars = {}) {
   return String(template).replace(/\{(\w+)\}/g, (_match, name) => String(vars[name] ?? ""));
 }
 
+function localeFromLanguage(value) {
+  const language = String(value || "").toLowerCase();
+  if (language.startsWith("es")) return "es";
+  if (language.startsWith("en")) return "en";
+  return "";
+}
+
 function detectLocale(project = null) {
-  const workLanguage = String(project?.work?.language || project?.work?.primary_language || "").toLowerCase();
-  if (workLanguage.startsWith("es")) return "es";
-  if (workLanguage.startsWith("en")) return "en";
+  const candidates = [
+    project?.work?.language,
+    project?.work?.primary_language,
+    state.current?.project?.work?.language,
+    state.current?.project?.work?.primary_language,
+    state.current?.canon?.work?.language,
+    state.current?.canon?.work?.primary_language,
+    preferredProject(state.projects || [])?.work?.language,
+    preferredProject(state.projects || [])?.work?.primary_language,
+  ];
+  for (const candidate of candidates) {
+    const locale = localeFromLanguage(candidate);
+    if (locale) return locale;
+  }
   const navLanguage = String(navigator.language || "en").toLowerCase();
   if (navLanguage.startsWith("es")) return "es";
   return "en";
+}
+
+function projectTitle(project = {}, current = state.current) {
+  return current?.canon?.work?.title
+    || project?.work?.title
+    || project?.name
+    || t('selectProject');
+}
+
+function kindLabel(kind) {
+  const normalized = String(kind || '').toLowerCase();
+  if (normalized === 'character') return t('kindCharacter');
+  if (normalized === 'place') return t('kindPlace');
+  if (normalized === 'event') return t('kindEvent');
+  if (normalized === 'object') return t('kindObject');
+  if (normalized === 'concept') return t('kindConcept');
+  if (normalized === 'review') return t('kindReview');
+  return normalized || '—';
 }
 
 function applyStaticTranslations() {
@@ -346,14 +395,18 @@ function applyStaticTranslations() {
   $("label-hide-review").textContent = t('hideReview');
   $("label-hide-chapters").textContent = t('hideChapters');
   $("label-local-graph").textContent = t('localGraph');
+  if ($("label-show-all-nodes")) $("label-show-all-nodes").textContent = t('showAllNodes');
   $("legend-character").textContent = t('kindCharacter');
   $("legend-place").textContent = t('kindPlace');
   $("legend-event").textContent = t('kindEvent');
   $("legend-object").textContent = t('kindObject');
   $("legend-concept").textContent = t('kindConcept');
   $("legend-review").textContent = t('kindReview');
+  if ($("graph-zoom-in")) $("graph-zoom-in").textContent = t('zoomIn');
+  if ($("graph-zoom-out")) $("graph-zoom-out").textContent = t('zoomOut');
   $("graph-zoom-reset").textContent = t('resetLayout');
   if (!state.current) $("graph-detail").textContent = t('selectNode');
+  if ($("artifact-detail") && !state.current) $("artifact-detail").textContent = t('selectArtifact');
 }
 
 function preferredProject(projects) {
@@ -472,11 +525,13 @@ async function selectProject(projectId, options = {}) {
   state.viewerNavBack = [];
   state.viewerNavForward = [];
   state.viewerRecent = [];
+  state.graphShowAllNodes = false;
   if (state.current && state.current.graph) state.current.graphDetailPath = "";
   if (options.notice) setNavNotice(options.notice, "info");
   else if (!options.preserveNotice) state.navNotice = null;
   resetGraphViewBox();
   $("graph-kind-filter").dataset.ready = "";
+  if ($("show-all-nodes")) $("show-all-nodes").checked = false;
   renderProjects();
   renderCurrentProject();
 }
@@ -3448,18 +3503,21 @@ function renderGraph() {
   const hideReview = $("hide-review").checked;
   const hideChapters = $("hide-chapters").checked;
   const localGraphMode = $("local-graph-mode")?.checked;
+  const showAllNodes = $("show-all-nodes")?.checked || false;
+  state.graphShowAllNodes = showAllNodes;
   const kindFilter = $("graph-kind-filter").value;
   const statusFilter = $("graph-status-filter").value;
-  const kinds = [...new Set(graph.nodes.map((node) => node.kind).filter(Boolean))].sort();
+  const kinds = [...new Set(graph.nodes.map((node) => node.display_kind || node.canonical_kind || node.kind).filter(Boolean))].sort();
   const tags = [...new Set(graph.nodes.flatMap((node) => node.tags || []))].sort();
   const statuses = [...new Set(graph.nodes.map((node) => node.frontmatter?.review_state || node.frontmatter?.status || node.role).filter(Boolean))].sort();
   if (!$("graph-kind-filter").dataset.ready) {
-    $("graph-kind-filter").innerHTML = `<option value="">${escapeHtml(t('allKinds'))}</option>${kinds.map((kind) => `<option value="${escapeHtml(kind)}">${escapeHtml(kind)}</option>`).join("")}`;
+    $("graph-kind-filter").innerHTML = `<option value="">${escapeHtml(t('allKinds'))}</option>${kinds.map((kind) => `<option value="${escapeHtml(kind)}">${escapeHtml(kindLabel(kind))}</option>`).join("")}`;
     $("graph-status-filter").innerHTML = `<option value="">${escapeHtml(t('allStatus'))}</option>${statuses.map((status) => `<option value="${escapeHtml(status)}">${escapeHtml(status)}</option>`).join("")}`;
     $("graph-kind-filter").dataset.ready = "1";
     $("graph-kind-filter").onchange = renderGraph;
     $("graph-status-filter").onchange = renderGraph;
     $("local-graph-mode").onchange = renderGraph;
+    $("show-all-nodes").onchange = renderGraph;
   }
   renderGraphTagFilter(tags);
   state.current.graph = graph;
@@ -3467,6 +3525,7 @@ function renderGraph() {
     hideSystem,
     hideReview,
     hideChapters,
+    showAllNodes,
     localGraphMode,
     kindFilter,
     statusFilter,
@@ -3495,6 +3554,9 @@ function normalizeGraphData(rawGraph) {
       status,
       review_state: status,
       note_path: safeNode.note_path || safeNode.id,
+      canonical_kind: safeNode.canonical_kind || safeNode.display_kind || safeNode.kind,
+      display_kind: safeNode.display_kind || safeNode.canonical_kind || safeNode.kind,
+      canonical_degree: Number(safeNode.canonical_degree ?? degree),
       tags: Array.isArray(safeNode.tags) ? safeNode.tags : [],
     };
   });
@@ -3548,22 +3610,51 @@ function edgeIdFor(edge) {
   return `edge:${slugify(`${edge.source || ""}::${edge.label || edge.type || edge.kind || "edge"}::${edge.target || ""}`)}`;
 }
 
+function collapseGraphEdges(edges, redirects) {
+  const deduped = new Map();
+  for (const edge of edges || []) {
+    const source = redirects[edge.source] || edge.source;
+    const target = redirects[edge.target] || edge.target;
+    if (!source || !target || source === target) continue;
+    const normalized = {
+      ...edge,
+      source,
+      target,
+      id: edgeIdFor({ source, target, label: edge.label || edge.type || edge.kind || "wikilink" }),
+    };
+    if (!deduped.has(normalized.id)) deduped.set(normalized.id, normalized);
+  }
+  return [...deduped.values()];
+}
+
 function buildVisibleGraph(graph, options) {
   const {
     hideSystem,
     hideReview,
     hideChapters,
+    showAllNodes,
     localGraphMode,
     kindFilter,
     statusFilter,
     hiddenTags,
     selectedGraphNodeId,
   } = options;
+  const redirects = graph.canonical_redirects || {};
+  const scopedEdges = showAllNodes ? (graph.edges || []) : collapseGraphEdges(graph.edges || [], redirects);
   let visibleNodes = graph.nodes.filter((node) => {
+    const filterKind = node.display_kind || node.canonical_kind || node.kind;
+    const degree = Number(node.canonical_degree ?? node.degree ?? 0);
     if (hideSystem && node.role === "system") return false;
     if (hideReview && node.role === "review") return false;
     if (hideChapters && node.role === "chapter") return false;
-    if (kindFilter && node.kind !== kindFilter) return false;
+    if (!showAllNodes) {
+      if (node.canonical_redirected) return false;
+      if (node.role === "review" || node.kind === "review") return false;
+      if (node.role === "chapter" || node.kind === "chapter") return false;
+      if (["character", "place", "object", "event"].includes(filterKind) && degree < 2) return false;
+      if (filterKind === "concept" && degree < 8) return false;
+    }
+    if (kindFilter && filterKind !== kindFilter) return false;
     const nodeStatus = node.review_state || node.status || node.frontmatter?.review_state || node.frontmatter?.status || node.role || "";
     if (statusFilter && nodeStatus !== statusFilter) return false;
     if ((node.tags || []).some((tag) => hiddenTags.has(tag))) return false;
@@ -3571,14 +3662,14 @@ function buildVisibleGraph(graph, options) {
   });
   if (localGraphMode && selectedGraphNodeId) {
     const neighborIds = new Set([selectedGraphNodeId]);
-    for (const edge of graph.edges || []) {
+    for (const edge of scopedEdges) {
       if (edge.source === selectedGraphNodeId) neighborIds.add(edge.target);
       if (edge.target === selectedGraphNodeId) neighborIds.add(edge.source);
     }
     visibleNodes = visibleNodes.filter((node) => neighborIds.has(node.id));
   }
   const visibleIds = new Set(visibleNodes.map((node) => node.id));
-  const visibleEdges = (graph.edges || []).filter((edge) => visibleIds.has(edge.source) && visibleIds.has(edge.target));
+  const visibleEdges = scopedEdges.filter((edge) => visibleIds.has(edge.source) && visibleIds.has(edge.target));
   return {
     nodes: visibleNodes,
     edges: visibleEdges,
@@ -3597,7 +3688,7 @@ function renderGraphTagFilter(tags) {
     ${tags.map((tag) => `
       <button type="button" class="tag-chip ${state.hiddenGraphTags.has(tag) ? "active" : ""}" data-graph-tag="${escapeHtml(tag)}">${escapeHtml(tag)}</button>
     `).join("")}
-    ${activeCount ? `<button type="button" class="tag-chip clear" id="clear-graph-tags">clear ${activeCount}</button>` : ""}
+    ${activeCount ? `<button type="button" class="tag-chip clear" id="clear-graph-tags">${escapeHtml(t('clearHiddenTags', { count: activeCount }))}</button>` : ""}
   `;
   container.querySelectorAll("[data-graph-tag]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -3904,8 +3995,10 @@ async function openGraphNote(path, nodeId = null, { pushHistory = true } = {}) {
   const local = data.local_graph || {};
   const markdownText = String(data.markdown || "");
   const sections = parseMarkdownSections(markdownText);
-  const hasSummary = Boolean(sections.summary);
-  const hasFacts = sections.facts.length > 0;
+  const fallbackSummary = summaryNode.summary_excerpt || "";
+  const fallbackFacts = summaryNode.key_facts_preview || [];
+  const hasSummary = Boolean(sections.summary || fallbackSummary);
+  const hasFacts = sections.facts.length > 0 || fallbackFacts.length > 0;
   const hasRelationships = sections.relationships.length > 0;
   const hasEvidence = sections.evidence.length > 0;
   const chapterIds = data.frontmatter?.chapter_ids || [];
@@ -3920,9 +4013,9 @@ async function openGraphNote(path, nodeId = null, { pushHistory = true } = {}) {
     <p class="muted">${escapeHtml(t('degree'))} ${escapeHtml(fmtCount(data.degree || 0))}</p>
     <p>${(data.tags || []).map((tag) => `<span class="badge tag-badge">${escapeHtml(tag)}</span>`).join("")}</p>
     <h4>${escapeHtml(t('summary'))}</h4>
-    ${hasSummary ? `<p>${escapeHtml(sections.summary)}</p>` : `<p class="note-fallback">${escapeHtml(t('noSummary'))}</p>`}
+    ${hasSummary ? `<p>${escapeHtml(sections.summary || fallbackSummary)}</p>` : `<p class="note-fallback">${escapeHtml(t('noSummary'))}</p>`}
     <h4>${escapeHtml(t('facts'))}</h4>
-    ${hasFacts ? `<ul>${sections.facts.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : `<p class="muted">${escapeHtml(t('noFacts'))}</p>`}
+    ${hasFacts ? `<ul>${(sections.facts.length ? sections.facts : fallbackFacts).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : `<p class="muted">${escapeHtml(t('noFacts'))}</p>`}
     <h4>${escapeHtml(t('storyRelationships'))}</h4>
     ${hasRelationships ? `<ul>${sections.relationships.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : `<p class="muted">—</p>`}
     <h4>${escapeHtml(t('appearancesEvidence'))}</h4>
@@ -3959,17 +4052,17 @@ function graphNodeSummary(node) {
     <article class="inspector-card narrative-card">
       <header>
         <h3>${escapeHtml(node.label || "Unresolved")}</h3>
-        <p><span class="badge kind-badge kind-${escapeHtml(String(node.kind || 'unknown').toLowerCase())}">${escapeHtml(node.kind || "unknown")}</span> <span class="badge">${escapeHtml(node.role || "unknown")}</span></p>
+        <p><span class="badge kind-badge kind-${escapeHtml(String(node.display_kind || node.canonical_kind || node.kind || 'unknown').toLowerCase())}">${escapeHtml(kindLabel(node.display_kind || node.canonical_kind || node.kind || "unknown"))}</span> <span class="badge">${escapeHtml(node.role || "unknown")}</span></p>
       </header>
-      <section><h4>${escapeHtml(t('summary'))}</h4><p>${escapeHtml(entity.summary || node.summary || t('noSummary'))}</p></section>
-      <section><h4>${escapeHtml(t('facts'))}</h4>${(entity.facts || entity.key_facts || []).length ? `<ul>${(entity.facts || entity.key_facts || []).slice(0, 12).map((fact) => `<li>${escapeHtml(String(fact))}</li>`).join('')}</ul>` : `<p class="muted">${escapeHtml(t('noFacts'))}</p>`}</section>
+      <section><h4>${escapeHtml(t('summary'))}</h4><p>${escapeHtml(entity.summary || node.summary || node.summary_excerpt || t('noSummary'))}</p></section>
+      <section><h4>${escapeHtml(t('facts'))}</h4>${(entity.facts || entity.key_facts || node.key_facts_preview || []).length ? `<ul>${(entity.facts || entity.key_facts || node.key_facts_preview || []).slice(0, 12).map((fact) => `<li>${escapeHtml(String(fact))}</li>`).join('')}</ul>` : `<p class="muted">${escapeHtml(t('noFacts'))}</p>`}</section>
       <section><h4>${escapeHtml(t('storyRelationships'))}</h4>${(entity.relationships || []).length ? `<ul>${(entity.relationships || []).slice(0, 10).map((rel) => `<li>${escapeHtml(rel.target || rel.source || '')}${rel.type || rel.relation_type ? ` (${escapeHtml(rel.type || rel.relation_type)})` : ''}</li>`).join('')}</ul>` : `<p class="muted">—</p>`}</section>
       <section><h4>${escapeHtml(t('appearancesEvidence'))}</h4>${(entity.evidence_refs || []).length ? `<ul>${(entity.evidence_refs || []).slice(0, 10).map((ref) => `<li>${escapeHtml(ref.chapter_id || 'chapter')}${ref.pointer ? ` · ${escapeHtml(ref.pointer)}` : ''}</li>`).join('')}</ul>` : `<p class="muted">${escapeHtml(t('evidence'))}</p>`}</section>
       <section><h4>${escapeHtml(t('backlinks'))}</h4><p class="muted">${escapeHtml(fmtCount((node.backlinks || []).length))}</p></section>
       <div class="nav-actions">
         <button type="button" data-graph-nav-back ${state.viewerNavBack.length < 2 ? "disabled" : ""}>${escapeHtml(t('back'))}</button>
         <button type="button" data-graph-nav-forward ${state.viewerNavForward.length < 1 ? "disabled" : ""}>${escapeHtml(t('forward'))}</button>
-        ${canonLabel ? `<button type="button" data-graph-open-canon="${escapeHtml(canonLabel)}">Open in Canon</button>` : ""}
+        ${canonLabel ? `<button type="button" data-graph-open-canon="${escapeHtml(canonLabel)}">${escapeHtml(t('openInCanon'))}</button>` : ""}
         ${hasReviewContext ? `<button type="button" data-graph-open-review="${escapeHtml(reviewLabel)}">${escapeHtml(t('openReview'))}</button>` : ""}
         ${showOpenNote ? `<button type="button" data-graph-open-note="${escapeHtml(canonicalNotePath)}">${escapeHtml(t('viewInWiki'))}</button>` : ""}
       </div>

@@ -1,0 +1,10 @@
+{
+  "assessment": "author_workspace_stabilization_ready_for_manual_review",
+  "root_cause": "renderOverview called projectTitle before helper existed",
+  "file": "textifai/web_viewer/static/app.js",
+  "line_or_symbol": "projectTitle",
+  "fixed": true,
+  "helper_exists": true,
+  "load_projects_no_longer_throws": true,
+  "project_count_visible": 2
+}

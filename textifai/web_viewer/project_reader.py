@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -205,6 +206,7 @@ def read_project(project: ProjectRef) -> dict[str, Any]:
             "kind": project.kind,
             "root": str(project.root),
             "system_root": str(project.system_root) if project.system_root else None,
+            "work": canon.get("work") if isinstance(canon.get("work"), dict) else {},
         },
         "notes": list_notes(project.root, markdown_manifest=markdown_manifest, markdown_index=markdown_graph_index),
         "markdown_manifest": markdown_manifest,
@@ -280,6 +282,7 @@ def read_note(project: ProjectRef, note_path: str) -> dict[str, Any]:
         "path": rel,
         "markdown": text,
         "frontmatter": frontmatter,
+        "content_hydration": _markdown_content_hydration(text),
         "links": extract_obsidian_links(text),
         "tags": indexed_note.get("tags") or _tags_from_frontmatter(frontmatter),
         "backlinks": indexed_note.get("backlinks") or [],
@@ -288,6 +291,45 @@ def read_note(project: ProjectRef, note_path: str) -> dict[str, Any]:
         "local_graph": local_graph(markdown_index, rel, depth=1) if isinstance(markdown_index, dict) and markdown_index.get("nodes") else {},
     }
 
+
+
+def _markdown_content_hydration(markdown_text: str) -> dict[str, Any]:
+    sections: dict[str, Any] = {"summary": "", "facts": [], "relationships": [], "evidence": []}
+    current = ""
+    for raw_line in str(markdown_text or "").splitlines():
+        line = raw_line.strip()
+        if line.startswith("## "):
+            heading = _key(line[3:])
+            if "summary" in heading:
+                current = "summary"
+            elif "fact" in heading:
+                current = "facts"
+            elif "relationship" in heading or "relacion" in heading:
+                current = "relationships"
+            elif "evidence" in heading or "evidencia" in heading:
+                current = "evidence"
+            else:
+                current = ""
+            continue
+        if not current or not line or line.startswith("<!--") or line == "---":
+            continue
+        cleaned = re.sub(r"^[-*]\s+", "", line).strip()
+        cleaned = re.sub(r"\[\[([^\]|]+)(?:\|[^\]]+)?\]\]", r"\1", cleaned)
+        if not cleaned:
+            continue
+        if current == "summary":
+            sections["summary"] = " ".join(part for part in [sections["summary"], cleaned] if part)
+        else:
+            sections[current].append(cleaned)
+    summary = str(sections["summary"] or "").strip()
+    facts = [str(item) for item in sections["facts"][:8]]
+    return {
+        "summary_excerpt": summary[:420],
+        "key_facts_count": len(sections["facts"]),
+        "key_facts_preview": facts,
+        "relationship_count": len(sections["relationships"]),
+        "evidence_count": len(sections["evidence"]),
+    }
 
 def read_canon(project: ProjectRef) -> dict[str, Any]:
     system = project.system_root
@@ -803,6 +845,7 @@ def _build_graph_from_markdown_index(project: ProjectRef) -> dict[str, Any] | No
         for note in markdown_index.get("notes") or []
         if isinstance(note, dict)
     }
+    hydration_cache: dict[str, dict[str, Any]] = {}
     nodes: list[dict[str, Any]] = []
     for node in markdown_index.get("nodes") or []:
         if not isinstance(node, dict):
@@ -839,8 +882,27 @@ def _build_graph_from_markdown_index(project: ProjectRef) -> dict[str, Any] | No
         node_id = str(node.get("id") or "")
         canonical_node_id = canonical_redirects.get(node_id, node_id)
         canonical_node = nodes_by_id.get(canonical_node_id) or node
+        canonical_note_path = str(canonical_node.get("note_path") or canonical_node.get("id") or "")
         node["canonical_node_id"] = canonical_node_id
-        node["canonical_note_path"] = str(canonical_node.get("note_path") or canonical_node.get("id") or "")
+        node["canonical_note_path"] = canonical_note_path
+        node["canonical_kind"] = str(canonical_node.get("kind") or node.get("kind") or "note")
+        node["display_kind"] = str(canonical_node.get("kind") or node.get("kind") or "note")
+        node["canonical_degree"] = int(canonical_node.get("degree") or node.get("degree") or 0)
+        if canonical_note_path not in hydration_cache:
+            canonical_note = notes_by_path.get(canonical_note_path, {}) if canonical_note_path else {}
+            markdown_text = str(canonical_note.get("markdown") or "")
+            if not markdown_text and canonical_note_path:
+                note_file = project.root / canonical_note_path
+                if note_file.exists():
+                    markdown_text = note_file.read_text(encoding="utf-8", errors="replace")
+            hydration_cache[canonical_note_path] = _markdown_content_hydration(markdown_text) if markdown_text else {
+                "summary_excerpt": "",
+                "key_facts_count": 0,
+                "key_facts_preview": [],
+                "relationship_count": 0,
+                "evidence_count": 0,
+            }
+        node.update(hydration_cache.get(canonical_note_path, {}))
         if canonical_node_id != node_id:
             node["canonical_redirected"] = True
             node["canonical_redirect_reason"] = "exact_label_cross_kind"

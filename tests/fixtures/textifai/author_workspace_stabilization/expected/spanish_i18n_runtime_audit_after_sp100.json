@@ -1,0 +1,13 @@
+{
+  "assessment": "author_workspace_stabilization_ready_for_manual_review",
+  "full_project_work_language_available": true,
+  "detected_locale_for_runtime": "es",
+  "expected_locale": "es",
+  "primary_labels_spanish": true,
+  "remaining_english_primary_strings": [
+    "Open Graph for unresolved targets"
+  ],
+  "remaining_english_dev_strings": [
+    "Future action labels remain dev/review-only"
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "assessment": "author_workspace_stabilization_ready_for_manual_review",
+  "sera_raw_concept_exists": true,
+  "sera_character_exists": true,
+  "sera_display_kind": "character",
+  "sera_visible_when_concepts_hidden": true,
+  "ren_raw_concept_exists": true,
+  "ren_character_exists": true,
+  "ren_display_kind": "character",
+  "ren_visible_when_concepts_hidden": true,
+  "filters_use_canonical_kind": true,
+  "redirected_duplicates_collapsed_by_default": true
+}
