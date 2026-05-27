@@ -1,0 +1,12 @@
+{
+  "assessment": "author_workspace_redesign_ready_for_manual_review",
+  "review_role": "decision_queue",
+  "cards_expected": [
+    "issue",
+    "affected_node_or_chapter",
+    "evidence",
+    "suggested_action",
+    "confidence_status"
+  ],
+  "audit_dump_primary": false
+}

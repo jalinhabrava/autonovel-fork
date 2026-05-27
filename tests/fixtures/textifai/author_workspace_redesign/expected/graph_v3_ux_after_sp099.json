@@ -1,0 +1,9 @@
+{
+  "assessment": "author_workspace_redesign_ready_for_manual_review",
+  "edge_labels_hidden_by_default": true,
+  "local_graph_mode_explicit": true,
+  "high_degree_center_bias": true,
+  "fit_padding": 100,
+  "rails_reduced_by": "d3-force center/link/charge/collide + seeded radial layout",
+  "legend_clear": true
+}

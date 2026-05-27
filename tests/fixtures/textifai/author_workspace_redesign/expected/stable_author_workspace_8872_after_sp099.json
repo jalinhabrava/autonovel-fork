@@ -1,0 +1,12 @@
+{
+  "assessment": "author_workspace_redesign_ready_for_manual_review",
+  "8872_serves_sp096": true,
+  "project_id": "tmp__textifai_private_provider_runs__sp096_vaerl_entity_quality_viewer_ux_patch__20260527T124326Z__viewer_project",
+  "graph_nodes": 446,
+  "graph_edges": 582,
+  "d3_graph_engine_active": true,
+  "package_dependency_present": true,
+  "manual_review_url": "http://127.0.0.1:8872/",
+  "pid": 1073609,
+  "log": "/tmp/textifai_viewer_8872.log"
+}

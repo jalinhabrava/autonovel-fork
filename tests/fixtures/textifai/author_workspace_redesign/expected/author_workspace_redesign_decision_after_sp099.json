@@ -1,0 +1,7 @@
+{
+  "assessment": "author_workspace_redesign_ready_for_manual_review",
+  "product_decision": "author_workspace_redesign_ready_for_manual_review",
+  "provider_calls": false,
+  "write_back": false,
+  "next_phase": "SP-101 editor entry points + markdown edit affordances + deeper inspector actions"
+}

@@ -1,0 +1,12 @@
+{
+  "assessment": "author_workspace_redesign_ready_for_manual_review",
+  "wiki_role": "knowledge_base",
+  "search_filter_present": true,
+  "canonical_resolution_expected": true,
+  "preview_focus": [
+    "summary",
+    "kind",
+    "status",
+    "backlinks"
+  ]
+}

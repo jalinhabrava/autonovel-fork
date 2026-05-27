@@ -1,0 +1,18 @@
+{
+  "assessment": "author_workspace_redesign_ready_for_manual_review",
+  "package_files_were_untracked": true,
+  "map_dependency_found": true,
+  "map_used_in_repo": false,
+  "package_strategy": "replace historical untracked package metadata with minimal intentional viewer package and add only d3-force runtime dependency; keep runtime load via static vendor bundle because viewer has no bundler",
+  "d3_force_added": true,
+  "package_json_diff_summary": [
+    "name=textifai-web-viewer",
+    "private=true",
+    "dependencies only d3-force"
+  ],
+  "lockfile_diff_summary": [
+    "lockfile regenerated clean",
+    "transitive deps limited to d3-dispatch,d3-quadtree,d3-timer"
+  ],
+  "node_modules_not_staged": true
+}

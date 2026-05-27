@@ -1420,3 +1420,114 @@ button:hover, button.active {
 .open-project-list { display: grid; gap: 8px; }
 .project-card-header { display: flex; gap: 8px; align-items: start; justify-content: space-between; }
 .project-card-actions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+
+/* SP-100 Author Workspace shell */
+.app-shell {
+  grid-template-columns: minmax(260px, 300px) minmax(0, 1fr);
+}
+.sidebar {
+  background: linear-gradient(180deg, rgba(255,250,240,0.94), rgba(245,241,232,0.9));
+}
+.project-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: rgba(245, 241, 232, 0.82);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(222, 212, 189, 0.7);
+  border-radius: 24px;
+  padding: 18px;
+}
+.tabs button#tab-dev {
+  opacity: 0.72;
+  border-style: dashed;
+}
+.open-project-panel,
+.workspace-card,
+.dev-drawer,
+.author-hero,
+.inspector-card {
+  border-radius: 24px;
+}
+.dev-drawer {
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px dashed rgba(108, 106, 95, 0.36);
+  background: rgba(255, 255, 255, 0.28);
+}
+.dev-drawer summary,
+.technical-details summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-weight: 700;
+}
+.author-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.hero-actions,
+.project-card-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.author-dashboard .stat-card {
+  min-height: 132px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.graph-layout {
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 420px);
+}
+#graph-svg {
+  min-height: 72vh;
+  background:
+    radial-gradient(circle at 50% 45%, rgba(29,111,104,0.08), transparent 24rem),
+    rgba(255, 250, 240, 0.72);
+}
+.graph-error {
+  fill: #8c2240;
+  font-size: 18px;
+  font-weight: 700;
+}
+.narrative-card {
+  display: grid;
+  gap: 14px;
+  line-height: 1.55;
+}
+.narrative-card h3 {
+  font-size: 28px;
+}
+.narrative-card h4 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: var(--accent-2);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.narrative-card section {
+  border-top: 1px solid rgba(222, 212, 189, 0.75);
+  padding-top: 12px;
+}
+.technical-details {
+  border-top: 1px dashed rgba(108, 106, 95, 0.35);
+  padding-top: 12px;
+}
+.view-dev.active {
+  display: grid;
+  grid-template-columns: minmax(280px, 380px) minmax(0, 1fr);
+  gap: 16px;
+}
+@media (max-width: 1040px) {
+  .app-shell { grid-template-columns: 1fr; }
+  .sidebar { border-right: 0; border-bottom: 1px solid var(--line); }
+  .graph-layout,
+  .split-view.active,
+  .view-dev.active { grid-template-columns: 1fr; }
+  .author-hero { grid-template-columns: 1fr; }
+}

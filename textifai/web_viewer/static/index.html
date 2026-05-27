@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -30,12 +30,12 @@
             <p id="project-meta" class="muted">Read-only preview</p>
           </div>
           <nav class="tabs">
-            <button id="tab-overview" data-view="overview" class="active">Overview</button>
+            <button id="tab-overview" data-view="overview" class="active">Resumen</button>
             <button id="tab-notes" data-view="notes">Wiki</button>
             <button id="tab-canon" data-view="canon">Canon</button>
-            <button id="tab-review" data-view="review">Review</button>
-            <button id="tab-graph" data-view="graph">Graph</button>
-            <button id="tab-artifacts" data-view="artifacts">Artifacts</button>
+            <button id="tab-review" data-view="review">Revisión</button>
+            <button id="tab-graph" data-view="graph">Grafo</button>
+            <button id="tab-dev" data-view="artifacts">Dev</button>
           </nav>
         </header>
 
@@ -90,9 +90,9 @@
             <div id="graph-detail" class="panel graph-detail muted">Select a node to inspect.</div>
           </div>
         </section>
-        <section id="view-artifacts" class="view split-view">
-          <div class="panel">
-            <h3>System Artifacts</h3>
+        <section id="view-artifacts" class="view split-view view-dev">
+          <div class="panel dev-drawer">
+            <h3 id="dev-title">Detalles técnicos</h3>
             <div id="artifact-list" class="list"></div>
           </div>
           <div class="panel detail">
@@ -101,6 +101,7 @@
         </section>
       </main>
     </div>
-    <script src="/app.js?v=graph-detail-tags-v3"></script>
+    <script src="/vendor/d3-force.bundle.min.js"></script>
+    <script src="/app.js?v=author-workspace-d3-v3"></script>
   </body>
 </html>

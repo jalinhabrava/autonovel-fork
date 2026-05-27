@@ -1,0 +1,22 @@
+{
+  "assessment": "author_workspace_redesign_ready_for_manual_review",
+  "viewer_project_default": true,
+  "markdown_vault_dev_artifact": true,
+  "left_rail_px": "260-300",
+  "right_inspector_px": "360-420",
+  "primary_nav": [
+    "Resumen",
+    "Wiki",
+    "Canon",
+    "Revisión",
+    "Grafo",
+    "Dev"
+  ],
+  "primary_ux_hides": [
+    "served root",
+    "filesystem browsing",
+    "raw project ids",
+    "raw roots"
+  ],
+  "dev_drawer_present": true
+}

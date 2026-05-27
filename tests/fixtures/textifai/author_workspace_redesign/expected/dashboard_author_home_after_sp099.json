@@ -1,0 +1,16 @@
+{
+  "assessment": "author_workspace_redesign_ready_for_manual_review",
+  "cards": [
+    "story_health",
+    "chapters",
+    "review_queue",
+    "retry",
+    "graph_health",
+    "next_action"
+  ],
+  "author_ctas": [
+    "Wiki",
+    "Grafo"
+  ],
+  "technical_metadata_primary": false
+}

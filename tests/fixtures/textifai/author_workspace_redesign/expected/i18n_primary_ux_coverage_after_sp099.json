@@ -1,0 +1,18 @@
+{
+  "assessment": "author_workspace_redesign_ready_for_manual_review",
+  "locales": [
+    "en",
+    "es"
+  ],
+  "missing_primary_keys": [],
+  "runtime_default_for_spanish": "es",
+  "coverage": [
+    "nav",
+    "project_selector",
+    "graph_controls",
+    "inspector",
+    "wiki",
+    "review",
+    "dev_drawer"
+  ]
+}

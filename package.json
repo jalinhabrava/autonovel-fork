@@ -1,0 +1,7 @@
+{
+  "name": "textifai-web-viewer",
+  "private": true,
+  "dependencies": {
+    "d3-force": "^3.0.0"
+  }
+}

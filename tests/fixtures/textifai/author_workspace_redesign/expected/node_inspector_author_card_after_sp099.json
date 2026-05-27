@@ -1,0 +1,24 @@
+{
+  "assessment": "author_workspace_redesign_ready_for_manual_review",
+  "section_order": [
+    "summary",
+    "facts",
+    "story_relationships",
+    "appearances_evidence",
+    "markdown_backlinks",
+    "technical_details"
+  ],
+  "technical_details_collapsed": true,
+  "sera": {
+    "resolved_kind": "character",
+    "canonical_note_path": "Characters/Sera.md",
+    "summary_present": true,
+    "facts_present": true
+  },
+  "ren": {
+    "resolved_kind": "character",
+    "canonical_note_path": "Characters/Ren.md",
+    "summary_present": true,
+    "facts_present": true
+  }
+}

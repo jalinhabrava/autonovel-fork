@@ -1,0 +1,19 @@
+{
+  "assessment": "author_workspace_redesign_ready_for_manual_review",
+  "graph_contract_v2_retained": true,
+  "svg_renderer_retained": true,
+  "edge_identity": "edge.id",
+  "apis": [
+    "forceSimulation",
+    "forceCenter",
+    "forceManyBody",
+    "forceLink",
+    "forceCollide",
+    "forceX",
+    "forceY"
+  ],
+  "drag_pin_reset_supported": true,
+  "local_graph_supported": true,
+  "visible_graph_single_source_of_truth": true,
+  "failure_behavior": "visible graph error if d3 bundle missing; no silent fallback"
+}
