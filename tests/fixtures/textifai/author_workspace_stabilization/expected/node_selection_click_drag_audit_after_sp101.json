@@ -1,0 +1,14 @@
+{
+  "assessment": "node_selection_click_drag_fixed",
+  "root_cause": "bindNodeDrag marked graphDidDragNode true on any pointermove, so click handler returned before selectGraphNode for normal clicks with micro-movement.",
+  "file": "textifai/web_viewer/static/app.js",
+  "line_or_symbol": "bindNodeDrag / graphDidDragNode / selectGraphNode",
+  "drag_threshold_px": 5,
+  "click_under_threshold_selects": true,
+  "drag_over_threshold_drags": true,
+  "selected_state_updates": true,
+  "click_handler_calls_select_graph_node": true,
+  "double_selection_prevented": true,
+  "no_provider_calls": true,
+  "no_package_changes": true
+}

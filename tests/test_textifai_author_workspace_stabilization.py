@@ -15,6 +15,7 @@ PACKAGE_JSON = REPO / 'package.json'
 PACKAGE_LOCK = REPO / 'package-lock.json'
 EXPECTED = REPO / 'tests/fixtures/textifai/author_workspace_stabilization/expected'
 PRIVATE = REPO / 'docs/handoffs/private/safepoint-101_author-workspace-stabilization'
+PRIVATE_SP102 = REPO / 'docs/handoffs/private/safepoint-102_node-selection-inspector-hydration'
 RUNTIME_ROOT = Path('/tmp/textifai_private_provider_runs/sp096_vaerl_entity_quality_viewer_ux_patch/20260527T124326Z')
 PROJECT_ID = 'tmp__textifai_private_provider_runs__sp096_vaerl_entity_quality_viewer_ux_patch__20260527T124326Z__viewer_project'
 
@@ -26,6 +27,13 @@ REPORTS = [
     'graph_v3_density_layout_audit_after_sp100.json',
     'node_content_hydration_audit_after_sp100.json',
     'author_workspace_stabilization_decision_after_sp100.json',
+]
+
+SP102_REPORTS = [
+    'node_selection_click_drag_audit_after_sp101.json',
+    'inspector_hydration_fallback_after_sp101.json',
+    'sera_ren_node_selection_after_sp101.json',
+    'node_selection_inspector_decision_after_sp101.json',
 ]
 
 def read_json(name: str) -> dict:
@@ -116,8 +124,53 @@ class TextifAIAuthorWorkspaceStabilizationTests(unittest.TestCase):
         note = read_note(viewer_project(), 'Characters/Sera.md')
         self.assertTrue(note['content_hydration']['summary_excerpt'])
 
+
+    def test_sp102_reports_parse(self):
+        for name in SP102_REPORTS:
+            payload = read_json(name)
+            self.assertIn('assessment', payload, name)
+
+    def test_graph_click_drag_threshold_and_loading_state_present(self):
+        text = APP_JS.read_text(encoding='utf-8')
+        self.assertIn('const GRAPH_CLICK_DRAG_THRESHOLD_PX = 5;', text)
+        self.assertIn('startX: event.clientX', text)
+        self.assertIn('startY: event.clientY', text)
+        self.assertIn('Math.hypot(deltaX, deltaY)', text)
+        self.assertIn('state.graphDidDragNode = distance >= GRAPH_CLICK_DRAG_THRESHOLD_PX', text)
+        self.assertIn("$(\"graph-detail\").innerHTML = `<p class=\"muted\">${escapeHtml(t('loadingNodeDetail'))}</p>`;", text)
+
+    def test_canonical_selection_and_note_path_priority_present(self):
+        text = APP_JS.read_text(encoding='utf-8')
+        self.assertIn('const canonicalNodeId = resolveCanonicalNodeId(nodeId) || nodeId;', text)
+        self.assertIn('const canonicalNotePath = resolveCanonicalNotePath(node.canonical_note_path || node.note_path || "");', text)
+        self.assertIn('const canonicalPath = resolveCanonicalNotePath(path);', text)
+        self.assertIn('const summaryNode = (state.current?.graph?.nodes || []).find((item) => item.id === state.selectedGraphNodeId) || {};', text)
+
+    def test_inspector_hydration_fallback_strings_present(self):
+        text = APP_JS.read_text(encoding='utf-8')
+        self.assertIn('loadingNodeDetail: "Cargando ficha..."', text)
+        self.assertIn('loadingNodeDetail: "Loading node card..."', text)
+        self.assertIn('noteLoadFallback: "No se pudo cargar la nota completa. Mostrando resumen disponible."', text)
+        self.assertIn('noteLoadFallback: "Could not load full note. Showing available summary instead."', text)
+        self.assertIn("renderGraphNodeHydrationFallback(node, { warning: t('noteLoadFallback') })", text)
+
+    def test_hydration_fallback_uses_summary_and_facts(self):
+        text = APP_JS.read_text(encoding='utf-8')
+        self.assertIn('function renderGraphNodeHydrationFallback(node, { warning = "" } = {}) {', text)
+        self.assertIn("node.summary_excerpt || t('noSummary')", text)
+        self.assertIn('const facts = (node.key_facts_preview || []).slice(0, 8);', text)
+        self.assertIn('node.relationship_count', text)
+        self.assertIn('node.evidence_count', text)
+
+    def test_sera_ren_reports_confirm_canonical_selection(self):
+        report = read_json('sera_ren_node_selection_after_sp101.json')
+        self.assertEqual(report['sera_expected_note_path'], 'Characters/Sera.md')
+        self.assertEqual(report['ren_expected_note_path'], 'Characters/Ren.md')
+        self.assertTrue(report['canonical_note_path_preferred'])
+        self.assertTrue(report['inspector_leaves_empty_state'])
+
     def test_no_provider_writeback_private_leaks(self):
-        for name in REPORTS:
+        for name in REPORTS + SP102_REPORTS:
             text = (EXPECTED / name).read_text(encoding='utf-8')
             self.assertNotIn('provider_response_raw', text)
             self.assertNotIn('final_prompt_sent', text)
@@ -129,6 +182,8 @@ class TextifAIAuthorWorkspaceStabilizationTests(unittest.TestCase):
     def test_private_handoff_gitignored(self):
         result = subprocess.run(['git', 'check-ignore', '-v', str(PRIVATE / 'decision_handoff_private.md')], cwd=REPO, check=False, capture_output=True, text=True)
         self.assertIn('docs/handoffs/private/', result.stdout)
+        result_sp102 = subprocess.run(['git', 'check-ignore', '-v', str(PRIVATE_SP102 / 'decision_handoff_private.md')], cwd=REPO, check=False, capture_output=True, text=True)
+        self.assertIn('docs/handoffs/private/', result_sp102.stdout)
 
 if __name__ == '__main__':
     unittest.main()

@@ -45,6 +45,8 @@ const state = {
   autoOpenedRecommendedProject: false,
 };
 
+const GRAPH_CLICK_DRAG_THRESHOLD_PX = 5;
+
 const I18N = {
   en: {
     appTitle: "TextifAI Viewer",
@@ -88,6 +90,7 @@ const I18N = {
     openInCanon: "Open in Canon",
     clearHiddenTags: "clear {count}",
     selectNode: "Select a node to inspect.",
+    loadingNodeDetail: "Loading node card...",
     selectArtifact: "Select an artifact.",
     summary: "Bio / Summary",
     facts: "Key facts",
@@ -99,6 +102,7 @@ const I18N = {
     localGraphSummary: "Local graph",
     noSummary: "No summary yet. This node may need enrichment.",
     noFacts: "Facts are thin or missing for this note.",
+    noteLoadFallback: "Could not load full note. Showing available summary instead.",
     duplicateRedirected: "Duplicate note redirected to canonical node.",
     viewInWiki: "View in wiki",
     openReview: "Open review",
@@ -167,6 +171,7 @@ const I18N = {
     openInCanon: "Abrir en canon",
     clearHiddenTags: "limpiar {count}",
     selectNode: "Selecciona un nodo para revisar.",
+    loadingNodeDetail: "Cargando ficha...",
     selectArtifact: "Selecciona un artefacto.",
     summary: "Bio / Resumen",
     facts: "Datos clave",
@@ -178,6 +183,7 @@ const I18N = {
     localGraphSummary: "Grafo local",
     noSummary: "Aún no hay resumen. Este nodo puede necesitar enriquecimiento.",
     noFacts: "Los datos clave faltan o son escasos para esta nota.",
+    noteLoadFallback: "No se pudo cargar la nota completa. Mostrando resumen disponible.",
     duplicateRedirected: "Nota duplicada redirigida al nodo canónico.",
     viewInWiki: "Ver en wiki",
     openReview: "Abrir revisión",
@@ -3895,7 +3901,7 @@ function bindNodeDrag(nodeEl, node, layoutState, svg, visibleGraph) {
   nodeEl.onpointerdown = (event) => {
     event.stopPropagation();
     nodeEl.setPointerCapture(event.pointerId);
-    state.graphDrag = { pointerId: event.pointerId, nodeId: node.id };
+    state.graphDrag = { pointerId: event.pointerId, nodeId: node.id, startX: event.clientX, startY: event.clientY };
     node.fx = node.x;
     node.fy = node.y;
     node.pinned = true;
@@ -3904,13 +3910,17 @@ function bindNodeDrag(nodeEl, node, layoutState, svg, visibleGraph) {
   };
   nodeEl.onpointermove = (event) => {
     if (!state.graphDrag || state.graphDrag.pointerId !== event.pointerId || state.graphDrag.nodeId !== node.id) return;
+    const deltaX = event.clientX - state.graphDrag.startX;
+    const deltaY = event.clientY - state.graphDrag.startY;
+    const distance = Math.hypot(deltaX, deltaY);
+    state.graphDidDragNode = distance >= GRAPH_CLICK_DRAG_THRESHOLD_PX;
+    if (!state.graphDidDragNode) return;
     const point = clientToGraphPoint(svg, event.clientX, event.clientY);
     node.fx = point.x;
     node.fy = point.y;
     node.x = point.x;
     node.y = point.y;
     node.pinned = true;
-    state.graphDidDragNode = true;
     updateGraphDom(svg, visibleGraph || state.currentVisibleGraph || { edges: [] }, layoutState);
   };
   nodeEl.onpointerup = (event) => finishNodeDrag(nodeEl, event.pointerId, layoutState.byId);
@@ -3947,13 +3957,37 @@ function selectGraphNode(nodeId, { pushHistory = false, renderDetail = true } = 
 
 async function renderGraphNodeDetail(node) {
   const canonicalNotePath = resolveCanonicalNotePath(node.canonical_note_path || node.note_path || "");
+  $("graph-detail").innerHTML = `<p class="muted">${escapeHtml(t('loadingNodeDetail'))}</p>`;
   if (canonicalNotePath) {
-    await openGraphNote(canonicalNotePath, node.canonical_node_id || node.id);
+    try {
+      await openGraphNote(canonicalNotePath, node.canonical_node_id || node.id);
+    } catch (_error) {
+      renderGraphNodeHydrationFallback(node, { warning: t('noteLoadFallback') });
+      bindGraphDetailNavigation();
+      bindCanonicalizationInteractions();
+    }
     return;
   }
-  $("graph-detail").innerHTML = graphNodeSummary(node);
+  renderGraphNodeHydrationFallback(node);
   bindGraphDetailNavigation();
   bindCanonicalizationInteractions();
+}
+
+function renderGraphNodeHydrationFallback(node, { warning = "" } = {}) {
+  const facts = (node.key_facts_preview || []).slice(0, 8);
+  $("graph-detail").innerHTML = `
+    ${warning ? `<p class="note-fallback">${escapeHtml(warning)}</p>` : ""}
+    ${graphNodeSummary(node)}
+    <hr />
+    <h4>${escapeHtml(t('summary'))}</h4>
+    <p>${escapeHtml(node.summary_excerpt || t('noSummary'))}</p>
+    <h4>${escapeHtml(t('facts'))}</h4>
+    ${facts.length ? `<ul>${facts.map((fact) => `<li>${escapeHtml(String(fact))}</li>`).join("")}</ul>` : `<p class="muted">${escapeHtml(t('noFacts'))}</p>`}
+    <h4>${escapeHtml(t('storyRelationships'))}</h4>
+    <p class="muted">${escapeHtml(fmtCount(node.relationship_count || 0))}</p>
+    <h4>${escapeHtml(t('appearancesEvidence'))}</h4>
+    <p class="muted">${escapeHtml(fmtCount(node.evidence_count || 0))}</p>
+  `;
 }
 
 function parseMarkdownSections(markdownText) {
@@ -3989,6 +4023,7 @@ async function openGraphNote(path, nodeId = null, { pushHistory = true } = {}) {
   }
   if (canonicalNodeId) state.selectedGraphNodeId = canonicalNodeId;
   state.current.graphDetailPath = canonicalPath;
+  const summaryNode = (state.current?.graph?.nodes || []).find((item) => item.id === state.selectedGraphNodeId) || {};
   const data = await api(`/api/projects/${encodeURIComponent(state.currentId)}/note?path=${encodeURIComponent(canonicalPath)}`);
   const backlinks = data.backlinks || [];
   const outgoing = data.outgoing_wikilinks || [];
@@ -4002,7 +4037,6 @@ async function openGraphNote(path, nodeId = null, { pushHistory = true } = {}) {
   const hasRelationships = sections.relationships.length > 0;
   const hasEvidence = sections.evidence.length > 0;
   const chapterIds = data.frontmatter?.chapter_ids || [];
-  const summaryNode = (state.current.graph.nodes || []).find((item) => item.id === state.selectedGraphNodeId) || {};
   const showReviewAction = findReviewItemsByTerm(summaryNode.label || "").length > 0;
   const canonicalPathChanged = canonicalPath !== String(path || "");
   $("graph-detail").innerHTML = `

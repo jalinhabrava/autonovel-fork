@@ -1,0 +1,19 @@
+{
+  "assessment": "node_selection_inspector_hydration_ready_for_manual_review",
+  "manual_review_url": "http://127.0.0.1:8872/",
+  "project_id": "tmp__textifai_private_provider_runs__sp096_vaerl_entity_quality_viewer_ux_patch__20260527T124326Z__viewer_project",
+  "root_cause": "clicks were suppressed by drag state on tiny pointer movement, and inspector lacked robust note fetch fallback.",
+  "drag_threshold_px": 5,
+  "click_under_threshold_selects": true,
+  "drag_over_threshold_drags": true,
+  "selected_state_updates": true,
+  "canonical_note_path_preferred": true,
+  "hydration_fallback_available": true,
+  "sera_result": "Click resolves to Characters/Sera.md and inspector card should load.",
+  "ren_result": "Click resolves to Characters/Ren.md and inspector card should load.",
+  "d3_force_retained": true,
+  "graph_engine_changed": false,
+  "no_provider_calls": true,
+  "no_package_changes": true,
+  "write_back": false
+}

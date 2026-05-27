@@ -1,0 +1,17 @@
+{
+  "assessment": "sera_ren_canonical_selection_ready",
+  "project_id": "tmp__textifai_private_provider_runs__sp096_vaerl_entity_quality_viewer_ux_patch__20260527T124326Z__viewer_project",
+  "sera_visible_node": "Characters/Sera.md",
+  "sera_duplicate_node": "Concepts/Sera.md",
+  "sera_expected_node_id": "Characters/Sera.md",
+  "sera_expected_note_path": "Characters/Sera.md",
+  "ren_visible_node": "Characters/Ren.md",
+  "ren_duplicate_node": "Concepts/Ren.md",
+  "ren_expected_node_id": "Characters/Ren.md",
+  "ren_expected_note_path": "Characters/Ren.md",
+  "canonical_note_path_preferred": true,
+  "inspector_leaves_empty_state": true,
+  "hydration_fallback_available": true,
+  "no_provider_calls": true,
+  "no_package_changes": true
+}

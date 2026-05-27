@@ -1,0 +1,16 @@
+{
+  "assessment": "inspector_hydration_fallback_ready",
+  "root_cause": "openGraphNote fetch/render path could fail before fallback because summaryNode was read after fallback variables and renderGraphNodeDetail had no try/catch fallback.",
+  "file": "textifai/web_viewer/static/app.js",
+  "line_or_symbol": "renderGraphNodeDetail / openGraphNote / renderGraphNodeHydrationFallback",
+  "canonical_note_path_preferred": true,
+  "loading_state_visible": true,
+  "hydration_fallback_available": true,
+  "fallback_summary_source": "node.summary_excerpt",
+  "fallback_facts_source": "node.key_facts_preview",
+  "fallback_counts": ["relationship_count", "evidence_count"],
+  "empty_state_after_valid_click": false,
+  "warning_copy_es": "No se pudo cargar la nota completa. Mostrando resumen disponible.",
+  "no_provider_calls": true,
+  "no_package_changes": true
+}
