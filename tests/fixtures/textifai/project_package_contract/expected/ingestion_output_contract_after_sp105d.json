@@ -1,0 +1,8 @@
+{
+  "assessment": "ingestion_output_contract_ready",
+  "source_to_chapter_markdown": true,
+  "source_to_provider_semantics": true,
+  "source_to_vaerl": true,
+  "source_to_graph": true,
+  "source_to_review_queue": true
+}

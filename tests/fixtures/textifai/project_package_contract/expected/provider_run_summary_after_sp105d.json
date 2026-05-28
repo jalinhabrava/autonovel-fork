@@ -1,0 +1,9 @@
+{
+  "assessment": "provider_run_summary_ready",
+  "provider": "deepseek",
+  "provider_calls_executed": true,
+  "provider_assessment": "spanish_20ch_provider_run_completed",
+  "product_assessment": "spanish_20ch_partial_needs_targeted_retry",
+  "chapters_ready": 5,
+  "chapters_needing_retry": 15
+}

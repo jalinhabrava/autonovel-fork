@@ -11,6 +11,9 @@ from vault.schema import slugify
 from textifai.import_review.markdown_graph_index import build_markdown_graph_index, local_graph
 from textifai.import_review.viewer_graph_adapter import adapt_ingestion_graph_to_viewer_graph
 
+REPO_ROOT = Path(__file__).resolve().parents[2]
+LOCAL_PROJECT_REGISTRY = REPO_ROOT / '.textifai_runs' / 'registry.local.json'
+
 CANONICAL_KIND_PRIORITY = {
     "character": 700,
     "place": 600,
@@ -80,6 +83,8 @@ class ProjectRef:
     root: Path
     system_root: Path | None
     kind: str
+    manifest_path: Path | None = None
+    manifest: dict[str, Any] | None = None
 
 
 class ProjectCatalog:
@@ -108,13 +113,15 @@ class ProjectCatalog:
                 project = _project_from_candidate(candidate)
                 if project is None:
                     continue
-                projects[project.project_id] = project
+                projects.setdefault(project.project_id, project)
+        for project in _discover_registry_projects():
+            projects[project.project_id] = project
         return sorted(projects.values(), key=lambda item: item.name.casefold())
 
     def _project_summary(self, project: ProjectRef) -> dict[str, Any]:
         system = project.system_root
-        obsidian_import = _read_json(system / "obsidian_import.json") if system else None
-        review_queue = _read_json(system / "review_queue.json") if system else None
+        obsidian_import = _read_project_json(project, 'vaerl') or (_read_json(system / "obsidian_import.json") if system else None)
+        review_queue = _read_project_json(project, 'review_queue') or (_read_json(system / "review_queue.json") if system else None)
         invariants = _read_json(system / "semantic_invariants_audit.json") if system else None
         ingestion_graph = _read_json(system / "ingestion_graph.json") if system else None
         markdown_manifest = read_markdown_manifest(project)
@@ -142,6 +149,8 @@ class ProjectCatalog:
         chapter_count = int(writer_outcome.get("total_chapters") or len(chapters or []) or len((ingestion_graph or {}).get("metadata", {}).get("chapters") or []) or markdown_chapter_count)
         synthetic_label_count = graph_summary.get("synthetic_label_count")
         recommended = bool(graph_summary) and synthetic_label_count == 0 and str(project.name).endswith("sp089")
+        if project.kind == 'textifai_project' and chapter_count >= 20:
+            recommended = True
         return {
             "project_id": project.project_id,
             "name": project.name,
@@ -149,7 +158,7 @@ class ProjectCatalog:
             "root": str(project.root),
             "system_root": str(system) if system else None,
             "mtime": project.root.stat().st_mtime if project.root.exists() else None,
-            "work": obsidian_import.get("work") if isinstance(obsidian_import, dict) else {},
+            "work": _project_work(project, obsidian_import),
             "chapter_count": chapter_count,
             "entity_count": len(entities or []),
             "primary_count": primary_count,
@@ -333,12 +342,12 @@ def _markdown_content_hydration(markdown_text: str) -> dict[str, Any]:
 
 def read_canon(project: ProjectRef) -> dict[str, Any]:
     system = project.system_root
-    obsidian_import = _read_json(system / "obsidian_import.json") if system else {}
-    review_queue = _read_json(system / "review_queue.json") if system else {}
+    obsidian_import = _read_project_json(project, 'vaerl') or (_read_json(system / "obsidian_import.json") if system else {})
+    review_queue = _read_project_json(project, 'review_queue') or (_read_json(system / "review_queue.json") if system else {})
     entities = obsidian_import.get("entities") if isinstance(obsidian_import, dict) else []
     chapters = obsidian_import.get("chapters") if isinstance(obsidian_import, dict) else []
     return {
-        "work": obsidian_import.get("work") if isinstance(obsidian_import, dict) else {},
+        "work": _project_work(project, obsidian_import),
         "chapters": chapters or [],
         "primaries": [item for item in entities or [] if _is_primary(item)],
         "review_entities": [item for item in entities or [] if not _is_primary(item)],
@@ -347,6 +356,13 @@ def read_canon(project: ProjectRef) -> dict[str, Any]:
 
 
 def list_artifacts(project: ProjectRef) -> list[dict[str, Any]]:
+    if project.kind == 'textifai_project':
+        artifacts: list[dict[str, Any]] = []
+        for key in ['vaerl', 'entities', 'relationships', 'review_queue', 'graph', 'backlinks', 'markdown_graph_index', 'markdown_manifest']:
+            path = _project_path(project, key)
+            if path and path.exists():
+                artifacts.append(_artifact_meta(project.root, path))
+        return artifacts
     system = project.system_root
     if system is None or not system.exists():
         return []
@@ -364,6 +380,22 @@ def list_artifacts(project: ProjectRef) -> list[dict[str, Any]]:
 
 
 def read_artifact(project: ProjectRef, artifact_path: str) -> dict[str, Any]:
+    if project.kind == 'textifai_project':
+        path = _safe_child(project.root, artifact_path)
+        if path.is_dir():
+            return {
+                "path": path.relative_to(project.root).as_posix(),
+                "kind": "directory",
+                "children": [_artifact_meta(project.root, child) for child in sorted(path.iterdir()) if child.is_file()],
+            }
+        if not path.exists():
+            raise FileNotFoundError(artifact_path)
+        text = path.read_text(encoding="utf-8", errors="replace")
+        try:
+            payload: Any = json.loads(text)
+        except json.JSONDecodeError:
+            payload = None
+        return {"path": path.relative_to(project.root).as_posix(), "kind": "json" if payload is not None else "text", "json": payload, "text": text if payload is None else ""}
     if project.system_root is None:
         raise FileNotFoundError(artifact_path)
     path = _safe_child(project.system_root, artifact_path)
@@ -478,6 +510,8 @@ def build_semantic_health(
     graph = graph or build_graph(project, canon=canon)
     invariants = _read_json(project.system_root / "semantic_invariants_audit.json") if project.system_root else {}
     invariant_checks = invariants.get("checks") if isinstance(invariants, dict) else []
+    if not isinstance(invariant_checks, list):
+        invariant_checks = []
     artifact_paths = {item.get("path") for item in artifacts if isinstance(item, dict)}
     unresolved_nodes = [node for node in graph.get("nodes", []) if node.get("kind") == "unresolved"]
     unresolved_edges = [edge for edge in graph.get("edges", []) if str(edge.get("target") or "").startswith("unresolved:")]
@@ -775,6 +809,11 @@ def _graph_chapter_payload(chapter: dict[str, Any]) -> dict[str, Any]:
 
 
 def _project_from_candidate(path: Path) -> ProjectRef | None:
+    manifest_path = path / 'textifai.project.json'
+    manifest = _read_json(manifest_path)
+    if isinstance(manifest, dict) and manifest.get('schema') == 'textifai.project':
+        title = str(manifest.get('title') or path.name)
+        return ProjectRef(project_id=_project_id(path), name=title, root=path, system_root=None, kind='textifai_project', manifest_path=manifest_path, manifest=manifest)
     system = path / "99_System"
     has_system_artifacts = lambda root: any((root / name).exists() for name in ("obsidian_import.json", "review_queue.json", "ingestion_graph.json", "markdown_manifest.json", "markdown_graph_index.json"))
     has_markdown_manifest = lambda root: any((root / name).exists() for name in ("System/materialization_manifest.json", "System/markdown_manifest.json", "99_System/markdown_manifest.json"))
@@ -789,6 +828,9 @@ def _project_from_candidate(path: Path) -> ProjectRef | None:
 
 def _markdown_manifest_candidates(project: ProjectRef) -> list[Path]:
     candidates: list[Path] = []
+    manifest_path = _project_path(project, 'markdown_manifest')
+    if manifest_path:
+        candidates.append(manifest_path)
     if project.system_root:
         candidates.extend([
             project.system_root / "markdown_manifest.json",
@@ -803,6 +845,9 @@ def _markdown_manifest_candidates(project: ProjectRef) -> list[Path]:
 
 def _markdown_index_candidates(project: ProjectRef) -> list[Path]:
     candidates: list[Path] = []
+    manifest_path = _project_path(project, 'markdown_graph_index')
+    if manifest_path:
+        candidates.append(manifest_path)
     if project.system_root:
         candidates.append(project.system_root / "markdown_graph_index.json")
     candidates.extend([
@@ -962,6 +1007,9 @@ def _build_graph_from_markdown_index(project: ProjectRef) -> dict[str, Any] | No
 
 def _read_writer_outcome(project: ProjectRef) -> dict[str, Any]:
     candidates: list[Path] = []
+    manifest_path = _project_path(project, 'writer_outcome')
+    if manifest_path:
+        candidates.append(manifest_path)
     if project.system_root:
         candidates.append(project.system_root / "writer_outcome.json")
     candidates.extend([
@@ -1034,6 +1082,9 @@ def _build_canonical_redirect_maps(nodes: list[dict[str, Any]]) -> tuple[dict[st
 
 
 def _build_graph_from_ingestion_artifact(project: ProjectRef) -> dict[str, Any] | None:
+    manifest_graph = _read_project_json(project, 'graph')
+    if isinstance(manifest_graph, dict) and isinstance(manifest_graph.get('nodes'), list):
+        return manifest_graph
     system = project.system_root
     if system is None:
         return None
@@ -1047,6 +1098,44 @@ def _build_graph_from_ingestion_artifact(project: ProjectRef) -> dict[str, Any] 
 
 def _project_id(path: Path) -> str:
     return path.resolve().as_posix().replace("/", "__").strip("_")
+
+def _discover_registry_projects() -> list[ProjectRef]:
+    payload = _read_json(LOCAL_PROJECT_REGISTRY)
+    if not isinstance(payload, dict):
+        return []
+    projects: list[ProjectRef] = []
+    for row in payload.get('projects') or []:
+        if not isinstance(row, dict):
+            continue
+        manifest_path = Path(str(row.get('manifest_path') or '')).resolve()
+        manifest = _read_json(manifest_path)
+        if not manifest_path.exists() or not isinstance(manifest, dict) or manifest.get('schema') != 'textifai.project':
+            continue
+        root = manifest_path.parent
+        projects.append(ProjectRef(project_id=_project_id(root), name=str(manifest.get('title') or root.name), root=root, system_root=None, kind='textifai_project', manifest_path=manifest_path, manifest=manifest))
+    return projects
+
+def _project_path(project: ProjectRef, key: str) -> Path | None:
+    manifest = project.manifest or {}
+    paths = manifest.get('paths') if isinstance(manifest.get('paths'), dict) else {}
+    value = paths.get(key)
+    if not isinstance(value, str) or not value.strip():
+        return None
+    candidate = _safe_child(project.root, value)
+    return candidate
+
+def _read_project_json(project: ProjectRef, key: str) -> Any:
+    path = _project_path(project, key)
+    return _read_json(path) if path else None
+
+def _project_work(project: ProjectRef, obsidian_import: Any) -> dict[str, Any]:
+    if isinstance(obsidian_import, dict) and isinstance(obsidian_import.get('work'), dict):
+        return obsidian_import.get('work') or {}
+    manifest = project.manifest or {}
+    return {
+        'title': manifest.get('title'),
+        'language': manifest.get('language'),
+    }
 
 
 def _safe_child(root: Path, relative: str) -> Path:

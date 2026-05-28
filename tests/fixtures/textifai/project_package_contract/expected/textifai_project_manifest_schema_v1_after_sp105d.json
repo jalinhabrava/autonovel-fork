@@ -1,0 +1,22 @@
+{
+  "assessment": "textifai_project_manifest_schema_v1_ready",
+  "schema": "textifai.project",
+  "schema_version": 1,
+  "required_fields": [
+    "capabilities",
+    "created_at",
+    "dev",
+    "language",
+    "paths",
+    "privacy",
+    "project_id",
+    "source",
+    "status",
+    "textifai_version",
+    "title",
+    "updated_at",
+    "workspace_entry"
+  ],
+  "paths_relative_only": true,
+  "contains_tmp_product_paths": false
+}

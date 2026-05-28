@@ -1,0 +1,11 @@
+{
+  "assessment": "persistent_20ch_project_recovery_ready",
+  "source_exists": true,
+  "provider_calls_executed": true,
+  "runtime_root": "/home/david/TextifAIProjects/OnT_Spanish_20ch.textifai/runs/sp106_spanish_20ch_e2e/20260528T174159Z",
+  "persistent_project_root": "/home/david/TextifAIProjects/OnT_Spanish_20ch.textifai",
+  "restored_from_tmp_only": false,
+  "chapters_total": 20,
+  "chapters_ready": 5,
+  "chapters_needing_retry": 15
+}

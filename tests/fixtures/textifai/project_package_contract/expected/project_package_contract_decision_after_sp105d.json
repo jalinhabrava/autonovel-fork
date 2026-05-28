@@ -1,0 +1,8 @@
+{
+  "assessment": "persistent_20ch_e2e_ready_with_retry_warnings",
+  "provider_calls": true,
+  "write_back": false,
+  "package_changes": false,
+  "real_project_preferred_over_mini_fixture": true,
+  "persistent_project_root": "/home/david/TextifAIProjects/OnT_Spanish_20ch.textifai"
+}

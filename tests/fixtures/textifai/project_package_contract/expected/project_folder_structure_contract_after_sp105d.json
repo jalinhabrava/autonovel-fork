@@ -1,0 +1,16 @@
+{
+  "assessment": "project_folder_structure_contract_ready",
+  "project_root": "/home/david/TextifAIProjects/OnT_Spanish_20ch.textifai",
+  "top_level": [
+    "99_System",
+    "dev",
+    "drafts",
+    "graph",
+    "markdown",
+    "patches",
+    "reports",
+    "textifai.project.json",
+    "vaerl"
+  ],
+  "chapter_files": 20
+}

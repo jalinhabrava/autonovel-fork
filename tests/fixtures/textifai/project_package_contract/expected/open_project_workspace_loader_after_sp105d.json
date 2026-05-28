@@ -1,0 +1,7 @@
+{
+  "assessment": "open_project_workspace_loader_ready",
+  "registry_local_path": ".textifai_runs/registry.local.json",
+  "manifest_project_detected": true,
+  "real_project_preferred_over_mini_fixture": true,
+  "arbitrary_filesystem_browsing_allowed": false
+}
