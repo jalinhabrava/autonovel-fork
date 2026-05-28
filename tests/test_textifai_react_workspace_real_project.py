@@ -87,14 +87,12 @@ class TextifAIReactWorkspaceRealProjectTests(unittest.TestCase):
         graph_start = text.index("if (active === 'graph')")
         graph_end = text.index("if (active === 'review')")
         graph_block = text[graph_start:graph_end]
-        self.assertIn('NativeGraphSurface', graph_block)
-        self.assertIn('Superficie React nativa para nodos VaERL', graph_block)
-        self.assertIn('SVG React nativo sobre `/graph`', text)
+        self.assertIn('GraphCanvas', graph_block)
+        self.assertIn('Exploración visual author-facing con física viva e inspector editorial.', graph_block)
         self.assertIn('setSelectedGraphNodeId', text)
         self.assertIn('Ficha del nodo', text)
         self.assertIn('Editar', text)
-        if 'LegacyEmbed' in graph_block:
-            self.assertLess(graph_block.index('NativeGraphSurface'), graph_block.index('LegacyEmbed'))
+        self.assertNotIn('LegacyEmbed', graph_block)
         self.assertNotIn('Graph module (legacy runtime boundary)', graph_block)
         report = read_json('native_react_graph_surface_after_sp105c.json')
         self.assertTrue(report['legacy_embed_removed_from_primary_graph'])
