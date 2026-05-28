@@ -1,0 +1,10 @@
+{
+  "assessment": "review_queue_author_facing_ready",
+  "product_title": "Cola de decisiones",
+  "filters_localized": true,
+  "raw_terms_absent": ["Source → graph", "Target → graph", "Source → canon", "Target → canon", "Future viewer actions", "inspect evidence only"],
+  "not_available_hidden": true,
+  "decision_items_count": 3,
+  "technical_details_collapsed_or_dev": true,
+  "author_actions_available": ["Ver evidencia", "Abrir entidad origen", "Abrir entidad relacionada", "Ver relación en el grafo", "Ver ficha en Canon / Entidades"]
+}

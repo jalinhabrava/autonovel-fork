@@ -1,0 +1,11 @@
+{
+  "assessment": "workspace_open_flow_prepared",
+  "current_flow": "Sidebar loads /api/projects from ProjectCatalog under served registered roots.",
+  "product_flow": "Mis obras -> Abrir proyecto -> Workspace narrativo.",
+  "local_dev_safe_flow": "Only registered/served roots are listed; no arbitrary filesystem picker is exposed in Product Mode.",
+  "saas_future_flow": "Workspace list backed by tenant-safe ids and app-service DTOs.",
+  "arbitrary_filesystem_browsing_allowed": false,
+  "endpoints_needed": ["GET /api/workspaces future DTO alias", "GET /api/workspaces/<id> future author-facing DTO"],
+  "implemented_now": ["Sidebar copy renamed to Mis obras/Abrir proyecto", "Project open notice uses work title, not raw id", "root/system_root remain Dev/API diagnostics only"],
+  "deferred_items": ["safe registry editor", "SaaS tenancy", "filesystem chooser"]
+}

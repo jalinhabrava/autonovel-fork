@@ -1,0 +1,7 @@
+{
+  "assessment": "review_product_dev_details_separated",
+  "product_mode_fields": ["plain_language_issue", "why_it_matters", "evidence_summary", "affected_entities", "recommendation", "author_actions"],
+  "dev_debug_fields": ["raw_type", "raw_status", "metadata", "candidate_count", "evidence_count"],
+  "technical_details_collapsed": true,
+  "not_available_visible_in_product": false
+}

@@ -1,0 +1,10 @@
+{
+  "assessment": "open_design_usable_for_sp105a",
+  "mcp_registered": true,
+  "daemon_healthy": true,
+  "daemon_url": "http://127.0.0.1:7457",
+  "usable_in_this_session": true,
+  "skills_or_design_systems_used": ["Lazyweb linear/notion-style decision queue search", "Open Design od_compose_brief warm-editorial workspace brief"],
+  "fallback_used": false,
+  "no_runtime_dependency": true
+}

@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title id="doc-title">TextifAI Viewer</title>
+    <title id="doc-title">TextifAI Author Workspace</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
@@ -12,12 +12,12 @@
         <div class="brand">
           <span class="brand-mark">T</span>
           <div>
-            <h1 id="brand-title">TextifAI Viewer</h1>
-            <p id="brand-subtitle">Author knowledge workspace</p>
+            <h1 id="brand-title">TextifAI Author Workspace</h1>
+            <p id="brand-subtitle">Workspace narrativo para autores</p>
           </div>
         </div>
         <div class="toolbar">
-            <button id="refresh-projects">Refresh</button>
+            <button id="refresh-projects">Abrir proyecto</button>
         </div>
         <div id="project-list" class="project-list"></div>
         <div class="sidebar-footer" aria-label="User profile and settings placeholder">
@@ -35,9 +35,9 @@
       <main class="main">
         <header class="project-header">
           <div>
-            <p id="current-project-eyebrow" class="eyebrow">Current project</p>
-            <h2 id="project-title">Select project</h2>
-            <p id="project-meta" class="muted">Read-only preview</p>
+            <p id="current-project-eyebrow" class="eyebrow">Proyecto narrativo</p>
+            <h2 id="project-title">Selecciona una obra</h2>
+            <p id="project-meta" class="muted">Workspace local-first</p>
           </div>
           <nav class="tabs">
             <button id="tab-overview" data-view="overview" class="active">Resumen</button>
@@ -53,7 +53,7 @@
         <section id="view-notes" class="view split-view">
           <div class="panel">
             <h3 id="wiki-title">Wiki</h3>
-            <p id="wiki-subtitle" class="muted">Read-only Markdown notes projected from VaERL.</p>
+            <p id="wiki-subtitle" class="muted">Notas Markdown proyectadas desde VaERL.</p>
             <div class="wiki-filters">
               <input id="note-filter" class="search" placeholder="Search notes" />
               <select id="note-kind-filter"><option value="">All kinds</option></select>

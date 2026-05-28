@@ -1,0 +1,8 @@
+{
+  "assessment": "product_naming_cleanup_ready",
+  "visible_viewer_terms_before": ["TextifAI Viewer", "Visor TextifAI", "Read-only preview", "Future viewer actions"],
+  "visible_viewer_terms_after": [],
+  "remaining_viewer_terms": ["textifai/web_viewer", "viewer_project", "viewerNavBack", "legacy reports/tests"],
+  "remaining_terms_are_internal_or_dev": true,
+  "future_rename_plan": ["Keep internal web_viewer routes until migration is safe", "Use Author Workspace/Story Workspace in product copy", "Avoid new product-facing APIs/components named viewer"]
+}

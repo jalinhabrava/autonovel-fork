@@ -1,0 +1,8 @@
+{
+  "assessment": "review_actions_contract_ready",
+  "raw_action_labels_removed": ["Source → graph", "Target → graph", "Source → canon", "Target → canon", "Open canon"],
+  "author_action_labels": ["Ver evidencia", "Abrir entidad origen", "Abrir entidad relacionada", "Ver relación en el grafo", "Ver ficha en Canon / Entidades", "Marcar como correcto", "Marcar como falso positivo", "Dejar para más tarde"],
+  "uses_navigate_to_graph_node": true,
+  "disabled_actions_documented": ["Marcar como correcto", "Marcar como falso positivo", "Dejar para más tarde"],
+  "no_placeholder_buttons": true
+}

@@ -1,0 +1,8 @@
+{
+  "assessment": "review_decision_item_contract_ready",
+  "contract_name": "ReviewDecisionItem",
+  "fields": ["id", "title", "plain_language_issue", "why_it_matters", "evidence_summary", "affected_entities", "affected_chapters", "recommendation", "severity_label", "decision_type_label", "actions", "technical_details", "raw_type", "raw_status"],
+  "raw_fields_hidden_from_product": ["review_type", "metadata.recommended_action", "metadata.signal_tier", "metadata.candidate_status", "metadata.semantic_value", "metadata.surface_type", "metadata.language_hint"],
+  "maps_raw_review_items": true,
+  "technical_details_available_for_dev": true
+}

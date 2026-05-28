@@ -1,0 +1,28 @@
+{
+  "assessment": "layer_boundaries_plan_ready",
+  "current_mixing_points": [
+    "app.js still contains state, DTO derivation, renderers, navigation, graph, and dev diagnostics"
+  ],
+  "view_models_introduced": [
+    "WorkspaceSummary",
+    "ReviewDecisionItem"
+  ],
+  "view_models_planned": [
+    "ProjectSummary",
+    "WorkspaceSummary",
+    "AuthorOverviewViewModel",
+    "GraphViewModel",
+    "EntityCardViewModel",
+    "CanonEntityViewModel",
+    "DraftPatch"
+  ],
+  "product_consumes_author_facing_models": true,
+  "dev_consumes_diagnostics": true,
+  "future_backend_services": [
+    "list workspaces",
+    "open workspace",
+    "list review decisions",
+    "save draft patch",
+    "apply VaERL patch"
+  ]
+}

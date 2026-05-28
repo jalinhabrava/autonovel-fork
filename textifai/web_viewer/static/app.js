@@ -59,15 +59,15 @@ const GRAPH_HIDDEN_TECHNICAL_TAGS = new Set([
 
 const I18N = {
   en: {
-    appTitle: "TextifAI Viewer",
-    brandSubtitle: "Author knowledge workspace",
+    appTitle: "TextifAI Author Workspace",
+    brandSubtitle: "Author story workspace",
     profileName: "Guest author",
     profileRole: "Local profile",
     settings: "Settings",
-    refresh: "Refresh",
-    currentProject: "Current project",
-    selectProject: "Select project",
-    readOnlyPreview: "Read-only preview",
+    refresh: "Open project",
+    currentProject: "Story project",
+    selectProject: "Select work",
+    readOnlyPreview: "Local-first workspace",
     overview: "Overview",
     wiki: "Wiki",
     canon: "Canon",
@@ -75,8 +75,8 @@ const I18N = {
     review: "Review",
     graph: "Graph",
     artifacts: "Technical details",
-    projectPanelTitle: "Story workspace",
-    projectPanelSubtitle: "Choose the narrative project to review.",
+    projectPanelTitle: "My works",
+    projectPanelSubtitle: "Open a registered story workspace. Filesystem browsing stays in Dev.",
     active: "active",
     open: "Open",
     authorProject: "Author project",
@@ -89,7 +89,7 @@ const I18N = {
     ready: "ready",
     needsReview: "review",
     retry: "retry",
-    wikiSubtitle: "Read-only Markdown notes projected from VaERL.",
+    wikiSubtitle: "Markdown notes projected from VaERL.",
     searchNotes: "Search notes",
     allKinds: "All kinds",
     allTags: "All tags",
@@ -147,7 +147,7 @@ const I18N = {
     productMode: "Product mode",
     devMode: "Dev/debug mode",
     devSummary: "Technical diagnostics moved out of the author workspace.",
-    openRawReview: "Open raw review_queue.json",
+    openRawReview: "Open raw review_queue.json in Dev",
     decisionQueueTitle: "Decision queue",
     decisionQueueSubtitle: "Review items grouped by story decision, evidence, and impact.",
     canonSubtitle: "Story bible entities, aliases, evidence, and future merge decisions.",
@@ -179,17 +179,58 @@ const I18N = {
     kindObject: "object",
     kindConcept: "concept",
     kindReview: "review",
+    allDecisions: "All",
+    requiresAuthorReview: "Requires review",
+    highPriority: "High",
+    mediumPriority: "Medium",
+    relatedElements: "Related elements",
+    objectRetention: "Object retention",
+    plannedActions: "Planned actions",
+    quickFilters: "Quick filters",
+    clearFilter: "Clear filter",
+    severity: "Severity",
+    decisionType: "Decision type",
+    search: "Search",
+    sort: "Sort",
+    resetFilters: "Reset",
+    sortSeverity: "severity high → low",
+    sortRecent: "recent first",
+    sortType: "type A→Z",
+    sortSource: "entity A→Z",
+    visibleDecisions: "Showing {visible} visible decisions from {total} review items.",
+    noDecisionsMatch: "No decisions match this filter.",
+    editorialDecision: "Editorial decision",
+    issue: "Issue",
+    whyItMatters: "Why it matters",
+    recommendation: "Recommendation",
+    affectedEntities: "Affected entities",
+    affectedChapters: "Affected chapters",
+    technicalDetailsCollapsed: "Technical details (Dev/debug)",
+    viewEvidence: "View evidence",
+    openSourceEntity: "Open source entity",
+    openRelatedEntity: "Open related entity",
+    viewRelationshipInGraph: "View relationship in graph",
+    viewInCanonEntities: "View card in Canon / Entities",
+    markCorrect: "Mark as correct",
+    markFalsePositive: "Mark false positive",
+    leaveForLater: "Leave for later",
+    disabledNeedsWriteback: "Requires persistence/write-back; planned for a later phase.",
+    evidenceCount: "{count} evidence fragments",
+    noEvidenceYet: "No evidence fragments available yet.",
+    reviewMergeOrAliasLabel: "Possible alias or duplicate",
+    relationshipGapLabel: "Relationship needs evidence",
+    genericReviewLabel: "Decision pending",
   },
   es: {
-    appTitle: "Visor TextifAI",
+    appTitle: "TextifAI Author Workspace",
     brandSubtitle: "Workspace narrativo para autores",
     profileName: "Autor invitado",
     profileRole: "Perfil local",
     settings: "Ajustes",
-    refresh: "Actualizar",
-    currentProject: "Proyecto actual",
-    selectProject: "Selecciona proyecto",
-    readOnlyPreview: "Vista de solo lectura",
+    refresh: "Abrir proyecto",
+    currentProject: "Proyecto narrativo",
+    selectProject: "Selecciona una obra",
+    readOnlyPreview: "Workspace local-first",
     overview: "Resumen",
     wiki: "Wiki",
     canon: "Canon",
@@ -197,8 +238,8 @@ const I18N = {
     review: "Revisión",
     graph: "Grafo",
     artifacts: "Detalles técnicos",
-    projectPanelTitle: "Workspace narrativo",
-    projectPanelSubtitle: "Elige el proyecto narrativo para revisar.",
+    projectPanelTitle: "Mis obras",
+    projectPanelSubtitle: "Abre un workspace narrativo registrado. La exploración de archivos queda en Dev.",
     active: "activo",
     open: "Abrir",
     authorProject: "Proyecto de autor",
@@ -211,7 +252,7 @@ const I18N = {
     ready: "listo",
     needsReview: "revisión",
     retry: "reintento",
-    wikiSubtitle: "Notas Markdown de solo lectura proyectadas desde VaERL.",
+    wikiSubtitle: "Notas Markdown proyectadas desde VaERL.",
     searchNotes: "Buscar notas",
     allKinds: "Todos los tipos",
     allTags: "Todas las etiquetas",
@@ -269,7 +310,7 @@ const I18N = {
     productMode: "Modo producto",
     devMode: "Modo dev/debug",
     devSummary: "Diagnósticos técnicos movidos fuera del workspace de autor.",
-    openRawReview: "Abrir review_queue.json raw",
+    openRawReview: "Abrir review_queue.json en Dev",
     decisionQueueTitle: "Cola de decisiones",
     decisionQueueSubtitle: "Items agrupados por decisión narrativa, evidencia e impacto.",
     canonSubtitle: "Entidades de la biblia de obra, aliases, evidencia y futuras decisiones de fusión.",
@@ -301,6 +342,47 @@ const I18N = {
     kindObject: "objeto",
     kindConcept: "concepto",
     kindReview: "revisión",
+    allDecisions: "Todas",
+    requiresAuthorReview: "Requieren revisión",
+    highPriority: "Alta",
+    mediumPriority: "Media",
+    relatedElements: "Elementos relacionados",
+    objectRetention: "Retención de objeto",
+    plannedActions: "Acciones planificadas",
+    quickFilters: "Filtros rápidos",
+    clearFilter: "Limpiar filtro",
+    severity: "Severidad",
+    decisionType: "Tipo de decisión",
+    search: "Buscar",
+    sort: "Ordenar",
+    resetFilters: "Restablecer",
+    sortSeverity: "severidad alta → baja",
+    sortRecent: "recientes primero",
+    sortType: "tipo A→Z",
+    sortSource: "entidad A→Z",
+    visibleDecisions: "Mostrando {visible} decisiones visibles de {total} elementos de revisión.",
+    noDecisionsMatch: "Ninguna decisión coincide con este filtro.",
+    editorialDecision: "Decisión editorial",
+    issue: "Problema",
+    whyItMatters: "Por qué importa",
+    recommendation: "Recomendación",
+    affectedEntities: "Entidades afectadas",
+    affectedChapters: "Capítulos afectados",
+    technicalDetailsCollapsed: "Detalles técnicos (Dev/debug)",
+    viewEvidence: "Ver evidencia",
+    openSourceEntity: "Abrir entidad origen",
+    openRelatedEntity: "Abrir entidad relacionada",
+    viewRelationshipInGraph: "Ver relación en el grafo",
+    viewInCanonEntities: "Ver ficha en Canon / Entidades",
+    markCorrect: "Marcar como correcto",
+    markFalsePositive: "Marcar como falso positivo",
+    leaveForLater: "Dejar para más tarde",
+    disabledNeedsWriteback: "Requiere persistencia/write-back; planificado para fase posterior.",
+    evidenceCount: "{count} fragmentos de evidencia",
+    noEvidenceYet: "Aún no hay fragmentos de evidencia disponibles.",
+    reviewMergeOrAliasLabel: "Posible alias o duplicado",
+    relationshipGapLabel: "Relación con evidencia insuficiente",
+    genericReviewLabel: "Decisión pendiente",
   },
 };
 
@@ -550,7 +632,7 @@ async function loadProjects() {
   }
   if (!state.autoOpenedRecommendedProject && recommended && state.currentId !== recommended.project_id) {
     state.autoOpenedRecommendedProject = true;
-    await selectProject(recommended.project_id, { notice: `Opened recommended project ${recommended.name} for manual review.` });
+    await selectProject(recommended.project_id, { notice: `${t('open')}: ${recommended.work?.title || recommended.name}` });
   }
 }
 
@@ -590,10 +672,9 @@ function renderProjects() {
   const devProjects = projects.filter((project) => !authorProjects.includes(project));
   const primary = authorProjects.length ? authorProjects : [projects[0]];
   const renderCard = (project, kind) => {
-    const graphSummary = project.graph_summary || {};
-    const writerOutcome = project.writer_outcome || {};
+    const summary = buildWorkspaceSummary(project);
     const active = project.project_id === state.currentId;
-    const title = project.work?.title || project.name || project.project_id;
+    const title = summary.title;
     return `
       <div class="project-card workspace-card ${active ? "active" : ""}" data-project="${escapeHtml(project.project_id)}">
         <div class="project-card-header">
@@ -603,8 +684,8 @@ function renderProjects() {
             ${active ? `<span class="badge">${escapeHtml(t('active'))}</span>` : `<button type="button" class="inline-action" data-open-project="${escapeHtml(project.project_id)}">${escapeHtml(t('open'))}</button>`}
           </div>
         </div>
-        <small>${escapeHtml(t('chapters'))} ${escapeHtml(fmtCount(project.chapter_count))} · ${escapeHtml(t('nodes'))} ${escapeHtml(fmtCount(graphSummary.node_count ?? '—'))} · ${escapeHtml(t('edges'))} ${escapeHtml(fmtCount(graphSummary.edge_count ?? '—'))}</small>
-        <small>${escapeHtml(t('ready'))} ${escapeHtml(fmtCount(writerOutcome.chapters_ready ?? '—'))} · ${escapeHtml(t('needsReview'))} ${escapeHtml(fmtCount(writerOutcome.chapters_needing_review ?? '—'))} · ${escapeHtml(t('retry'))} ${escapeHtml(fmtCount(writerOutcome.chapters_needing_retry ?? '—'))}</small>
+        <small>${escapeHtml(t('chapters'))} ${escapeHtml(fmtCount(summary.chapter_count))} · ${escapeHtml(t('nodes'))} ${escapeHtml(fmtCount(summary.node_count))} · ${escapeHtml(t('edges'))} ${escapeHtml(fmtCount(summary.edge_count))}</small>
+        <small>${escapeHtml(t('ready'))} ${escapeHtml(fmtCount(summary.chapters_ready))} · ${escapeHtml(t('needsReview'))} ${escapeHtml(fmtCount(summary.chapters_needing_review))} · ${escapeHtml(t('retry'))} ${escapeHtml(fmtCount(summary.chapters_needing_retry))}</small>
       </div>
     `;
   };
@@ -622,9 +703,27 @@ function renderProjects() {
   document.querySelectorAll("[data-open-project]").forEach((node) => {
     node.addEventListener("click", (event) => {
       event.stopPropagation();
-      selectProject(node.dataset.openProject, { notice: `${t('open')}: ${node.dataset.openProject}` });
+      const project = (state.projects || []).find((entry) => entry.project_id === node.dataset.openProject);
+      const title = project?.work?.title || project?.name || node.dataset.openProject;
+      selectProject(node.dataset.openProject, { notice: `${t('open')}: ${title}` });
     });
   });
+}
+
+function buildWorkspaceSummary(project) {
+  const graphSummary = project?.graph_summary || {};
+  const writerOutcome = project?.writer_outcome || {};
+  return {
+    project_id: project?.project_id || "",
+    title: project?.work?.title || project?.name || project?.project_id || "",
+    chapter_count: project?.chapter_count,
+    node_count: graphSummary.node_count,
+    edge_count: graphSummary.edge_count,
+    chapters_ready: writerOutcome.chapters_ready,
+    chapters_needing_review: writerOutcome.chapters_needing_review,
+    chapters_needing_retry: writerOutcome.chapters_needing_retry,
+    recommended: Boolean(project?.recommended),
+  };
 }
 
 async function selectProject(projectId, options = {}) {
@@ -2754,11 +2853,11 @@ function reviewItemKey(item, index) {
   ].join(":"));
 }
 
-function navigateToGraphTerm(term, { from = "Viewer" } = {}) {
+function navigateToGraphTerm(term, { from = "Workspace" } = {}) {
   return navigateToGraphNode(term, { from });
 }
 
-function navigateToCanonTerm(term, { from = "Viewer" } = {}) {
+function navigateToCanonTerm(term, { from = "Workspace" } = {}) {
   const entity = findCanonEntityByTerm(term);
   if (!entity) {
     setNavNotice(`${from}: "${term}" not found in canon.`, "warning");
@@ -2808,7 +2907,7 @@ function canonEntityNotePath(entity) {
   return "";
 }
 
-function navigateToGraphNode(nodeOrPathOrId, { from = "Viewer" } = {}) {
+function navigateToGraphNode(nodeOrPathOrId, { from = "Workspace" } = {}) {
   const node = typeof nodeOrPathOrId === 'object' && nodeOrPathOrId
     ? findGraphNodeByTerm(nodeOrPathOrId.id || nodeOrPathOrId.note_path || nodeOrPathOrId.canonical_note_path || nodeOrPathOrId.label || "")
     : findGraphNodeByTerm(nodeOrPathOrId);
@@ -2976,6 +3075,191 @@ function chapterTable(chapters) {
   </tbody></table>`;
 }
 
+function buildReviewDecisionItems(rawReviewItems, context = {}) {
+  return (rawReviewItems || []).map((item, index) => buildReviewDecisionItem(item, index, context));
+}
+
+function buildReviewDecisionItem(item, index, _context = {}) {
+  const metadata = reviewMetadata(item);
+  const candidates = item.candidate_entities || [];
+  const evidence = item.evidence || [];
+  const source = cleanReviewValue(item.source_entity);
+  const target = cleanReviewValue(item.target_text);
+  const rawType = String(item.review_type || "");
+  const rawStatus = String(metadata.recommended_action || item.suggested_action || "");
+  const decisionTypeLabel = humanReviewTypeLabel(rawType, rawStatus);
+  const severityLabel = humanReviewSeverityLabel(item.severity);
+  const affectedEntities = [source, target, ...candidates.map((candidate) => cleanReviewValue(candidate.canonical_name || candidate.name))].filter(Boolean);
+  const affectedChapters = [...new Set(evidence.map((entry) => cleanReviewValue(entry.chapter_id || entry.source)).filter(Boolean))];
+  const title = reviewDecisionTitle({ source, target, rawType, rawStatus, decisionTypeLabel });
+  const plainIssue = reviewDecisionIssue({ source, target, rawType, rawStatus });
+  const whyItMatters = reviewDecisionWhyItMatters({ rawType, rawStatus });
+  const recommendation = humanRecommendedActionLabel(rawStatus, rawType);
+  const evidenceSummary = evidence.length
+    ? t('evidenceCount', { count: fmtCount(evidence.length) })
+    : t('noEvidenceYet');
+  return {
+    id: reviewItemKey(item, index),
+    title,
+    plain_language_issue: plainIssue,
+    why_it_matters: whyItMatters,
+    evidence_summary: evidenceSummary,
+    affected_entities: [...new Set(affectedEntities)],
+    affected_chapters: affectedChapters,
+    recommendation,
+    severity_label: severityLabel,
+    decision_type_label: decisionTypeLabel,
+    actions: buildReviewActions({ source, target, candidates, evidence }),
+    technical_details: buildReviewTechnicalDetails(item, metadata),
+    raw_type: rawType,
+    raw_status: rawStatus,
+    raw_item: item,
+  };
+}
+
+function cleanReviewValue(value) {
+  const text = String(value === null || value === undefined ? "" : value).trim();
+  if (!text || text.toLowerCase() === "not available" || text === "—") return "";
+  return text;
+}
+
+function humanReviewSeverityLabel(severity) {
+  const value = String(severity || "").toLowerCase();
+  if (value === "high") return t('highPriority');
+  if (value === "medium") return t('mediumPriority');
+  if (value === "low") return "Baja";
+  return t('needsReview');
+}
+
+function humanReviewTypeLabel(rawType, rawStatus = "") {
+  const type = String(rawType || "").toLowerCase();
+  const status = String(rawStatus || "").toLowerCase();
+  if (type.includes("relationship") || status.includes("insufficient_evidence")) return t('relationshipGapLabel');
+  if (type.includes("alias") || status.includes("merge") || status.includes("alias")) return t('reviewMergeOrAliasLabel');
+  return t('genericReviewLabel');
+}
+
+function humanRecommendedActionLabel(rawStatus, rawType = "") {
+  const status = String(rawStatus || "").toLowerCase();
+  if (status.includes("merge") || status.includes("alias")) return "Revisar si son la misma entidad o si una debe quedar como alias.";
+  if (status.includes("insufficient_evidence") || String(rawType || "").toLowerCase().includes("relationship")) return "Revisar evidencia antes de confirmar la relación en canon.";
+  if (status.includes("create_primary")) return "Decidir si debe convertirse en entidad canónica.";
+  if (status.includes("keep_secondary")) return "Mantener como mención secundaria si no aporta canon propio.";
+  if (status.includes("reject")) return "Descartar si es ruido o falso positivo.";
+  return "Revisar y decidir antes de modificar canon.";
+}
+
+function reviewDecisionTitle({ source, target, rawType, rawStatus, decisionTypeLabel }) {
+  if (source && target) return `${source} ↔ ${target}`;
+  if (source) return `${decisionTypeLabel}: ${source}`;
+  if (target) return `${decisionTypeLabel}: ${target}`;
+  return humanReviewTypeLabel(rawType, rawStatus);
+}
+
+function reviewDecisionIssue({ source, target, rawType, rawStatus }) {
+  const type = String(rawType || "").toLowerCase();
+  const status = String(rawStatus || "").toLowerCase();
+  if ((type.includes("relationship") || status.includes("insufficient_evidence")) && source && target) {
+    return `${source} aparece relacionado con ${target}, pero la evidencia detectada todavía es insuficiente.`;
+  }
+  if ((type.includes("alias") || status.includes("merge") || status.includes("alias")) && source && target) {
+    return `${source} podría ser alias o duplicado de ${target}.`;
+  }
+  if (source) return `${source} necesita una decisión editorial antes de actualizar canon.`;
+  return "Hay una decisión editorial pendiente en la cola de revisión.";
+}
+
+function reviewDecisionWhyItMatters({ rawType, rawStatus }) {
+  const type = String(rawType || "").toLowerCase();
+  const status = String(rawStatus || "").toLowerCase();
+  if (type.includes("relationship") || status.includes("insufficient_evidence")) return "Puede afectar al canon de relaciones, lugares y contexto del personaje.";
+  if (type.includes("alias") || status.includes("merge") || status.includes("alias")) return "Puede limpiar duplicados y mejorar grafo, wiki y fichas canónicas.";
+  return "Ayuda a mantener VaERL coherente antes de futuras fusiones o ediciones.";
+}
+
+function buildReviewActions({ source, target, candidates, evidence }) {
+  const candidateName = cleanReviewValue(candidates?.[0]?.canonical_name || candidates?.[0]?.name || "");
+  const canonTarget = target || candidateName || source;
+  const actions = [];
+  if ((evidence || []).length) actions.push({ key: "evidence", label: t('viewEvidence'), kind: "evidence", enabled: true });
+  if (source) actions.push({ key: "source", label: t('openSourceEntity'), kind: "canon", term: source, enabled: true });
+  if (target || candidateName) actions.push({ key: "related", label: t('openRelatedEntity'), kind: "canon", term: target || candidateName, enabled: true });
+  if (source || target || candidateName) actions.push({ key: "graph", label: t('viewRelationshipInGraph'), kind: "graph", term: source || target || candidateName, enabled: true });
+  if (canonTarget) actions.push({ key: "canon", label: t('viewInCanonEntities'), kind: "canon", term: canonTarget, enabled: true });
+  actions.push({ key: "mark_correct", label: t('markCorrect'), kind: "decision", enabled: false, disabled_reason: t('disabledNeedsWriteback') });
+  actions.push({ key: "false_positive", label: t('markFalsePositive'), kind: "decision", enabled: false, disabled_reason: t('disabledNeedsWriteback') });
+  actions.push({ key: "later", label: t('leaveForLater'), kind: "decision", enabled: false, disabled_reason: t('disabledNeedsWriteback') });
+  return actions;
+}
+
+function buildReviewTechnicalDetails(item, metadata) {
+  return {
+    raw_type: item.review_type || "",
+    raw_status: metadata.recommended_action || item.suggested_action || "",
+    metadata,
+    candidate_count: (item.candidate_entities || []).length,
+    evidence_count: (item.evidence || []).length,
+  };
+}
+
+function renderReviewDecisionActions(decision) {
+  return `<div class="review-actions author-actions">
+    ${(decision.actions || []).map((action) => {
+      const attrs = action.enabled
+        ? `${action.kind === 'graph' ? `data-review-graph-node="${escapeHtml(action.term || '')}"` : ''}${action.kind === 'canon' ? `data-review-canon="${escapeHtml(action.term || '')}"` : ''}${action.kind === 'evidence' ? `data-review-evidence="${escapeHtml(decision.id)}"` : ''}`
+        : `disabled title="${escapeHtml(action.disabled_reason || t('futurePhaseDisabled'))}"`;
+      return `<button type="button" class="${action.enabled ? '' : 'is-disabled'}" ${attrs}>${escapeHtml(action.label)}</button>`;
+    }).join("")}
+  </div>`;
+}
+
+function renderReviewTechnicalDetails(decision) {
+  const details = decision.technical_details || {};
+  const metadataEntries = Object.entries(details.metadata || {}).filter(([, value]) => value !== null && value !== undefined && value !== "");
+  return `
+    <details class="technical-details review-technical-details">
+      <summary>${escapeHtml(t('technicalDetailsCollapsed'))}</summary>
+      <div class="review-meta-grid">
+        ${details.raw_type ? `<div><span class="muted">raw_type:</span> ${escapeHtml(details.raw_type)}</div>` : ""}
+        ${details.raw_status ? `<div><span class="muted">raw_status:</span> ${escapeHtml(details.raw_status)}</div>` : ""}
+        <div><span class="muted">candidate_count:</span> ${escapeHtml(fmtCount(details.candidate_count))}</div>
+        <div><span class="muted">evidence_count:</span> ${escapeHtml(fmtCount(details.evidence_count))}</div>
+      </div>
+      ${metadataEntries.length ? `<ul class="review-technical-list">${metadataEntries.map(([key, value]) => `<li><code>${escapeHtml(key)}</code>: ${escapeHtml(JSON.stringify(value))}</li>`).join("")}</ul>` : ""}
+    </details>
+  `;
+}
+
+function renderReviewDecisionCard(decision, index) {
+  const item = decision.raw_item || {};
+  const evidence = item.evidence || [];
+  const open = index < 2 || state.selectedReviewItemId === decision.id;
+  return `
+    <details class="review-item review-decision-card ${state.selectedReviewItemId === decision.id ? "review-highlight" : ""}" data-review-item-id="${escapeHtml(decision.id)}" ${open ? "open" : ""}>
+      <summary>
+        <span class="badge severity-${escapeHtml(String(item.severity || "unknown").toLowerCase())}">${escapeHtml(decision.severity_label)}</span>
+        <span class="badge">${escapeHtml(decision.decision_type_label)}</span>
+        <strong>${escapeHtml(decision.title)}</strong>
+      </summary>
+      <div class="review-item-body">
+        <p class="eyebrow">${escapeHtml(t('editorialDecision'))}</p>
+        <h4>${escapeHtml(decision.title)}</h4>
+        <div class="review-decision-copy">
+          <div><span class="muted">${escapeHtml(t('issue'))}:</span> ${escapeHtml(decision.plain_language_issue)}</div>
+          <div><span class="muted">${escapeHtml(t('whyItMatters'))}:</span> ${escapeHtml(decision.why_it_matters)}</div>
+          <div><span class="muted">${escapeHtml(t('evidence'))}:</span> ${escapeHtml(decision.evidence_summary)}</div>
+          <div><span class="muted">${escapeHtml(t('recommendation'))}:</span> ${escapeHtml(decision.recommendation)}</div>
+        </div>
+        ${decision.affected_entities.length ? `<p><span class="muted">${escapeHtml(t('affectedEntities'))}:</span> ${decision.affected_entities.map((entity) => `<span class="badge">${escapeHtml(entity)}</span>`).join(" ")}</p>` : ""}
+        ${decision.affected_chapters.length ? `<p><span class="muted">${escapeHtml(t('affectedChapters'))}:</span> ${decision.affected_chapters.map((chapter) => `<span class="badge">${escapeHtml(chapter)}</span>`).join(" ")}</p>` : ""}
+        ${renderReviewDecisionActions(decision)}
+        ${evidence.length ? `<div class="review-evidence-block" id="review-evidence-${escapeHtml(decision.id)}"><h4>${escapeHtml(t('evidence'))}</h4><ul class="review-evidence">${evidence.map((entry) => `<li><p>${escapeHtml(cleanReviewValue(entry.text) || t('noEvidenceYet'))}</p>${cleanReviewValue(entry.chapter_id || entry.source) ? `<small class="muted">${escapeHtml(cleanReviewValue(entry.chapter_id || entry.source))}</small>` : ""}</li>`).join("")}</ul></div>` : ""}
+        ${renderReviewTechnicalDetails(decision)}
+      </div>
+    </details>
+  `;
+}
+
 function renderReview() {
   const queue = state.current.canon.review_queue || {};
   const items = queue.items || [];
@@ -2985,10 +3269,8 @@ function renderReview() {
   const view = state.reviewView || { severity: "", reviewType: "", query: "", sortBy: "severity_desc", quickFilter: "all", candidate: "" };
   const filtered = applyReviewFilters(items, view);
   const sorted = sortReviewItems(filtered, view.sortBy);
-  const grouped = groupReviewItemsForPresentation(sorted);
-  const quickFiltered = applyReviewQuickFilter({ grouped, filterKey: view.quickFilter || "all" });
-  const candidateFiltered = applyReviewCandidateFilter({ grouped: quickFiltered, candidateName: view.candidate || "" });
-  const candidateEntries = deriveReviewCandidates(grouped);
+  const decisions = buildReviewDecisionItems(sorted, { project: state.current?.project || {} });
+  const quickFilteredDecisions = applyReviewDecisionQuickFilter(decisions, view.quickFilter || "all");
   const candidateCount = items.filter((item) => (item.candidate_entities || []).length > 0).length;
   const evidenceCount = items.filter((item) => (item.evidence || []).length > 0).length;
   const highSeverity = severityCounts.high || 0;
@@ -3019,54 +3301,61 @@ function renderReview() {
       <div class="stat-card"><span>${escapeHtml(t('technicalRetry'))}</span><strong style="font-size:20px">${highSeverity}</strong></div>
     </div>
     <div class="review-summary panel">
-      <div class="review-summary-block">
-        <h4>By severity</h4>
-        <p>${renderCountBadges(severityCounts, "severity")}</p>
-      </div>
-      <div class="review-summary-block">
-        <h4>By review type</h4>
-        <p>${renderCountBadges(typeCounts, "type")}</p>
-      </div>
+      <div class="review-summary-block"><h4>${escapeHtml(t('severity'))}</h4><p>${renderCountBadges(severityCounts, "severity")}</p></div>
+      <div class="review-summary-block"><h4>${escapeHtml(t('decisionType'))}</h4><p>${renderCountBadges(typeCounts, "type")}</p></div>
     </div>
-    ${renderReviewPresentationSummary(grouped)}
     ${renderReviewQuickFilters(view.quickFilter || "all")}
-    ${renderReviewCandidateDrilldown(candidateEntries, view.candidate || "")}
     <div class="review-filters panel">
-      <label>Severity
+      <label>${escapeHtml(t('severity'))}
         <select id="review-filter-severity">
-          <option value="">all</option>
+          <option value="">${escapeHtml(t('allDecisions'))}</option>
           ${Object.keys(severityCounts).sort((a, b) => reviewSeverityRank(a) - reviewSeverityRank(b)).map((severity) => `
-            <option value="${escapeHtml(severity)}" ${view.severity === severity ? "selected" : ""}>${escapeHtml(severity)}</option>
+            <option value="${escapeHtml(severity)}" ${view.severity === severity ? "selected" : ""}>${escapeHtml(humanReviewSeverityLabel(severity))}</option>
           `).join("")}
         </select>
       </label>
-      <label>Review type
+      <label>${escapeHtml(t('decisionType'))}
         <select id="review-filter-type">
-          <option value="">all</option>
+          <option value="">${escapeHtml(t('allDecisions'))}</option>
           ${typeOptions.map((reviewType) => `
-            <option value="${escapeHtml(reviewType)}" ${view.reviewType === reviewType ? "selected" : ""}>${escapeHtml(reviewType)}</option>
+            <option value="${escapeHtml(reviewType)}" ${view.reviewType === reviewType ? "selected" : ""}>${escapeHtml(humanReviewTypeLabel(reviewType))}</option>
           `).join("")}
         </select>
       </label>
-      <label>Search
-        <input id="review-filter-query" class="search compact" placeholder="source, target, type, evidence..." value="${escapeHtml(view.query || "")}" />
+      <label>${escapeHtml(t('search'))}
+        <input id="review-filter-query" class="search compact" placeholder="Ren, Sera, Castillo..." value="${escapeHtml(view.query || "")}" />
       </label>
-      <label>Sort
+      <label>${escapeHtml(t('sort'))}
         <select id="review-sort-by">
-          <option value="severity_desc" ${view.sortBy === "severity_desc" ? "selected" : ""}>severity (high → low)</option>
-          <option value="review_type_asc" ${view.sortBy === "review_type_asc" ? "selected" : ""}>review_type (A→Z)</option>
-          <option value="source_asc" ${view.sortBy === "source_asc" ? "selected" : ""}>source (A→Z)</option>
-          <option value="target_asc" ${view.sortBy === "target_asc" ? "selected" : ""}>target (A→Z)</option>
+          <option value="severity_desc" ${view.sortBy === "severity_desc" ? "selected" : ""}>${escapeHtml(t('sortSeverity'))}</option>
+          <option value="recent_desc" ${view.sortBy === "recent_desc" ? "selected" : ""}>${escapeHtml(t('sortRecent'))}</option>
+          <option value="review_type_asc" ${view.sortBy === "review_type_asc" ? "selected" : ""}>${escapeHtml(t('sortType'))}</option>
+          <option value="source_asc" ${view.sortBy === "source_asc" ? "selected" : ""}>${escapeHtml(t('sortSource'))}</option>
         </select>
       </label>
-      <button type="button" id="review-filter-reset">Reset</button>
+      <button type="button" id="review-filter-reset">${escapeHtml(t('resetFilters'))}</button>
     </div>
     <div class="review-results panel">
-      <p class="muted">Showing ${countRenderedReviewItems(candidateFiltered)} visible grouped entries from ${items.length} raw items</p>
-      ${countRenderedReviewItems(candidateFiltered) ? renderReviewPresentationGroups(candidateFiltered) : `<p class="muted">No groups match this filter.</p>`}
+      <p class="muted">${escapeHtml(t('visibleDecisions', { visible: fmtCount(quickFilteredDecisions.length), total: fmtCount(items.length) }))}</p>
+      ${quickFilteredDecisions.length ? quickFilteredDecisions.map((decision, index) => renderReviewDecisionCard(decision, index)).join("") : `<p class="muted">${escapeHtml(t('noDecisionsMatch'))}</p>`}
     </div>
   `;
   bindReviewQueueInteractions();
+}
+
+function applyReviewDecisionQuickFilter(decisions, filterKey) {
+  const key = filterKey || "all";
+  if (key === "all") return decisions;
+  return (decisions || []).filter((decision) => {
+    const item = decision.raw_item || {};
+    if (key === "requires_human_review") return true;
+    if (key === "high") return String(item.severity || "").toLowerCase() === "high";
+    if (key === "medium") return String(item.severity || "").toLowerCase() === "medium";
+    if (key === "has_related") return decision.affected_entities.length > 1;
+    if (key === "object_retention") return String(decision.raw_status || "").includes("keep_secondary") || String(decision.raw_status || "").includes("create_primary");
+    if (key === "future_actions") return (decision.actions || []).some((action) => !action.enabled);
+    return true;
+  });
 }
 
 function deriveReviewSeverityCounts(queue, items) {
@@ -3130,6 +3419,8 @@ function sortReviewItems(items, sortBy) {
   const byText = (value) => String(value || "").toLowerCase();
   if (sortBy === "review_type_asc") {
     sorted.sort((a, b) => byText(a.review_type).localeCompare(byText(b.review_type)));
+  } else if (sortBy === "recent_desc") {
+    sorted.sort((a, b) => reviewItemKey(b, 0).localeCompare(reviewItemKey(a, 0)));
   } else if (sortBy === "source_asc") {
     sorted.sort((a, b) => byText(a.source_entity).localeCompare(byText(b.source_entity)));
   } else if (sortBy === "target_asc") {
@@ -3321,41 +3612,39 @@ function renderReviewSummaryCard(label, value) {
 
 function reviewQuickFilterPresentation(filterKey) {
   const labels = {
-    all: "All groups",
-    requires_human_review: "Requires human review",
-    high: "High",
-    medium: "Medium",
-    has_related: "Has related/equivalent items",
-    object_retention: "Object retention",
-    legacy: "Legacy/ungrouped",
-    future_actions: "Future actions",
+    all: t('allDecisions'),
+    requires_human_review: t('requiresAuthorReview'),
+    high: t('highPriority'),
+    medium: t('mediumPriority'),
+    has_related: t('relatedElements'),
+    object_retention: t('objectRetention'),
+    future_actions: t('plannedActions'),
   };
   const key = labels[filterKey] ? filterKey : "all";
   return {
     key,
-    label: key === "all" ? "Active filter: All groups" : `Active filter: ${labels[key]}`,
+    label: labels[key],
     showClear: key !== "all",
   };
 }
 
 function renderReviewQuickFilters(activeFilter) {
   const filters = [
-    { key: "all", label: "All" },
-    { key: "requires_human_review", label: "Requires human review" },
-    { key: "high", label: "High" },
-    { key: "medium", label: "Medium" },
-    { key: "has_related", label: "Has related/equivalent items" },
-    { key: "object_retention", label: "Object retention" },
-    { key: "legacy", label: "Legacy/ungrouped" },
-    { key: "future_actions", label: "Future actions" },
+    { key: "all", label: t('allDecisions') },
+    { key: "requires_human_review", label: t('requiresAuthorReview') },
+    { key: "high", label: t('highPriority') },
+    { key: "medium", label: t('mediumPriority') },
+    { key: "has_related", label: t('relatedElements') },
+    { key: "object_retention", label: t('objectRetention') },
+    { key: "future_actions", label: t('plannedActions') },
   ];
   const presentation = reviewQuickFilterPresentation(activeFilter || "all");
   return `
     <div class="review-quick-filters panel">
       <div class="review-quick-filters-header">
-        <h4>Quick filters</h4>
+        <h4>${escapeHtml(t('quickFilters'))}</h4>
         <span class="badge review-group-badge">${escapeHtml(presentation.label)}</span>
-        ${presentation.showClear ? `<button type="button" id="review-quick-filter-clear">Clear filter</button>` : ""}
+        ${presentation.showClear ? `<button type="button" id="review-quick-filter-clear">${escapeHtml(t('clearFilter'))}</button>` : ""}
       </div>
       <div class="review-quick-filters-chips">
         ${filters.map((filter) => `<button type="button" class="review-quick-filter-chip ${filter.key === presentation.key ? "is-active" : ""}" data-review-quick-filter="${escapeHtml(filter.key)}">${escapeHtml(filter.label)}</button>`).join("")}
@@ -3437,7 +3726,7 @@ function countRenderedReviewItems(grouped) {
 
 function renderCountBadges(counts, badgeType) {
   const entries = Object.entries(counts || {});
-  if (!entries.length) return `<span class="muted">not available</span>`;
+  if (!entries.length) return "";
   const sorted = badgeType === "severity"
     ? entries.sort((a, b) => reviewSeverityRank(a[0]) - reviewSeverityRank(b[0]))
     : entries.sort((a, b) => String(a[0]).localeCompare(String(b[0])));
@@ -3488,7 +3777,7 @@ function renderReviewActionDescriptors(item) {
   const presentation = reviewActionPresentation(item);
   const actionDescriptors = presentation.actions.map((actionKey) => viewerActionDescriptor(actionKey)).filter(Boolean);
   if (!actionDescriptors.length) {
-    return `<p class="muted">Future actions: inspect evidence only.</p>`;
+    return `<p class="muted">${escapeHtml(t('futurePhaseDisabled'))}</p>`;
   }
   return `
     <div class="future-action-badges">
@@ -3618,7 +3907,7 @@ function renderReviewRelatedItem(item, index) {
           <div><span class="muted">Surface type:</span> ${escapeHtml(presentation.surfaceType || "not available")}</div>
         </div>
         ${renderReviewContractWarnings(item)}
-        <h5>Future viewer actions</h5>
+        <h5>${escapeHtml(t('plannedActions'))}</h5>
         ${renderReviewActionDescriptors(item)}
       </div>
     </details>
@@ -3685,21 +3974,20 @@ function renderReviewItemCard(item, index) {
         </div>
         ${renderReviewContractWarnings(item)}
         <div class="review-actions">
-          ${item.source_entity ? `<button type="button" data-review-graph="${escapeHtml(item.source_entity)}">Source → graph</button>` : ""}
-          ${item.target_text ? `<button type="button" data-review-graph="${escapeHtml(item.target_text)}">Target → graph</button>` : ""}
-          ${item.source_entity ? `<button type="button" data-review-canon="${escapeHtml(item.source_entity)}">Source → canon</button>` : ""}
-          ${item.target_text ? `<button type="button" data-review-canon="${escapeHtml(item.target_text)}">Target → canon</button>` : ""}
-          <button type="button" data-review-open-canon="1">Open canon</button>
+          ${item.source_entity ? `<button type="button" data-review-graph-node="${escapeHtml(item.source_entity)}">${escapeHtml(t('openSourceEntity'))}</button>` : ""}
+          ${item.target_text ? `<button type="button" data-review-graph-node="${escapeHtml(item.target_text)}">${escapeHtml(t('openRelatedEntity'))}</button>` : ""}
+          ${item.source_entity ? `<button type="button" data-review-canon="${escapeHtml(item.source_entity)}">${escapeHtml(t('viewInCanonEntities'))}</button>` : ""}
+          ${item.target_text ? `<button type="button" data-review-canon="${escapeHtml(item.target_text)}">${escapeHtml(t('viewInCanonEntities'))}</button>` : ""}
         </div>
-        <h4>Future viewer actions</h4>
+        <h4>${escapeHtml(t('plannedActions'))}</h4>
         ${renderReviewActionDescriptors(item)}
         ${candidates.length ? `<h4>Candidates</h4><div class="review-candidates">${candidates.map((candidate) => `
           <div class="candidate-card">
             <strong>${escapeHtml(candidate.canonical_name || "not available")}</strong>
             <small>${escapeHtml(candidate.entity_kind || "not available")}</small>
             <div class="candidate-actions">
-              ${candidate.canonical_name ? `<button type="button" class="inline-action" data-review-graph="${escapeHtml(candidate.canonical_name)}">Graph</button>` : ""}
-              ${candidate.canonical_name ? `<button type="button" class="inline-action" data-review-canon="${escapeHtml(candidate.canonical_name)}">Canon</button>` : ""}
+              ${candidate.canonical_name ? `<button type="button" class="inline-action" data-review-graph-node="${escapeHtml(candidate.canonical_name)}">${escapeHtml(t('viewInGraph'))}</button>` : ""}
+              ${candidate.canonical_name ? `<button type="button" class="inline-action" data-review-canon="${escapeHtml(candidate.canonical_name)}">${escapeHtml(t('viewInCanonEntities'))}</button>` : ""}
             </div>
           </div>
         `).join("")}</div>` : `<p class="muted">Candidates: not available</p>`}
@@ -3761,10 +4049,10 @@ function bindReviewQueueInteractions() {
       renderReview();
     });
   });
-  document.querySelectorAll("[data-review-graph]").forEach((node) => {
+  document.querySelectorAll("[data-review-graph-node]").forEach((node) => {
     node.addEventListener("click", () => {
-      const term = node.dataset.reviewGraph || "";
-      if (term) navigateToGraphTerm(term, { from: "Review Queue" });
+      const term = node.dataset.reviewGraphNode || "";
+      if (term) navigateToGraphNode(term, { from: "Review Queue" });
     });
   });
   document.querySelectorAll("[data-review-canon]").forEach((node) => {
@@ -3773,8 +4061,12 @@ function bindReviewQueueInteractions() {
       if (term) navigateToCanonTerm(term, { from: "Review Queue" });
     });
   });
-  document.querySelectorAll("[data-review-open-canon]").forEach((node) => {
-    node.addEventListener("click", () => setView("canon"));
+  document.querySelectorAll("[data-review-evidence]").forEach((node) => {
+    node.addEventListener("click", () => {
+      const id = node.dataset.reviewEvidence || "";
+      const target = document.getElementById(`review-evidence-${id}`);
+      if (target) target.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
   });
 }
 
@@ -4785,6 +5077,9 @@ function nodeStatusBorder(node) {
 }
 
 globalThis.__TEXTIFAI_REVIEW_ACTIONS__ = {
+  buildReviewDecisionItems,
+  buildReviewDecisionItem,
+  buildReviewActions,
   mapRecommendedActionToViewerActions,
   normalizedFutureViewerActions,
   reviewActionPresentation,

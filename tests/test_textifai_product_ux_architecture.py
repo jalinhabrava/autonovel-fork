@@ -81,7 +81,7 @@ class TextifAIProductUXArchitectureTests(unittest.TestCase):
 
     def test_view_in_graph_contract_helper(self):
         text = APP_JS.read_text(encoding='utf-8')
-        self.assertIn('function navigateToGraphNode(nodeOrPathOrId, { from = "Viewer" } = {}) {', text)
+        self.assertIn('function navigateToGraphNode(nodeOrPathOrId, { from = "Workspace" } = {}) {', text)
         self.assertIn('const canonicalNodeId = resolveCanonicalNodeId(node.canonical_node_id || node.id || node.note_path || node.label);', text)
         self.assertIn('const revealNotice = ensureGraphNodeVisible(canonicalNode);', text)
         self.assertIn('setView("graph");', text)

@@ -1,0 +1,9 @@
+{
+  "assessment": "review_workspace_cleanup_ready_for_manual_review",
+  "provider_calls": false,
+  "package_changes": false,
+  "write_back": false,
+  "open_design_used": true,
+  "lazyweb_used": true,
+  "ready_for_sp105b": true
+}
