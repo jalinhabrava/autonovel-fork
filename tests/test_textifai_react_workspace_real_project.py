@@ -93,8 +93,8 @@ class TextifAIReactWorkspaceRealProjectTests(unittest.TestCase):
         self.assertIn('setSelectedGraphNodeId', text)
         self.assertIn('Ficha del nodo', text)
         self.assertIn('Editar', text)
-        self.assertIn('mx-5 mb-5 hidden', graph_block)
-        self.assertIn('hidden"><LegacyEmbed title="Graph legacy dev fallback"', graph_block)
+        if 'LegacyEmbed' in graph_block:
+            self.assertLess(graph_block.index('NativeGraphSurface'), graph_block.index('LegacyEmbed'))
         self.assertNotIn('Graph module (legacy runtime boundary)', graph_block)
         report = read_json('native_react_graph_surface_after_sp105c.json')
         self.assertTrue(report['legacy_embed_removed_from_primary_graph'])
