@@ -1,0 +1,6 @@
+{
+  "assessment": "review_queue_product_tone_ready",
+  "product_sections": ["suggested_merges", "ambiguous_entities", "uncertain_relationships", "technical_retry"],
+  "raw_audit_terms_demoted": true,
+  "empty_states_author_facing": true
+}

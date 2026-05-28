@@ -1,0 +1,9 @@
+{
+  "assessment": "overview_redesign_ready",
+  "removed_technical_sections": ["Semantic Health", "Run observability", "Materialization Integrity", "run_comparability_manifest", "Entity Triage"],
+  "author_sections": ["story_status", "recommended_next_step", "pending_decisions", "main_entities", "graph_status_natural_language"],
+  "primary_cta": "review_queue",
+  "entity_summary_available": true,
+  "debug_sections_moved_to_dev": true,
+  "forbidden_terms_absent_from_overview": true
+}

@@ -1,0 +1,8 @@
+{
+  "assessment": "dev_debug_surface_ready",
+  "sections": ["semantic_health", "ingestion_wizard", "compare_runs", "entity_triage", "artifacts"],
+  "shows_run_project_technical_details": true,
+  "shows_raw_artifacts": true,
+  "shows_canonicalization_internals": true,
+  "explains_why_it_matters": true
+}

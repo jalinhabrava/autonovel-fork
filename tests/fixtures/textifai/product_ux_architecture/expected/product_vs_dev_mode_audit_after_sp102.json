@@ -1,0 +1,10 @@
+{
+  "assessment": "product_dev_mode_audit_ready",
+  "product_surfaces": ["overview", "graph", "wiki", "canon_entities", "review", "narrative_inspector"],
+  "dev_surfaces": ["semantic_health", "run_observability", "ingestion_wizard", "entity_triage", "compare_runs", "raw_artifacts", "canonicalization_internals"],
+  "moved_from_overview_to_dev": ["semantic_health", "run_observability", "entity_triage", "compare_runs", "ingestion_wizard"],
+  "moved_from_canon_to_dev": ["canonicalization_visibility", "resolution_audit", "cluster_audit", "promotion_decision", "pre_vaerl_reconciliation", "relationship_reconciliation"],
+  "hidden_from_product_primary": ["materialization_integrity", "semantic_invariants", "missing_artifacts", "run_comparability_manifest"],
+  "dev_access_path": "tab-dev",
+  "no_technical_garbage_in_author_overview": true
+}

@@ -8,12 +8,14 @@ const state = {
   selectedGraphNodeId: null,
   graphAnimation: null,
   graphSimulation: null,
+  currentGraphLayout: null,
   graphViewBox: { x: 0, y: 0, width: 1200, height: 720 },
   graphPan: null,
   graphDidPan: false,
   graphDidDragNode: false,
   graphDrag: null,
   graphShowAllNodes: false,
+  graphRevealNodeId: null,
   hiddenGraphTags: new Set(),
   wikiFilters: { query: "", kind: "", tag: "", status: "" },
   selectedCanonEntityKey: null,
@@ -46,11 +48,22 @@ const state = {
 };
 
 const GRAPH_CLICK_DRAG_THRESHOLD_PX = 5;
+const GRAPH_HIDDEN_TECHNICAL_TAGS = new Set([
+  'review',
+  'ready',
+  'needs_review',
+  'needs_retry',
+  'es',
+  'en',
+]);
 
 const I18N = {
   en: {
     appTitle: "TextifAI Viewer",
     brandSubtitle: "Author knowledge workspace",
+    profileName: "Guest author",
+    profileRole: "Local profile",
+    settings: "Settings",
     refresh: "Refresh",
     currentProject: "Current project",
     selectProject: "Select project",
@@ -58,6 +71,7 @@ const I18N = {
     overview: "Overview",
     wiki: "Wiki",
     canon: "Canon",
+    canonEntities: "Canon / Entities",
     review: "Review",
     graph: "Graph",
     artifacts: "Technical details",
@@ -69,6 +83,7 @@ const I18N = {
     technicalArtifact: "Technical artifact",
     technicalDetails: "Technical details",
     chapters: "chapters",
+    kind: "Kind",
     nodes: "nodes",
     edges: "edges",
     ready: "ready",
@@ -79,6 +94,7 @@ const I18N = {
     allKinds: "All kinds",
     allTags: "All tags",
     allStatus: "All status",
+    selectNote: "Select note.",
     hideSystem: "Hide system",
     hideReview: "Hide review",
     hideChapters: "Hide chapters",
@@ -115,6 +131,41 @@ const I18N = {
     workspaceStatus: "Author-ready preview",
     storyHealth: "Story health",
     graphHealth: "Graph health",
+    storyStatus: "Story status",
+    authorNextStep: "Recommended next step",
+    pendingDecisions: "Pending decisions",
+    mainEntities: "Main entities",
+    graphReadyNatural: "Graph ready for review with {nodes} useful nodes visible.",
+    openDecisionQueue: "Review decisions",
+    openEntities: "Open entities",
+    chaptersReady: "chapters ready",
+    technicalRetry: "technical retry",
+    ambiguousEntities: "ambiguous entities",
+    uncertainRelationships: "uncertain relationships",
+    suggestedMerges: "suggested merges",
+    noSuggestedMerges: "No suggested merges yet. Candidates will be generated in the next phase.",
+    productMode: "Product mode",
+    devMode: "Dev/debug mode",
+    devSummary: "Technical diagnostics moved out of the author workspace.",
+    openRawReview: "Open raw review_queue.json",
+    decisionQueueTitle: "Decision queue",
+    decisionQueueSubtitle: "Review items grouped by story decision, evidence, and impact.",
+    canonSubtitle: "Story bible entities, aliases, evidence, and future merge decisions.",
+    canonicalEntities: "Canonical entities",
+    reviewEntities: "Needs review",
+    chaptersSection: "Chapters",
+    aliases: "Aliases",
+    relationships: "Relationships",
+    reviewState: "Review state",
+    viewInGraph: "View in graph",
+    viewCard: "View card",
+    compare: "Compare",
+    suggestMerge: "Suggest merge",
+    markForReview: "Mark for review",
+    futurePhaseDisabled: "Planned for next phase; no write-back runs here.",
+    graphNodeHiddenRevealed: "Node was hidden by graph scope. Show all nodes enabled temporarily.",
+    graphNodeMissing: "This entity is not in the graph yet.",
+    openedInGraph: "Opened in graph.",
     nextAction: "Next action",
     reviewQueue: "Decision queue",
     evidence: "Evidence",
@@ -132,6 +183,9 @@ const I18N = {
   es: {
     appTitle: "Visor TextifAI",
     brandSubtitle: "Workspace narrativo para autores",
+    profileName: "Autor invitado",
+    profileRole: "Perfil local",
+    settings: "Ajustes",
     refresh: "Actualizar",
     currentProject: "Proyecto actual",
     selectProject: "Selecciona proyecto",
@@ -139,6 +193,7 @@ const I18N = {
     overview: "Resumen",
     wiki: "Wiki",
     canon: "Canon",
+    canonEntities: "Canon / Entidades",
     review: "Revisión",
     graph: "Grafo",
     artifacts: "Detalles técnicos",
@@ -150,6 +205,7 @@ const I18N = {
     technicalArtifact: "Artefacto técnico",
     technicalDetails: "Detalles técnicos",
     chapters: "capítulos",
+    kind: "Tipo",
     nodes: "nodos",
     edges: "relaciones",
     ready: "listo",
@@ -160,6 +216,7 @@ const I18N = {
     allKinds: "Todos los tipos",
     allTags: "Todas las etiquetas",
     allStatus: "Todos los estados",
+    selectNote: "Selecciona nota.",
     hideSystem: "Ocultar sistema",
     hideReview: "Ocultar revisión",
     hideChapters: "Ocultar capítulos",
@@ -196,6 +253,41 @@ const I18N = {
     workspaceStatus: "Vista lista para autor",
     storyHealth: "Salud narrativa",
     graphHealth: "Salud del grafo",
+    storyStatus: "Estado de la obra",
+    authorNextStep: "Siguiente acción recomendada",
+    pendingDecisions: "Decisiones pendientes",
+    mainEntities: "Entidades principales",
+    graphReadyNatural: "Grafo listo para revisión con {nodes} nodos útiles visibles.",
+    openDecisionQueue: "Revisar decisiones",
+    openEntities: "Abrir entidades",
+    chaptersReady: "capítulos listos",
+    technicalRetry: "retry técnico",
+    ambiguousEntities: "entidades ambiguas",
+    uncertainRelationships: "relaciones inciertas",
+    suggestedMerges: "fusiones sugeridas",
+    noSuggestedMerges: "No hay fusiones sugeridas todavía. Los candidatos se generarán en la siguiente fase.",
+    productMode: "Modo producto",
+    devMode: "Modo dev/debug",
+    devSummary: "Diagnósticos técnicos movidos fuera del workspace de autor.",
+    openRawReview: "Abrir review_queue.json raw",
+    decisionQueueTitle: "Cola de decisiones",
+    decisionQueueSubtitle: "Items agrupados por decisión narrativa, evidencia e impacto.",
+    canonSubtitle: "Entidades de la biblia de obra, aliases, evidencia y futuras decisiones de fusión.",
+    canonicalEntities: "Entidades canónicas",
+    reviewEntities: "Sin revisar",
+    chaptersSection: "Capítulos",
+    aliases: "Alias",
+    relationships: "Relaciones",
+    reviewState: "Estado de revisión",
+    viewInGraph: "Ver en grafo",
+    viewCard: "Ver ficha",
+    compare: "Comparar",
+    suggestMerge: "Sugerir fusión",
+    markForReview: "Marcar para revisión",
+    futurePhaseDisabled: "Planificado para la siguiente fase; aquí no hay write-back.",
+    graphNodeHiddenRevealed: "El nodo estaba oculto por el scope del grafo. Se activó Mostrar todo temporalmente.",
+    graphNodeMissing: "Esta entidad aún no está en el grafo.",
+    openedInGraph: "Abierto en grafo.",
     nextAction: "Siguiente acción",
     reviewQueue: "Cola de decisiones",
     evidence: "Evidencia",
@@ -378,24 +470,43 @@ function kindLabel(kind) {
   return normalized || '—';
 }
 
+function noteStatusLabel(status) {
+  const normalized = normalizeReviewStatus(status);
+  if (normalized === 'ready' || normalized === 'pass') return t('ready');
+  if (normalized === 'needs_review' || normalized === 'review' || normalized === 'warn') return t('needsReview');
+  if (normalized === 'needs_retry' || normalized === 'retry' || normalized === 'fail') return t('retry');
+  return normalized || '—';
+}
+
+function normalizeReviewStatus(status) {
+  const normalized = String(status || '').toLowerCase();
+  if (['ready', 'pass'].includes(normalized)) return 'ready';
+  if (['needs_review', 'review', 'warn'].includes(normalized)) return 'needs_review';
+  if (['needs_retry', 'retry', 'fail'].includes(normalized)) return 'needs_retry';
+  return normalized;
+}
+
 function applyStaticTranslations() {
   document.documentElement.lang = state.locale;
   document.title = t('appTitle');
   $("brand-title").textContent = t('appTitle');
   $("brand-subtitle").textContent = t('brandSubtitle');
+  if ($("profile-name")) $("profile-name").textContent = t('profileName');
+  if ($("profile-role")) $("profile-role").textContent = t('profileRole');
+  if ($("settings-placeholder")) $("settings-placeholder").textContent = t('settings');
   $("refresh-projects").textContent = t('refresh');
   $("current-project-eyebrow").textContent = t('currentProject');
   $("project-title").textContent = state.current ? $("project-title").textContent : t('selectProject');
   if (!state.current) $("project-meta").textContent = t('readOnlyPreview');
   $("tab-overview").textContent = t('overview');
   $("tab-notes").textContent = t('wiki');
-  $("tab-canon").textContent = t('canon');
+  $("tab-canon").textContent = t('canonEntities');
   $("tab-review").textContent = t('review');
   $("tab-graph").textContent = t('graph');
   if ($("tab-dev")) $("tab-dev").textContent = t('dev');
   $("wiki-title").textContent = t('wiki');
   $("wiki-subtitle").textContent = t('wikiSubtitle');
-  if ($("dev-title")) $("dev-title").textContent = t('technicalDetails');
+  if ($("dev-title")) $("dev-title").textContent = t('devMode');
   $("note-filter").placeholder = t('searchNotes');
   $("label-hide-system").textContent = t('hideSystem');
   $("label-hide-review").textContent = t('hideReview');
@@ -412,6 +523,7 @@ function applyStaticTranslations() {
   if ($("graph-zoom-out")) $("graph-zoom-out").textContent = t('zoomOut');
   $("graph-zoom-reset").textContent = t('resetLayout');
   if (!state.current) $("graph-detail").textContent = t('selectNode');
+  if ($("note-detail") && !state.current) $("note-detail").textContent = t('selectNote');
   if ($("artifact-detail") && !state.current) $("artifact-detail").textContent = t('selectArtifact');
 }
 
@@ -532,11 +644,11 @@ async function selectProject(projectId, options = {}) {
   state.viewerNavForward = [];
   state.viewerRecent = [];
   state.graphShowAllNodes = false;
+  state.currentGraphLayout = null;
   if (state.current && state.current.graph) state.current.graphDetailPath = "";
   if (options.notice) setNavNotice(options.notice, "info");
   else if (!options.preserveNotice) state.navNotice = null;
   resetGraphViewBox();
-  $("graph-kind-filter").dataset.ready = "";
   if ($("show-all-nodes")) $("show-all-nodes").checked = false;
   renderProjects();
   renderCurrentProject();
@@ -678,41 +790,126 @@ function applyViewerNavEntry(entry, { pushHistory = false } = {}) {
 function renderOverview() {
   if (!state.current) return;
   const overview = state.current.overview || {};
-  const health = state.current.health || {};
   const graph = normalizeGraphData(state.current.graph || { nodes: [], edges: [] });
+  const visibleGraph = buildVisibleGraph(graph, {
+    hideSystem: true,
+    hideReview: true,
+    hideChapters: true,
+    showAllNodes: false,
+    localGraphMode: false,
+    hiddenTags: new Set(),
+    selectedGraphNodeId: state.selectedGraphNodeId,
+  });
   const reviewCount = Number(overview.chapters_needing_review || 0) + Number(overview.unresolved_link_count || 0);
   const retryCount = Number(overview.chapters_needing_retry || 0);
+  const topCharacters = overviewTopEntitiesByKind('character');
+  const topPlaces = overviewTopEntitiesByKind('place');
+  const topEvents = overviewTopEntitiesByKind('event');
+  const topObjects = overviewTopEntitiesByKind('object');
+  const primaryAction = overviewPrimaryAction(overview, reviewCount, retryCount);
   $("view-overview").innerHTML = `
-    <section class="author-hero panel">
+    ${renderNavNotice()}
+    <div class="stats-grid author-dashboard">
+      <div class="stat-card"><span>${escapeHtml(t('storyStatus'))}</span><strong>${escapeHtml(overview.user_summary || t('workspaceStatus'))}</strong></div>
+      <div class="stat-card"><span>${escapeHtml(t('chapters'))}</span><strong>${fmtCount(overview.chapters_processed || 0)}</strong></div>
+      <div class="stat-card"><span>${escapeHtml(t('chaptersReady'))}</span><strong>${fmtCount(overview.chapters_ready || 0)}</strong></div>
+      <div class="stat-card"><span>${escapeHtml(t('pendingDecisions'))}</span><strong>${fmtCount(reviewCount)}</strong></div>
+      <div class="stat-card"><span>${escapeHtml(t('technicalRetry'))}</span><strong>${fmtCount(retryCount)}</strong></div>
+      <div class="stat-card"><span>${escapeHtml(t('mainEntities'))}</span><strong>${fmtCount((state.current.canon?.primaries || []).length)}</strong></div>
+    </div>
+    <section class="overview-actions panel">
       <div>
-        <p class="eyebrow">${escapeHtml(t('storyWorkspace'))}</p>
-        <h3>${escapeHtml(projectTitle(state.current.project || {}))}</h3>
-        <p class="muted">${escapeHtml(overview.user_summary || t('workspaceStatus'))}</p>
+        <p class="eyebrow">${escapeHtml(t('authorNextStep'))}</p>
+        <h3>${escapeHtml(primaryAction.label)}</h3>
+        <p class="muted">${escapeHtml(primaryAction.description)}</p>
       </div>
       <div class="hero-actions">
-        <button id="overview-open-wiki" type="button">${escapeHtml(t('wiki'))}</button>
+        <button id="overview-open-review" type="button">${escapeHtml(t('openDecisionQueue'))}</button>
         <button id="overview-open-graph" type="button">${escapeHtml(t('graph'))}</button>
+        <button id="overview-open-wiki" type="button">${escapeHtml(t('wiki'))}</button>
+        <button id="overview-open-canon" type="button">${escapeHtml(t('openEntities'))}</button>
       </div>
     </section>
-    <div class="stats-grid author-dashboard">
-      <div class="stat-card"><span>${escapeHtml(t('storyHealth'))}</span><strong>${escapeHtml(health.status || t('ready'))}</strong></div>
-      <div class="stat-card"><span>${escapeHtml(t('chapters'))}</span><strong>${fmtCount(overview.chapters_processed || 0)}</strong></div>
-      <div class="stat-card"><span>${escapeHtml(t('reviewQueue'))}</span><strong>${fmtCount(reviewCount)}</strong></div>
-      <div class="stat-card"><span>${escapeHtml(t('retry'))}</span><strong>${fmtCount(retryCount)}</strong></div>
-      <div class="stat-card"><span>${escapeHtml(t('graphHealth'))}</span><strong>${fmtCount(graph.nodes.length)} / ${fmtCount(graph.edges.length)}</strong></div>
-      <div class="stat-card"><span>${escapeHtml(t('nextAction'))}</span><strong>${escapeHtml((overview.primary_action || {}).label || overview.next_action_cta || t('review'))}</strong></div>
-    </div>
-    ${renderSemanticHealth(state.current.health || {})}
-    ${renderIngestionWizard()}
-    ${renderCompareRunsPanel()}
-    ${renderEntityTriagePanel()}
+    <section class="overview-grid">
+      <article class="panel">
+        <p class="eyebrow">${escapeHtml(t('pendingDecisions'))}</p>
+        <h3>${escapeHtml(t('decisionQueueTitle'))}</h3>
+        <div class="overview-list">
+          ${renderOverviewMetricLine(t('reviewQueue'), reviewCount)}
+          ${renderOverviewMetricLine(t('technicalRetry'), retryCount)}
+          ${renderOverviewMetricLine(t('ambiguousEntities'), (state.current.canon?.review_entities || []).length)}
+          ${renderOverviewMetricLine(t('uncertainRelationships'), Number(overview.unresolved_link_count || 0))}
+          ${renderOverviewMetricLine(t('suggestedMerges'), 0)}
+        </div>
+      </article>
+      <article class="panel">
+        <p class="eyebrow">${escapeHtml(t('mainEntities'))}</p>
+        <h3>${escapeHtml(t('canonEntities'))}</h3>
+        ${renderOverviewEntityStrip(topCharacters, t('kindCharacter'))}
+        ${renderOverviewEntityStrip(topPlaces, t('kindPlace'))}
+        ${renderOverviewEntityStrip(topEvents, t('kindEvent'))}
+        ${renderOverviewEntityStrip(topObjects, t('kindObject'))}
+      </article>
+    </section>
+    <section class="panel overview-graph-status">
+      <p class="eyebrow">${escapeHtml(t('graph'))}</p>
+      <h3>${escapeHtml(t('graphReadyNatural', { nodes: fmtCount(visibleGraph.nodes.length) }))}</h3>
+      <p class="muted">${escapeHtml(`${fmtCount(graph.nodes.length)} ${t('nodes')} · ${fmtCount(graph.edges.length)} ${t('edges')}`)}</p>
+    </section>
   `;
-  bindHealthInteractions();
-  bindIngestionWizardInteractions();
-  bindCompareRunsInteractions();
-  bindEntityTriageInteractions();
+  $("overview-open-review")?.addEventListener("click", () => setView("review"));
   $("overview-open-wiki")?.addEventListener("click", () => setView("notes"));
   $("overview-open-graph")?.addEventListener("click", () => setView("graph"));
+  $("overview-open-canon")?.addEventListener("click", () => setView("canon"));
+  document.querySelectorAll("[data-overview-canon]").forEach((node) => {
+    node.addEventListener("click", () => {
+      const key = node.dataset.overviewCanon || "";
+      if (!key) return;
+      state.selectedCanonEntityKey = normalizeKey(key);
+      setView("canon");
+      renderCanon();
+    });
+  });
+}
+
+function overviewPrimaryAction(overview, reviewCount, retryCount) {
+  if (reviewCount > 0) {
+    return {
+      label: t('openDecisionQueue'),
+      description: `${fmtCount(reviewCount)} ${t('pendingDecisions')}.`,
+    };
+  }
+  if (retryCount > 0) {
+    return {
+      label: t('technicalRetry'),
+      description: `${fmtCount(retryCount)} ${t('technicalRetry')}.`,
+    };
+  }
+  const actionLabel = (overview.primary_action || {}).label || overview.next_action_cta || t('graph');
+  return {
+    label: actionLabel,
+    description: overview.user_summary || t('workspaceStatus'),
+  };
+}
+
+function overviewTopEntitiesByKind(kind) {
+  return (state.current?.canon?.primaries || [])
+    .filter((entity) => String(entity.entity_kind || '').toLowerCase() === kind)
+    .sort((left, right) => String(left.canonical_name || '').localeCompare(String(right.canonical_name || '')))
+    .slice(0, 5);
+}
+
+function renderOverviewMetricLine(label, value) {
+  return `<div class="overview-metric-line"><span>${escapeHtml(label)}</span><strong>${escapeHtml(fmtCount(value))}</strong></div>`;
+}
+
+function renderOverviewEntityStrip(entities, label) {
+  return `
+    <section class="overview-entity-strip">
+      <h4>${escapeHtml(label)}</h4>
+      ${entities.length ? `<p>${entities.map((entity) => `<button type="button" class="tag-chip overview-entity-chip" data-overview-canon="${escapeHtml(canonEntityKey(entity))}">${escapeHtml(entity.canonical_name || entity.preferred_slug || '—')}</button>`).join('')}</p>` : `<p class="muted">—</p>`}
+    </section>
+  `;
 }
 
 function renderIngestionWizard() {
@@ -2278,11 +2475,15 @@ function renderNotes() {
   const tagFilter = $("note-tag-filter");
   const statusFilter = $("note-status-filter");
   const kinds = [...new Set(notes.map((note) => note.kind || note.frontmatter?.kind || note.role).filter(Boolean))].sort();
-  const tags = [...new Set(notes.flatMap((note) => note.tags || []))].sort();
-  const statuses = [...new Set(notes.map((note) => note.review_state || note.status || note.frontmatter?.review_state || note.frontmatter?.status).filter(Boolean))].sort();
-  kindFilter.innerHTML = `<option value="">all kinds</option>${kinds.map((kind) => `<option value="${escapeHtml(kind)}">${escapeHtml(kind)}</option>`).join("")}`;
-  tagFilter.innerHTML = `<option value="">all tags</option>${tags.map((tag) => `<option value="${escapeHtml(tag)}">${escapeHtml(tag)}</option>`).join("")}`;
-  statusFilter.innerHTML = `<option value="">all status</option>${statuses.map((status) => `<option value="${escapeHtml(status)}">${escapeHtml(status)}</option>`).join("")}`;
+  const tags = [...new Set(notes.flatMap((note) => note.tags || []))]
+    .filter((tag) => !GRAPH_HIDDEN_TECHNICAL_TAGS.has(String(tag || '').trim().toLowerCase()))
+    .sort();
+  const statuses = [...new Set(notes
+    .map((note) => normalizeReviewStatus(note.review_state || note.status || note.frontmatter?.review_state || note.frontmatter?.status))
+    .filter(Boolean))].sort();
+  kindFilter.innerHTML = `<option value="">${escapeHtml(t('allKinds'))}</option>${kinds.map((kind) => `<option value="${escapeHtml(kind)}">${escapeHtml(kindLabel(kind))}</option>`).join("")}`;
+  tagFilter.innerHTML = `<option value="">${escapeHtml(t('allTags'))}</option>${tags.map((tag) => `<option value="${escapeHtml(tag)}">${escapeHtml(tag)}</option>`).join("")}`;
+  statusFilter.innerHTML = `<option value="">${escapeHtml(t('allStatus'))}</option>${statuses.map((status) => `<option value="${escapeHtml(status)}">${escapeHtml(noteStatusLabel(status))}</option>`).join("")}`;
   kindFilter.value = state.wikiFilters.kind || "";
   tagFilter.value = state.wikiFilters.tag || "";
   statusFilter.value = state.wikiFilters.status || "";
@@ -2301,7 +2502,7 @@ function renderNotes() {
         if (needle && !searchBlob.includes(needle)) return false;
         if (state.wikiFilters.kind && (note.kind || note.frontmatter?.kind || note.role) !== state.wikiFilters.kind) return false;
         if (state.wikiFilters.tag && !(note.tags || []).includes(state.wikiFilters.tag)) return false;
-        const noteStatus = note.review_state || note.status || note.frontmatter?.review_state || note.frontmatter?.status || "";
+        const noteStatus = normalizeReviewStatus(note.review_state || note.status || note.frontmatter?.review_state || note.frontmatter?.status || "");
         if (state.wikiFilters.status && noteStatus !== state.wikiFilters.status) return false;
         return true;
       })
@@ -2554,21 +2755,7 @@ function reviewItemKey(item, index) {
 }
 
 function navigateToGraphTerm(term, { from = "Viewer" } = {}) {
-  const node = findGraphNodeByTerm(term);
-  if (!node) {
-    setNavNotice(`${from}: "${term}" not found in graph.`, "warning");
-    if (state.activeView === "canon") renderCanon();
-    if (state.activeView === "review") renderReview();
-    return false;
-  }
-  state.selectedGraphNodeId = node.canonical_node_id || node.id;
-  const entity = node.entity || {};
-  if (Object.keys(entity).length) state.selectedCanonEntityKey = canonEntityKey(entity);
-  setNavNotice(`${from}: opened "${node.label || node.id}" in graph.`, "success");
-  setView("graph");
-  renderGraph();
-  renderGraphNodeDetail(node);
-  return true;
+  return navigateToGraphNode(term, { from });
 }
 
 function navigateToCanonTerm(term, { from = "Viewer" } = {}) {
@@ -2604,6 +2791,94 @@ function navigateToReviewContext(term, { from = "Graph" } = {}) {
   return true;
 }
 
+function canonEntityNotePath(entity) {
+  if (!entity) return "";
+  const terms = [
+    entity.note_path,
+    entity.canonical_note_path,
+    entity.canonical_name,
+    entity.preferred_slug,
+    ...(entity.aliases || []),
+  ].filter(Boolean);
+  for (const term of terms) {
+    const node = findGraphNodeByTerm(term);
+    const path = resolveCanonicalNotePath(node?.canonical_note_path || node?.note_path || String(term || ""));
+    if (path && path.includes('/')) return path;
+  }
+  return "";
+}
+
+function navigateToGraphNode(nodeOrPathOrId, { from = "Viewer" } = {}) {
+  const node = typeof nodeOrPathOrId === 'object' && nodeOrPathOrId
+    ? findGraphNodeByTerm(nodeOrPathOrId.id || nodeOrPathOrId.note_path || nodeOrPathOrId.canonical_note_path || nodeOrPathOrId.label || "")
+    : findGraphNodeByTerm(nodeOrPathOrId);
+  if (!node) {
+    setNavNotice(`${from}: ${t('graphNodeMissing')}`, "warning");
+    if (state.activeView === "canon") renderCanon();
+    if (state.activeView === "review") renderReview();
+    return false;
+  }
+  const canonicalNodeId = resolveCanonicalNodeId(node.canonical_node_id || node.id || node.note_path || node.label);
+  const canonicalNode = (state.current?.graph?.nodes || []).find((item) => item.id === canonicalNodeId) || node;
+  const revealNotice = ensureGraphNodeVisible(canonicalNode);
+  const entity = canonicalNode.entity || {};
+  if (Object.keys(entity).length) state.selectedCanonEntityKey = canonEntityKey(entity);
+  setView("graph");
+  renderGraph();
+  focusGraphNode(canonicalNode.id);
+  selectGraphNode(canonicalNode.id, { pushHistory: true, renderDetail: true });
+  setNavNotice(revealNotice || `${from}: ${t('openedInGraph')}`, "success");
+  return true;
+}
+
+function ensureGraphNodeVisible(node) {
+  if (!node) return "";
+  let changed = false;
+  const visibleIds = new Set((state.currentVisibleGraph?.nodes || []).map((item) => item.id));
+  if (!visibleIds.has(node.id)) {
+    if ($("local-graph-mode")?.checked) {
+      $("local-graph-mode").checked = false;
+      changed = true;
+    }
+    if (state.hiddenGraphTags.size && (node.tags || []).some((tag) => state.hiddenGraphTags.has(tag))) {
+      state.hiddenGraphTags = new Set([...(state.hiddenGraphTags || [])].filter((tag) => !(node.tags || []).includes(tag)));
+      changed = true;
+    }
+    if ($("hide-chapters")?.checked && String(node.kind || "").toLowerCase() === 'chapter') {
+      $("hide-chapters").checked = false;
+      changed = true;
+    }
+    if ($("hide-review")?.checked && String(node.kind || "").toLowerCase() === 'review') {
+      $("hide-review").checked = false;
+      changed = true;
+    }
+    if ($("hide-system")?.checked && String(node.role || "").toLowerCase() === 'system') {
+      $("hide-system").checked = false;
+      changed = true;
+    }
+    if (!($("show-all-nodes")?.checked)) {
+      $("show-all-nodes").checked = true;
+      state.graphShowAllNodes = true;
+      changed = true;
+    }
+  }
+  return changed ? t('graphNodeHiddenRevealed') : "";
+}
+
+function focusGraphNode(nodeId) {
+  const node = state.currentGraphLayout?.byId?.[nodeId];
+  if (!node) return;
+  const width = Math.max(320, Math.min(900, node.radius * 18 || 440));
+  const height = Math.max(220, width * 0.62);
+  state.graphViewBox = {
+    x: node.x - width / 2,
+    y: node.y - height / 2,
+    width,
+    height,
+  };
+  applyGraphViewBox();
+}
+
 function findSelectedGraphNode() {
   const graph = state.current && state.current.graph ? state.current.graph : { nodes: [] };
   return (graph.nodes || []).find((item) => item.id === state.selectedGraphNodeId) || null;
@@ -2614,39 +2889,81 @@ function highlightNote(path) {
 }
 
 function renderCanon() {
-  const canon = state.current.canon;
+  const canon = state.current.canon || {};
+  if (!state.selectedCanonEntityKey && (canon.primaries || []).length) {
+    state.selectedCanonEntityKey = canonEntityKey(canon.primaries[0]);
+  }
   const focusEntity = selectedCanonEntity();
   $("view-canon").innerHTML = `
     ${renderNavNotice()}
-    <h3>Canonicalization Visibility</h3>
-    ${focusEntity ? renderCanonicalizationVisibility(focusEntity, { source: "canon" }) : `<p class="muted">Select entity in Canon or Graph to inspect merge/canonicalization visibility.</p>`}
-    <h3>Primaries</h3>
-    ${entityTable(canon.primaries)}
-    <h3 style="margin-top:24px">Chapters</h3>
-    ${chapterTable(canon.chapters)}
-    <h3 style="margin-top:24px">Review Entities</h3>
-    ${entityTable(canon.review_entities.slice(0, 80))}
+    <section class="canon-workspace">
+      <div class="panel canon-browser">
+        <p class="eyebrow">${escapeHtml(t('canonEntities'))}</p>
+        <h3>${escapeHtml(t('canonicalEntities'))}</h3>
+        <p class="muted">${escapeHtml(t('canonSubtitle'))}</p>
+        <div class="canon-merge-placeholder">
+          <strong>${escapeHtml(t('suggestedMerges'))}</strong>
+          <p class="muted">${escapeHtml(t('noSuggestedMerges'))}</p>
+        </div>
+        ${entityTable(canon.primaries || [], { title: t('canonicalEntities') })}
+        <h3 style="margin-top:24px">${escapeHtml(t('reviewEntities'))}</h3>
+        ${entityTable((canon.review_entities || []).slice(0, 80), { title: t('reviewEntities'), compact: true })}
+        <h3 style="margin-top:24px">${escapeHtml(t('chaptersSection'))}</h3>
+        ${chapterTable(canon.chapters || [])}
+      </div>
+      <aside class="panel canon-side-detail">
+        ${focusEntity ? renderCanonEntityDetail(focusEntity) : `<p class="muted">${escapeHtml(t('canonSubtitle'))}</p>`}
+      </aside>
+    </section>
   `;
   bindCanonNavigation();
-  bindCanonicalizationInteractions();
 }
 
-function entityTable(entities) {
-  return `<table class="table"><thead><tr><th>Name</th><th>Kind</th><th>Slug</th><th>Summary</th><th>Navigate</th></tr></thead><tbody>
+function entityTable(entities, { title = "", compact = false } = {}) {
+  if (!entities.length) return `<p class="muted">—</p>`;
+  return `<table class="table canon-entity-table" aria-label="${escapeHtml(title)}"><thead><tr><th>${escapeHtml(t('canonicalEntities'))}</th><th>${escapeHtml(t('kind'))}</th><th>${escapeHtml(t('summary'))}</th><th>${escapeHtml(t('viewInGraph'))}</th></tr></thead><tbody>
     ${entities.map((entity) => {
       const key = canonEntityKey(entity);
-      return `<tr class="${state.selectedCanonEntityKey === key ? "row-highlight" : ""}">
-      <td>${escapeHtml(entity.canonical_name)}</td>
-      <td>${escapeHtml(entity.entity_kind || "")}</td>
-      <td>${escapeHtml(entity.preferred_slug || "")}</td>
-      <td>${escapeHtml(entity.summary || "").slice(0, 260)}</td>
+      const aliases = entity.aliases || [];
+      return `<tr class="canon-row ${state.selectedCanonEntityKey === key ? "row-highlight" : ""}" data-canon-select="${escapeHtml(key)}" tabindex="0">
+      <td><strong>${escapeHtml(entity.canonical_name || entity.preferred_slug || '—')}</strong>${aliases.length && !compact ? `<small>${escapeHtml(t('aliases'))}: ${aliases.slice(0, 3).map(escapeHtml).join(', ')}</small>` : ""}</td>
+      <td>${escapeHtml(kindLabel(entity.entity_kind || entity.entity_subkind || ""))}</td>
+      <td>${escapeHtml(entity.summary || "").slice(0, compact ? 140 : 260)}</td>
       <td>
-        <button type="button" class="inline-action" data-canon-inspect="${escapeHtml(key)}">Inspect</button>
-        <button type="button" class="inline-action" data-canon-graph="${escapeHtml(key)}">View in graph</button>
+        <button type="button" class="inline-action" data-canon-inspect="${escapeHtml(key)}">${escapeHtml(t('viewCard'))}</button>
+        <button type="button" class="inline-action" data-canon-graph="${escapeHtml(key)}">${escapeHtml(t('viewInGraph'))}</button>
       </td>
     </tr>`;
     }).join("")}
   </tbody></table>`;
+}
+
+function renderCanonEntityDetail(entity) {
+  const key = canonEntityKey(entity);
+  const aliases = entity.aliases || entity.surface_forms || [];
+  const facts = entity.facts || entity.key_facts || [];
+  const relationships = entity.relationships || entity.relationships_out || [];
+  const evidence = entity.evidence_refs || entity.source_refs || [];
+  return `
+    <article class="canon-entity-detail" data-canon-detail="${escapeHtml(key)}">
+      <p class="eyebrow">${escapeHtml(t('canonEntities'))}</p>
+      <h3>${escapeHtml(entity.canonical_name || entity.preferred_slug || '—')}</h3>
+      <p><span class="badge kind-badge kind-${escapeHtml(String(entity.entity_kind || 'unknown').toLowerCase())}">${escapeHtml(kindLabel(entity.entity_kind || entity.entity_subkind || 'unknown'))}</span> <span class="badge">${escapeHtml(entity.review_state || entity.note_role || t('ready'))}</span></p>
+      <section><h4>${escapeHtml(t('summary'))}</h4><p>${escapeHtml(entity.summary || t('noSummary'))}</p></section>
+      <section><h4>${escapeHtml(t('aliases'))}</h4>${aliases.length ? `<p>${aliases.slice(0, 16).map((alias) => `<span class="badge">${escapeHtml(alias)}</span>`).join('')}</p>` : `<p class="muted">—</p>`}</section>
+      <section><h4>${escapeHtml(t('facts'))}</h4>${facts.length ? `<ul>${facts.slice(0, 8).map((fact) => `<li>${escapeHtml(String(fact))}</li>`).join('')}</ul>` : `<p class="muted">${escapeHtml(t('noFacts'))}</p>`}</section>
+      <section><h4>${escapeHtml(t('relationships'))}</h4>${relationships.length ? `<ul>${relationships.slice(0, 8).map((rel) => `<li>${escapeHtml(rel.target || rel.source || rel.name || '')}${rel.type || rel.relation_type ? ` · ${escapeHtml(rel.type || rel.relation_type)}` : ''}</li>`).join('')}</ul>` : `<p class="muted">—</p>`}</section>
+      <section><h4>${escapeHtml(t('appearancesEvidence'))}</h4>${evidence.length ? `<ul>${evidence.slice(0, 8).map((ref) => `<li>${escapeHtml(ref.chapter_id || ref.path || ref.source || String(ref))}</li>`).join('')}</ul>` : `<p class="muted">${escapeHtml(t('evidence'))}</p>`}</section>
+      <div class="nav-actions">
+        <button type="button" data-canon-graph="${escapeHtml(key)}">${escapeHtml(t('viewInGraph'))}</button>
+        <button type="button" data-canon-note="${escapeHtml(key)}">${escapeHtml(t('viewInWiki'))}</button>
+        <button type="button" disabled title="${escapeHtml(t('futurePhaseDisabled'))}">${escapeHtml(t('compare'))}</button>
+        <button type="button" disabled title="${escapeHtml(t('futurePhaseDisabled'))}">${escapeHtml(t('suggestMerge'))}</button>
+        <button type="button" disabled title="${escapeHtml(t('futurePhaseDisabled'))}">${escapeHtml(t('markForReview'))}</button>
+      </div>
+      <details class="technical-details"><summary>${escapeHtml(t('technicalDetails'))}</summary>${renderCanonicalizationVisibility(entity, { source: "dev" })}</details>
+    </article>
+  `;
 }
 
 function chapterTable(chapters) {
@@ -2675,25 +2992,31 @@ function renderReview() {
   const candidateCount = items.filter((item) => (item.candidate_entities || []).length > 0).length;
   const evidenceCount = items.filter((item) => (item.evidence || []).length > 0).length;
   const highSeverity = severityCounts.high || 0;
+  const suggestedMergeCount = sorted.filter((item) => (reviewActionPresentation(item).recommendedAction || '').includes('merge')).length;
+  const ambiguousCount = sorted.filter((item) => {
+    const action = reviewActionPresentation(item).recommendedAction || '';
+    return action.includes('review') || action.includes('attach_role') || action.includes('keep_secondary');
+  }).length;
+  const relationshipCount = sorted.filter((item) => String(item.review_type || '').toLowerCase().includes('relationship')).length;
   $("view-review").innerHTML = `
     ${renderNavNotice()}
     <div class="review-header panel">
       <div class="review-header-title">
-        <p class="eyebrow">Review Queue</p>
-        <h3>Deep visibility</h3>
-        <p class="muted">Prioriza revisión por severidad, tipo, evidencia y candidatos.</p>
+        <p class="eyebrow">${escapeHtml(t('decisionQueueTitle'))}</p>
+        <h3>${escapeHtml(t('reviewQueue'))}</h3>
+        <p class="muted">${escapeHtml(t('decisionQueueSubtitle'))}</p>
       </div>
       <div class="review-header-actions">
-        <button type="button" id="review-open-raw">Open raw review_queue.json</button>
+        <button type="button" id="review-open-raw">${escapeHtml(t('openRawReview'))}</button>
       </div>
     </div>
     <div class="stats-grid">
-      <div class="stat-card"><span>Total items</span><strong>${items.length}</strong></div>
-      <div class="stat-card"><span>High severity</span><strong>${highSeverity}</strong></div>
-      <div class="stat-card"><span>With candidates</span><strong>${candidateCount}</strong></div>
-      <div class="stat-card"><span>With evidence</span><strong>${evidenceCount}</strong></div>
-      <div class="stat-card"><span>Review types</span><strong>${Object.keys(typeCounts).length}</strong></div>
-      <div class="stat-card"><span>Status</span><strong style="font-size:20px">${escapeHtml(queue.status || "unknown")}</strong></div>
+      <div class="stat-card"><span>${escapeHtml(t('pendingDecisions'))}</span><strong>${items.length}</strong></div>
+      <div class="stat-card"><span>${escapeHtml(t('suggestedMerges'))}</span><strong>${suggestedMergeCount}</strong></div>
+      <div class="stat-card"><span>${escapeHtml(t('ambiguousEntities'))}</span><strong>${ambiguousCount}</strong></div>
+      <div class="stat-card"><span>${escapeHtml(t('uncertainRelationships'))}</span><strong>${relationshipCount}</strong></div>
+      <div class="stat-card"><span>${escapeHtml(t('evidence'))}</span><strong>${evidenceCount}</strong></div>
+      <div class="stat-card"><span>${escapeHtml(t('technicalRetry'))}</span><strong style="font-size:20px">${highSeverity}</strong></div>
     </div>
     <div class="review-summary panel">
       <div class="review-summary-block">
@@ -2968,25 +3291,25 @@ function renderReviewPresentationSummary(grouped) {
   return `
     <div class="review-group-summary panel">
       <div class="review-group-summary-title">
-        <p class="eyebrow">Decision summary</p>
-        <h4>Prioritized review groups</h4>
-        <p class="muted">Read-only grouping summary. Use groups below to inspect principal and related signals.</p>
+        <p class="eyebrow">${escapeHtml(t('reviewQueue'))}</p>
+        <h4>${escapeHtml(t('pendingDecisions'))}</h4>
+        <p class="muted">${escapeHtml(t('decisionQueueSubtitle'))}</p>
       </div>
       <div class="review-group-summary-cards">
-        ${renderReviewSummaryCard("Total review groups", summary.total_groups)}
-        ${renderReviewSummaryCard("Requires human review", summary.requires_human_review_groups)}
-        ${renderReviewSummaryCard("High groups", summary.groups_by_highest_severity.high || 0)}
-        ${renderReviewSummaryCard("Medium groups", summary.groups_by_highest_severity.medium || 0)}
-        ${renderReviewSummaryCard("Low groups", summary.groups_by_highest_severity.low || 0)}
-        ${renderReviewSummaryCard("Groups with related/equivalent items", summary.groups_with_related_items)}
-        ${renderReviewSummaryCard("Object retention groups", summary.object_retention_groups)}
-        ${renderReviewSummaryCard("Legacy / ungrouped", summary.legacy_ungrouped_count)}
+        ${renderReviewSummaryCard(t('pendingDecisions'), summary.total_groups)}
+        ${renderReviewSummaryCard(t('needsReview'), summary.requires_human_review_groups)}
+        ${renderReviewSummaryCard('High', summary.groups_by_highest_severity.high || 0)}
+        ${renderReviewSummaryCard('Medium', summary.groups_by_highest_severity.medium || 0)}
+        ${renderReviewSummaryCard('Low', summary.groups_by_highest_severity.low || 0)}
+        ${renderReviewSummaryCard(t('relationships'), summary.groups_with_related_items)}
+        ${renderReviewSummaryCard(t('kindObject'), summary.object_retention_groups)}
+        ${renderReviewSummaryCard('Legacy', summary.legacy_ungrouped_count)}
       </div>
       <div class="review-group-summary-actions">
-        <span class="muted">Groups by action:</span>
+        <span class="muted">${escapeHtml(t('authorNextStep'))}:</span>
         ${renderCountBadges(summary.groups_by_action, "action")}
         <span class="badge review-group-badge">Read-only</span>
-        <span class="badge review-group-badge">Future actions disabled</span>
+        <span class="badge review-group-badge">${escapeHtml(t('futurePhaseDisabled'))}</span>
       </div>
     </div>
   `;
@@ -3456,19 +3779,49 @@ function bindReviewQueueInteractions() {
 }
 
 function bindCanonNavigation() {
+  document.querySelectorAll("[data-canon-select]").forEach((node) => {
+    const activate = () => {
+      const key = node.dataset.canonSelect || "";
+      if (!key) return;
+      state.selectedCanonEntityKey = normalizeKey(key);
+      setNavNotice(`Canon: ${key}.`, "info");
+      renderCanon();
+    };
+    node.addEventListener("click", activate);
+    node.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        activate();
+      }
+    });
+  });
   document.querySelectorAll("[data-canon-inspect]").forEach((node) => {
     node.addEventListener("click", () => {
       const key = node.dataset.canonInspect || "";
       if (!key) return;
       state.selectedCanonEntityKey = normalizeKey(key);
-      setNavNotice(`Canon: inspecting "${key}".`, "info");
+      setNavNotice(`Canon: ${key}.`, "info");
       renderCanon();
     });
   });
   document.querySelectorAll("[data-canon-graph]").forEach((node) => {
     node.addEventListener("click", () => {
       const key = node.dataset.canonGraph || "";
-      if (key) navigateToGraphTerm(key, { from: "Canon" });
+      if (key) navigateToGraphNode(key, { from: "Canon" });
+    });
+  });
+  document.querySelectorAll("[data-canon-note]").forEach((node) => {
+    node.addEventListener("click", async () => {
+      const key = node.dataset.canonNote || "";
+      const entity = findCanonEntityByTerm(key);
+      const path = canonEntityNotePath(entity);
+      if (!path) {
+        setNavNotice(`Canon: ${t('graphNodeMissing')}`, "warning");
+        renderCanon();
+        return;
+      }
+      setView("notes");
+      await openNote(path);
     });
   });
 }
@@ -3476,7 +3829,11 @@ function bindCanonNavigation() {
 function renderArtifacts() {
   const artifacts = state.current.artifacts || [];
   $("artifact-list").innerHTML = `
-    <div class="panel"><p class="muted"><strong>${escapeHtml(t('devDrawer'))}:</strong> ${escapeHtml(t('technicalDetails'))}.</p></div>
+    <div class="panel"><p class="eyebrow">${escapeHtml(t('devMode'))}</p><h3>${escapeHtml(t('technicalDetails'))}</h3><p class="muted">${escapeHtml(t('devSummary'))}</p></div>
+    ${renderSemanticHealth(state.current.health || {})}
+    ${renderIngestionWizard()}
+    ${renderCompareRunsPanel()}
+    ${renderEntityTriagePanel()}
     ${artifacts.map((artifact) => `
       <div class="list-item" data-artifact="${escapeHtml(artifact.path)}">
         <strong>${escapeHtml(artifact.name)}</strong>
@@ -3487,6 +3844,10 @@ function renderArtifacts() {
   document.querySelectorAll("[data-artifact]").forEach((node) => {
     node.addEventListener("click", () => openArtifact(node.dataset.artifact));
   });
+  bindHealthInteractions();
+  bindIngestionWizardInteractions();
+  bindCompareRunsInteractions();
+  bindEntityTriageInteractions();
 }
 
 async function openArtifact(path) {
@@ -3511,20 +3872,12 @@ function renderGraph() {
   const localGraphMode = $("local-graph-mode")?.checked;
   const showAllNodes = $("show-all-nodes")?.checked || false;
   state.graphShowAllNodes = showAllNodes;
-  const kindFilter = $("graph-kind-filter").value;
-  const statusFilter = $("graph-status-filter").value;
-  const kinds = [...new Set(graph.nodes.map((node) => node.display_kind || node.canonical_kind || node.kind).filter(Boolean))].sort();
-  const tags = [...new Set(graph.nodes.flatMap((node) => node.tags || []))].sort();
-  const statuses = [...new Set(graph.nodes.map((node) => node.frontmatter?.review_state || node.frontmatter?.status || node.role).filter(Boolean))].sort();
-  if (!$("graph-kind-filter").dataset.ready) {
-    $("graph-kind-filter").innerHTML = `<option value="">${escapeHtml(t('allKinds'))}</option>${kinds.map((kind) => `<option value="${escapeHtml(kind)}">${escapeHtml(kindLabel(kind))}</option>`).join("")}`;
-    $("graph-status-filter").innerHTML = `<option value="">${escapeHtml(t('allStatus'))}</option>${statuses.map((status) => `<option value="${escapeHtml(status)}">${escapeHtml(status)}</option>`).join("")}`;
-    $("graph-kind-filter").dataset.ready = "1";
-    $("graph-kind-filter").onchange = renderGraph;
-    $("graph-status-filter").onchange = renderGraph;
-    $("local-graph-mode").onchange = renderGraph;
-    $("show-all-nodes").onchange = renderGraph;
-  }
+  const visibleSourceNodes = state.currentVisibleGraph?.nodes?.length ? state.currentVisibleGraph.nodes : graph.nodes;
+  const tags = [...new Set(visibleSourceNodes.flatMap((node) => node.tags || []))]
+    .filter((tag) => !GRAPH_HIDDEN_TECHNICAL_TAGS.has(String(tag || '').trim().toLowerCase()))
+    .sort();
+  $("local-graph-mode").onchange = renderGraph;
+  $("show-all-nodes").onchange = renderGraph;
   renderGraphTagFilter(tags);
   state.current.graph = graph;
   state.current.visibleGraph = buildVisibleGraph(graph, {
@@ -3533,8 +3886,6 @@ function renderGraph() {
     hideChapters,
     showAllNodes,
     localGraphMode,
-    kindFilter,
-    statusFilter,
     hiddenTags: state.hiddenGraphTags,
     selectedGraphNodeId: state.selectedGraphNodeId,
   });
@@ -3640,8 +3991,6 @@ function buildVisibleGraph(graph, options) {
     hideChapters,
     showAllNodes,
     localGraphMode,
-    kindFilter,
-    statusFilter,
     hiddenTags,
     selectedGraphNodeId,
   } = options;
@@ -3660,9 +4009,6 @@ function buildVisibleGraph(graph, options) {
       if (["character", "place", "object", "event"].includes(filterKind) && degree < 2) return false;
       if (filterKind === "concept" && degree < 8) return false;
     }
-    if (kindFilter && filterKind !== kindFilter) return false;
-    const nodeStatus = node.review_state || node.status || node.frontmatter?.review_state || node.frontmatter?.status || node.role || "";
-    if (statusFilter && nodeStatus !== statusFilter) return false;
     if ((node.tags || []).some((tag) => hiddenTags.has(tag))) return false;
     return true;
   });
@@ -3722,6 +4068,7 @@ function drawForceGraph(visibleGraph) {
     state.graphSimulation = null;
   }
   const layoutState = createGraphLayout(visibleGraph, width, height);
+  state.currentGraphLayout = layoutState;
   const byId = layoutState.byId;
   svg.innerHTML = renderGraphDom(visibleGraph, layoutState);
   applyGraphViewBox();
@@ -3977,7 +4324,7 @@ function renderGraphNodeHydrationFallback(node, { warning = "" } = {}) {
   const facts = (node.key_facts_preview || []).slice(0, 8);
   $("graph-detail").innerHTML = `
     ${warning ? `<p class="note-fallback">${escapeHtml(warning)}</p>` : ""}
-    ${graphNodeSummary(node)}
+    ${graphNodeContextCard(node)}
     <hr />
     <h4>${escapeHtml(t('summary'))}</h4>
     <p>${escapeHtml(node.summary_excerpt || t('noSummary'))}</p>
@@ -4040,7 +4387,7 @@ async function openGraphNote(path, nodeId = null, { pushHistory = true } = {}) {
   const showReviewAction = findReviewItemsByTerm(summaryNode.label || "").length > 0;
   const canonicalPathChanged = canonicalPath !== String(path || "");
   $("graph-detail").innerHTML = `
-    ${graphNodeSummary(summaryNode)}
+    ${graphNodeContextCard(summaryNode)}
     <hr />
     ${canonicalPathChanged ? `<p class="muted">${escapeHtml(t('duplicateRedirected'))}</p>` : ""}
     <h3>${escapeHtml(data.title || data.path || summaryNode.label || '')}</h3>
@@ -4071,7 +4418,34 @@ async function openGraphNote(path, nodeId = null, { pushHistory = true } = {}) {
   bindCanonicalizationInteractions();
 }
 
-function graphNodeSummary(node) {
+function graphNodeContextCard(node) {
+  const entity = node.entity || {};
+  const chapter = node.chapter || {};
+  const canonLabel = Object.keys(entity).length ? (entity.canonical_name || entity.preferred_slug || node.label || "") : "";
+  const reviewLabel = entity.canonical_name || entity.preferred_slug || node.label || chapter.chapter_id || "";
+  const hasReviewContext = reviewLabel ? findReviewItemsByTerm(reviewLabel).length > 0 : false;
+  const canonicalNotePath = resolveCanonicalNotePath(node.canonical_note_path || node.note_path || "");
+  const showOpenNote = canonicalNotePath && canonicalNotePath !== String(state.current?.graphDetailPath || "");
+  return `
+    ${renderNavNotice()}
+    <article class="inspector-card narrative-card">
+      <header>
+        <h3>${escapeHtml(node.label || "Unresolved")}</h3>
+        <p><span class="badge kind-badge kind-${escapeHtml(String(node.display_kind || node.canonical_kind || node.kind || 'unknown').toLowerCase())}">${escapeHtml(kindLabel(node.display_kind || node.canonical_kind || node.kind || "unknown"))}</span> <span class="badge">${escapeHtml(node.role || "unknown")}</span></p>
+      </header>
+      <div class="nav-actions">
+        <button type="button" data-graph-nav-back ${state.viewerNavBack.length < 2 ? "disabled" : ""}>${escapeHtml(t('back'))}</button>
+        <button type="button" data-graph-nav-forward ${state.viewerNavForward.length < 1 ? "disabled" : ""}>${escapeHtml(t('forward'))}</button>
+        ${canonLabel ? `<button type="button" data-graph-open-canon="${escapeHtml(canonLabel)}">${escapeHtml(t('openInCanon'))}</button>` : ""}
+        ${hasReviewContext ? `<button type="button" data-graph-open-review="${escapeHtml(reviewLabel)}">${escapeHtml(t('openReview'))}</button>` : ""}
+        ${showOpenNote ? `<button type="button" data-graph-open-note="${escapeHtml(canonicalNotePath)}">${escapeHtml(t('viewInWiki'))}</button>` : ""}
+      </div>
+      ${state.viewerRecent.length ? `<p class="muted">${escapeHtml(t('recent'))}: ${state.viewerRecent.slice(0, 6).map((row) => `<button type="button" class="inline-action" data-graph-recent="${escapeHtml(row.id)}">${escapeHtml(row.label || row.id)}</button>`).join(' ')}</p>` : ""}
+    </article>
+  `;
+}
+
+function graphNodeSummary(node, { includeTechnicalDetails = true } = {}) {
   const entity = node.entity || {};
   const chapter = node.chapter || {};
   const frontmatter = node.frontmatter || {};
@@ -4101,14 +4475,16 @@ function graphNodeSummary(node) {
         ${showOpenNote ? `<button type="button" data-graph-open-note="${escapeHtml(canonicalNotePath)}">${escapeHtml(t('viewInWiki'))}</button>` : ""}
       </div>
       ${state.viewerRecent.length ? `<p class="muted">${escapeHtml(t('recent'))}: ${state.viewerRecent.slice(0, 6).map((row) => `<button type="button" class="inline-action" data-graph-recent="${escapeHtml(row.id)}">${escapeHtml(row.label || row.id)}</button>`).join(' ')}</p>` : ""}
+      ${includeTechnicalDetails ? `
       <details class="technical-details">
         <summary>${escapeHtml(t('technicalDetails'))}</summary>
         ${canonicalNodeId !== node.id ? `<p class="muted">${escapeHtml(t('duplicateRedirected'))}: ${escapeHtml(node.id)} → ${escapeHtml(canonicalNodeId)}</p>` : ""}
         <p class="muted">${escapeHtml(t('degree'))} ${escapeHtml(fmtCount(node.degree || 0))}</p>
         ${Object.keys(frontmatter).length ? `<pre class="frontmatter">${escapeHtml(JSON.stringify(frontmatter, null, 2))}</pre>` : ""}
         ${Object.keys(entity).length ? entityDetail(entity) : ""}
+        ${Object.keys(entity).length ? renderCanonicalizationVisibility(entity, { source: "dev" }) : ""}
       </details>
-      ${Object.keys(entity).length ? renderCanonicalizationVisibility(entity, { source: "graph" }) : ""}
+      ` : ""}
       ${Object.keys(chapter).length ? chapterDetail(chapter) : ""}
     </article>
   `;

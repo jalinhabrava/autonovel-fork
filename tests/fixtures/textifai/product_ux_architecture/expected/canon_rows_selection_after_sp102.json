@@ -1,0 +1,7 @@
+{
+  "assessment": "canon_rows_selection_ready",
+  "rows_clickable": true,
+  "selected_row_highlight": true,
+  "selected_entity_updates_side_detail": true,
+  "actions_use_selected_entity": true
+}

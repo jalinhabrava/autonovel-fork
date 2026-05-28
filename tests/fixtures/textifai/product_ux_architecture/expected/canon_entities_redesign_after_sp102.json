@@ -1,0 +1,10 @@
+{
+  "assessment": "canon_entities_redesign_ready",
+  "canon_name": "Canon / Entidades",
+  "rows_clickable": true,
+  "side_detail_present": true,
+  "action_contracts": ["view_card", "view_in_graph", "view_in_wiki", "compare_disabled", "suggest_merge_disabled", "mark_for_review_disabled"],
+  "technical_fields_moved_to_dev": ["canonicalization_visibility", "raw_confidence", "promotion_decision", "pre_vaerl_reconciliation", "relationship_reconciliation"],
+  "merge_placeholder_visible": true,
+  "no_placeholder_buttons": true
+}

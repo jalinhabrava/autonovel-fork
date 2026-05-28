@@ -1,0 +1,9 @@
+{
+  "assessment": "product_dev_mode_separation_ready_for_manual_review",
+  "manual_review_url": "http://127.0.0.1:8872/",
+  "product_decision": "Author product mode and Dev/debug mode are now separated in core navigation and primary content.",
+  "next_phase": "SP-105 merge candidate generation and contextual canonicalization UX.",
+  "provider_calls": false,
+  "package_changes": false,
+  "write_back": false
+}

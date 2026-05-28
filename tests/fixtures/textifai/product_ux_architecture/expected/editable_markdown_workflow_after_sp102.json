@@ -1,0 +1,8 @@
+{
+  "assessment": "editable_markdown_workflow_contract_ready",
+  "phase_one": ["edit_button", "inline_or_side_panel_editor", "local_draft", "visible_diff", "pending_apply_to_canon_state"],
+  "phase_two": ["patch_proposal_queue", "accept_reject", "apply_to_vaerl", "regenerate_graph_wiki", "audit_trail"],
+  "draft_storage": ".textifai/drafts or dedicated project artifact",
+  "write_back": false,
+  "local_first": true
+}

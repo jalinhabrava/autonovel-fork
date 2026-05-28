@@ -72,6 +72,17 @@ class TextifAIAuthorWorkspaceStabilizationTests(unittest.TestCase):
         self.assertIn('showAllNodes: "Mostrar todo"', js)
         self.assertIn('openInCanon: "Abrir en canon"', js)
 
+    def test_wiki_filters_localized_and_hide_technical_tags(self):
+        text = APP_JS.read_text(encoding='utf-8')
+        self.assertIn('const GRAPH_HIDDEN_TECHNICAL_TAGS = new Set([', text)
+        for token in ["'es'", "'review'", "'needs_review'"]:
+            self.assertIn(token, text)
+        self.assertIn("escapeHtml(t('allKinds'))", text)
+        self.assertIn("escapeHtml(t('allTags'))", text)
+        self.assertIn("escapeHtml(t('allStatus'))", text)
+        self.assertIn('function noteStatusLabel(status) {', text)
+        self.assertIn("if (normalized === 'needs_review' || normalized === 'review' || normalized === 'warn') return t('needsReview');", text)
+
     def test_canonical_graph_kind_for_sera_ren(self):
         graph = read_project(viewer_project())['graph']
         by_id = {node['id']: node for node in graph['nodes']}

@@ -20,6 +20,16 @@
             <button id="refresh-projects">Refresh</button>
         </div>
         <div id="project-list" class="project-list"></div>
+        <div class="sidebar-footer" aria-label="User profile and settings placeholder">
+          <div class="profile-card">
+            <span class="profile-avatar" aria-hidden="true">A</span>
+            <div class="profile-copy">
+              <strong id="profile-name">Autor invitado</strong>
+              <small id="profile-role">Perfil local</small>
+            </div>
+            <button id="settings-placeholder" type="button" disabled>Settings</button>
+          </div>
+        </div>
       </aside>
 
       <main class="main">
@@ -32,7 +42,7 @@
           <nav class="tabs">
             <button id="tab-overview" data-view="overview" class="active">Resumen</button>
             <button id="tab-notes" data-view="notes">Wiki</button>
-            <button id="tab-canon" data-view="canon">Canon</button>
+            <button id="tab-canon" data-view="canon">Canon / Entidades</button>
             <button id="tab-review" data-view="review">Revisión</button>
             <button id="tab-graph" data-view="graph">Grafo</button>
             <button id="tab-dev" data-view="artifacts">Dev</button>
@@ -65,12 +75,6 @@
             <label><input type="checkbox" id="hide-chapters" checked /> <span id="label-hide-chapters">Hide chapters</span></label>
             <label><input type="checkbox" id="local-graph-mode" /> <span id="label-local-graph">Local graph</span></label>
             <label><input type="checkbox" id="show-all-nodes" /> <span id="label-show-all-nodes">Show all nodes</span></label>
-            <select id="graph-kind-filter">
-              <option value="">All kinds</option>
-            </select>
-            <select id="graph-status-filter">
-              <option value="">All status</option>
-            </select>
             <div class="graph-legend">
               <span class="legend-dot kind-character"></span> <span id="legend-character">character</span>
               <span class="legend-dot kind-place"></span> <span id="legend-place">place</span>

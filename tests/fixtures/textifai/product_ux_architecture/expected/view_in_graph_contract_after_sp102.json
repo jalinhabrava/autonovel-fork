@@ -1,0 +1,13 @@
+{
+  "assessment": "view_in_graph_contract_ready",
+  "helper_exists": true,
+  "canonical_resolution": true,
+  "switches_to_graph": true,
+  "selects_node": true,
+  "centers_node": true,
+  "opens_inspector": true,
+  "handles_hidden_by_scope": true,
+  "handles_missing_node": true,
+  "used_by_canon": true,
+  "used_by_wiki_or_inspector_if_applicable": true
+}

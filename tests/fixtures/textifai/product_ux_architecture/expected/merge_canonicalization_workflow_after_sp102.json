@@ -1,0 +1,10 @@
+{
+  "assessment": "merge_canonicalization_workflow_contract_ready",
+  "sources": ["exact_normalized_alias", "descriptive_alias", "relationship_overlap", "chapter_evidence", "manual_selection"],
+  "states": ["auto_merged", "suggested_merge", "needs_author_review", "rejected_merge", "confirmed_separate", "alias_confirmed"],
+  "surfaces": ["review", "canon_entities", "wiki_warning", "graph_context_menu", "inspector", "graph_multiselect"],
+  "sp105_required_cases": {
+    "grandfather_variants": ["abuelo", "Abuelo de Ren", "Abuelo del narrador", "el abuelo", "el abuelo del chico"],
+    "sera_variants": ["la chica", "la princesa", "chica desconocida", "chica_herida", "Sera"]
+  }
+}
