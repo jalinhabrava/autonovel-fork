@@ -1,0 +1,12 @@
+{
+  "assessment": "ingestion_retry_policy_configured",
+  "policy_fields": {
+    "allow_auto_retries": true,
+    "max_retries_per_chapter": 2,
+    "retry_only_technical_failures": true,
+    "ask_before_extra_costly_retry": true
+  },
+  "user_facing_behavior": "TextifAI reintentará automáticamente capítulos con fallos técnicos hasta 2 veces, sin tocar decisiones editoriales.",
+  "retry_vs_review_policy": "solo fallos técnicos se reintentan; reviews semánticas se muestran en Review Queue.",
+  "manifest_updated": true
+}

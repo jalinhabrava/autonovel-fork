@@ -172,6 +172,8 @@ class ProjectCatalog:
             "markdown_unresolved_link_count": len(markdown_index.get("unresolved_links") or []) if isinstance(markdown_index, dict) else None,
             "graph_summary": graph_summary,
             "writer_outcome": writer_outcome,
+            "ingestion_policy": project.manifest.get("ingestion_policy") if isinstance(project.manifest, dict) else {},
+            "workspace_status": _build_workspace_status_summary(writer_outcome, project.manifest if isinstance(project.manifest, dict) else {}),
             "recommended": recommended,
         }
 
@@ -225,8 +227,29 @@ def read_project(project: ProjectRef) -> dict[str, Any]:
         "graph": graph,
         "overview": overview,
         "writer_outcome": writer_outcome if isinstance(writer_outcome, dict) else {},
+        "ingestion_policy": project.manifest.get("ingestion_policy") if isinstance(project.manifest, dict) else {},
+        "workspace_status": _build_workspace_status_summary(writer_outcome if isinstance(writer_outcome, dict) else {}, project.manifest if isinstance(project.manifest, dict) else {}),
         "health": build_semantic_health(project, canon=canon, artifacts=artifacts, graph=graph),
         "canonicalization": build_canonicalization_payload(project, canon=canon, artifacts=artifacts),
+    }
+
+def _build_workspace_status_summary(writer_outcome: dict[str, Any], manifest: dict[str, Any]) -> dict[str, Any]:
+    status = manifest.get("status") if isinstance(manifest.get("status"), dict) else {}
+    total = int(writer_outcome.get("total_chapters") or status.get("chapters_total") or 0)
+    ready = int(writer_outcome.get("chapters_ready") or status.get("chapters_ready") or 0)
+    retry_required = int(writer_outcome.get("chapters_needing_retry") or status.get("chapters_retry_required") or status.get("retry_required") or 0)
+    retried = int(writer_outcome.get("chapters_retried") or status.get("chapters_retried") or 0)
+    still_failed = int(writer_outcome.get("chapters_still_failed") or status.get("chapters_still_failed") or retry_required)
+    semantic_reviews = int(writer_outcome.get("chapters_needing_review") or status.get("semantic_reviews") or 0)
+    return {
+        "chapters_detected_label": f"{total} capítulos detectados",
+        "chapters_ready_label": f"{ready} listos",
+        "chapters_retried_label": f"{retried} reintentados",
+        "chapters_still_failed_label": f"{still_failed} siguen necesitando reintento",
+        "semantic_review_label": f"{semantic_reviews} decisiones editoriales pendientes",
+        "retry_cta": "Reintentar capítulos fallidos" if still_failed else "Abrir workspace",
+        "review_cta": "Ver decisiones" if semantic_reviews else "Sin decisiones pendientes",
+        "product_language": "author_facing_no_provider_jargon",
     }
 
 

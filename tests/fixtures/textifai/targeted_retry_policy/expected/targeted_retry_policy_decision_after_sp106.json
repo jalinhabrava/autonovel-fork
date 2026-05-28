@@ -1,0 +1,13 @@
+{
+  "assessment": "targeted_retry_policy_decision_ready",
+  "retry_policy": "ingestion_retry_policy.allow_auto_retries=true, retry_only_technical_failures=true, max_retries_per_chapter=2",
+  "manifest_schema_version": 1,
+  "retry_execution_started": true,
+  "no_full_novel_rerun": true,
+  "chapters_skipped_ready": true,
+  "semantic_reviews_not_retried": true,
+  "provider_calls_made": true,
+  "write_back": false,
+  "package_changes": false,
+  "no_chunk_jargon_in_product_ui": true
+}

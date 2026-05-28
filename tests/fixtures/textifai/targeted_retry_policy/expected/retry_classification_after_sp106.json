@@ -1,0 +1,13 @@
+{
+  "assessment": "retry_classification_completed",
+  "chapters_total": 20,
+  "ready_chapters": 5,
+  "retry_required_chapters": 15,
+  "retry_reasons": [
+    "chapter_needs_second_pass"
+  ],
+  "semantic_review_items": 0,
+  "technical_retry_items": 15,
+  "retry_vs_review_distinction": "retry_only_technical_failures",
+  "retry_only_technical_failures": true
+}

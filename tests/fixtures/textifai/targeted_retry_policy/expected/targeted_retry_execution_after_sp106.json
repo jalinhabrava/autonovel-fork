@@ -1,0 +1,15 @@
+{
+  "assessment": "targeted_retry_execution_started",
+  "provider_used": "deepseek",
+  "model_used": "deepseek-v4-flash",
+  "chapters_attempted": 15,
+  "chapters_succeeded": null,
+  "chapters_still_failed": null,
+  "chapters_skipped_ready": 5,
+  "semantic_reviews_not_retried": 0,
+  "provider_calls_made": true,
+  "full_rerun": false,
+  "output_paths_sanitized": "/home/david/TextifAIProjects/OnT_Spanish_20ch.textifai/dev/provider_outputs/targeted_retry_sp106b/*",
+  "execution_incomplete": true,
+  "note": "Provider run still in progress."
+}

@@ -17,6 +17,21 @@ export type ProjectSummary = {
     edge_count?: number;
     node_counts_by_kind?: Record<string, number>;
   };
+  ingestion_policy?: {
+    allow_auto_retries?: boolean;
+    max_retries_per_chapter?: number;
+    retry_only_technical_failures?: boolean;
+    ask_before_extra_costly_retry?: boolean;
+  };
+  workspace_status?: {
+    chapters_detected_label?: string;
+    chapters_ready_label?: string;
+    chapters_retried_label?: string;
+    chapters_still_failed_label?: string;
+    semantic_review_label?: string;
+    retry_cta?: string;
+    review_cta?: string;
+  };
 };
 
 export type ReviewItem = {
@@ -99,6 +114,21 @@ export type ProjectDetail = {
   };
   notes?: Array<{ path: string; name?: string; kind?: string; role?: string; status?: string }>;
   graph?: GraphPayload;
+  ingestion_policy?: {
+    allow_auto_retries?: boolean;
+    max_retries_per_chapter?: number;
+    retry_only_technical_failures?: boolean;
+    ask_before_extra_costly_retry?: boolean;
+  };
+  workspace_status?: {
+    chapters_detected_label?: string;
+    chapters_ready_label?: string;
+    chapters_retried_label?: string;
+    chapters_still_failed_label?: string;
+    semantic_review_label?: string;
+    retry_cta?: string;
+    review_cta?: string;
+  };
 };
 
 export type IngestionConfig = {

@@ -1,0 +1,14 @@
+{
+  "assessment": "workspace_ingestion_status_updated",
+  "author_summary_strings": [
+    "20 capítulos detectados",
+    "5 listos",
+    "15 reintentados",
+    "Si aún hay fallos, aparecen aquí con la opción de reintentar.",
+    "N decisiones editoriales pendientes: 0"
+  ],
+  "dev_details_available": true,
+  "retry_cta_present_if_needed": true,
+  "review_cta_present_if_needed": false,
+  "no_chunk_language_in_product_ui": true
+}
