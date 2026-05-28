@@ -1,0 +1,27 @@
+export type GraphKind = 'chapter' | 'character' | 'concept' | 'event' | 'object' | 'place' | 'review' | 'note';
+
+export type GraphCanvasNode = {
+  id: string;
+  label: string;
+  kind: GraphKind;
+  reviewState: string;
+  notePath: string;
+  summaryExcerpt: string;
+  relationshipCount: number;
+  degree: number;
+  color: string;
+};
+
+export type GraphCanvasEdge = {
+  id: string;
+  source: string;
+  target: string;
+  label: string;
+};
+
+export type GraphViewModel = {
+  nodes: GraphCanvasNode[];
+  edges: GraphCanvasEdge[];
+  kinds: GraphKind[];
+  byId: Record<string, GraphCanvasNode>;
+};
