@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef } from 'react';
 import ForceGraph2D, { ForceGraphMethods, LinkObject, NodeObject } from 'react-force-graph-2d';
 import { GraphCanvasEdge, GraphCanvasNode } from './types';
 
@@ -20,7 +20,6 @@ const ANIMATION_MS = 450;
 
 export function GraphCanvas({ nodes, edges, selectedNodeId, onSelectNode }: GraphCanvasProps) {
   const graphRef = useRef<ForceGraphMethods<GraphCanvasNode, GraphCanvasEdge>>();
-  const [zoomLevel, setZoomLevel] = useState(1);
 
   const graphData = useMemo(
     () => ({
@@ -39,6 +38,16 @@ export function GraphCanvas({ nodes, edges, selectedNodeId, onSelectNode }: Grap
     });
     return ids;
   }, [edges, selectedNodeId]);
+
+  const isSelectedLink = useCallback(
+    (link: ForceLink): boolean => {
+      if (!selectedNodeId) return false;
+      const sourceId = typeof link.source === 'object' ? String(link.source.id) : String(link.source);
+      const targetId = typeof link.target === 'object' ? String(link.target.id) : String(link.target);
+      return sourceId === selectedNodeId || targetId === selectedNodeId;
+    },
+    [selectedNodeId],
+  );
 
   const paintNode = useCallback(
     (node: ForceNode, ctx: CanvasRenderingContext2D, globalScale: number) => {
@@ -74,7 +83,7 @@ export function GraphCanvas({ nodes, edges, selectedNodeId, onSelectNode }: Grap
         ctx.stroke();
       }
 
-      const showLabel = isSelected || globalScale >= LABEL_ZOOM_THRESHOLD || zoomLevel >= LABEL_ZOOM_THRESHOLD;
+      const showLabel = isSelected || globalScale >= LABEL_ZOOM_THRESHOLD;
       if (showLabel) {
         const fontSize = Math.max(10, 13 / globalScale);
         const paddingX = 6 / globalScale;
@@ -97,7 +106,7 @@ export function GraphCanvas({ nodes, edges, selectedNodeId, onSelectNode }: Grap
 
       ctx.restore();
     },
-    [selectedNeighborIds, selectedNodeId, zoomLevel],
+    [selectedNeighborIds, selectedNodeId],
   );
 
   const paintPointerArea = useCallback((node: ForceNode, color: string, ctx: CanvasRenderingContext2D) => {
@@ -130,20 +139,11 @@ export function GraphCanvas({ nodes, edges, selectedNodeId, onSelectNode }: Grap
         linkTarget="target"
         backgroundColor="#ffffff"
         nodeRelSize={6}
-        autoPauseRedraw={false}
         minZoom={0.4}
         maxZoom={6}
         cooldownTicks={120}
-        linkColor={(link) => {
-          const sourceId = typeof link.source === 'object' ? String(link.source.id) : String(link.source);
-          const targetId = typeof link.target === 'object' ? String(link.target.id) : String(link.target);
-          return selectedNodeId && (sourceId === selectedNodeId || targetId === selectedNodeId) ? ACTIVE_LINK_COLOR : LINK_COLOR;
-        }}
-        linkWidth={(link) => {
-          const sourceId = typeof link.source === 'object' ? String(link.source.id) : String(link.source);
-          const targetId = typeof link.target === 'object' ? String(link.target.id) : String(link.target);
-          return selectedNodeId && (sourceId === selectedNodeId || targetId === selectedNodeId) ? 2.2 : 1.1;
-        }}
+        linkColor={(link) => (isSelectedLink(link as ForceLink) ? ACTIVE_LINK_COLOR : LINK_COLOR)}
+        linkWidth={(link) => (isSelectedLink(link as ForceLink) ? 2.2 : 1.1)}
         nodeCanvasObjectMode={() => 'replace'}
         nodeCanvasObject={paintNode}
         nodePointerAreaPaint={paintPointerArea}
@@ -151,7 +151,6 @@ export function GraphCanvas({ nodes, edges, selectedNodeId, onSelectNode }: Grap
         onBackgroundClick={() => onSelectNode(null)}
         onNodeDragEnd={handleNodeDragEnd}
         onNodeRightClick={handleNodeRightClick}
-        onZoom={({ k }) => setZoomLevel(k)}
       />
     </div>
   );
