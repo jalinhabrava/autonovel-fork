@@ -1,0 +1,15 @@
+{
+  "assessment": "persistent_workspace_8872_full_quality_verified",
+  "persistent_project_selected": true,
+  "mini_fixture_selected_by_default": false,
+  "chapter_count": 20,
+  "note_count": 280,
+  "graph_node_count": 1971,
+  "graph_edge_count": 1072,
+  "review_count": 59,
+  "retry_status": {
+    "technical_retry_required": 0,
+    "semantic_reviews": 20
+  },
+  "manual_review_url": "http://127.0.0.1:8872/"
+}

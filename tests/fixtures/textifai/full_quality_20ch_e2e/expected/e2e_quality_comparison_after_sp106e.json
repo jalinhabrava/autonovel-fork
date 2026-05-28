@@ -1,0 +1,22 @@
+{
+  "assessment": "e2e_quality_comparison_ready",
+  "sp095_baseline": {
+    "notes": 445,
+    "graph_nodes": 445,
+    "graph_edges": 222
+  },
+  "sp106_previous": {
+    "chapters_ready": 5,
+    "chapters_still_failed": 13
+  },
+  "sp107_current": {
+    "chapters_total": 20,
+    "valid_reduction_count": 20,
+    "notes": 280,
+    "graph_nodes": 1971,
+    "graph_edges": 1072,
+    "review_items": 59,
+    "semantic_model": "deepseek-v4-pro"
+  },
+  "difference_note": "SP-107 genera grafo más grande; capítulos de baja confianza pasan a revisión semántica cuando output es válido."
+}

@@ -1,0 +1,321 @@
+{
+  "assessment": "full_quality_20ch_e2e_ready_with_review_warnings",
+  "chapters_detected": 20,
+  "ready_chapters": 0,
+  "review_chapters": 20,
+  "retry_required_chapters": 0,
+  "valid_reduction_count": 20,
+  "ready_chapter_ids": [],
+  "ready_with_review_warnings_chapter_ids": [
+    "ch_001",
+    "ch_002",
+    "ch_003",
+    "ch_004",
+    "ch_005",
+    "ch_006",
+    "ch_007",
+    "ch_008",
+    "ch_009",
+    "ch_010",
+    "ch_011",
+    "ch_012",
+    "ch_013",
+    "ch_014",
+    "ch_015",
+    "ch_016",
+    "ch_017",
+    "ch_018",
+    "ch_019",
+    "ch_020"
+  ],
+  "technical_retry_required_chapter_ids": [],
+  "chapters": [
+    {
+      "chapter_id": "ch_001",
+      "parseable_json": true,
+      "schema_valid": true,
+      "source_refs_present": true,
+      "entity_count": 20,
+      "relationship_count": 4,
+      "score": 37.0,
+      "thin_warnings": [
+        "low_objects_count",
+        "model_profile_experimental"
+      ],
+      "status": "ready_with_review_warnings"
+    },
+    {
+      "chapter_id": "ch_002",
+      "parseable_json": true,
+      "schema_valid": true,
+      "source_refs_present": true,
+      "entity_count": 19,
+      "relationship_count": 5,
+      "score": 40.5,
+      "thin_warnings": [
+        "model_profile_experimental"
+      ],
+      "status": "ready_with_review_warnings"
+    },
+    {
+      "chapter_id": "ch_003",
+      "parseable_json": true,
+      "schema_valid": true,
+      "source_refs_present": true,
+      "entity_count": 23,
+      "relationship_count": 6,
+      "score": 46.5,
+      "thin_warnings": [
+        "model_profile_experimental"
+      ],
+      "status": "ready_with_review_warnings"
+    },
+    {
+      "chapter_id": "ch_004",
+      "parseable_json": true,
+      "schema_valid": true,
+      "source_refs_present": true,
+      "entity_count": 0,
+      "relationship_count": 0,
+      "score": -3.0,
+      "thin_warnings": [
+        "valid_json_but_thin",
+        "low_density_score",
+        "low_objects_count",
+        "low_events_count",
+        "low_relations_count",
+        "zero_unresolved_mentions_in_ambiguous_context",
+        "model_profile_experimental"
+      ],
+      "status": "ready_with_review_warnings"
+    },
+    {
+      "chapter_id": "ch_005",
+      "parseable_json": true,
+      "schema_valid": true,
+      "source_refs_present": true,
+      "entity_count": 16,
+      "relationship_count": 7,
+      "score": 39.0,
+      "thin_warnings": [
+        "model_profile_experimental"
+      ],
+      "status": "ready_with_review_warnings"
+    },
+    {
+      "chapter_id": "ch_006",
+      "parseable_json": true,
+      "schema_valid": true,
+      "source_refs_present": true,
+      "entity_count": 15,
+      "relationship_count": 5,
+      "score": 33.0,
+      "thin_warnings": [
+        "model_profile_experimental"
+      ],
+      "status": "ready_with_review_warnings"
+    },
+    {
+      "chapter_id": "ch_007",
+      "parseable_json": true,
+      "schema_valid": true,
+      "source_refs_present": true,
+      "entity_count": 13,
+      "relationship_count": 6,
+      "score": 35.5,
+      "thin_warnings": [
+        "low_objects_count",
+        "model_profile_experimental"
+      ],
+      "status": "ready_with_review_warnings"
+    },
+    {
+      "chapter_id": "ch_008",
+      "parseable_json": true,
+      "schema_valid": true,
+      "source_refs_present": true,
+      "entity_count": 8,
+      "relationship_count": 2,
+      "score": 19.0,
+      "thin_warnings": [
+        "valid_json_but_thin",
+        "low_density_score",
+        "low_objects_count",
+        "low_relations_count",
+        "model_profile_experimental"
+      ],
+      "status": "ready_with_review_warnings"
+    },
+    {
+      "chapter_id": "ch_009",
+      "parseable_json": true,
+      "schema_valid": true,
+      "source_refs_present": true,
+      "entity_count": 10,
+      "relationship_count": 3,
+      "score": 23.5,
+      "thin_warnings": [
+        "low_objects_count",
+        "model_profile_experimental"
+      ],
+      "status": "ready_with_review_warnings"
+    },
+    {
+      "chapter_id": "ch_010",
+      "parseable_json": true,
+      "schema_valid": true,
+      "source_refs_present": true,
+      "entity_count": 19,
+      "relationship_count": 4,
+      "score": 36.0,
+      "thin_warnings": [
+        "model_profile_experimental"
+      ],
+      "status": "ready_with_review_warnings"
+    },
+    {
+      "chapter_id": "ch_011",
+      "parseable_json": true,
+      "schema_valid": true,
+      "source_refs_present": true,
+      "entity_count": 19,
+      "relationship_count": 4,
+      "score": 37.0,
+      "thin_warnings": [
+        "model_profile_experimental"
+      ],
+      "status": "ready_with_review_warnings"
+    },
+    {
+      "chapter_id": "ch_012",
+      "parseable_json": true,
+      "schema_valid": true,
+      "source_refs_present": true,
+      "entity_count": 10,
+      "relationship_count": 3,
+      "score": 23.5,
+      "thin_warnings": [
+        "low_events_count",
+        "model_profile_experimental"
+      ],
+      "status": "ready_with_review_warnings"
+    },
+    {
+      "chapter_id": "ch_013",
+      "parseable_json": true,
+      "schema_valid": true,
+      "source_refs_present": true,
+      "entity_count": 20,
+      "relationship_count": 6,
+      "score": 42.5,
+      "thin_warnings": [
+        "model_profile_experimental"
+      ],
+      "status": "ready_with_review_warnings"
+    },
+    {
+      "chapter_id": "ch_014",
+      "parseable_json": true,
+      "schema_valid": true,
+      "source_refs_present": true,
+      "entity_count": 0,
+      "relationship_count": 0,
+      "score": -3.0,
+      "thin_warnings": [
+        "valid_json_but_thin",
+        "low_density_score",
+        "low_objects_count",
+        "low_events_count",
+        "low_relations_count",
+        "zero_unresolved_mentions_in_ambiguous_context",
+        "model_profile_experimental"
+      ],
+      "status": "ready_with_review_warnings"
+    },
+    {
+      "chapter_id": "ch_015",
+      "parseable_json": true,
+      "schema_valid": true,
+      "source_refs_present": true,
+      "entity_count": 7,
+      "relationship_count": 2,
+      "score": 17.5,
+      "thin_warnings": [
+        "valid_json_but_thin",
+        "low_density_score",
+        "low_objects_count",
+        "low_relations_count",
+        "model_profile_experimental"
+      ],
+      "status": "ready_with_review_warnings"
+    },
+    {
+      "chapter_id": "ch_016",
+      "parseable_json": true,
+      "schema_valid": true,
+      "source_refs_present": true,
+      "entity_count": 19,
+      "relationship_count": 5,
+      "score": 39.5,
+      "thin_warnings": [
+        "low_events_count",
+        "model_profile_experimental"
+      ],
+      "status": "ready_with_review_warnings"
+    },
+    {
+      "chapter_id": "ch_017",
+      "parseable_json": true,
+      "schema_valid": true,
+      "source_refs_present": true,
+      "entity_count": 43,
+      "relationship_count": 8,
+      "score": 76.0,
+      "thin_warnings": [
+        "model_profile_experimental"
+      ],
+      "status": "ready_with_review_warnings"
+    },
+    {
+      "chapter_id": "ch_018",
+      "parseable_json": true,
+      "schema_valid": true,
+      "source_refs_present": true,
+      "entity_count": 15,
+      "relationship_count": 5,
+      "score": 31.0,
+      "thin_warnings": [
+        "zero_unresolved_mentions_in_ambiguous_context",
+        "model_profile_experimental"
+      ],
+      "status": "ready_with_review_warnings"
+    },
+    {
+      "chapter_id": "ch_019",
+      "parseable_json": true,
+      "schema_valid": true,
+      "source_refs_present": true,
+      "entity_count": 19,
+      "relationship_count": 6,
+      "score": 40.5,
+      "thin_warnings": [
+        "model_profile_experimental"
+      ],
+      "status": "ready_with_review_warnings"
+    },
+    {
+      "chapter_id": "ch_020",
+      "parseable_json": true,
+      "schema_valid": true,
+      "source_refs_present": true,
+      "entity_count": 17,
+      "relationship_count": 5,
+      "score": 35.0,
+      "thin_warnings": [
+        "zero_unresolved_mentions_in_ambiguous_context",
+        "model_profile_experimental"
+      ],
+      "status": "ready_with_review_warnings"
+    }
+  ]
+}

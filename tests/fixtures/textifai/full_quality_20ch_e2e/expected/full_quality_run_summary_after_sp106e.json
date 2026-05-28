@@ -1,0 +1,16 @@
+{
+  "assessment": "full_quality_20ch_e2e_ready_with_review_warnings",
+  "active_run_id": "20260528T200618Z",
+  "runtime_root_sanitized": "/home/david/TextifAIProjects/OnT_Spanish_20ch.textifai/runs/sp107_full_quality_pro/*",
+  "work_title": "Ouja no Tsue",
+  "provider": "deepseek",
+  "models_used": {
+    "semantic": "deepseek-v4-pro",
+    "flash": "deepseek-v4-flash"
+  },
+  "chapters_total": 20,
+  "valid_reduction_count": 20,
+  "provider_calls_made": 50,
+  "compact_mode_used": true,
+  "write_back": false
+}

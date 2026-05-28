@@ -1,0 +1,17 @@
+{
+  "assessment": "workspace_views_full_quality_verified",
+  "editor_chapter_count": 20,
+  "editor_primaries_excluded": true,
+  "graph_node_count": 1971,
+  "graph_edge_count": 1072,
+  "review_decision_count": 59,
+  "story_bible_generated": true,
+  "markdown_kb_roots": [
+    "Characters",
+    "Places",
+    "Events",
+    "Objects",
+    "Concepts"
+  ],
+  "uses_persistent_project": true
+}

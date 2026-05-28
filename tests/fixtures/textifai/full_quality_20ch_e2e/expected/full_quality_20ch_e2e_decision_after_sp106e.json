@@ -1,0 +1,9 @@
+{
+  "assessment": "full_quality_20ch_e2e_ready_with_review_warnings",
+  "product_decision": "manual_review_base_ready_with_review_warnings",
+  "provider_calls": "YES",
+  "write_back": "NO",
+  "package_changes": "NO",
+  "persistent_project_updated": true,
+  "private_outputs_not_committed": true
+}

@@ -1,0 +1,30 @@
+{
+  "assessment": "provider_model_routing_ready",
+  "provider_name": "deepseek",
+  "strong_model_available": true,
+  "strong_model_name": "deepseek-v4-pro",
+  "flash_model_name": "deepseek-v4-flash",
+  "semantic_tasks_use_strong_model": true,
+  "low_quality_retries_escalate_to_strong_model": true,
+  "no_secrets_logged": true,
+  "model_routing_policy": {
+    "deterministic_no_llm": [
+      "chapter_detection",
+      "markdown_materialization",
+      "manifest_generation"
+    ],
+    "cheap_flash_allowed": [
+      "preflight",
+      "basic_classification",
+      "non_critical_summaries"
+    ],
+    "pro_strong_required": [
+      "vaerl_semantic_extraction",
+      "chapter_level_reduction",
+      "canonical_entity_resolution",
+      "relationships",
+      "facts_evidence",
+      "review_candidates"
+    ]
+  }
+}

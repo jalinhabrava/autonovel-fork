@@ -110,18 +110,29 @@ def main(argv: list[str] | None = None) -> int:
         )
 
     selected_chapters = parse_chapter_ids(args.chapter_ids)
+    semantic_model = str(args.semantic_model).strip() or "deepseek-v4-flash"
+    strong_model = str(args.strong_model).strip() or "deepseek-v4-pro"
+    flash_model = str(args.flash_model).strip() or "deepseek-v4-flash"
+    semantic_tasks_use_strong_model = semantic_model == strong_model
     execution_plan = {
         "assessment": "spanish_20ch_execution_plan_ready",
         "source_path": str(source_path),
         "selected_chapters": selected_chapters,
         "strategy": {
             "provider": "deepseek",
-            "flash_first": {"model": "deepseek-v4-flash", "phase": "bootstrap_chapter_extraction"},
+            "semantic_model": semantic_model,
+            "strong_model": strong_model,
+            "flash_model": flash_model,
+            "semantic_tasks_use_strong_model": semantic_tasks_use_strong_model,
+            "low_quality_retries_escalate_to_strong_model": True,
+            "pro_compact_reduction_mode": bool(args.pro_compact_reduction_mode),
+            "flash_first": {"model": flash_model, "phase": "non_critical_preflight"},
             "targeted_pro_conditions": [
                 "flash_invalid_or_unrecoverable_output",
                 "repeated_truncation_or_continuation_failure",
                 "critical_chapter_relation_quality_poor",
                 "source_evidence_coverage_poor",
+                "semantic_extraction_low_confidence",
             ],
         },
         "no_artificial_call_cap": True,
@@ -145,6 +156,16 @@ def main(argv: list[str] | None = None) -> int:
         "chapter_scoped": len(selected_chapters) < 20,
         "private_runtime_packet_root": str(runtime_root),
         "private_handoff_root": str(private_dir),
+        "model_routing_summary": {
+            "provider_name": "deepseek",
+            "strong_model_available": strong_model == "deepseek-v4-pro",
+            "strong_model_name": strong_model,
+            "flash_model_name": flash_model,
+            "semantic_model_name": semantic_model,
+            "semantic_tasks_use_strong_model": semantic_tasks_use_strong_model,
+            "low_quality_retries_escalate_to_strong_model": True,
+            "no_secrets_logged": True,
+        },
     }
     write_json(expected_dir / "spanish_20ch_execution_plan_after_sp094.json", execution_plan)
 
@@ -161,7 +182,7 @@ def main(argv: list[str] | None = None) -> int:
         "--chapter-ids",
         ",".join(selected_chapters),
         "--models",
-        "deepseek-v4-flash",
+        semantic_model,
         "--output-root",
         str(private_provider_root),
         "--allow-provider-calls",
@@ -182,6 +203,8 @@ def main(argv: list[str] | None = None) -> int:
         "--expected-root",
         str(provider_expected_root),
     ]
+    if args.pro_compact_reduction_mode:
+        provider_cmd.append("--pro-compact-reduction-mode")
 
     start = time.time()
     run = subprocess.run(provider_cmd, cwd=str(REPO_ROOT), capture_output=True, text=True)
@@ -300,6 +323,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--viewer-port", type=int, default=8872)
     parser.add_argument("--emergency-max-provider-requests", type=int, default=5000)
     parser.add_argument("--chapter-ids", default="", help="Comma-separated chapter ids like ch_005,ch_006. Empty keeps full 20ch run.")
+    parser.add_argument("--semantic-model", default="deepseek-v4-flash", help="DeepSeek model used for semantic extraction/reduction.")
+    parser.add_argument("--strong-model", default="deepseek-v4-pro", help="Strong model name for Pro-first semantic routing reports.")
+    parser.add_argument("--flash-model", default="deepseek-v4-flash", help="Flash model name for lightweight routing reports.")
+    parser.add_argument("--pro-compact-reduction-mode", action="store_true", help="Pass compact Pro reduction mode to provider dryrun.")
     return parser
 
 def parse_chapter_ids(raw: str | None) -> list[str]:
@@ -1602,4 +1629,3 @@ def write_json(path: Path, payload: dict[str, Any]) -> None:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

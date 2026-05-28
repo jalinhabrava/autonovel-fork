@@ -1,0 +1,33 @@
+{
+  "assessment": "full_quality_20ch_e2e_ready_with_review_warnings",
+  "active_run_id": "20260528T200618Z",
+  "status": {
+    "chapters_total": 20,
+    "chapters_ready": 0,
+    "chapters_ready_with_review_warnings": 20,
+    "chapters_needs_author_review": 20,
+    "chapters_retry_required": 0,
+    "chapters_still_failed": 0,
+    "retry_required": 0,
+    "review_items": 59,
+    "technical_failures": 0,
+    "semantic_reviews": 20,
+    "graph_nodes": 1971,
+    "graph_edges": 1072,
+    "vaerl_ready": true,
+    "graph_ready": true,
+    "review_ready": true,
+    "active_run_id": "20260528T200618Z",
+    "last_full_quality_run_at": "2026-05-28T21:33:21.965907+00:00"
+  },
+  "model_routing_summary": {
+    "provider": "deepseek",
+    "strong_model": "deepseek-v4-pro",
+    "flash_model": "deepseek-v4-flash",
+    "strong_model_used": true,
+    "semantic_tasks_use_strong_model": true,
+    "low_quality_retries_escalate_to_strong_model": true
+  },
+  "manifest_updated": true,
+  "contains_tmp_paths": false
+}
