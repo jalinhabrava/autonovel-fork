@@ -49,6 +49,9 @@ class TextifAIReactForceGraphWorkspaceTests(unittest.TestCase):
         self.assertIn('Editar', inspector)
         self.assertIn('Hechos clave', inspector)
         self.assertIn('Ver contenido de la nota', inspector)
+        self.assertIn('Backlinks', inspector)
+        self.assertIn('Enlaces salientes', inspector)
+        self.assertIn('Grafo local', inspector)
         self.assertIn('SP-106', modal)
         self.assertIn('No write-back', modal)
 

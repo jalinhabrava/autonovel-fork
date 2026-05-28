@@ -145,8 +145,15 @@ export async function fetchReviewQueue(projectId: string): Promise<NonNullable<P
   return detail.canon?.review_queue || { item_count: 0, items: [] };
 }
 
-export async function fetchNote(projectId: string, path: string): Promise<{ markdown?: string }> {
-  return api<{ markdown?: string }>(`/api/projects/${encodeURIComponent(projectId)}/note?path=${encodeURIComponent(path)}`);
+export type NoteDetail = {
+  markdown?: string;
+  backlinks?: string[];
+  outgoing_wikilinks?: Array<{ target?: string; label?: string }>;
+  local_graph?: { nodes?: Array<{ id?: string; label?: string; kind?: string }>; edges?: Array<{ source?: string; target?: string; label?: string }> };
+};
+
+export async function fetchNote(projectId: string, path: string): Promise<NoteDetail> {
+  return api<NoteDetail>(`/api/projects/${encodeURIComponent(projectId)}/note?path=${encodeURIComponent(path)}`);
 }
 
 export async function fetchArtifacts(projectId: string): Promise<{ artifacts?: Array<{ path?: string }> }> {

@@ -1,15 +1,16 @@
 import React from 'react';
 import { GraphCanvasNode } from './types';
-import { CanonEntity } from '../api';
+import { CanonEntity, NoteDetail } from '../api';
 
 export type GraphInspectorProps = {
   node: GraphCanvasNode | null;
   entityCard: CanonEntity | null;
   noteContent: string;
+  noteDetail: NoteDetail | null;
   onEdit: (node: GraphCanvasNode) => void;
 };
 
-export function GraphInspector({ node, entityCard, noteContent, onEdit }: GraphInspectorProps) {
+export function GraphInspector({ node, entityCard, noteContent, noteDetail, onEdit }: GraphInspectorProps) {
   if (!node) {
     return (
       <aside className="rounded-3xl border border-neutral-200 bg-white p-5 text-sm text-neutral-500">
@@ -77,6 +78,43 @@ export function GraphInspector({ node, entityCard, noteContent, onEdit }: GraphI
       )}
 
       {/* Note content */}
+      {noteDetail ? (
+        <div className="mt-4 space-y-3 text-sm">
+          {(noteDetail.backlinks || []).length > 0 ? (
+            <div>
+              <div className="mb-2 text-xs uppercase tracking-wide text-neutral-400">Backlinks</div>
+              <div className="space-y-1">
+                {(noteDetail.backlinks || []).slice(0, 8).map((backlink) => (
+                  <div key={backlink} className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm">
+                    {backlink}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+          {(noteDetail.outgoing_wikilinks || []).length > 0 ? (
+            <div>
+              <div className="mb-2 text-xs uppercase tracking-wide text-neutral-400">Enlaces salientes</div>
+              <div className="space-y-1">
+                {(noteDetail.outgoing_wikilinks || []).slice(0, 8).map((link) => (
+                  <div key={link.target || link.label} className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm">
+                    {link.label || link.target}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+          {noteDetail.local_graph?.nodes?.length ? (
+            <div>
+              <div className="mb-2 text-xs uppercase tracking-wide text-neutral-400">Grafo local</div>
+              <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3 text-sm">
+                {noteDetail.local_graph.nodes.length} nodos · {noteDetail.local_graph.edges?.length || 0} relaciones
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
       {noteContent ? (
         <details className="mt-4">
           <summary className="cursor-pointer rounded-2xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs font-semibold">
