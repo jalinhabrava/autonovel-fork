@@ -61,6 +61,23 @@ class TextifAIReactUITargetParityTests(unittest.TestCase):
         for fn in ['function Shell', 'function TopBar', 'function Button', 'function Metric', 'function SidebarNav', 'function StatusChip', 'function ProjectRow', 'function DecisionCard', 'function EntityRecordTable', 'function InspectorCard']:
             self.assertIn(fn, text)
 
+    def test_review_queue_header_and_per_case_actions(self):
+        text = APP.read_text(encoding='utf-8')
+        review_start = text.index("if (active === 'review')")
+        review_end = text.index("if (active === 'editor')")
+        review_block = text[review_start:review_end]
+        self.assertIn('Apply decisions', review_block)
+        self.assertIn('Re-run checks', review_block)
+        self.assertIn('Pending warnings', review_block)
+        self.assertIn('Decision model', review_block)
+        self.assertIn('Must match visible queue count.', review_block)
+        self.assertIn('No silent canon changes.', review_block)
+        self.assertIn('Every decision stores: action, target ids, previous state, resulting VaERL change, author note, and replay metadata.', review_block)
+        self.assertIn('<Button>Accept</Button>', text)
+        self.assertIn('<Button variant="secondary">Reject</Button>', text)
+        self.assertIn('<Button variant="secondary">Merge</Button>', text)
+        self.assertIn('<Button variant="secondary">Open evidence</Button>', text)
+
     def test_black_sidebar_not_primary_shell(self):
         text = APP.read_text(encoding='utf-8')
         shell_start = text.index('function Shell')
