@@ -78,6 +78,11 @@ class TextifAIReactWorkspaceRealProjectTests(unittest.TestCase):
         self.assertIn('Pantalla completa', text)
         self.assertIn('Panel derecho retenido también en fullscreen', text)
         self.assertIn('No write-back en SP-105D', text)
+        editor_start = text.index("if (active === 'editor')")
+        editor_end = text.index("if (active === 'story')")
+        editor_block = text[editor_start:editor_end]
+        self.assertNotIn('TopBar title="Editor" subtitle="Solo capítulos/manuscrito. Fichas primarias viven en Codex, Graph o Story Bible." actions={<><Button onClick={() => setEditDraft', editor_block)
+        self.assertIn('flex items-center justify-between gap-3', editor_block)
         report = read_json('editor_chapter_only_fullscreen_after_sp105c.json')
         self.assertTrue(report['editor_items_are_chapters_only'])
         self.assertFalse(report['write_back'])
