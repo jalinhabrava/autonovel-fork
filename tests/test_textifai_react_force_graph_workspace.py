@@ -14,7 +14,7 @@ PKG = REPO / 'textifai/web_viewer/react_shell/package.json'
 
 class TextifAIReactForceGraphWorkspaceTests(unittest.TestCase):
     def test_graph_uses_force_graph_library(self):
-        self.assertTrue(GRAPH_CANVAS.exists(), f'Missing graph canvas contract file: {GRAPH_CANVAS}')
+        self.assertTrue(GRAPH_CANVAS.exists())
         text = GRAPH_CANVAS.read_text(encoding='utf-8')
         self.assertIn("from 'react-force-graph-2d'", text)
         self.assertIn('ForceGraph2D', text)
@@ -38,17 +38,17 @@ class TextifAIReactForceGraphWorkspaceTests(unittest.TestCase):
             'Conceptos',
             'Revisión',
             'Solo relacionados',
-            'Buscar nodo',
         ]:
             self.assertIn(label, text)
+        self.assertIn('Buscar nodo', text)
 
     def test_inspector_and_edit_draft_modal_exist(self):
-        inspector_text = GRAPH_INSPECTOR.read_text(encoding='utf-8')
-        modal_text = GRAPH_MODAL.read_text(encoding='utf-8')
-        self.assertIn('Ficha del nodo', inspector_text)
-        self.assertIn('Editar', inspector_text)
-        self.assertIn('SP-106', modal_text)
-        self.assertIn('No write-back', modal_text)
+        inspector = GRAPH_INSPECTOR.read_text(encoding='utf-8')
+        modal = GRAPH_MODAL.read_text(encoding='utf-8')
+        self.assertIn('Ficha del nodo', inspector)
+        self.assertIn('Editar', inspector)
+        self.assertIn('SP-106', modal)
+        self.assertIn('No write-back', modal)
 
     def test_dependency_scope_shell_only(self):
         package = json.loads(PKG.read_text(encoding='utf-8'))
