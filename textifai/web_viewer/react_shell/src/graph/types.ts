@@ -1,4 +1,4 @@
-export type GraphKind = 'chapter' | 'character' | 'concept' | 'event' | 'object' | 'place' | 'review' | 'note';
+export type GraphKind = 'chapter' | 'character' | 'concept' | 'event' | 'object' | 'place' | 'review' | 'unresolved' | 'note';
 
 export type GraphCanvasNode = {
   id: string;

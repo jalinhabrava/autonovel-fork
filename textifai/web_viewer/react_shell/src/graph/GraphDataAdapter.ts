@@ -1,5 +1,6 @@
 import { GraphPayload } from '../api';
 import { GraphCanvasEdge, GraphCanvasNode, GraphKind, GraphViewModel } from './types';
+import { pickColor } from './GraphTheme';
 
 const DEFAULT_KIND: GraphKind = 'note';
 
@@ -38,7 +39,7 @@ export function mapGraphPayload(payload: GraphPayload | null | undefined): Graph
   return { nodes, edges, kinds, byId };
 }
 
-export function filterGraph(vm: GraphViewModel, kind: string, query: string, relatedTo: string | null): GraphViewModel {
+export function filterGraph(vm: GraphViewModel, kind: 'all' | GraphKind, query: string, relatedTo: string | null): GraphViewModel {
   const normalizedQuery = query.trim().toLowerCase();
   const kindFiltered = vm.nodes.filter((node) => (kind === 'all' ? true : node.kind === kind));
   const searchFiltered = kindFiltered.filter((node) => {
@@ -65,20 +66,6 @@ export function filterGraph(vm: GraphViewModel, kind: string, query: string, rel
 
 function normalizeKind(kind: string): GraphKind {
   const value = kind.toLowerCase();
-  if (['chapter', 'character', 'concept', 'event', 'object', 'place', 'review'].includes(value)) return value as GraphKind;
+  if (['chapter', 'character', 'concept', 'event', 'object', 'place', 'review', 'unresolved'].includes(value)) return value as GraphKind;
   return DEFAULT_KIND;
-}
-
-function pickColor(kind: GraphKind): string {
-  const palette: Record<GraphKind, string> = {
-    chapter: '#7f7a6a',
-    character: '#111827',
-    concept: '#6b7280',
-    event: '#9a3412',
-    object: '#0f766e',
-    place: '#1d4ed8',
-    review: '#b91c1c',
-    note: '#525252',
-  };
-  return palette[kind];
 }
