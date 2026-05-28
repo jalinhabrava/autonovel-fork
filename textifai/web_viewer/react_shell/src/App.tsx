@@ -222,6 +222,8 @@ export function App() {
   const [graphQuery, setGraphQuery] = useState('');
   const [graphRelatedOnly, setGraphRelatedOnly] = useState(false);
   const [graphEditNodeId, setGraphEditNodeId] = useState<string | null>(null);
+  const [selectedGraphEntityKey, setSelectedGraphEntityKey] = useState<string>('');
+  const [selectedGraphNoteContent, setSelectedGraphNoteContent] = useState<string>('');
   const [artifactsCount, setArtifactsCount] = useState<number>(0);
   const [editDraft, setEditDraft] = useState<EditDraft>(null);
   const [error, setError] = useState<string>('');
@@ -244,6 +246,26 @@ export function App() {
   const warningsVisible = visibleDecisions.length;
   const graphVm = useMemo(() => mapGraphPayload(graphPayload), [graphPayload]);
   const filteredGraph = useMemo(() => filterGraph(graphVm, graphKindFilter, graphQuery, graphRelatedOnly ? selectedGraphNodeId : null), [graphVm, graphKindFilter, graphQuery, graphRelatedOnly, selectedGraphNodeId]);
+  const selectedGraphEntity = useMemo(() => {
+    if (!selectedGraphNodeId || !projectDetail) return null;
+    return (projectDetail?.canon?.primaries || []).find((entity) => {
+      const key = entity.preferred_slug || entity.canonical_name || '';
+      const node = filteredGraph.byId[selectedGraphNodeId];
+      return key && node && (key === node.notePath || key === node.id || node.label?.toLowerCase().includes(key.toLowerCase()));
+    }) || null;
+  }, [selectedGraphNodeId, projectDetail, filteredGraph]);
+
+  async function handleGraphNodeSelect(nodeId: string | null) {
+    setSelectedGraphNodeId(nodeId);
+    if (!nodeId || !selectedProjectId) { setSelectedGraphNoteContent(''); return; }
+    const node = filteredGraph.byId[nodeId];
+    const notePath = node?.notePath || node?.id || '';
+    if (!notePath) { setSelectedGraphNoteContent(''); return; }
+    try {
+      const payload = await fetchNote(selectedProjectId, notePath);
+      setSelectedGraphNoteContent(String(payload.markdown || ''));
+    } catch { setSelectedGraphNoteContent(''); }
+  }
   const selectedGraphNode = useMemo(() => (selectedGraphNodeId ? filteredGraph.byId[selectedGraphNodeId] || null : null), [filteredGraph, selectedGraphNodeId]);
   const graphEditNode = useMemo(() => (graphEditNodeId ? filteredGraph.byId[graphEditNodeId] || null : null), [filteredGraph, graphEditNodeId]);
   const graphStats = { nodes: filteredGraph.nodes.length, edges: filteredGraph.edges.length };
@@ -269,10 +291,10 @@ export function App() {
           />
         </aside>
         <div className="col-span-12 xl:col-span-6">
-          {selectedProjectId ? <GraphCanvas nodes={filteredGraph.nodes} edges={filteredGraph.edges} selectedNodeId={selectedGraphNodeId} onSelectNode={setSelectedGraphNodeId} /> : <div className="rounded-3xl border border-neutral-200 p-5 text-sm text-neutral-500">Selecciona un proyecto para abrir Graph.</div>}
+          {selectedProjectId ? <GraphCanvas nodes={filteredGraph.nodes} edges={filteredGraph.edges} selectedNodeId={selectedGraphNodeId} onSelectNode={handleGraphNodeSelect} /> : <div className="rounded-3xl border border-neutral-200 p-5 text-sm text-neutral-500">Selecciona un proyecto para abrir Graph.</div>}
         </div>
         <aside className="col-span-12 xl:col-span-3">
-          <GraphInspector node={selectedGraphNode} onEdit={(node: GraphCanvasNode) => setGraphEditNodeId(node.id)} />
+          <GraphInspector node={selectedGraphNode} entityCard={selectedGraphEntity} noteContent={selectedGraphNoteContent} onEdit={(node: GraphCanvasNode) => setGraphEditNodeId(node.id)} />
         </aside>
       </div>
       <GraphNodeEditDraftModal node={graphEditNode} onClose={() => setGraphEditNodeId(null)} />

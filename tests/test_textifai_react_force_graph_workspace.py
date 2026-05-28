@@ -47,8 +47,18 @@ class TextifAIReactForceGraphWorkspaceTests(unittest.TestCase):
         modal = GRAPH_MODAL.read_text(encoding='utf-8')
         self.assertIn('Ficha del nodo', inspector)
         self.assertIn('Editar', inspector)
+        self.assertIn('Hechos clave', inspector)
+        self.assertIn('Ver contenido de la nota', inspector)
         self.assertIn('SP-106', modal)
         self.assertIn('No write-back', modal)
+
+    def test_graph_auto_centers_and_loads_primary_data_on_click(self):
+        canvas = GRAPH_CANVAS.read_text(encoding='utf-8')
+        app = APP.read_text(encoding='utf-8')
+        self.assertIn('zoomToFit(500, 60)', canvas)
+        self.assertIn('function handleGraphNodeSelect', app)
+        self.assertIn('fetchNote(selectedProjectId, notePath)', app)
+        self.assertIn('selectedGraphEntity', app)
 
     def test_dependency_scope_shell_only(self):
         package = json.loads(PKG.read_text(encoding='utf-8'))

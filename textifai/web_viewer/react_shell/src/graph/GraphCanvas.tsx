@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import ForceGraph2D, { ForceGraphMethods, LinkObject, NodeObject } from 'react-force-graph-2d';
 import { GraphCanvasEdge, GraphCanvasNode } from './types';
 
@@ -128,6 +128,16 @@ export function GraphCanvas({ nodes, edges, selectedNodeId, onSelectNode }: Grap
     graphRef.current?.centerAt(node.x ?? 0, node.y ?? 0, ANIMATION_MS);
     graphRef.current?.zoom(CENTER_ZOOM_LEVEL, ANIMATION_MS);
   }, [onSelectNode]);
+
+  // Auto-center on first load or data change
+  const hasData = nodes.length > 0;
+  const prevCount = useRef(0);
+  useEffect(() => {
+    if (hasData && prevCount.current === 0 && nodes.length > 0 && graphRef.current) {
+      setTimeout(() => { graphRef.current?.zoomToFit(500, 60); }, 100);
+    }
+    prevCount.current = nodes.length;
+  }, [nodes.length, hasData]);
 
   return (
     <div className="h-full min-h-[560px] w-full overflow-hidden rounded-3xl border border-neutral-200 bg-white">
