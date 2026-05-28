@@ -1,0 +1,10 @@
+{
+  "retry_available": true,
+  "retry_disabled": false,
+  "retry_label": "Reintentar capítulos fallidos",
+  "review_available": false,
+  "review_label": "Ver decisiones editoriales",
+  "open_workspace_available": true,
+  "open_workspace_label": "Abrir workspace",
+  "reason": "still_failed_chapters_exist"
+}

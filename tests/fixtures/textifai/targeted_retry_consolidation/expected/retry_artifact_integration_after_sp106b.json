@@ -1,0 +1,12 @@
+{
+  "integration_supported": false,
+  "reason": "retry outputs still indicate need_retry, no successful artifacts to integrate into vaerl/graph",
+  "files_integrated": [],
+  "chapters_integrated": [],
+  "graph_updated": false,
+  "vaerl_updated": false,
+  "review_queue_updated": false,
+  "writer_outcome_updated": false,
+  "backups_created": [],
+  "remaining_unintegrated_outputs": "/home/david/TextifAIProjects/OnT_Spanish_20ch.textifai/dev/provider_outputs/targeted_retry_sp106b/20260528T184056Z"
+}

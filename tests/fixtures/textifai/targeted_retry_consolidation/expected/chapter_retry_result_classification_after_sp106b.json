@@ -1,0 +1,224 @@
+{
+  "chapters": [
+    {
+      "chapter_id": "ch_001",
+      "title": "Chapter 1",
+      "before_retry_status": "needs_retry",
+      "retry_attempted": true,
+      "retry_attempt_count": 1,
+      "after_retry_status": "ready",
+      "technical_failure_reason": null,
+      "semantic_review_count": 0,
+      "artifacts_integrated": false
+    },
+    {
+      "chapter_id": "ch_002",
+      "title": "Chapter 2",
+      "before_retry_status": "ready",
+      "retry_attempted": false,
+      "retry_attempt_count": 0,
+      "after_retry_status": "ready",
+      "technical_failure_reason": null,
+      "semantic_review_count": 0,
+      "artifacts_integrated": false
+    },
+    {
+      "chapter_id": "ch_003",
+      "title": "Chapter 3",
+      "before_retry_status": "ready",
+      "retry_attempted": false,
+      "retry_attempt_count": 0,
+      "after_retry_status": "ready",
+      "technical_failure_reason": null,
+      "semantic_review_count": 0,
+      "artifacts_integrated": false
+    },
+    {
+      "chapter_id": "ch_004",
+      "title": "Chapter 4",
+      "before_retry_status": "needs_retry",
+      "retry_attempted": true,
+      "retry_attempt_count": 1,
+      "after_retry_status": "ready",
+      "technical_failure_reason": null,
+      "semantic_review_count": 0,
+      "artifacts_integrated": false
+    },
+    {
+      "chapter_id": "ch_005",
+      "title": "Chapter 5",
+      "before_retry_status": "needs_retry",
+      "retry_attempted": true,
+      "retry_attempt_count": 1,
+      "after_retry_status": "still_failed",
+      "technical_failure_reason": "chapter_needs_second_pass",
+      "semantic_review_count": 0,
+      "artifacts_integrated": false
+    },
+    {
+      "chapter_id": "ch_006",
+      "title": "Chapter 6",
+      "before_retry_status": "needs_retry",
+      "retry_attempted": true,
+      "retry_attempt_count": 1,
+      "after_retry_status": "still_failed",
+      "technical_failure_reason": "chapter_needs_second_pass",
+      "semantic_review_count": 0,
+      "artifacts_integrated": false
+    },
+    {
+      "chapter_id": "ch_007",
+      "title": "Chapter 7",
+      "before_retry_status": "needs_retry",
+      "retry_attempted": true,
+      "retry_attempt_count": 1,
+      "after_retry_status": "still_failed",
+      "technical_failure_reason": "chapter_needs_second_pass",
+      "semantic_review_count": 0,
+      "artifacts_integrated": false
+    },
+    {
+      "chapter_id": "ch_008",
+      "title": "Chapter 8",
+      "before_retry_status": "needs_retry",
+      "retry_attempted": true,
+      "retry_attempt_count": 1,
+      "after_retry_status": "still_failed",
+      "technical_failure_reason": "chapter_needs_second_pass",
+      "semantic_review_count": 0,
+      "artifacts_integrated": false
+    },
+    {
+      "chapter_id": "ch_009",
+      "title": "Chapter 9",
+      "before_retry_status": "needs_retry",
+      "retry_attempted": true,
+      "retry_attempt_count": 1,
+      "after_retry_status": "still_failed",
+      "technical_failure_reason": "chapter_needs_second_pass",
+      "semantic_review_count": 0,
+      "artifacts_integrated": false
+    },
+    {
+      "chapter_id": "ch_010",
+      "title": "Chapter 10",
+      "before_retry_status": "needs_retry",
+      "retry_attempted": true,
+      "retry_attempt_count": 1,
+      "after_retry_status": "still_failed",
+      "technical_failure_reason": "chapter_needs_second_pass",
+      "semantic_review_count": 0,
+      "artifacts_integrated": false
+    },
+    {
+      "chapter_id": "ch_011",
+      "title": "Chapter 11",
+      "before_retry_status": "needs_retry",
+      "retry_attempted": true,
+      "retry_attempt_count": 1,
+      "after_retry_status": "still_failed",
+      "technical_failure_reason": "chapter_needs_second_pass",
+      "semantic_review_count": 0,
+      "artifacts_integrated": false
+    },
+    {
+      "chapter_id": "ch_012",
+      "title": "Chapter 12",
+      "before_retry_status": "needs_retry",
+      "retry_attempted": true,
+      "retry_attempt_count": 1,
+      "after_retry_status": "still_failed",
+      "technical_failure_reason": "chapter_needs_second_pass",
+      "semantic_review_count": 0,
+      "artifacts_integrated": false
+    },
+    {
+      "chapter_id": "ch_013",
+      "title": "Chapter 13",
+      "before_retry_status": "ready",
+      "retry_attempted": false,
+      "retry_attempt_count": 0,
+      "after_retry_status": "ready",
+      "technical_failure_reason": null,
+      "semantic_review_count": 0,
+      "artifacts_integrated": false
+    },
+    {
+      "chapter_id": "ch_014",
+      "title": "Chapter 14",
+      "before_retry_status": "ready",
+      "retry_attempted": false,
+      "retry_attempt_count": 0,
+      "after_retry_status": "ready",
+      "technical_failure_reason": null,
+      "semantic_review_count": 0,
+      "artifacts_integrated": false
+    },
+    {
+      "chapter_id": "ch_015",
+      "title": "Chapter 15",
+      "before_retry_status": "needs_retry",
+      "retry_attempted": true,
+      "retry_attempt_count": 1,
+      "after_retry_status": "still_failed",
+      "technical_failure_reason": "chapter_needs_second_pass",
+      "semantic_review_count": 0,
+      "artifacts_integrated": false
+    },
+    {
+      "chapter_id": "ch_016",
+      "title": "Chapter 16",
+      "before_retry_status": "needs_retry",
+      "retry_attempted": true,
+      "retry_attempt_count": 1,
+      "after_retry_status": "still_failed",
+      "technical_failure_reason": "chapter_needs_second_pass",
+      "semantic_review_count": 0,
+      "artifacts_integrated": false
+    },
+    {
+      "chapter_id": "ch_017",
+      "title": "Chapter 17",
+      "before_retry_status": "ready",
+      "retry_attempted": false,
+      "retry_attempt_count": 0,
+      "after_retry_status": "ready",
+      "technical_failure_reason": null,
+      "semantic_review_count": 0,
+      "artifacts_integrated": false
+    },
+    {
+      "chapter_id": "ch_018",
+      "title": "Chapter 18",
+      "before_retry_status": "needs_retry",
+      "retry_attempted": true,
+      "retry_attempt_count": 1,
+      "after_retry_status": "still_failed",
+      "technical_failure_reason": "chapter_needs_second_pass",
+      "semantic_review_count": 0,
+      "artifacts_integrated": false
+    },
+    {
+      "chapter_id": "ch_019",
+      "title": "Chapter 19",
+      "before_retry_status": "needs_retry",
+      "retry_attempted": true,
+      "retry_attempt_count": 1,
+      "after_retry_status": "still_failed",
+      "technical_failure_reason": "chapter_needs_second_pass",
+      "semantic_review_count": 0,
+      "artifacts_integrated": false
+    },
+    {
+      "chapter_id": "ch_020",
+      "title": "Chapter 20",
+      "before_retry_status": "needs_retry",
+      "retry_attempted": true,
+      "retry_attempt_count": 1,
+      "after_retry_status": "still_failed",
+      "technical_failure_reason": "chapter_needs_second_pass",
+      "semantic_review_count": 0,
+      "artifacts_integrated": false
+    }
+  ]
+}

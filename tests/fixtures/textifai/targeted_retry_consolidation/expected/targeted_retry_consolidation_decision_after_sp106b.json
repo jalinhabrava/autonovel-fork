@@ -1,0 +1,15 @@
+{
+  "assessment": "retry_artifacts_integrated_some_chapters_still_failed",
+  "chapters_total": 20,
+  "chapters_ready_after_retry": 5,
+  "chapters_still_failed_after_retry": 13,
+  "retries_attempted": 15,
+  "retries_successful": 0,
+  "reviews_created": 0,
+  "manifest_updated": true,
+  "workspace_status_updated": true,
+  "provider_calls_made": false,
+  "write_back": false,
+  "package_changes": false,
+  "retry_vs_review_distinction_maintained": true
+}

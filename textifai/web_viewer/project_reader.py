@@ -241,6 +241,10 @@ def _build_workspace_status_summary(writer_outcome: dict[str, Any], manifest: di
     retried = int(writer_outcome.get("chapters_retried") or status.get("chapters_retried") or 0)
     still_failed = int(writer_outcome.get("chapters_still_failed") or status.get("chapters_still_failed") or retry_required)
     semantic_reviews = int(writer_outcome.get("chapters_needing_review") or status.get("semantic_reviews") or 0)
+    if status.get("chapters_still_failed") is not None:
+        still_failed = int(status.get("chapters_still_failed") or 0)
+    if status.get("chapters_retried") is not None:
+        retried = int(status.get("chapters_retried") or 0)
     return {
         "chapters_detected_label": f"{total} capítulos detectados",
         "chapters_ready_label": f"{ready} listos",

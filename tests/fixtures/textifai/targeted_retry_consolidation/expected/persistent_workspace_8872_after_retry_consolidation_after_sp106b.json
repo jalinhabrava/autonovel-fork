@@ -1,0 +1,11 @@
+{
+  "persistent_project_selected": true,
+  "mini_fixture_not_selected_by_default": true,
+  "chapter_count": 20,
+  "note_count": 422,
+  "graph_node_count": 645,
+  "graph_edge_count": 182,
+  "review_count": 59,
+  "retry_status": "some_still_failed",
+  "manual_review_url": "http://localhost:8872/"
+}

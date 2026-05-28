@@ -1,0 +1,10 @@
+{
+  "chapters_detected_label": "20 capítulos detectados",
+  "chapters_ready_label": "5 listos",
+  "chapters_retried_label": "15 reintentados",
+  "chapters_still_failed_label": "13 siguen necesitando reintento",
+  "semantic_review_label": "0 decisiones editoriales pendientes",
+  "retry_cta": "Reintentar capítulos fallidos",
+  "review_cta": "Ver decisiones editoriales",
+  "product_language": "author_facing_no_provider_jargon"
+}
