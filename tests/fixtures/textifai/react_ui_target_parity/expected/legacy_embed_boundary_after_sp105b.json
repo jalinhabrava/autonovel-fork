@@ -1,0 +1,8 @@
+{
+  "assessment": "legacy_embed_boundary_documented",
+  "remaining_legacy_embeds": ["Graph", "Story Bible"],
+  "embed_contract": "?embed=1&view=<view>&project=<project_id>",
+  "legacy_sidebar_hidden_in_embed": true,
+  "legacy_not_primary_product_shell": true,
+  "apis_preserved": ["/api/projects", "/api/projects/<id>", "/api/projects/<id>/graph", "/api/projects/<id>/note", "/api/projects/<id>/artifacts", "/api/ingestion/config", "/api/ingestion/jobs"]
+}

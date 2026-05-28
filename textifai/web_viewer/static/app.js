@@ -21,6 +21,9 @@ const state = {
   selectedCanonEntityKey: null,
   selectedReviewItemId: null,
   navNotice: null,
+  showTechnicalDetails: false,
+  profileMenuOpen: false,
+  settingsSection: 'general',
   viewerNavBack: [],
   viewerNavForward: [],
   viewerRecent: [],
@@ -44,8 +47,17 @@ const state = {
   },
   compareView: { baseId: "", candidateId: "", loading: false, result: null, error: "" },
   reviewView: { severity: "", reviewType: "", query: "", sortBy: "severity_desc", quickFilter: "all", candidate: "" },
+  workspaceTitles: loadWorkspaceTitleOverrides(),
   autoOpenedRecommendedProject: false,
 };
+
+const BOOT_PARAMS = new URLSearchParams(window.location.search);
+const BOOT_EMBED = BOOT_PARAMS.get('embed') === '1';
+const BOOT_PROJECT_ID = BOOT_PARAMS.get('project') || '';
+const BOOT_VIEW = BOOT_PARAMS.get('view') || '';
+let bootSelectionApplied = false;
+
+if (BOOT_EMBED) document.body.classList.add('embedded-legacy');
 
 const GRAPH_CLICK_DRAG_THRESHOLD_PX = 5;
 const GRAPH_HIDDEN_TECHNICAL_TAGS = new Set([
@@ -64,6 +76,37 @@ const I18N = {
     profileName: "Guest author",
     profileRole: "Local profile",
     settings: "Settings",
+    technicalViewOff: "Technical view off",
+    technicalViewOn: "Technical view on",
+    technicalViewToggle: "Technical view",
+    settingsTitle: "Settings",
+    settingsSubtitle: "Adjust workspace behavior for this local profile.",
+    technicalViewHelp: "Show technical/debug details inside canon, review, and inspector cards.",
+    settingsSectionGeneral: "General",
+    settingsSectionNotifications: "Notifications",
+    settingsSectionPersonalization: "Personalization",
+    settingsSectionProfile: "Profile",
+    settingsSectionData: "Data controls",
+    settingsSectionKeyboard: "Keyboard",
+    profileMenuPlan: "Plan",
+    profileMenuPersonalization: "Personalization",
+    profileMenuProfile: "Profile",
+    profileMenuHelp: "Help",
+    settingsGeneralBlurb: "Core workspace preferences for this local author profile.",
+    settingsComingSoon: "Planned for future phase.",
+    settingsAppearanceTitle: "Appearance",
+    settingsAppearanceValue: "Classic editorial",
+    settingsLanguageTitle: "Language",
+    settingsLanguageValue: "Auto-detect Spanish/English",
+    settingsProfileTitle: "Profile name",
+    settingsProfileValue: "Local author",
+    settingsStorageTitle: "Storage model",
+    settingsStorageValue: "Local-first, no write-back",
+    openSettingsLabel: "Open settings",
+    close: "Close",
+    renameWork: "Rename work",
+    renameWorkPlaceholder: "Work title",
+    localTitleDraft: "Local title draft",
     refresh: "Open project",
     currentProject: "Story project",
     selectProject: "Select work",
@@ -227,6 +270,37 @@ const I18N = {
     profileName: "Autor invitado",
     profileRole: "Perfil local",
     settings: "Ajustes",
+    technicalViewOff: "Vista técnica desactivada",
+    technicalViewOn: "Vista técnica activada",
+    technicalViewToggle: "Vista técnica",
+    settingsTitle: "Ajustes",
+    settingsSubtitle: "Ajusta el comportamiento del workspace para este perfil local.",
+    technicalViewHelp: "Muestra detalles técnicos/debug dentro de fichas de canon, revisión e inspector.",
+    settingsSectionGeneral: "General",
+    settingsSectionNotifications: "Notificaciones",
+    settingsSectionPersonalization: "Personalización",
+    settingsSectionProfile: "Perfil",
+    settingsSectionData: "Control de datos",
+    settingsSectionKeyboard: "Atajos",
+    profileMenuPlan: "Plan",
+    profileMenuPersonalization: "Personalización",
+    profileMenuProfile: "Perfil",
+    profileMenuHelp: "Ayuda",
+    settingsGeneralBlurb: "Preferencias base del workspace para este perfil local de autor.",
+    settingsComingSoon: "Planificado para fase futura.",
+    settingsAppearanceTitle: "Apariencia",
+    settingsAppearanceValue: "Editorial clásica",
+    settingsLanguageTitle: "Idioma",
+    settingsLanguageValue: "Auto-detectar español/inglés",
+    settingsProfileTitle: "Nombre de perfil",
+    settingsProfileValue: "Autor local",
+    settingsStorageTitle: "Modelo de almacenamiento",
+    settingsStorageValue: "Local-first, sin write-back",
+    openSettingsLabel: "Abrir ajustes",
+    close: "Cerrar",
+    renameWork: "Renombrar obra",
+    renameWorkPlaceholder: "Título de la obra",
+    localTitleDraft: "Título local",
     refresh: "Abrir proyecto",
     currentProject: "Proyecto narrativo",
     selectProject: "Selecciona una obra",
@@ -482,6 +556,41 @@ const STATUS_BORDERS = {
 
 const $ = (id) => document.getElementById(id);
 
+function loadWorkspaceTitleOverrides() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem("textifai.workspace.titles") || "{}");
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch (_error) {
+    return {};
+  }
+}
+
+function persistWorkspaceTitleOverrides() {
+  try {
+    localStorage.setItem("textifai.workspace.titles", JSON.stringify(state.workspaceTitles || {}));
+  } catch (_error) {
+    // Local draft only; ignore storage failures.
+  }
+}
+
+function detectedWorkspaceTitle(project) {
+  return project?.work?.title || project?.project?.work?.title || project?.name || project?.project?.name || project?.project_id || project?.project?.project_id || "";
+}
+
+function workspaceTitle(project) {
+  const projectId = project?.project_id || project?.project?.project_id || "";
+  const override = projectId ? cleanReviewValue(state.workspaceTitles?.[projectId]) : "";
+  return override || detectedWorkspaceTitle(project);
+}
+
+function setWorkspaceTitle(projectId, title) {
+  const cleanTitle = String(title || "").trim();
+  if (!projectId) return;
+  if (cleanTitle) state.workspaceTitles[projectId] = cleanTitle;
+  else delete state.workspaceTitles[projectId];
+  persistWorkspaceTitleOverrides();
+}
+
 async function api(path, options = {}) {
   const response = await fetch(path, options);
   if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
@@ -575,7 +684,37 @@ function applyStaticTranslations() {
   $("brand-subtitle").textContent = t('brandSubtitle');
   if ($("profile-name")) $("profile-name").textContent = t('profileName');
   if ($("profile-role")) $("profile-role").textContent = t('profileRole');
-  if ($("settings-placeholder")) $("settings-placeholder").textContent = t('settings');
+  if ($("profile-menu-name")) $("profile-menu-name").textContent = t('profileName');
+  if ($("profile-menu-role")) $("profile-menu-role").textContent = t('profileRole');
+  if ($("profile-trigger")) $("profile-trigger").title = t('openSettingsLabel');
+  if ($("settings-placeholder")) {
+    $("settings-placeholder").textContent = `${t('settings')} · ${state.showTechnicalDetails ? t('technicalViewOn') : t('technicalViewOff')}`;
+    $("settings-placeholder").disabled = false;
+    $("settings-placeholder").setAttribute('aria-pressed', state.showTechnicalDetails ? 'true' : 'false');
+    $("settings-placeholder").title = t('technicalViewToggle');
+  }
+  document.querySelectorAll('[data-profile-menu-action]').forEach((button) => {
+    const action = button.dataset.profileMenuAction;
+    const label = action === 'settings' ? t('settings')
+      : action === 'personalization' ? t('profileMenuPersonalization')
+      : action === 'profile' ? t('profileMenuProfile')
+      : action === 'upgrade' ? t('profileMenuPlan')
+      : action === 'help' ? t('profileMenuHelp')
+      : '';
+    const labelNode = button.querySelector('span:last-child');
+    if (label && labelNode) labelNode.textContent = label;
+  });
+  document.querySelectorAll('[data-settings-section]').forEach((button) => {
+    const section = button.dataset.settingsSection;
+    const label = section === 'general' ? t('settingsSectionGeneral')
+      : section === 'notifications' ? t('settingsSectionNotifications')
+      : section === 'personalization' ? t('settingsSectionPersonalization')
+      : section === 'profile' ? t('settingsSectionProfile')
+      : section === 'data' ? t('settingsSectionData')
+      : section === 'keyboard' ? t('settingsSectionKeyboard')
+      : section;
+    button.innerHTML = `${button.textContent.trim().split(' ')[0]} ${escapeHtml(label)}`;
+  });
   $("refresh-projects").textContent = t('refresh');
   $("current-project-eyebrow").textContent = t('currentProject');
   $("project-title").textContent = state.current ? $("project-title").textContent : t('selectProject');
@@ -630,9 +769,16 @@ async function loadProjects() {
     await selectProject(recommended.project_id, { preserveNotice: true });
     return;
   }
+  if (!bootSelectionApplied && BOOT_PROJECT_ID && state.projects.some((project) => project.project_id === BOOT_PROJECT_ID)) {
+    bootSelectionApplied = true;
+    await selectProject(BOOT_PROJECT_ID, { preserveNotice: true });
+    if (BOOT_VIEW) setView(BOOT_VIEW);
+    return;
+  }
   if (!state.autoOpenedRecommendedProject && recommended && state.currentId !== recommended.project_id) {
     state.autoOpenedRecommendedProject = true;
-    await selectProject(recommended.project_id, { notice: `${t('open')}: ${recommended.work?.title || recommended.name}` });
+    await selectProject(recommended.project_id, { notice: `${t('open')}: ${workspaceTitle(recommended)}` });
+    if (BOOT_VIEW) setView(BOOT_VIEW);
   }
 }
 
@@ -675,15 +821,22 @@ function renderProjects() {
     const summary = buildWorkspaceSummary(project);
     const active = project.project_id === state.currentId;
     const title = summary.title;
+    const detectedTitle = detectedWorkspaceTitle(project);
+    const hasLocalTitle = Boolean(state.workspaceTitles?.[project.project_id]);
     return `
       <div class="project-card workspace-card ${active ? "active" : ""}" data-project="${escapeHtml(project.project_id)}">
         <div class="project-card-header">
-          <strong>${escapeHtml(title)}</strong>
+          <div class="workspace-title-block">
+            <strong>${escapeHtml(title)}</strong>
+            ${hasLocalTitle ? `<small class="muted">${escapeHtml(t('localTitleDraft'))}</small>` : ""}
+          </div>
           <div class="project-card-actions">
             <span class="badge ${kind === 'author' ? 'inspectable-badge' : 'warning-badge'}">${escapeHtml(kind === 'author' ? t('authorProject') : t('technicalArtifact'))}</span>
+            <button type="button" class="inline-action" data-rename-project="${escapeHtml(project.project_id)}" data-current-title="${escapeHtml(title)}" title="${escapeHtml(t('renameWork'))}">✎</button>
             ${active ? `<span class="badge">${escapeHtml(t('active'))}</span>` : `<button type="button" class="inline-action" data-open-project="${escapeHtml(project.project_id)}">${escapeHtml(t('open'))}</button>`}
           </div>
         </div>
+        ${hasLocalTitle && detectedTitle && detectedTitle !== title ? `<small>${escapeHtml(t('renameWorkPlaceholder'))}: ${escapeHtml(detectedTitle)}</small>` : ""}
         <small>${escapeHtml(t('chapters'))} ${escapeHtml(fmtCount(summary.chapter_count))} · ${escapeHtml(t('nodes'))} ${escapeHtml(fmtCount(summary.node_count))} · ${escapeHtml(t('edges'))} ${escapeHtml(fmtCount(summary.edge_count))}</small>
         <small>${escapeHtml(t('ready'))} ${escapeHtml(fmtCount(summary.chapters_ready))} · ${escapeHtml(t('needsReview'))} ${escapeHtml(fmtCount(summary.chapters_needing_review))} · ${escapeHtml(t('retry'))} ${escapeHtml(fmtCount(summary.chapters_needing_retry))}</small>
       </div>
@@ -704,8 +857,20 @@ function renderProjects() {
     node.addEventListener("click", (event) => {
       event.stopPropagation();
       const project = (state.projects || []).find((entry) => entry.project_id === node.dataset.openProject);
-      const title = project?.work?.title || project?.name || node.dataset.openProject;
+      const title = workspaceTitle(project || { project_id: node.dataset.openProject });
       selectProject(node.dataset.openProject, { notice: `${t('open')}: ${title}` });
+    });
+  });
+  document.querySelectorAll("[data-rename-project]").forEach((node) => {
+    node.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const projectId = node.dataset.renameProject || "";
+      const currentTitle = node.dataset.currentTitle || "";
+      const nextTitle = window.prompt(t('renameWork'), currentTitle);
+      if (nextTitle === null) return;
+      setWorkspaceTitle(projectId, nextTitle);
+      renderProjects();
+      if (state.currentId === projectId && state.current) renderCurrentProject();
     });
   });
 }
@@ -715,7 +880,7 @@ function buildWorkspaceSummary(project) {
   const writerOutcome = project?.writer_outcome || {};
   return {
     project_id: project?.project_id || "",
-    title: project?.work?.title || project?.name || project?.project_id || "",
+    title: workspaceTitle(project),
     chapter_count: project?.chapter_count,
     node_count: graphSummary.node_count,
     edge_count: graphSummary.edge_count,
@@ -755,7 +920,7 @@ async function selectProject(projectId, options = {}) {
 
 function renderCurrentProject() {
   const project = state.current.project;
-  $("project-title").textContent = project.work?.title || project.name || t('selectProject');
+  $("project-title").textContent = workspaceTitle(project) || t('selectProject');
   $("project-meta").textContent = t('readOnlyPreview');
   renderOverview();
   renderNotes();
@@ -763,6 +928,104 @@ function renderCurrentProject() {
   renderReview();
   renderArtifacts();
   renderGraph();
+  renderSettingsPanel();
+}
+
+function renderSettingsPanel() {
+  const body = $("settings-body");
+  const title = $("settings-title");
+  const close = $("settings-close");
+  if (!body || !title || !close) return;
+  title.textContent = state.settingsSection === 'general' ? t('settingsSectionGeneral')
+    : state.settingsSection === 'notifications' ? t('settingsSectionNotifications')
+    : state.settingsSection === 'personalization' ? t('settingsSectionPersonalization')
+    : state.settingsSection === 'profile' ? t('settingsSectionProfile')
+    : state.settingsSection === 'data' ? t('settingsSectionData')
+    : t('settingsSectionKeyboard');
+  close.textContent = '×';
+  close.setAttribute('aria-label', t('close'));
+  document.querySelectorAll('[data-settings-section]').forEach((button) => {
+    button.classList.toggle('active', button.dataset.settingsSection === state.settingsSection);
+  });
+  if (state.settingsSection === 'general') {
+    body.innerHTML = `
+      <p class="muted">${escapeHtml(t('settingsGeneralBlurb'))}</p>
+      <div class="settings-card-grid">
+        <article class="settings-info-card"><strong>${escapeHtml(t('settingsAppearanceTitle'))}</strong><span>${escapeHtml(t('settingsAppearanceValue'))}</span></article>
+        <article class="settings-info-card"><strong>${escapeHtml(t('settingsLanguageTitle'))}</strong><span>${escapeHtml(t('settingsLanguageValue'))}</span></article>
+        <article class="settings-info-card"><strong>${escapeHtml(t('settingsProfileTitle'))}</strong><span>${escapeHtml(t('settingsProfileValue'))}</span></article>
+        <article class="settings-info-card"><strong>${escapeHtml(t('settingsStorageTitle'))}</strong><span>${escapeHtml(t('settingsStorageValue'))}</span></article>
+      </div>
+      <label class="settings-toggle-row">
+        <div>
+          <strong>${escapeHtml(t('technicalViewToggle'))}</strong>
+          <small>${escapeHtml(t('technicalViewHelp'))}</small>
+        </div>
+        <input id="settings-technical-toggle" type="checkbox" ${state.showTechnicalDetails ? 'checked' : ''} />
+      </label>
+    `;
+  } else {
+    body.innerHTML = `
+      <p class="muted">${escapeHtml(t('settingsSubtitle'))}</p>
+      <article class="settings-placeholder-card">
+        <strong>${escapeHtml(title.textContent)}</strong>
+        <p class="muted">${escapeHtml(t('settingsComingSoon'))}</p>
+      </article>
+    `;
+  }
+  $("settings-technical-toggle")?.addEventListener('change', (event) => {
+    state.showTechnicalDetails = Boolean(event.target.checked);
+    applyStaticTranslations();
+    if (state.current) renderCurrentProject();
+  });
+}
+
+function openProfileMenu() {
+  const menu = $("profile-menu");
+  const trigger = $("profile-trigger");
+  if (!menu || !trigger) return;
+  state.profileMenuOpen = true;
+  menu.hidden = false;
+  trigger.setAttribute('aria-expanded', 'true');
+}
+
+function closeProfileMenu() {
+  const menu = $("profile-menu");
+  const trigger = $("profile-trigger");
+  if (!menu || !trigger) return;
+  state.profileMenuOpen = false;
+  menu.hidden = true;
+  trigger.setAttribute('aria-expanded', 'false');
+}
+
+function toggleProfileMenu() {
+  if (state.profileMenuOpen) closeProfileMenu();
+  else openProfileMenu();
+}
+
+function openSettingsModal() {
+  const modal = $("settings-modal");
+  if (!modal) return;
+  closeProfileMenu();
+  renderSettingsPanel();
+  modal.hidden = false;
+  document.body.classList.add('modal-open');
+  document.body.dataset.modal = 'settings';
+  $("settings-technical-toggle")?.focus();
+}
+
+function closeSettingsModal() {
+  const modal = $("settings-modal");
+  if (!modal) return;
+  modal.hidden = true;
+  document.body.classList.remove('modal-open');
+  delete document.body.dataset.modal;
+  $("profile-trigger")?.focus();
+}
+
+function setSettingsSection(section) {
+  state.settingsSection = section || 'general';
+  renderSettingsPanel();
 }
 
 function setView(view) {
@@ -3060,7 +3323,7 @@ function renderCanonEntityDetail(entity) {
         <button type="button" disabled title="${escapeHtml(t('futurePhaseDisabled'))}">${escapeHtml(t('suggestMerge'))}</button>
         <button type="button" disabled title="${escapeHtml(t('futurePhaseDisabled'))}">${escapeHtml(t('markForReview'))}</button>
       </div>
-      <details class="technical-details"><summary>${escapeHtml(t('technicalDetails'))}</summary>${renderCanonicalizationVisibility(entity, { source: "dev" })}</details>
+      ${state.showTechnicalDetails ? `<details class="technical-details"><summary>${escapeHtml(t('technicalDetails'))}</summary>${renderCanonicalizationVisibility(entity, { source: "dev" })}</details>` : ""}
     </article>
   `;
 }
@@ -3214,6 +3477,7 @@ function renderReviewDecisionActions(decision) {
 }
 
 function renderReviewTechnicalDetails(decision) {
+  if (!state.showTechnicalDetails) return "";
   const details = decision.technical_details || {};
   const metadataEntries = Object.entries(details.metadata || {}).filter(([, value]) => value !== null && value !== undefined && value !== "");
   return `
@@ -4697,13 +4961,14 @@ async function openGraphNote(path, nodeId = null, { pushHistory = true } = {}) {
     ${backlinks.length ? `<details><summary>${escapeHtml(t('backlinks'))}</summary><ul>${backlinks.map((item) => `<li><a href="#" class="wikilink" data-wikilink="${escapeHtml(item)}">${escapeHtml(item)}</a></li>`).join("")}</ul></details>` : ""}
     ${outgoing.length ? `<details><summary>${escapeHtml(t('outgoingLinks'))}</summary><ul>${outgoing.map((item) => `<li><a href="#" class="wikilink" data-wikilink="${escapeHtml(item.target || item.label || "")}">[[${escapeHtml(item.label || item.target || "")}]]</a></li>`).join("")}</ul></details>` : ""}
     ${showReviewAction ? `<div class="nav-actions"><button type="button" data-graph-open-review="${escapeHtml(summaryNode.label || '')}">${escapeHtml(t('openReview'))}</button></div>` : `<p class="muted">${escapeHtml(t('reviewUnavailable'))}</p>`}
-    <details>
+    ${state.showTechnicalDetails ? `
+    <details class="technical-details">
       <summary>${escapeHtml(t('technicalDetails'))}</summary>
       <p class="muted">${escapeHtml(data.path || '')}</p>
       ${(local.nodes || []).length ? `<p class="muted">${escapeHtml(t('localGraphSummary'))}: ${escapeHtml(fmtCount((local.nodes || []).length))} / ${escapeHtml(fmtCount((local.edges || []).length))}</p>` : ""}
       <pre class="frontmatter">${escapeHtml(JSON.stringify(data.frontmatter || {}, null, 2))}</pre>
       <details><summary>Markdown</summary><article class="markdown">${renderMarkdown(markdownText)}</article></details>
-    </details>
+    </details>` : ""}
   `;
   attachWikiLinkHandlers($("graph-detail"));
   bindGraphDetailNavigation();
@@ -5097,15 +5362,38 @@ globalThis.__TEXTIFAI_REVIEW_ACTIONS__ = {
   renderReviewItemCard,
 };
 
-document.querySelectorAll(".tabs button").forEach((button) => button.addEventListener("click", () => setView(button.dataset.view)));
-$("refresh-projects").addEventListener("click", loadProjects);
-$("hide-system").addEventListener("change", renderGraph);
-$("hide-review").addEventListener("change", renderGraph);
-$("hide-chapters").addEventListener("change", renderGraph);
-$("graph-zoom-in").addEventListener("click", () => zoomGraph(0.82));
-$("graph-zoom-out").addEventListener("click", () => zoomGraph(1.22));
-$("graph-zoom-reset").addEventListener("click", resetGraphViewBox);
+if (document.documentElement.dataset.ui === 'legacy') {
+  document.querySelectorAll(".tabs button").forEach((button) => button.addEventListener("click", () => setView(button.dataset.view)));
+  $("refresh-projects")?.addEventListener("click", loadProjects);
+  $("settings-placeholder")?.addEventListener("click", openSettingsModal);
+  $("profile-trigger")?.addEventListener("click", toggleProfileMenu);
+  $("settings-close")?.addEventListener("click", closeSettingsModal);
+  document.querySelectorAll("[data-profile-menu-action]").forEach((node) => node.addEventListener("click", (event) => {
+    const action = event.currentTarget.dataset.profileMenuAction;
+    if (action === 'settings') openSettingsModal();
+    else if (action === 'personalization') { state.settingsSection = 'personalization'; openSettingsModal(); }
+    else if (action === 'profile' || action === 'identity') { state.settingsSection = 'profile'; openSettingsModal(); }
+    else closeProfileMenu();
+  }));
+  document.querySelectorAll("[data-settings-section]").forEach((node) => node.addEventListener("click", (event) => setSettingsSection(event.currentTarget.dataset.settingsSection)));
+  document.querySelectorAll("[data-settings-close]").forEach((node) => node.addEventListener("click", closeSettingsModal));
+  document.addEventListener('click', (event) => {
+    if (!state.profileMenuOpen) return;
+    if (event.target.closest('#profile-menu') || event.target.closest('#profile-trigger')) return;
+    closeProfileMenu();
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !$("settings-modal")?.hidden) closeSettingsModal();
+    else if (event.key === 'Escape' && state.profileMenuOpen) closeProfileMenu();
+  });
+  $("hide-system")?.addEventListener("change", renderGraph);
+  $("hide-review")?.addEventListener("change", renderGraph);
+  $("hide-chapters")?.addEventListener("change", renderGraph);
+  $("graph-zoom-in")?.addEventListener("click", () => zoomGraph(0.82));
+  $("graph-zoom-out")?.addEventListener("click", () => zoomGraph(1.22));
+  $("graph-zoom-reset")?.addEventListener("click", resetGraphViewBox);
 
-loadProjects().catch((error) => {
-  $("project-list").innerHTML = `<div class="panel">Failed to load projects: ${escapeHtml(error.message)}</div>`;
-});
+  loadProjects().catch((error) => {
+    $("project-list").innerHTML = `<div class="panel">Failed to load projects: ${escapeHtml(error.message)}</div>`;
+  });
+}

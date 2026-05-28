@@ -115,12 +115,24 @@ class TextifAIReviewWorkspaceCleanupTests(unittest.TestCase):
 
     def test_technical_details_collapsed_or_dev_and_not_available_hidden(self):
         text = APP_JS.read_text(encoding='utf-8')
+        self.assertIn('showTechnicalDetails: false', text)
         self.assertIn('function renderReviewTechnicalDetails(decision) {', text)
         self.assertIn('class="technical-details review-technical-details"', text)
         self.assertIn("t('technicalDetailsCollapsed')", text)
+        self.assertIn('${state.showTechnicalDetails ? `', text)
         report = read_json('review_product_vs_dev_details_after_sp104.json')
         self.assertTrue(report['technical_details_collapsed'])
         self.assertFalse(report['not_available_visible_in_product'])
+
+    def test_settings_button_opens_real_modal(self):
+        index = INDEX_HTML.read_text(encoding='utf-8')
+        app = APP_JS.read_text(encoding='utf-8')
+        self.assertIn('id="settings-modal"', index)
+        self.assertIn('class="settings-backdrop"', index)
+        self.assertIn('id="settings-body"', index)
+        self.assertIn('function openSettingsModal()', app)
+        self.assertIn('function closeSettingsModal()', app)
+        self.assertIn('$("settings-placeholder")?.addEventListener("click", openSettingsModal);', app)
 
     def test_visible_product_copy_stops_calling_product_viewer(self):
         index = INDEX_HTML.read_text(encoding='utf-8')

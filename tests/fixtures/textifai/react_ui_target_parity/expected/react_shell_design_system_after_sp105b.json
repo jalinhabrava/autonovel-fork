@@ -1,0 +1,9 @@
+{
+  "assessment": "react_shell_design_system_target_classes_present",
+  "components": ["Shell", "TopBar", "Button", "Metric", "SidebarNav", "StatusChip", "ProjectRow", "DecisionCard", "EntityRecordTable", "InspectorCard", "LegacyEmbed"],
+  "button_primary": "bg-neutral-900 text-white",
+  "button_secondary": "bg-neutral-100 text-neutral-800 border border-neutral-200",
+  "card_radius": "rounded-3xl",
+  "grid_system": "grid grid-cols-12 gap-5",
+  "neutral_palette": true
+}

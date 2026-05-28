@@ -4,108 +4,169 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title id="doc-title">TextifAI Author Workspace</title>
-    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/react-shell/app.css" />
+    <link id="legacy-css" rel="stylesheet" href="/styles.css" />
   </head>
   <body>
-    <div class="app-shell">
-      <aside class="sidebar">
-        <div class="brand">
-          <span class="brand-mark">T</span>
-          <div>
-            <h1 id="brand-title">TextifAI Author Workspace</h1>
-            <p id="brand-subtitle">Workspace narrativo para autores</p>
-          </div>
-        </div>
-        <div class="toolbar">
-            <button id="refresh-projects">Abrir proyecto</button>
-        </div>
-        <div id="project-list" class="project-list"></div>
-        <div class="sidebar-footer" aria-label="User profile and settings placeholder">
-          <div class="profile-card">
-            <span class="profile-avatar" aria-hidden="true">A</span>
-            <div class="profile-copy">
-              <strong id="profile-name">Autor invitado</strong>
-              <small id="profile-role">Perfil local</small>
+    <div id="react-root"></div>
+    <div id="legacy-root" class="legacy-root" hidden>
+      <div class="app-shell">
+        <aside class="sidebar">
+          <div class="brand">
+            <span class="brand-mark">T</span>
+            <div>
+              <h1 id="brand-title">TextifAI Author Workspace</h1>
+              <p id="brand-subtitle">Workspace narrativo para autores</p>
             </div>
-            <button id="settings-placeholder" type="button" disabled>Settings</button>
           </div>
-        </div>
-      </aside>
+          <div class="toolbar">
+              <button id="refresh-projects">Abrir proyecto</button>
+          </div>
+          <div id="project-list" class="project-list"></div>
+          <div class="sidebar-footer" aria-label="Perfil y ajustes de usuario">
+            <div class="profile-menu" id="profile-menu" hidden>
+              <button type="button" class="profile-menu-identity" data-profile-menu-action="identity">
+                <span class="profile-avatar" aria-hidden="true">A</span>
+                <span><strong id="profile-menu-name">Autor invitado</strong><small id="profile-menu-role">Perfil local</small></span>
+                <span aria-hidden="true">›</span>
+              </button>
+              <div class="profile-menu-separator"></div>
+              <button type="button" data-profile-menu-action="upgrade"><span aria-hidden="true">✦</span><span>Plan</span></button>
+              <button type="button" data-profile-menu-action="personalization"><span aria-hidden="true">◐</span><span>Personalización</span></button>
+              <button type="button" data-profile-menu-action="profile"><span aria-hidden="true">◎</span><span>Perfil</span></button>
+              <button type="button" data-profile-menu-action="settings"><span aria-hidden="true">⚙</span><span>Ajustes</span></button>
+              <div class="profile-menu-separator"></div>
+              <button type="button" data-profile-menu-action="help"><span aria-hidden="true">?</span><span>Ayuda</span></button>
+            </div>
+            <button id="profile-trigger" type="button" class="profile-card" aria-haspopup="menu" aria-expanded="false" aria-controls="profile-menu">
+              <span class="profile-avatar" aria-hidden="true">A</span>
+              <div class="profile-copy">
+                <strong id="profile-name">Autor invitado</strong>
+                <small id="profile-role">Perfil local</small>
+              </div>
+              <span class="profile-chevron" aria-hidden="true">⌄</span>
+            </button>
+            <button id="settings-placeholder" type="button" hidden>Settings</button>
+          </div>
+        </aside>
 
-      <main class="main">
-        <header class="project-header">
-          <div>
-            <p id="current-project-eyebrow" class="eyebrow">Proyecto narrativo</p>
-            <h2 id="project-title">Selecciona una obra</h2>
-            <p id="project-meta" class="muted">Workspace local-first</p>
-          </div>
-          <nav class="tabs">
-            <button id="tab-overview" data-view="overview" class="active">Resumen</button>
-            <button id="tab-notes" data-view="notes">Wiki</button>
-            <button id="tab-canon" data-view="canon">Canon / Entidades</button>
-            <button id="tab-review" data-view="review">Revisión</button>
-            <button id="tab-graph" data-view="graph">Grafo</button>
-            <button id="tab-dev" data-view="artifacts">Dev</button>
-          </nav>
-        </header>
+        <main class="main">
+          <header class="project-header">
+            <div>
+              <p id="current-project-eyebrow" class="eyebrow">Proyecto narrativo</p>
+              <h2 id="project-title">Selecciona una obra</h2>
+              <p id="project-meta" class="muted">Workspace local-first</p>
+            </div>
+            <nav class="tabs">
+              <button id="tab-overview" data-view="overview" class="active">Resumen</button>
+              <button id="tab-notes" data-view="notes">Wiki</button>
+              <button id="tab-canon" data-view="canon">Canon / Entidades</button>
+              <button id="tab-review" data-view="review">Revisión</button>
+              <button id="tab-graph" data-view="graph">Grafo</button>
+              <button id="tab-dev" data-view="artifacts">Dev</button>
+            </nav>
+          </header>
 
-        <section id="view-overview" class="view active"></section>
-        <section id="view-notes" class="view split-view">
-          <div class="panel">
-            <h3 id="wiki-title">Wiki</h3>
-            <p id="wiki-subtitle" class="muted">Notas Markdown proyectadas desde VaERL.</p>
-            <div class="wiki-filters">
-              <input id="note-filter" class="search" placeholder="Search notes" />
-              <select id="note-kind-filter"><option value="">All kinds</option></select>
-              <select id="note-tag-filter"><option value="">All tags</option></select>
-              <select id="note-status-filter"><option value="">All status</option></select>
+          <section id="view-overview" class="view active"></section>
+          <section id="view-notes" class="view split-view">
+            <div class="panel">
+              <h3 id="wiki-title">Wiki</h3>
+              <p id="wiki-subtitle" class="muted">Notas Markdown proyectadas desde VaERL.</p>
+              <div class="wiki-filters">
+                <input id="note-filter" class="search" placeholder="Search notes" />
+                <select id="note-kind-filter"><option value="">All kinds</option></select>
+                <select id="note-tag-filter"><option value="">All tags</option></select>
+                <select id="note-status-filter"><option value="">All status</option></select>
+              </div>
+              <div id="note-list" class="list"></div>
             </div>
-            <div id="note-list" class="list"></div>
-          </div>
-          <div class="panel detail">
-            <div id="note-detail" class="note-detail muted">Select note.</div>
+            <div class="panel detail">
+              <div id="note-detail" class="note-detail muted">Select note.</div>
+            </div>
+          </section>
+          <section id="view-canon" class="view"></section>
+          <section id="view-review" class="view"></section>
+          <section id="view-graph" class="view">
+            <div class="graph-toolbar">
+              <label><input type="checkbox" id="hide-system" checked /> <span id="label-hide-system">Hide system</span></label>
+              <label><input type="checkbox" id="hide-review" checked /> <span id="label-hide-review">Hide review</span></label>
+              <label><input type="checkbox" id="hide-chapters" checked /> <span id="label-hide-chapters">Hide chapters</span></label>
+              <label><input type="checkbox" id="local-graph-mode" /> <span id="label-local-graph">Local graph</span></label>
+              <label><input type="checkbox" id="show-all-nodes" /> <span id="label-show-all-nodes">Show all nodes</span></label>
+              <div class="graph-legend">
+                <span class="legend-dot kind-character"></span> <span id="legend-character">character</span>
+                <span class="legend-dot kind-place"></span> <span id="legend-place">place</span>
+                <span class="legend-dot kind-event"></span> <span id="legend-event">event</span>
+                <span class="legend-dot kind-object"></span> <span id="legend-object">object</span>
+                <span class="legend-dot kind-concept"></span> <span id="legend-concept">concept</span>
+                <span class="legend-dot kind-review"></span> <span id="legend-review">review</span>
+              </div>
+              <div class="graph-zoom-controls" aria-label="Graph zoom controls">
+                <button id="graph-zoom-in" type="button">Zoom +</button>
+                <button id="graph-zoom-out" type="button">Zoom -</button>
+                <button id="graph-zoom-reset" type="button">Reset layout</button>
+              </div>
+              <div id="graph-tag-filter" class="graph-tag-filter" aria-label="Graph tag filters"></div>
+            </div>
+            <div class="graph-layout">
+              <svg id="graph-svg" viewBox="0 0 1200 720" role="img" aria-label="TextifAI graph"></svg>
+              <aside id="graph-detail" class="panel detail">Select a node to inspect.</aside>
+            </div>
+          </section>
+          <section id="view-artifacts" class="view view-dev">
+            <div class="panel dev-drawer">
+              <h3 id="dev-title">Detalles técnicos</h3>
+              <div id="artifact-list" class="list"></div>
+            </div>
+            <div class="panel detail">
+              <pre id="artifact-detail" class="artifact-detail muted">Select an artifact.</pre>
+            </div>
+          </section>
+        </main>
+      </div>
+      <div id="settings-modal" class="settings-modal" hidden>
+        <div class="settings-backdrop" data-settings-close="1"></div>
+        <section class="settings-dialog" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+          <aside class="settings-nav" aria-label="Secciones de ajustes">
+            <button id="settings-close" type="button" aria-label="Cerrar">×</button>
+            <button type="button" class="active" data-settings-section="general">⚙ General</button>
+            <button type="button" data-settings-section="notifications">🔔 Notificaciones</button>
+            <button type="button" data-settings-section="personalization">◐ Personalización</button>
+            <button type="button" data-settings-section="profile">◎ Perfil</button>
+            <button type="button" data-settings-section="data">▣ Datos</button>
+            <button type="button" data-settings-section="keyboard">⌨ Atajos</button>
+          </aside>
+          <div class="settings-content">
+            <div class="settings-dialog-header">
+              <div>
+                <p class="eyebrow">Workspace</p>
+                <h3 id="settings-title">Ajustes</h3>
+              </div>
+            </div>
+            <div id="settings-body" class="settings-body"></div>
           </div>
         </section>
-        <section id="view-canon" class="view"></section>
-        <section id="view-review" class="view"></section>
-        <section id="view-graph" class="view">
-          <div class="graph-toolbar">
-            <label><input type="checkbox" id="hide-system" checked /> <span id="label-hide-system">Hide system</span></label>
-            <label><input type="checkbox" id="hide-review" checked /> <span id="label-hide-review">Hide review</span></label>
-            <label><input type="checkbox" id="hide-chapters" checked /> <span id="label-hide-chapters">Hide chapters</span></label>
-            <label><input type="checkbox" id="local-graph-mode" /> <span id="label-local-graph">Local graph</span></label>
-            <label><input type="checkbox" id="show-all-nodes" /> <span id="label-show-all-nodes">Show all nodes</span></label>
-            <div class="graph-legend">
-              <span class="legend-dot kind-character"></span> <span id="legend-character">character</span>
-              <span class="legend-dot kind-place"></span> <span id="legend-place">place</span>
-              <span class="legend-dot kind-event"></span> <span id="legend-event">event</span>
-              <span class="legend-dot kind-object"></span> <span id="legend-object">object</span>
-              <span class="legend-dot kind-concept"></span> <span id="legend-concept">concept</span>
-              <span class="legend-dot kind-review"></span> <span id="legend-review">review</span>
-            </div>
-            <div class="graph-zoom-controls" aria-label="Graph zoom controls">
-              <button id="graph-zoom-in" type="button">Zoom +</button>
-              <button id="graph-zoom-out" type="button">Zoom -</button>
-              <button id="graph-zoom-reset" type="button">Reset layout</button>
-            </div>
-            <div id="graph-tag-filter" class="graph-tag-filter" aria-label="Graph tag filters"></div>
-          </div>
-          <div class="graph-layout">
-            <svg id="graph-svg" viewBox="0 0 1200 720"></svg>
-            <div id="graph-detail" class="panel graph-detail muted">Select a node to inspect.</div>
-          </div>
-        </section>
-        <section id="view-artifacts" class="view split-view view-dev">
-          <div class="panel dev-drawer">
-            <h3 id="dev-title">Detalles técnicos</h3>
-            <div id="artifact-list" class="list"></div>
-          </div>
-          <div class="panel detail">
-            <pre id="artifact-detail" class="artifact-detail muted">Select an artifact.</pre>
-          </div>
-        </section>
-      </main>
+      </div>
     </div>
+    <script>
+      const params = new URLSearchParams(window.location.search);
+      const legacyMode = params.get('legacy') === '1' || params.get('embed') === '1';
+      document.documentElement.dataset.ui = legacyMode ? 'legacy' : 'react';
+      const legacyCss = document.getElementById('legacy-css');
+      if (legacyCss) legacyCss.disabled = !legacyMode;
+      if (legacyMode) {
+        document.getElementById('legacy-root').hidden = false;
+        document.getElementById('react-root').hidden = true;
+      } else {
+        document.getElementById('legacy-root').hidden = true;
+        document.getElementById('react-root').hidden = false;
+      }
+    </script>
+    <script type="module">
+      const params = new URLSearchParams(window.location.search);
+      const legacyMode = params.get('legacy') === '1' || params.get('embed') === '1';
+      if (!legacyMode) import('/react-shell/app.js');
+    </script>
     <script src="/vendor/d3-force.bundle.min.js"></script>
     <script src="/app.js?v=author-workspace-d3-v3"></script>
   </body>

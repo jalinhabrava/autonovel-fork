@@ -1,0 +1,8 @@
+{
+  "assessment": "react_screens_match_target_surface_list",
+  "screens": ["Project Hub", "Ingestion", "Codex / VaERL", "Graph", "Review Queue", "Editor", "Story Bible", "Ask Canon"],
+  "overview_board_present": true,
+  "topbar_per_screen": true,
+  "icons_match_target": true,
+  "placeholder_honesty": true
+}
