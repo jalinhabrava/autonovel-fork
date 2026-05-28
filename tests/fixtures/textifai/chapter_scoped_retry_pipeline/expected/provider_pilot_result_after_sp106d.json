@@ -1,0 +1,17 @@
+{
+  "assessment": "provider_pilot_completed_no_quality_improvement",
+  "provider_calls_made": true,
+  "provider": "deepseek",
+  "model": "deepseek-v4-flash",
+  "chapters_attempted": [
+    "ch_005",
+    "ch_010"
+  ],
+  "provider_call_count": 4,
+  "valid_reduction_count": 2,
+  "chapters_ready": 0,
+  "chapters_still_failed": 2,
+  "full_rerun": false,
+  "continued_after_pilot": false,
+  "stop_reason": "pilot did not move selected chapters out of retry"
+}

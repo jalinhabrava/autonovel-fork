@@ -1,0 +1,9 @@
+{
+  "assessment": "chapter_subchunking_strategy_ready",
+  "helper": "build_chapter_subchunks",
+  "max_chunks": 3,
+  "preserves_chapter_id": true,
+  "preserves_source_refs": true,
+  "does_not_print_source_text": true,
+  "dry_run_output_path": "/home/david/TextifAIProjects/OnT_Spanish_20ch.textifai/dev/provider_outputs/chapter_scoped_retry_sp106e/*"
+}

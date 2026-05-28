@@ -1,0 +1,10 @@
+{
+  "assessment": "chapter_scoped_pipeline_ready_provider_pilot_needed",
+  "pipeline_ready": true,
+  "provider_pilot_done": true,
+  "pilot_improved": false,
+  "provider_calls": "YES targeted pilot only",
+  "write_back": false,
+  "package_changes": false,
+  "next_phase": "prompt-first or model-fallback retry for remaining failed chapters"
+}

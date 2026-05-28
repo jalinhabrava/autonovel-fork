@@ -1,0 +1,16 @@
+{
+  "assessment": "workspace_status_unchanged_after_failed_pilot",
+  "chapters_total": 20,
+  "chapters_ready": 5,
+  "chapters_retried": 17,
+  "chapters_still_failed": 13,
+  "semantic_reviews": 0,
+  "product_strings": [
+    "20 capítulos detectados",
+    "5 listos",
+    "17 reintentados",
+    "13 siguen necesitando reintento",
+    "0 decisiones editoriales pendientes"
+  ],
+  "no_product_jargon": true
+}

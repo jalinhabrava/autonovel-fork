@@ -1,0 +1,18 @@
+{
+  "assessment": "chapter_retry_output_contract_ready",
+  "schema": "textifai.chapter_retry_result",
+  "schema_version": 1,
+  "required_fields": [
+    "chapter_id",
+    "status",
+    "pre_retry_score",
+    "post_retry_score",
+    "subchunks",
+    "vaerl_patch_path",
+    "graph_patch_path",
+    "review_patch_path",
+    "integration_report_path",
+    "integration_applied"
+  ],
+  "private_output_root": "/home/david/TextifAIProjects/OnT_Spanish_20ch.textifai/dev/provider_outputs/chapter_scoped_retry_sp106e/*"
+}

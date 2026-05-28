@@ -274,7 +274,12 @@ def list_notes(
         for note in (markdown_index or {}).get("notes", [])
         if isinstance(note, dict)
     }
-    for path in sorted(root.rglob("*.md")):
+    manifest_paths = [root / rel for rel in manifest_by_path.keys() if rel]
+    if manifest_paths:
+        candidate_paths = [path for path in manifest_paths if path.exists() and path.suffix == '.md']
+    else:
+        candidate_paths = sorted(root.rglob("*.md"))
+    for path in sorted(candidate_paths):
         if any(part.startswith(".") for part in path.relative_to(root).parts):
             continue
         rel = path.relative_to(root).as_posix()

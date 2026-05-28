@@ -1,0 +1,12 @@
+{
+  "assessment": "chapter_ids_high_level_support_ready",
+  "argparse_accepts_chapter_ids": true,
+  "invalid_ids_rejected": true,
+  "full_run_without_chapter_ids_supported": true,
+  "selected_chapter_ids_reported": true,
+  "chapter_scoped_metadata": true,
+  "pilot_selected": [
+    "ch_005",
+    "ch_010"
+  ]
+}

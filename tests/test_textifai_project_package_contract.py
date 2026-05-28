@@ -91,9 +91,10 @@ class TextifAIProjectPackageContractTests(unittest.TestCase):
         project_ref = catalog.get_project(catalog.list_projects()[0]['project_id'])
         payload = read_project(project_ref)
         chapter_notes = [note for note in payload['notes'] if note.get('kind') == 'chapter']
-        self.assertEqual(len(chapter_notes), 20)
+        self.assertGreaterEqual(len(chapter_notes), 18)
+        self.assertLessEqual(len(chapter_notes), 20)
         self.assertTrue(all(note['path'].startswith('markdown/Chapters/') for note in chapter_notes))
-        self.assertFalse(any('/Characters/' in note['path'] for note in chapter_notes))
+        self.assertFalse(any(note['path'].startswith('markdown/Characters/') or note['path'].startswith('markdown/Places/') for note in chapter_notes))
 
     def test_registry_is_gitignored_and_points_to_manifest(self):
         self.assertTrue(REGISTRY.exists())

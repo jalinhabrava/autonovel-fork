@@ -109,7 +109,7 @@ def main(argv: list[str] | None = None) -> int:
             provider_setup=provider_setup,
         )
 
-    selected_chapters = [f"ch_{index:03d}" for index in range(1, 21)]
+    selected_chapters = parse_chapter_ids(args.chapter_ids)
     execution_plan = {
         "assessment": "spanish_20ch_execution_plan_ready",
         "source_path": str(source_path),
@@ -142,6 +142,7 @@ def main(argv: list[str] | None = None) -> int:
             "user_cancelled",
         ],
         "runtime_root": str(runtime_root),
+        "chapter_scoped": len(selected_chapters) < 20,
         "private_runtime_packet_root": str(runtime_root),
         "private_handoff_root": str(private_dir),
     }
@@ -250,6 +251,7 @@ def main(argv: list[str] | None = None) -> int:
         "assessment": assessment,
         "provider_calls_executed": True,
         "runtime_root": str(runtime_root),
+        "chapter_scoped": len(selected_chapters) < 20,
         "private_runtime_packet_root": str(runtime_root),
         "private_handoff_root": str(private_dir),
         "next_phase": "Phase 1.3.M-b5c-4y — targeted retry + markdown edit queue scaffolding" if assessment == "spanish_20ch_partial_needs_targeted_retry" else "Phase 1.3.M-b5c-4y — manual author review + targeted retry where needed",
@@ -297,7 +299,27 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--work-title", default="ESP 王者の杖")
     parser.add_argument("--viewer-port", type=int, default=8872)
     parser.add_argument("--emergency-max-provider-requests", type=int, default=5000)
+    parser.add_argument("--chapter-ids", default="", help="Comma-separated chapter ids like ch_005,ch_006. Empty keeps full 20ch run.")
     return parser
+
+def parse_chapter_ids(raw: str | None) -> list[str]:
+    if not raw:
+        return [f"ch_{index:03d}" for index in range(1, 21)]
+    out: list[str] = []
+    for item in str(raw).split(","):
+        chapter_id = item.strip()
+        if not chapter_id:
+            continue
+        if not chapter_id.startswith("ch_") or len(chapter_id) != 6 or not chapter_id[-3:].isdigit():
+            raise SystemExit(f"invalid chapter id: {chapter_id}")
+        number = int(chapter_id[-3:])
+        if number < 1 or number > 20:
+            raise SystemExit(f"unknown chapter id: {chapter_id}")
+        if chapter_id not in out:
+            out.append(chapter_id)
+    if not out:
+        raise SystemExit("--chapter-ids did not select any chapters")
+    return out
 
 
 def build_source_preflight(source_path: Path) -> dict[str, Any]:
@@ -1549,6 +1571,7 @@ def write_blocked_outputs(
         "blocking_reason": reason,
         "provider_calls_executed": False,
         "runtime_root": str(runtime_root),
+        "chapter_scoped": len(selected_chapters) < 20,
         "private_runtime_packet_root": str(runtime_root),
         "private_handoff_root": str(private_dir),
         "next_phase": "Phase 1.3.M-b5c-4y — unblock source/provider then rerun 20ch",

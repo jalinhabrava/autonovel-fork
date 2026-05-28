@@ -1,0 +1,8 @@
+{
+  "assessment": "chapter_patch_integration_safe_no_apply",
+  "integration_strategy": "patches generated privately; no apply until pilot passes quality threshold",
+  "overwrites_unrelated_chapters": false,
+  "backup_required_before_apply": true,
+  "integration_applied": false,
+  "reason": "provider pilot did not improve chapter status"
+}

@@ -1,0 +1,8 @@
+{
+  "assessment": "chapter_patch_generation_ready",
+  "vaerl_patch_schema": "textifai.chapter_vaerl_patch",
+  "graph_patch_schema": "textifai.chapter_graph_patch",
+  "review_patch_schema": "textifai.chapter_review_patch",
+  "pilot_patch_generation_dry_run": true,
+  "private_output_root": "/home/david/TextifAIProjects/OnT_Spanish_20ch.textifai/dev/provider_outputs/chapter_scoped_retry_sp106e/*"
+}
