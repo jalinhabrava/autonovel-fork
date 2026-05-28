@@ -74,10 +74,10 @@ class TextifAIReactUITargetParityTests(unittest.TestCase):
         self.assertIn('function LegacyEmbed', text)
         self.assertIn("?embed=1", text)
         self.assertIn('Story Bible transitional legacy boundary', text)
-        self.assertIn('Graph legacy dev fallback', text)
+        self.assertNotIn('LegacyEmbed', text[text.index("if (active === 'graph')"):text.index("if (active === 'review')")])
         report = read_json('legacy_embed_boundary_after_sp105b.json')
         self.assertTrue(report['legacy_not_primary_product_shell'])
-        self.assertIn('Graph', report['remaining_legacy_embeds'])
+        self.assertIn('Story Bible', report['remaining_legacy_embeds'])
 
     def test_api_adapters_preserve_existing_endpoints(self):
         text = API.read_text(encoding='utf-8')

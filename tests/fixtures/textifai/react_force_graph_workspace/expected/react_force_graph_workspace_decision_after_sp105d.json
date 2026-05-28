@@ -1,0 +1,14 @@
+{
+  "assessment": "react_force_graph_workspace_ready_for_manual_review",
+  "engine": "react-force-graph-2d",
+  "legacy_graph_primary": false,
+  "story_bible_legacy_boundary_remaining": true,
+  "filters": ["Todo", "Capítulos", "Personajes", "Lugares", "Objetos", "Eventos", "Conceptos", "Revisión"],
+  "search": true,
+  "related_only": true,
+  "inspector": true,
+  "edit_draft_modal": true,
+  "provider_calls": false,
+  "write_back": false,
+  "package_scope": "textifai/web_viewer/react_shell only"
+}
