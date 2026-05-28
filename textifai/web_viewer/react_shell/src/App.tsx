@@ -49,6 +49,7 @@ import { GraphCanvasNode } from './graph/types';
 type SectionId = 'hub' | 'ingest' | 'codex' | 'graph' | 'review' | 'editor' | 'story' | 'ask' | 'overview';
 type ScreenConfig = { id: SectionId; label: string; icon: React.ComponentType<{ size?: number; className?: string }> };
 type DecisionItem = { id: string; title: string; severity: string; source: string; action: string; raw: ReviewItem };
+type ReviewDecisionChoice = 'accept' | 'reject' | 'merge';
 type EditDraft = { title: string; notePath?: string; body: string } | null;
 
 const screens: ScreenConfig[] = [
@@ -114,9 +115,20 @@ function toDecisionItem(item: ReviewItem, index: number): DecisionItem {
 
 function severityClass(level: string): string {
   const normalized = level.toLowerCase();
-  if (normalized === 'high') return 'bg-red-100 text-red-700';
-  if (normalized === 'medium') return 'bg-amber-100 text-amber-700';
-  return 'bg-neutral-200 text-neutral-700';
+  if (normalized === 'high') return 'bg-rose-50 text-rose-700 border-rose-200';
+  if (normalized === 'medium') return 'bg-amber-50 text-amber-700 border-amber-200';
+  return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+}
+
+function severityIconClass(level: string): string {
+  const normalized = level.toLowerCase();
+  if (normalized === 'high') return 'text-rose-500';
+  if (normalized === 'medium') return 'text-amber-500';
+  return 'text-emerald-500';
+}
+
+function decisionButtonClass(active: boolean): string {
+  return `rounded-2xl px-4 py-2 text-sm font-medium ${active ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-800 border border-neutral-200 hover:bg-neutral-200'}`;
 }
 
 function legacyUrl(view: 'graph' | 'notes' | 'canon', projectId: string): string {
@@ -176,20 +188,21 @@ function Metric({ label, value, note }: { label: string; value: React.ReactNode;
 function TopBar({ title, subtitle, actions }: { title: string; subtitle: string; actions?: React.ReactNode }) { return <div className="flex flex-col gap-3 border-b border-neutral-200 bg-neutral-50 p-5 lg:flex-row lg:items-center lg:justify-between"><div><h1 className="text-2xl font-semibold tracking-tight">{title}</h1><p className="mt-1 text-sm text-neutral-500">{subtitle}</p></div><div className="flex flex-wrap gap-2">{actions}</div></div>; }
 function ProjectRow({ project, selected, onSelect }: { project: ProjectSummary; selected?: boolean; onSelect: () => void }) { const title = project.work?.title || project.name || 'Proyecto narrativo'; return <button onClick={onSelect} className={`w-full rounded-2xl border p-4 grid grid-cols-12 gap-3 items-center text-left ${selected ? 'bg-neutral-900 text-white border-neutral-900' : 'bg-white border-neutral-200 hover:bg-neutral-50'}`}><div className="col-span-12 md:col-span-7"><div className="font-semibold">{title}</div><div className={`text-xs ${selected ? 'text-neutral-300' : 'text-neutral-500'}`}>{project.kind || 'workspace'} · {project.work?.language || 'idioma pendiente'}</div></div><div className="col-span-4 md:col-span-2 text-sm">{project.chapter_count || 0} capítulos</div><div className="col-span-4 md:col-span-2 text-sm">{project.graph_summary?.node_count || 0} nodos</div><div className="col-span-4 md:col-span-1 text-sm">{isMinimalFixture(project) ? 'dev fixture' : 'real'}</div></button>; }
 
-function DecisionCard({ item, selected, onSelect }: { item: DecisionItem; selected?: boolean; onSelect: () => void }) {
+function DecisionCard({ item, selected, choice, onSelect, onChoose }: { item: DecisionItem; selected?: boolean; choice?: ReviewDecisionChoice; onSelect: () => void; onChoose: (choice: ReviewDecisionChoice) => void }) {
+  const choose = (nextChoice: ReviewDecisionChoice) => { onSelect(); onChoose(nextChoice); };
   return <article className={`w-full rounded-3xl border p-5 text-left shadow-sm ${selected ? 'border-neutral-900 bg-neutral-50' : 'border-neutral-200 bg-white'}`}>
     <div className="flex items-start justify-between gap-3">
       <button type="button" onClick={onSelect} className="min-w-0 flex-1 text-left">
-        <div className="text-xs uppercase tracking-wide text-neutral-500">{String(item.severity).toUpperCase()} SEVERITY · {item.source || 'Sin capítulos vinculados'}</div>
+        <div className={`inline-flex rounded-full border px-3 py-1 text-xs uppercase tracking-wide ${severityClass(item.severity)}`}>{String(item.severity).toUpperCase()} SEVERITY · {item.source || 'Sin capítulos vinculados'}</div>
         <h3 className="mt-2 text-2xl font-semibold tracking-tight">{item.title}</h3>
         <p className="mt-2 text-sm text-neutral-600">{item.action}</p>
       </button>
-      <AlertTriangle size={18} className="mt-1 shrink-0 text-neutral-500" />
+      <AlertTriangle size={18} className={`mt-1 shrink-0 ${severityIconClass(item.severity)}`} />
     </div>
     <div className="mt-5 flex flex-wrap gap-2">
-      <Button>Accept</Button>
-      <Button variant="secondary">Reject</Button>
-      <Button variant="secondary">Merge</Button>
+      <button type="button" onClick={() => choose('accept')} className={decisionButtonClass(choice === 'accept')}>Accept</button>
+      <button type="button" onClick={() => choose('reject')} className={decisionButtonClass(choice === 'reject')}>Reject</button>
+      <button type="button" onClick={() => choose('merge')} className={decisionButtonClass(choice === 'merge')}>Merge</button>
       <Button variant="secondary">Open evidence</Button>
     </div>
   </article>;
@@ -231,6 +244,7 @@ export function App() {
   const [reviewQuery, setReviewQuery] = useState('');
   const [reviewSeverity, setReviewSeverity] = useState('all');
   const [selectedDecisionId, setSelectedDecisionId] = useState<string>('');
+  const [reviewDecisionChoices, setReviewDecisionChoices] = useState<Record<string, ReviewDecisionChoice>>({});
   const [editorNotePath, setEditorNotePath] = useState<string>('');
   const [editorMarkdown, setEditorMarkdown] = useState<string>('');
   const [editorFullscreen, setEditorFullscreen] = useState(false);
@@ -254,6 +268,7 @@ export function App() {
   const allDecisions = useMemo(() => (projectDetail?.canon?.review_queue?.items || []).map(toDecisionItem), [projectDetail]);
   const visibleDecisions = useMemo(() => { const query = reviewQuery.trim().toLowerCase(); return allDecisions.filter((item) => { if (reviewSeverity !== 'all' && item.severity.toLowerCase() !== reviewSeverity) return false; if (!query) return true; return item.title.toLowerCase().includes(query) || item.action.toLowerCase().includes(query) || String(item.raw.review_type || '').toLowerCase().includes(query); }); }, [allDecisions, reviewQuery, reviewSeverity]);
   const selectedDecision = useMemo(() => visibleDecisions.find((item) => item.id === selectedDecisionId) || visibleDecisions[0] || null, [visibleDecisions, selectedDecisionId]);
+  const selectedDecisionChoice = selectedDecision ? reviewDecisionChoices[selectedDecision.id] : undefined;
 
   useEffect(() => { void loadInitial(); }, []);
   useEffect(() => { if (selectedProjectId) void loadProjectContext(selectedProjectId); }, [selectedProjectId]);
@@ -333,7 +348,7 @@ export function App() {
           <input value={reviewQuery} onChange={(event) => setReviewQuery(event.target.value)} className="flex-1 rounded-2xl border border-neutral-300 px-4 py-2 text-sm" placeholder="Buscar decisión..." />
           <select value={reviewSeverity} onChange={(event) => setReviewSeverity(event.target.value)} className="rounded-2xl border border-neutral-300 px-4 py-2 text-sm"><option value="all">Todas</option><option value="high">Alta</option><option value="medium">Media</option><option value="low">Baja</option></select>
         </div>
-        {visibleDecisions.map((item) => <DecisionCard key={item.id} item={item} selected={selectedDecision?.id === item.id} onSelect={() => setSelectedDecisionId(item.id)} />)}
+        {visibleDecisions.map((item) => <DecisionCard key={item.id} item={item} selected={selectedDecision?.id === item.id} choice={reviewDecisionChoices[item.id]} onSelect={() => setSelectedDecisionId(item.id)} onChoose={(choice) => setReviewDecisionChoices((previous) => ({ ...previous, [item.id]: choice }))} />)}
       </div>
       <aside className="col-span-12 lg:col-span-4 space-y-4">
         <Metric label="Pending warnings" value={warningsVisible} note="Must match visible queue count." />
@@ -341,6 +356,7 @@ export function App() {
         <div className="rounded-3xl border border-neutral-200 bg-neutral-50 p-5">
           <h2 className="font-semibold">Decision drawer</h2>
           <p className="mt-2 text-sm text-neutral-600">{selectedDecision?.action || 'Selecciona aviso.'}</p>
+          <p className="mt-3 text-sm font-medium text-neutral-900">Decisión local: {selectedDecisionChoice ? selectedDecisionChoice : 'sin marcar'}</p>
           <p className="mt-3 text-xs text-neutral-500">Every decision stores: action, target ids, previous state, resulting VaERL change, author note, and replay metadata.</p>
           <div className="mt-4 flex flex-wrap gap-2"><Button variant="secondary">Open evidence</Button><Button variant="secondary">Edit canonical label</Button></div>
         </div>

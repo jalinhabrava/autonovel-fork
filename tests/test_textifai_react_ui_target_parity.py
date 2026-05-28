@@ -73,10 +73,21 @@ class TextifAIReactUITargetParityTests(unittest.TestCase):
         self.assertIn('Must match visible queue count.', review_block)
         self.assertIn('No silent canon changes.', review_block)
         self.assertIn('Every decision stores: action, target ids, previous state, resulting VaERL change, author note, and replay metadata.', review_block)
-        self.assertIn('<Button>Accept</Button>', text)
-        self.assertIn('<Button variant="secondary">Reject</Button>', text)
-        self.assertIn('<Button variant="secondary">Merge</Button>', text)
+        self.assertIn("onClick={() => choose('accept')}", text)
+        self.assertIn("onClick={() => choose('reject')}", text)
+        self.assertIn("onClick={() => choose('merge')}", text)
+        self.assertIn('reviewDecisionChoices[item.id]', review_block)
+        self.assertIn('Decisión local:', review_block)
         self.assertIn('<Button variant="secondary">Open evidence</Button>', text)
+
+    def test_review_severity_uses_pastel_traffic_light_colors(self):
+        text = APP.read_text(encoding='utf-8')
+        self.assertIn("bg-rose-50 text-rose-700 border-rose-200", text)
+        self.assertIn("bg-amber-50 text-amber-700 border-amber-200", text)
+        self.assertIn("bg-emerald-50 text-emerald-700 border-emerald-200", text)
+        self.assertIn("if (normalized === 'high') return 'text-rose-500';", text)
+        self.assertIn("if (normalized === 'medium') return 'text-amber-500';", text)
+        self.assertIn("return 'text-emerald-500';", text)
 
     def test_black_sidebar_not_primary_shell(self):
         text = APP.read_text(encoding='utf-8')
