@@ -58,7 +58,7 @@ class TextifAIReactUITargetParityTests(unittest.TestCase):
 
     def test_design_system_components_exist(self):
         text = APP.read_text(encoding='utf-8')
-        for fn in ['function Shell', 'function TopBar', 'function Button', 'function Metric', 'function SidebarNav', 'function StatusChip', 'function ProjectRow', 'function DecisionCard', 'function EntityRecordTable', 'function InspectorCard']:
+        for fn in ['function Shell', 'function BrandMark', 'function TopBar', 'function Button', 'function Metric', 'function SidebarNav', 'function StatusChip', 'function ProjectRow', 'function DecisionCard', 'function EvidenceModal', 'function EntityRecordTable', 'function InspectorCard']:
             self.assertIn(fn, text)
 
     def test_review_queue_header_and_per_case_actions(self):
@@ -79,6 +79,14 @@ class TextifAIReactUITargetParityTests(unittest.TestCase):
         self.assertIn('reviewDecisionChoices[item.id]', review_block)
         self.assertIn('Decisión local:', review_block)
         self.assertIn('<Button variant="secondary">Open evidence</Button>', text)
+        self.assertIn('setEvidenceModalDecisionId(item.id)', review_block)
+        self.assertIn('EvidenceModal item={evidenceModalItem}', text)
+
+    def test_brand_logo_slot_with_fallback_exists(self):
+        text = APP.read_text(encoding='utf-8')
+        self.assertIn("const FULL_LOGO_SRC = '/branding/textifai-logo-full.png';", text)
+        self.assertIn('onError={() => setLogoFailed(true)}', text)
+        self.assertIn('Narrative semantic engine · author-facing VaERL workspace', text)
 
     def test_review_severity_uses_pastel_traffic_light_colors(self):
         text = APP.read_text(encoding='utf-8')

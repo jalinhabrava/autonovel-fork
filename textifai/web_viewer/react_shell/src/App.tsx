@@ -50,6 +50,7 @@ type SectionId = 'hub' | 'ingest' | 'codex' | 'graph' | 'review' | 'editor' | 's
 type ScreenConfig = { id: SectionId; label: string; icon: React.ComponentType<{ size?: number; className?: string }> };
 type DecisionItem = { id: string; title: string; severity: string; source: string; action: string; raw: ReviewItem };
 type ReviewDecisionChoice = 'accept' | 'reject' | 'merge';
+type EvidenceModalItem = DecisionItem | null;
 type EditDraft = { title: string; notePath?: string; body: string } | null;
 
 const screens: ScreenConfig[] = [
@@ -76,6 +77,7 @@ const overviewCards: Array<{ id: SectionId; title: string; text: string; icon: S
 
 const kindLabels: Record<string, string> = { chapter: 'capítulo', character: 'personaje', concept: 'concepto', event: 'evento', object: 'objeto', place: 'lugar', review: 'revisión' };
 const graphPalette: Record<string, string> = { chapter: '#7f7a6a', character: '#111827', concept: '#6b7280', event: '#9a3412', object: '#0f766e', place: '#1d4ed8', review: '#b91c1c' };
+const FULL_LOGO_SRC = '/branding/textifai-logo-full.png';
 
 function isChapterNote(note: { path?: string; kind?: string; role?: string } | undefined): boolean {
   if (!note) return false;
@@ -131,8 +133,23 @@ function decisionButtonClass(active: boolean): string {
   return `rounded-2xl px-4 py-2 text-sm font-medium ${active ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-800 border border-neutral-200 hover:bg-neutral-200'}`;
 }
 
+function formatDecisionChoice(choice?: ReviewDecisionChoice): string {
+  if (choice === 'accept') return 'Accept';
+  if (choice === 'reject') return 'Reject';
+  if (choice === 'merge') return 'Merge';
+  return 'sin marcar';
+}
+
 function legacyUrl(view: 'graph' | 'notes' | 'canon', projectId: string): string {
   return `/index.html?embed=1&view=${encodeURIComponent(view)}&project=${encodeURIComponent(projectId)}`;
+}
+
+function BrandMark() {
+  const [logoFailed, setLogoFailed] = useState(false);
+  if (!logoFailed) {
+    return <img src={FULL_LOGO_SRC} alt="TextifAI" className="h-8 w-auto object-contain" onError={() => setLogoFailed(true)} />;
+  }
+  return <div className="flex items-center gap-3"><div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-neutral-900 text-sm font-semibold text-white">T</div><div className="text-xl font-bold tracking-tight">TextifAI</div></div>;
 }
 
 function Shell({ active, setActive, children }: { active: SectionId; setActive: (id: SectionId) => void; children: React.ReactNode }) {
@@ -143,7 +160,7 @@ function Shell({ active, setActive, children }: { active: SectionId; setActive: 
       <div className="mx-auto w-full max-w-none h-full rounded-3xl bg-white shadow-xl overflow-hidden border border-neutral-200">
         <header className="flex items-center justify-between border-b border-neutral-200 px-5 py-4 bg-neutral-50">
           <button type="button" onClick={() => setActive('overview')} className="text-left">
-            <div className="text-xl font-bold tracking-tight">TextifAI</div>
+            <BrandMark />
             <div className="text-xs text-neutral-500">Narrative semantic engine · author-facing VaERL workspace</div>
           </button>
           <div className="flex items-center gap-2 text-xs"><StatusChip>Local project</StatusChip><StatusChip>VaERL ready</StatusChip></div>
@@ -188,7 +205,7 @@ function Metric({ label, value, note }: { label: string; value: React.ReactNode;
 function TopBar({ title, subtitle, actions }: { title: string; subtitle: string; actions?: React.ReactNode }) { return <div className="flex flex-col gap-3 border-b border-neutral-200 bg-neutral-50 p-5 lg:flex-row lg:items-center lg:justify-between"><div><h1 className="text-2xl font-semibold tracking-tight">{title}</h1><p className="mt-1 text-sm text-neutral-500">{subtitle}</p></div><div className="flex flex-wrap gap-2">{actions}</div></div>; }
 function ProjectRow({ project, selected, onSelect }: { project: ProjectSummary; selected?: boolean; onSelect: () => void }) { const title = project.work?.title || project.name || 'Proyecto narrativo'; return <button onClick={onSelect} className={`w-full rounded-2xl border p-4 grid grid-cols-12 gap-3 items-center text-left ${selected ? 'bg-neutral-900 text-white border-neutral-900' : 'bg-white border-neutral-200 hover:bg-neutral-50'}`}><div className="col-span-12 md:col-span-7"><div className="font-semibold">{title}</div><div className={`text-xs ${selected ? 'text-neutral-300' : 'text-neutral-500'}`}>{project.kind || 'workspace'} · {project.work?.language || 'idioma pendiente'}</div></div><div className="col-span-4 md:col-span-2 text-sm">{project.chapter_count || 0} capítulos</div><div className="col-span-4 md:col-span-2 text-sm">{project.graph_summary?.node_count || 0} nodos</div><div className="col-span-4 md:col-span-1 text-sm">{isMinimalFixture(project) ? 'dev fixture' : 'real'}</div></button>; }
 
-function DecisionCard({ item, selected, choice, onSelect, onChoose }: { item: DecisionItem; selected?: boolean; choice?: ReviewDecisionChoice; onSelect: () => void; onChoose: (choice: ReviewDecisionChoice) => void }) {
+function DecisionCard({ item, selected, choice, onSelect, onChoose, onOpenEvidence }: { item: DecisionItem; selected?: boolean; choice?: ReviewDecisionChoice; onSelect: () => void; onChoose: (choice: ReviewDecisionChoice) => void; onOpenEvidence: () => void }) {
   const choose = (nextChoice: ReviewDecisionChoice) => { onSelect(); onChoose(nextChoice); };
   return <article className={`w-full rounded-3xl border p-5 text-left shadow-sm ${selected ? 'border-neutral-900 bg-neutral-50' : 'border-neutral-200 bg-white'}`}>
     <div className="flex items-start justify-between gap-3">
@@ -203,9 +220,15 @@ function DecisionCard({ item, selected, choice, onSelect, onChoose }: { item: De
       <button type="button" onClick={() => choose('accept')} className={decisionButtonClass(choice === 'accept')}>Accept</button>
       <button type="button" onClick={() => choose('reject')} className={decisionButtonClass(choice === 'reject')}>Reject</button>
       <button type="button" onClick={() => choose('merge')} className={decisionButtonClass(choice === 'merge')}>Merge</button>
-      <Button variant="secondary">Open evidence</Button>
+      <Button variant="secondary" onClick={() => { onSelect(); onOpenEvidence(); }}>Open evidence</Button>
     </div>
   </article>;
+}
+
+function EvidenceModal({ item, onClose }: { item: EvidenceModalItem; onClose: () => void }) {
+  if (!item) return null;
+  const refs = item.raw.evidence_refs || [];
+  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"><div className="w-full max-w-3xl rounded-3xl border border-neutral-200 bg-white shadow-2xl"><div className="flex items-center justify-between border-b border-neutral-200 p-5"><div><div className="text-xs uppercase tracking-wide text-neutral-500">Evidence</div><h2 className="mt-1 text-xl font-semibold">{item.title}</h2><p className="mt-1 text-sm text-neutral-500">{item.action}</p></div><button type="button" onClick={onClose} className="rounded-full p-2 hover:bg-neutral-100"><X size={18} /></button></div><div className="grid gap-4 p-5 lg:grid-cols-[1.3fr_0.7fr]"><div className="space-y-3">{refs.length ? refs.map((ref, index) => <div key={`${ref.chapter_id || ref.pointer || 'evidence'}-${index}`} className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4"><div className="text-xs uppercase tracking-wide text-neutral-500">Evidencia {index + 1}</div><div className="mt-2 text-sm text-neutral-800">Capítulo: {ref.chapter_id || 'pendiente'}</div><div className="mt-1 text-sm text-neutral-600">Pointer: {ref.pointer || 'sin pointer estructurado'}</div></div>) : <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-600">No hay `evidence_refs` estructurados todavía para este caso.</div>}</div><aside className="space-y-3"><div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4"><div className="text-xs uppercase tracking-wide text-neutral-500">Tipo</div><div className="mt-2 text-sm text-neutral-800">{item.raw.review_type || 'review pending'}</div></div><div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4"><div className="text-xs uppercase tracking-wide text-neutral-500">Recomendación</div><div className="mt-2 text-sm text-neutral-800">{item.raw.recommendation || 'Necesita decisión explícita del autor.'}</div></div><div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4"><div className="text-xs uppercase tracking-wide text-neutral-500">Severidad</div><div className={`mt-2 inline-flex rounded-full border px-3 py-1 text-xs uppercase tracking-wide ${severityClass(item.severity)}`}>{item.severity}</div></div></aside></div><div className="flex justify-end border-t border-neutral-200 p-5"><Button variant="secondary" onClick={onClose}>Cerrar</Button></div></div></div>;
 }
 function EntityRecordTable({ entities, selectedKey, onSelect }: { entities: CanonEntity[]; selectedKey: string; onSelect: (key: string) => void }) { return <div className="overflow-hidden rounded-3xl border border-neutral-200"><div className="grid grid-cols-12 bg-neutral-100 px-4 py-3 text-xs uppercase tracking-wide text-neutral-500"><span className="col-span-5">Entidad</span><span className="col-span-2">Tipo</span><span className="col-span-2">Confianza</span><span className="col-span-3">Estado</span></div>{entities.slice(0, 18).map((entity) => { const key = entity.preferred_slug || entity.canonical_name || ''; const active = key === selectedKey; return <button key={key} onClick={() => onSelect(key)} className={`w-full grid grid-cols-12 px-4 py-3 text-sm border-t border-neutral-200 items-center text-left ${active ? 'bg-neutral-50' : 'bg-white hover:bg-neutral-50'}`}><span className="col-span-5 font-medium">{entity.canonical_name || key}</span><span className="col-span-2 text-neutral-500">{entity.entity_kind || 'entity'}</span><span className="col-span-2 text-neutral-500">{entity.confidence ?? '—'}</span><span className="col-span-3 text-neutral-500">{entity.review_state || 'ready'}</span></button>; })}</div>; }
 function InspectorCard({ entity }: { entity: CanonEntity | undefined }) { if (!entity) return <div className="rounded-3xl border border-neutral-200 p-5 text-sm text-neutral-500">Selecciona un record para abrir inspector.</div>; return <div className="rounded-3xl border border-neutral-200 bg-neutral-50 p-5"><div className="text-xs uppercase tracking-wide text-neutral-500">Inspector</div><h2 className="mt-2 text-xl font-semibold">{entity.canonical_name}</h2><p className="mt-3 text-sm leading-6 text-neutral-600">{entity.summary || 'Sin resumen author-facing disponible todavía.'}</p><div className="mt-4 flex flex-wrap gap-2">{(entity.aliases || []).slice(0, 6).map((alias) => <span key={alias} className="rounded-full bg-white border border-neutral-200 px-3 py-1 text-xs">{alias}</span>)}</div><Button variant="secondary">Editar ficha · draft</Button></div>; }
@@ -245,6 +268,7 @@ export function App() {
   const [reviewSeverity, setReviewSeverity] = useState('all');
   const [selectedDecisionId, setSelectedDecisionId] = useState<string>('');
   const [reviewDecisionChoices, setReviewDecisionChoices] = useState<Record<string, ReviewDecisionChoice>>({});
+  const [evidenceModalDecisionId, setEvidenceModalDecisionId] = useState<string>('');
   const [editorNotePath, setEditorNotePath] = useState<string>('');
   const [editorMarkdown, setEditorMarkdown] = useState<string>('');
   const [editorFullscreen, setEditorFullscreen] = useState(false);
@@ -269,6 +293,7 @@ export function App() {
   const visibleDecisions = useMemo(() => { const query = reviewQuery.trim().toLowerCase(); return allDecisions.filter((item) => { if (reviewSeverity !== 'all' && item.severity.toLowerCase() !== reviewSeverity) return false; if (!query) return true; return item.title.toLowerCase().includes(query) || item.action.toLowerCase().includes(query) || String(item.raw.review_type || '').toLowerCase().includes(query); }); }, [allDecisions, reviewQuery, reviewSeverity]);
   const selectedDecision = useMemo(() => visibleDecisions.find((item) => item.id === selectedDecisionId) || visibleDecisions[0] || null, [visibleDecisions, selectedDecisionId]);
   const selectedDecisionChoice = selectedDecision ? reviewDecisionChoices[selectedDecision.id] : undefined;
+  const evidenceModalItem = useMemo(() => allDecisions.find((item) => item.id === evidenceModalDecisionId) || null, [allDecisions, evidenceModalDecisionId]);
 
   useEffect(() => { void loadInitial(); }, []);
   useEffect(() => { if (selectedProjectId) void loadProjectContext(selectedProjectId); }, [selectedProjectId]);
@@ -348,7 +373,7 @@ export function App() {
           <input value={reviewQuery} onChange={(event) => setReviewQuery(event.target.value)} className="flex-1 rounded-2xl border border-neutral-300 px-4 py-2 text-sm" placeholder="Buscar decisión..." />
           <select value={reviewSeverity} onChange={(event) => setReviewSeverity(event.target.value)} className="rounded-2xl border border-neutral-300 px-4 py-2 text-sm"><option value="all">Todas</option><option value="high">Alta</option><option value="medium">Media</option><option value="low">Baja</option></select>
         </div>
-        {visibleDecisions.map((item) => <DecisionCard key={item.id} item={item} selected={selectedDecision?.id === item.id} choice={reviewDecisionChoices[item.id]} onSelect={() => setSelectedDecisionId(item.id)} onChoose={(choice) => setReviewDecisionChoices((previous) => ({ ...previous, [item.id]: choice }))} />)}
+        {visibleDecisions.map((item) => <DecisionCard key={item.id} item={item} selected={selectedDecision?.id === item.id} choice={reviewDecisionChoices[item.id]} onSelect={() => setSelectedDecisionId(item.id)} onChoose={(choice) => setReviewDecisionChoices((previous) => ({ ...previous, [item.id]: choice }))} onOpenEvidence={() => setEvidenceModalDecisionId(item.id)} />)}
       </div>
       <aside className="col-span-12 lg:col-span-4 space-y-4">
         <Metric label="Pending warnings" value={warningsVisible} note="Must match visible queue count." />
@@ -358,7 +383,7 @@ export function App() {
           <p className="mt-2 text-sm text-neutral-600">{selectedDecision?.action || 'Selecciona aviso.'}</p>
           <p className="mt-3 text-sm font-medium text-neutral-900">Decisión local: {selectedDecisionChoice ? selectedDecisionChoice : 'sin marcar'}</p>
           <p className="mt-3 text-xs text-neutral-500">Every decision stores: action, target ids, previous state, resulting VaERL change, author note, and replay metadata.</p>
-          <div className="mt-4 flex flex-wrap gap-2"><Button variant="secondary">Open evidence</Button><Button variant="secondary">Edit canonical label</Button></div>
+          <div className="mt-4 flex flex-wrap gap-2"><Button variant="secondary" onClick={() => selectedDecision && setEvidenceModalDecisionId(selectedDecision.id)}>Open evidence</Button><Button variant="secondary">Edit canonical label</Button></div>
         </div>
       </aside>
     </div>
@@ -367,7 +392,7 @@ export function App() {
   if (active === 'story') content = <section><TopBar title="Story Bible" subtitle="Wiki Markdown author-facing. Legacy boundary transicional documentado." actions={<><Button variant="secondary">Sync Markdown</Button><Button variant="secondary">Open graph side-by-side</Button></>} /><div className="p-5 grid grid-cols-12 gap-5"><aside className="col-span-12 lg:col-span-3 rounded-3xl border border-neutral-200 bg-neutral-50 p-4"><h2 className="font-semibold">Vault tree</h2><div className="mt-4 space-y-2 text-sm">{(projectDetail?.notes || []).slice(0, 16).map((note) => <div key={note.path} className="rounded-xl bg-white border border-neutral-200 px-3 py-2">{note.name || note.path}</div>)}</div></aside><div className="col-span-12 lg:col-span-9">{selectedProjectId ? <LegacyEmbed title="Story Bible transitional legacy boundary" src={legacyUrl('notes', selectedProjectId)} /> : <div className="rounded-3xl border border-neutral-200 p-5 text-sm text-neutral-500">Selecciona proyecto.</div>}</div></div></section>;
   if (active === 'ask') content = <section><TopBar title="Ask Canon" subtitle="Q&A shell grounded futuro en VaERL, evidencia y review state." actions={<><Button variant="secondary">Open answer history</Button><Button variant="secondary">Check source coverage</Button></>} /><div className="p-5 grid grid-cols-12 gap-5"><div className="col-span-12 lg:col-span-7 rounded-3xl border border-neutral-200 p-5 min-h-[560px] flex flex-col"><div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-500">Pregunta: “¿Qué sabe Sera antes del capítulo 6?”</div><div className="mt-5 rounded-3xl border border-neutral-200 p-5 bg-white shadow-sm"><div className="font-semibold">Respuesta grounded</div><p className="mt-3 text-sm leading-7">Placeholder. No se genera canon sin backend de evidencia.</p></div><div className="mt-auto pt-5 flex gap-2"><input className="flex-1 rounded-2xl border border-neutral-300 px-4 py-3 text-sm" placeholder="Pregunta sobre canon, continuidad o capítulos..." /><Button variant="secondary" disabled>Enviar</Button></div></div><aside className="col-span-12 lg:col-span-5 space-y-4"><Metric label="Grounding" value="Evidence-first" note="Sin claims no soportados." /></aside></div></section>;
 
-  return <Shell active={active} setActive={setActive}><motion.div key={active} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 }}>{content}</motion.div>{error ? <div className="mx-5 mb-5 rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div> : null}{editDraft ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"><div className="w-full max-w-2xl rounded-3xl border border-neutral-200 bg-white shadow-2xl"><div className="flex items-center justify-between border-b border-neutral-200 p-5"><div><h2 className="font-semibold">{editDraft.title}</h2><p className="text-sm text-neutral-500">{editDraft.notePath || 'nuevo draft local'}</p></div><button onClick={() => setEditDraft(null)} className="rounded-full p-2 hover:bg-neutral-100"><X size={18} /></button></div><div className="p-5"><textarea readOnly value={editDraft.body} className="h-48 w-full rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-sm" /><p className="mt-3 text-sm text-neutral-500">Guardar cambios llega con drafts/patch queue. No write-back en SP-105D.</p></div></div></div> : null}</Shell>;
+  return <Shell active={active} setActive={setActive}><motion.div key={active} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 }}>{content}</motion.div>{error ? <div className="mx-5 mb-5 rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div> : null}<EvidenceModal item={evidenceModalItem} onClose={() => setEvidenceModalDecisionId('')} />{editDraft ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"><div className="w-full max-w-2xl rounded-3xl border border-neutral-200 bg-white shadow-2xl"><div className="flex items-center justify-between border-b border-neutral-200 p-5"><div><h2 className="font-semibold">{editDraft.title}</h2><p className="text-sm text-neutral-500">{editDraft.notePath || 'nuevo draft local'}</p></div><button onClick={() => setEditDraft(null)} className="rounded-full p-2 hover:bg-neutral-100"><X size={18} /></button></div><div className="p-5"><textarea readOnly value={editDraft.body} className="h-48 w-full rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-sm" /><p className="mt-3 text-sm text-neutral-500">Guardar cambios llega con drafts/patch queue. No write-back en SP-105D.</p></div></div></div> : null}</Shell>;
 }
 
 export default App;
