@@ -1,0 +1,12 @@
+{
+  "assessment": "layout_editor_settings_ready_graph_partial",
+  "user_card_in_sidebar": true,
+  "settings_primary_location": "sidebar user card dropdown",
+  "top_right_settings_primary": false,
+  "dropdown_entries": ["Ajustes", "Proyecto / Workspace", "Dev tools"],
+  "settings_modal": {
+    "title": "Ajustes",
+    "sections": ["Apariencia", "Idioma", "Proyecto", "Dev/debug"],
+    "persistence": false
+  }
+}

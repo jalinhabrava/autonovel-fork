@@ -1,0 +1,8 @@
+{
+  "assessment": "real_project_loaded_graph_native_partial",
+  "graph_inspector_edit_button": true,
+  "story_bible_or_entity_edit_affordance": true,
+  "edit_mode": "draft_or_read_only_placeholder",
+  "save_fake_persistence": false,
+  "write_back": false
+}

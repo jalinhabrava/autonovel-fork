@@ -1,0 +1,12 @@
+{
+  "assessment": "blocked_missing_real_20ch_project",
+  "product_decision": "Bloqueo explícito por ausencia de runtime real 20ch en /tmp, pero shell SP-105D implementado para continuar cuando runtime reaparezca.",
+  "provider_calls": false,
+  "write_back": false,
+  "open_design_runtime_dependency": false,
+  "package_changes": "solo textifai/web_viewer/react_shell/package-lock.json por npm install local",
+  "native_graph_primary": true,
+  "editor_chapter_only": true,
+  "settings_from_user_card": true,
+  "next_phase": "Restaurar runtime SP-095 y ejecutar revisión manual UX completa sobre 20ch real."
+}

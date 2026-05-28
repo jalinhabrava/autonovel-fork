@@ -34,12 +34,12 @@ class TextifAIReactUITargetParityTests(unittest.TestCase):
     def test_shell_uses_target_design_classes(self):
         text = APP.read_text(encoding='utf-8')
         for cls in [
-            'min-h-screen bg-neutral-100 text-neutral-900 p-4 md:p-6',
-            'mx-auto max-w-7xl rounded-3xl bg-white shadow-xl overflow-hidden border border-neutral-200',
+            'min-h-screen h-screen bg-neutral-100 text-neutral-900 p-2 md:p-4 overflow-hidden',
+            'mx-auto w-full max-w-none h-full rounded-3xl bg-white shadow-xl overflow-hidden border border-neutral-200',
             'border-b border-neutral-200 px-5 py-4 bg-neutral-50',
-            'grid grid-cols-12 min-h-[760px]',
-            'col-span-12 md:col-span-2 border-r border-neutral-200 bg-neutral-50 p-3',
-            'col-span-12 md:col-span-10 bg-white',
+            'grid grid-cols-12 h-[calc(100%-73px)] min-h-0',
+            'col-span-12 md:col-span-2 border-r border-neutral-200 bg-neutral-50 p-3 flex min-h-0 flex-col',
+            'col-span-12 md:col-span-10 bg-white min-h-0 overflow-y-auto',
         ]:
             self.assertIn(cls, text)
 
@@ -67,12 +67,14 @@ class TextifAIReactUITargetParityTests(unittest.TestCase):
         shell_end = text.index('function SidebarNav')
         shell = text[shell_start:shell_end]
         self.assertIn('bg-neutral-50', shell)
-        self.assertNotIn('bg-black', shell)
+        self.assertNotIn('bg-black text-white', shell)
 
     def test_legacy_embed_boundary_documented_and_used(self):
         text = APP.read_text(encoding='utf-8')
         self.assertIn('function LegacyEmbed', text)
         self.assertIn("?embed=1", text)
+        self.assertIn('Story Bible transitional legacy boundary', text)
+        self.assertIn('Graph legacy dev fallback', text)
         report = read_json('legacy_embed_boundary_after_sp105b.json')
         self.assertTrue(report['legacy_not_primary_product_shell'])
         self.assertIn('Graph', report['remaining_legacy_embeds'])

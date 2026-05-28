@@ -1,0 +1,15 @@
+{
+  "assessment": "real_project_loaded_graph_native_partial",
+  "selection_strategy": "choosePreferredProject",
+  "priority_rules": [
+    "chapter_count >= 20 tiene prioridad",
+    "título/nombre con 20ch suma preferencia",
+    "recommended backend suma preferencia",
+    "si no existe 20ch, seleccionar mejor candidato y marcar fixture reducida"
+  ],
+  "distinguishes_project_types": true,
+  "minimal_fixture_warning_visible": true,
+  "auto_select_wrong_minimal_when_real_exists": false,
+  "current_selected_project_chapters": 2,
+  "real_20ch_available_now": false
+}

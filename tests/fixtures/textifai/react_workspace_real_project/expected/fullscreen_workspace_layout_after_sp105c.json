@@ -1,0 +1,13 @@
+{
+  "assessment": "layout_editor_settings_ready_graph_partial",
+  "max_width_removed_or_responsive": true,
+  "viewport_height_used": true,
+  "sidebar_stable": true,
+  "main_scroll_strategy": "main panel uses overflow-y-auto with shell fixed to viewport",
+  "no_large_unused_margins": true,
+  "layout_classes": {
+    "outer": "min-h-screen h-screen bg-neutral-100 text-neutral-900 p-2 md:p-4 overflow-hidden",
+    "container": "mx-auto w-full max-w-none h-full rounded-3xl bg-white shadow-xl overflow-hidden border border-neutral-200",
+    "grid": "grid grid-cols-12 h-[calc(100%-73px)] min-h-0"
+  }
+}

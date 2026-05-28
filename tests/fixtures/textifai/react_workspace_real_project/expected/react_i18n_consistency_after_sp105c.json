@@ -1,0 +1,7 @@
+{
+  "assessment": "layout_editor_settings_ready_graph_partial",
+  "locale_strategy": "runtime español preferido para pantallas principales",
+  "mixed_language_within_same_screen": false,
+  "core_screens_checked": ["Editor", "Graph", "Ajustes"],
+  "notes": "Se mantienen algunos labels heredados en inglés en navegación por continuidad de SP-105C; sin mezcla fuerte dentro de pantalla."
+}

@@ -1,0 +1,16 @@
+{
+  "assessment": "blocked_missing_real_20ch_project",
+  "expected_chapters": 20,
+  "loaded_chapters": 2,
+  "loaded_project_id": "tmp__textifai_private_provider_runs__sp096_vaerl_entity_quality_viewer_ux_patch__20260527T124326Z__viewer_project",
+  "loaded_project_path": "/tmp/textifai_private_provider_runs/sp096_vaerl_entity_quality_viewer_ux_patch/20260527T124326Z/viewer_project",
+  "is_minimal_fixture": true,
+  "real_runtime_found": false,
+  "selected_runtime": "sp096_vaerl_entity_quality_viewer_ux_patch/20260527T124326Z",
+  "blocked_if_missing": true,
+  "remediation_plan": [
+    "Restaurar runtime privado SP-095: /tmp/textifai_private_provider_runs/sp095_spanish_20ch_e2e_vaerl_markdown_viewer/20260527T074727Z/viewer_project.",
+    "Levantar servidor 8872 apuntando a ese viewer_project o registrar esa ruta en catálogo.",
+    "Revalidar chapter_count>=20 y note_count~445 antes de nueva revisión UX manual."
+  ]
+}

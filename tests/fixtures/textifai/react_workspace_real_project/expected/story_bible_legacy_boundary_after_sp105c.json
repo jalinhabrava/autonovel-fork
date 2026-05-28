@@ -1,0 +1,8 @@
+{
+  "assessment": "react_workspace_partial_needs_followup",
+  "story_bible_primary_mode": "legacy_embed_transitional",
+  "legacy_embed_visually_wrapped": true,
+  "legacy_shell_not_primary": true,
+  "graph_primary_mode": "native_react_surface",
+  "deferred_reason": "Se priorizó reemplazo nativo de Graph en SP-105D"
+}

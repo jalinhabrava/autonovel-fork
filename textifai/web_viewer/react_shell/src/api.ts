@@ -11,6 +11,7 @@ export type ProjectSummary = {
   has_ingestion_graph?: boolean;
   has_markdown_manifest?: boolean;
   has_markdown_graph_index?: boolean;
+  recommended?: boolean;
   graph_summary?: {
     node_count?: number;
     edge_count?: number;
@@ -41,6 +42,34 @@ export type CanonEntity = {
   evidence_refs?: Array<{ chapter_id?: string; pointer?: string }>;
 };
 
+export type GraphNode = {
+  id?: string;
+  label?: string;
+  kind?: string;
+  display_kind?: string;
+  role?: string;
+  note_path?: string;
+  canonical_note_path?: string;
+  status?: string;
+  review_state?: string;
+  degree?: number;
+  radius?: number;
+  summary_excerpt?: string;
+  relationship_count?: number;
+  canonical_degree?: number;
+};
+
+export type GraphEdge = {
+  id?: string;
+  source?: string;
+  target?: string;
+  type?: string;
+  kind?: string;
+  label?: string;
+};
+
+export type GraphPayload = { nodes?: GraphNode[]; edges?: GraphEdge[] };
+
 export type ProjectDetail = {
   project: {
     project_id: string;
@@ -68,11 +97,8 @@ export type ProjectDetail = {
       counts_by_type?: Record<string, number>;
     };
   };
-  notes?: Array<{ path: string; name?: string; kind?: string; status?: string }>;
-  graph?: {
-    nodes?: Array<{ id?: string }>;
-    edges?: Array<{ id?: string }>;
-  };
+  notes?: Array<{ path: string; name?: string; kind?: string; role?: string; status?: string }>;
+  graph?: GraphPayload;
 };
 
 export type IngestionConfig = {
@@ -110,8 +136,8 @@ export async function fetchProjectDetail(projectId: string): Promise<ProjectDeta
   return api<ProjectDetail>(`/api/projects/${encodeURIComponent(projectId)}`);
 }
 
-export async function fetchGraph(projectId: string): Promise<ProjectDetail['graph']> {
-  return api<ProjectDetail['graph']>(`/api/projects/${encodeURIComponent(projectId)}/graph`);
+export async function fetchGraph(projectId: string): Promise<GraphPayload> {
+  return api<GraphPayload>(`/api/projects/${encodeURIComponent(projectId)}/graph`);
 }
 
 export async function fetchReviewQueue(projectId: string): Promise<NonNullable<ProjectDetail['canon']>['review_queue']> {

@@ -1,0 +1,10 @@
+{
+  "assessment": "layout_editor_settings_ready_graph_partial",
+  "editor_items_are_chapters_only": true,
+  "primaries_excluded": true,
+  "add_chapter_button": true,
+  "fullscreen_mode": true,
+  "context_panel_retained": true,
+  "write_back": false,
+  "draft_message": "Draft local pendiente de SP-106"
+}

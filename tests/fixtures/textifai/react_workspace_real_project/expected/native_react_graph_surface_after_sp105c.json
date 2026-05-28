@@ -1,0 +1,11 @@
+{
+  "assessment": "real_project_loaded_graph_native_partial",
+  "legacy_embed_removed_from_primary_graph": true,
+  "graph_fetches_real_payload": true,
+  "tags_filters_present": true,
+  "right_inspector_present": true,
+  "node_click_selects": true,
+  "edit_node_action_present": true,
+  "write_back": false,
+  "fallback_legacy_location_if_any": "hidden dev fallback block within Graph section"
+}
