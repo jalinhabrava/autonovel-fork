@@ -63,6 +63,14 @@ class TextifAIReactForceGraphWorkspaceTests(unittest.TestCase):
         self.assertIn('fetchNote(selectedProjectId, notePath)', app)
         self.assertIn('selectedGraphEntity', app)
 
+    def test_graph_selection_does_not_rebuild_force_data(self):
+        canvas = GRAPH_CANVAS.read_text(encoding='utf-8')
+        self.assertIn('graphDataRef', canvas)
+        self.assertIn('graphSignatureRef', canvas)
+        self.assertIn('if (graphSignatureRef.current !== graphSignature)', canvas)
+        self.assertIn('prevSignature', canvas)
+        self.assertIn('prevSignature.current !== graphSignature', canvas)
+
     def test_dependency_scope_shell_only(self):
         package = json.loads(PKG.read_text(encoding='utf-8'))
         self.assertIn('react-force-graph-2d', package['dependencies'])

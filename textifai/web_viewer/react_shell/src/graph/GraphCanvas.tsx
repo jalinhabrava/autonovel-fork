@@ -20,14 +20,23 @@ const ANIMATION_MS = 450;
 
 export function GraphCanvas({ nodes, edges, selectedNodeId, onSelectNode }: GraphCanvasProps) {
   const graphRef = useRef<ForceGraphMethods<GraphCanvasNode, GraphCanvasEdge>>();
+  const graphDataRef = useRef<{ nodes: GraphCanvasNode[]; links: GraphCanvasEdge[] }>({ nodes: [], links: [] });
+  const graphSignatureRef = useRef('');
 
-  const graphData = useMemo(
-    () => ({
-      nodes: nodes.map((node) => ({ ...node })),
-      links: edges.map((edge) => ({ ...edge })),
-    }),
+  const graphSignature = useMemo(
+    () => `${nodes.map((node) => `${node.id}:${node.kind}:${node.label}`).join('|')}__${edges.map((edge) => `${edge.id || ''}:${edge.source}:${edge.target}`).join('|')}`,
     [edges, nodes],
   );
+
+  if (graphSignatureRef.current !== graphSignature) {
+    graphSignatureRef.current = graphSignature;
+    graphDataRef.current = {
+      nodes: nodes.map((node) => ({ ...node })),
+      links: edges.map((edge) => ({ ...edge })),
+    };
+  }
+
+  const graphData = graphDataRef.current;
 
   const selectedNeighborIds = useMemo(() => {
     if (!selectedNodeId) return new Set<string>();
@@ -131,13 +140,13 @@ export function GraphCanvas({ nodes, edges, selectedNodeId, onSelectNode }: Grap
 
   // Auto-center on first load or data change
   const hasData = nodes.length > 0;
-  const prevCount = useRef(0);
+  const prevSignature = useRef('');
   useEffect(() => {
-    if (hasData && prevCount.current === 0 && nodes.length > 0 && graphRef.current) {
+    if (hasData && prevSignature.current !== graphSignature && nodes.length > 0 && graphRef.current) {
       setTimeout(() => { graphRef.current?.zoomToFit(500, 60); }, 100);
     }
-    prevCount.current = nodes.length;
-  }, [nodes.length, hasData]);
+    prevSignature.current = graphSignature;
+  }, [graphSignature, hasData, nodes.length]);
 
   return (
     <div className="h-full min-h-[560px] w-full overflow-hidden rounded-3xl border border-neutral-200 bg-white">
