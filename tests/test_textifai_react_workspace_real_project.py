@@ -88,10 +88,12 @@ class TextifAIReactWorkspaceRealProjectTests(unittest.TestCase):
         graph_end = text.index("if (active === 'review')")
         graph_block = text[graph_start:graph_end]
         self.assertIn('NativeGraphSurface', graph_block)
+        self.assertIn('Superficie React nativa para nodos VaERL', graph_block)
         self.assertIn('SVG React nativo sobre `/graph`', text)
         self.assertIn('setSelectedGraphNodeId', text)
         self.assertIn('Ficha del nodo', text)
         self.assertIn('Editar', text)
+        self.assertIn('mx-5 mb-5 hidden', graph_block)
         self.assertIn('hidden"><LegacyEmbed title="Graph legacy dev fallback"', graph_block)
         self.assertNotIn('Graph module (legacy runtime boundary)', graph_block)
         report = read_json('native_react_graph_surface_after_sp105c.json')
