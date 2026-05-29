@@ -1,0 +1,6 @@
+{
+  "assessment": "ingestion_progress_gauges_ready",
+  "steps_have_progress_bar": true,
+  "final_hero_state": "Ingesta completada con revisión editorial",
+  "no_internal_paths_in_product_view": true
+}

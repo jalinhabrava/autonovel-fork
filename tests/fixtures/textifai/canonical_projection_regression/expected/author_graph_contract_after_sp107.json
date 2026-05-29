@@ -17,11 +17,11 @@
     "duplicate_alias_nodes": 89
   },
   "node_kinds": {
-    "concept": 152,
     "event": 130,
-    "object": 72,
-    "place": 63,
-    "character": 21,
+    "concept": 86,
+    "object": 78,
+    "character": 76,
+    "place": 68,
     "chapter": 20
   },
   "no_pronoun_nodes": true,

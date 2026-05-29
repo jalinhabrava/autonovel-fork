@@ -1,0 +1,8 @@
+{
+  "assessment": "canonical_kind_priority_ready",
+  "ren_kind": "character",
+  "sera_kind": "character",
+  "nael_kind": "character",
+  "priority_order": ["character","place","object","event","concept","chapter","review","note","unknown","unresolved"],
+  "no_source_prose": true
+}

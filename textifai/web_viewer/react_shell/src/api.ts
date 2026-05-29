@@ -49,7 +49,10 @@ export type ReviewItem = {
   human_reason?: string;
   evidence_summary?: string;
   local_state?: string;
-  evidence_refs?: Array<{ chapter_id?: string; pointer?: string }>;
+  evidence_refs?: Array<{ chapter_id?: string; pointer?: string; excerpt?: string | null; char_start?: number; char_end?: number }>;
+  technical_details?: Record<string, unknown>;
+  impact_if_accept?: string;
+  impact_if_reject?: string;
 };
 
 export type CanonEntity = {
@@ -81,6 +84,12 @@ export type GraphNode = {
   summary_excerpt?: string;
   relationship_count?: number;
   canonical_degree?: number;
+  aliases?: string[];
+  backlinks?: string[];
+  outgoing_wikilinks?: Array<{ target?: string; label?: string }>;
+  evidence_count?: number;
+  review_count?: number;
+  display_label?: string;
 };
 
 export type GraphEdge = {
@@ -201,6 +210,13 @@ export type NoteDetail = {
   backlinks?: string[];
   outgoing_wikilinks?: Array<{ target?: string; label?: string }>;
   local_graph?: { nodes?: Array<{ id?: string; label?: string; kind?: string }>; edges?: Array<{ source?: string; target?: string; label?: string }> };
+  summary_excerpt?: string;
+  key_facts_count?: number;
+  key_facts_preview?: string[];
+  relationship_count?: number;
+  evidence_count?: number;
+  display_label?: string;
+  display_kind?: string;
 };
 
 export async function fetchNote(projectId: string, path: string): Promise<NoteDetail> {

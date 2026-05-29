@@ -1,0 +1,7 @@
+{
+  "assessment": "graph_inspector_review_evidence_progress_ready",
+  "product_decision": "graph_inspector_ready_review_evidence_partial",
+  "provider_calls": "NO",
+  "write_back": "NO",
+  "package_changes": "NO"
+}

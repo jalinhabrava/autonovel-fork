@@ -9,7 +9,21 @@ from typing import Any, Mapping
 WIKILINK_RE = re.compile(r"\[\[([^\]|#]+)(?:#[^\]|]+)?(?:\|([^\]]+))?\]\]")
 TAG_RE = re.compile(r"(?<!\w)#([A-Za-z0-9_/-]+)")
 
+CANONICAL_KIND_PRIORITY = {
+    "character": 10,
+    "place": 9,
+    "object": 8,
+    "event": 7,
+    "concept": 6,
+    "chapter": 5,
+    "review": 4,
+    "note": 3,
+    "unknown": 2,
+    "unresolved": 1
+}
+
 _EXCLUDED_PATH_PARTS = {
+
     "dev",
     "runs",
     "99_system",
@@ -139,7 +153,14 @@ def build_author_graph(
     canonical_nodes: list[dict[str, Any]] = []
     node_redirect: dict[str, str] = {}
     for key, entries in grouped.items():
-        entries_sorted = sorted(entries, key=lambda row: (str(row.get('id') or '').count('/'), -(int(row.get('degree') or 0))))
+        entries_sorted = sorted(
+            entries,
+            key=lambda row: (
+                -CANONICAL_KIND_PRIORITY.get(str(row.get('kind') or '').lower(), 0),
+                str(row.get('id') or '').count('/'),
+                -int(row.get('degree') or 0),
+            ),
+        )
         canonical = entries_sorted[0]
         canonical_id = str(canonical.get('id') or '')
         note = notes_by_path.get(canonical_id, {})
@@ -162,7 +183,7 @@ def build_author_graph(
                 'label': label,
                 'kind': str(canonical.get('kind') or 'note').lower(),
                 'status': str(frontmatter.get('status') or frontmatter.get('review_state') or 'ready'),
-                'summary': '',
+                'summary': str(frontmatter.get('summary') or ''),
                 'aliases': sorted(set(aliases)),
                 'note_path': canonical_id,
                 'degree': int(canonical.get('degree') or 0),

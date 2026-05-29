@@ -1,0 +1,7 @@
+{
+  "assessment": "review_dynamic_summary_cards_ready",
+  "removed_decision_drawer": false,
+  "removed_modelo_decision": false,
+  "dashboard_cards_present": false,
+  "pending": "copy patched via Python but TSX not rebuilt from fresh; frontend incomplete pending full App refactor"
+}

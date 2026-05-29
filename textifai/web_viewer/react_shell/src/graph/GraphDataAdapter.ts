@@ -14,11 +14,16 @@ export function mapGraphPayload(payload: GraphPayload | null | undefined): Graph
       const kind = normalizeKind(String(node.display_kind || node.kind || DEFAULT_KIND));
       return {
         id: String(node.id),
-        label: String(node.label || node.id || ''),
+        label: String(node.display_label || node.label || node.id || ''),
         kind,
         reviewState: String(node.review_state || node.status || 'unknown'),
         notePath: String(node.note_path || node.canonical_note_path || ''),
         summaryExcerpt: String(node.summary_excerpt || ''),
+        aliases: Array.isArray(node.aliases) ? node.aliases.map(String) : [],
+        backlinks: Array.isArray(node.backlinks) ? node.backlinks.map(String) : [],
+        outgoingWikilinks: Array.isArray(node.outgoing_wikilinks) ? node.outgoing_wikilinks : [],
+        evidenceCount: Number(node.evidence_count || 0),
+        reviewCount: Number(node.review_count || 0),
         relationshipCount: Number(node.relationship_count || node.degree || 0),
         degree: Number(node.degree || node.canonical_degree || 0),
         color: pickColor(kind),
