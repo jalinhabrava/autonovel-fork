@@ -1,0 +1,17 @@
+{
+  "assessment": "sp095_vs_sp107_artifact_lineage_documented",
+  "sp095_nodes": 445,
+  "sp095_edges": 222,
+  "sp107_raw_nodes": 576,
+  "sp107_raw_edges": 183,
+  "sp107_author_nodes": 458,
+  "sp107_author_edges": 119,
+  "excluded": {
+    "internal_candidates": 25,
+    "pronouns": 4,
+    "dev_nodes": 0,
+    "duplicate_alias_nodes": 89
+  },
+  "root_cause": "build_markdown_graph_index scanned project.root recursively without excluding dev/, runs/, 99_System/",
+  "fix": "Scan narrowed to markdown/ dir. Author graph deduplicates, filters pronouns and internal candidates."
+}

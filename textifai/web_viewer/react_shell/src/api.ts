@@ -35,11 +35,20 @@ export type ProjectSummary = {
 };
 
 export type ReviewItem = {
+  id?: string;
+  type?: string;
+  title?: string;
+  subtitle?: string;
   source_entity?: string;
-  target_entity?: string;
+  target_label?: string;
+  target_entity?: string | { label?: string };
   severity?: string;
   recommendation?: string;
   review_type?: string;
+  suggested_action?: string;
+  human_reason?: string;
+  evidence_summary?: string;
+  local_state?: string;
   evidence_refs?: Array<{ chapter_id?: string; pointer?: string }>;
 };
 
@@ -108,6 +117,8 @@ export type ProjectDetail = {
     review_queue?: {
       item_count?: number;
       items?: ReviewItem[];
+      decision_items?: ReviewItem[];
+      decision_summary?: Record<string, number>;
       counts_by_severity?: Record<string, number>;
       counts_by_type?: Record<string, number>;
     };
@@ -128,6 +139,16 @@ export type ProjectDetail = {
     semantic_review_label?: string;
     retry_cta?: string;
     review_cta?: string;
+  };
+  run_status?: {
+    schema?: string;
+    schema_version?: number;
+    run_id?: string;
+    status?: string;
+    safe_to_open_workspace?: boolean;
+    steps?: Array<{ id?: string; label?: string; status?: string; progress?: number }>;
+    last_artifact?: string;
+    final_state_detail?: string;
   };
 };
 

@@ -1,0 +1,31 @@
+{
+  "assessment": "author_graph_contract_ready",
+  "schema": "textifai.author_graph",
+  "schema_version": 1,
+  "source": "canonical_projection",
+  "stats": {
+    "node_count": 458,
+    "edge_count": 119,
+    "review_decision_count": 0,
+    "raw_node_count": 576,
+    "raw_edge_count": 183
+  },
+  "excluded": {
+    "internal_candidates": 25,
+    "pronouns": 4,
+    "dev_nodes": 0,
+    "duplicate_alias_nodes": 89
+  },
+  "node_kinds": {
+    "concept": 152,
+    "event": 130,
+    "object": 72,
+    "place": 63,
+    "character": 21,
+    "chapter": 20
+  },
+  "no_pronoun_nodes": true,
+  "no_local_candidate_nodes": true,
+  "no_dev_runs_paths": true,
+  "no_99_system_paths": true
+}

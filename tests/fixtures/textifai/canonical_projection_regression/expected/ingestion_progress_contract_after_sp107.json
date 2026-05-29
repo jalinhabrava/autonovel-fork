@@ -1,0 +1,19 @@
+{
+  "assessment": "ingestion_progress_contract_ready",
+  "schema": "textifai.run_status",
+  "status": "completed_with_editorial_review",
+  "safe_to_open_workspace": true,
+  "steps": [
+    "Preparando manuscrito",
+    "Detectando capítulos",
+    "Creando capítulos Markdown",
+    "Extraciendo entidades y relaciones",
+    "Construyendo VaERL",
+    "Normalizando entidades y aliases",
+    "Generando grafo",
+    "Creando cola de revisión",
+    "Validando proyecto",
+    "Workspace listo"
+  ],
+  "final_state_detail": "20 chapters processed with semantic review. Author graph generated. 59 editor decisions pending."
+}

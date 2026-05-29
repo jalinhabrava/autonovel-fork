@@ -39,9 +39,16 @@ export function mapGraphPayload(payload: GraphPayload | null | undefined): Graph
   return { nodes, edges, kinds, byId };
 }
 
-export function filterGraph(vm: GraphViewModel, kind: 'all' | GraphKind, query: string, relatedTo: string | null): GraphViewModel {
+export function filterGraph(vm: GraphViewModel, selectedKinds: Set<GraphKind> | GraphKind[] | 'all' | GraphKind, query: string, relatedTo: string | null): GraphViewModel {
   const normalizedQuery = query.trim().toLowerCase();
-  const kindFiltered = vm.nodes.filter((node) => (kind === 'all' ? true : node.kind === kind));
+  const kindSet = selectedKinds === 'all'
+    ? null
+    : Array.isArray(selectedKinds)
+      ? new Set(selectedKinds)
+      : selectedKinds instanceof Set
+        ? selectedKinds
+        : new Set([selectedKinds]);
+  const kindFiltered = vm.nodes.filter((node) => (!kindSet || kindSet.size === 0 ? true : kindSet.has(node.kind)));
   const searchFiltered = kindFiltered.filter((node) => {
     if (!normalizedQuery) return true;
     return node.label.toLowerCase().includes(normalizedQuery) || node.notePath.toLowerCase().includes(normalizedQuery);

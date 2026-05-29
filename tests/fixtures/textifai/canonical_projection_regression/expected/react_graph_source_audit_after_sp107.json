@@ -1,0 +1,8 @@
+{
+  "assessment": "react_graph_source_audit_ready",
+  "graph_mode": "author_graph",
+  "author_graph_ready": true,
+  "source_path": "graph/author_graph.json",
+  "node_count": 458,
+  "edge_count": 119
+}

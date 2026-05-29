@@ -1,0 +1,33 @@
+{
+  "assessment": "review_decision_contract_ready",
+  "required_keys": [
+    "evidence_refs",
+    "evidence_summary",
+    "human_reason",
+    "id",
+    "local_state",
+    "severity",
+    "source_entity",
+    "subtitle",
+    "suggested_action",
+    "target_entity",
+    "title",
+    "type"
+  ],
+  "agrupaciones": [
+    "insufficient_evidence",
+    "possible_merges",
+    "probable_aliases",
+    "pronoun_pov",
+    "uncertain_relationships",
+    "unconfirmed_local_candidates"
+  ],
+  "local_states": [
+    "accepted_local",
+    "applied_to_vaerl",
+    "deferred",
+    "merged_local",
+    "pending",
+    "rejected_local"
+  ]
+}

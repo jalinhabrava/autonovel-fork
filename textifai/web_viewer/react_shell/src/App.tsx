@@ -101,16 +101,14 @@ function choosePreferredProject(projects: ProjectSummary[]): ProjectSummary | un
 }
 
 function toDecisionItem(item: ReviewItem, index: number): DecisionItem {
-  const source = item.source_entity || 'Entidad origen';
-  const target = item.target_entity || 'Entidad relacionada';
   const severity = String(item.severity || 'low');
-  const title = source && target ? `${source} / ${target}` : source || target || `Decisión ${index + 1}`;
+  const title = item.title || `${item.source_entity || 'Candidato'} / ${typeof item.target_entity === 'object' ? item.target_entity?.label : item.target_entity || item.target_label || 'entidad relacionada'}`;
   return {
-    id: `${title}-${index}`,
+    id: item.id || `${title}-${index}`,
     title,
     severity,
-    source: (item.evidence_refs || []).map((row) => row.chapter_id || row.pointer || 'evidencia').slice(0, 2).join(', ') || 'Evidencia pendiente',
-    action: item.recommendation || item.review_type || 'Necesita decisión del autor',
+    source: item.evidence_summary || item.subtitle || (item.evidence_refs || []).map((row) => row.chapter_id || row.pointer || 'evidencia').slice(0, 2).join(', ') || 'Evidencia pendiente',
+    action: item.recommendation || item.suggested_action || item.review_type || item.type || 'Necesita decisión del autor',
     raw: item,
   };
 }
@@ -275,7 +273,7 @@ export function App() {
   const [editorChapterRailCollapsed, setEditorChapterRailCollapsed] = useState(false);
   const [graphPayload, setGraphPayload] = useState<GraphPayload | null>(null);
   const [selectedGraphNodeId, setSelectedGraphNodeId] = useState<string>('');
-  const [graphKindFilter, setGraphKindFilter] = useState<string>('all');
+  const [graphKindFilter, setGraphKindFilter] = useState<Set<string>>(new Set());
   const [graphQuery, setGraphQuery] = useState('');
   const [graphRelatedOnly, setGraphRelatedOnly] = useState(false);
   const [graphEditNodeId, setGraphEditNodeId] = useState<string | null>(null);
@@ -289,7 +287,7 @@ export function App() {
   const selectedProject = useMemo(() => projects.find((project) => project.project_id === selectedProjectId) || null, [projects, selectedProjectId]);
   const selectedEntity = useMemo(() => (projectDetail?.canon?.primaries || []).find((entity) => (entity.preferred_slug || entity.canonical_name || '') === selectedEntityKey), [projectDetail, selectedEntityKey]);
   const chapterNotes = useMemo(() => (projectDetail?.notes || []).filter(isChapterNote), [projectDetail]);
-  const allDecisions = useMemo(() => (projectDetail?.canon?.review_queue?.items || []).map(toDecisionItem), [projectDetail]);
+  const allDecisions = useMemo(() => ((projectDetail?.canon?.review_queue?.decision_items || projectDetail?.canon?.review_queue?.items || []) as ReviewItem[]).map(toDecisionItem), [projectDetail]);
   const visibleDecisions = useMemo(() => { const query = reviewQuery.trim().toLowerCase(); return allDecisions.filter((item) => { if (reviewSeverity !== 'all' && item.severity.toLowerCase() !== reviewSeverity) return false; if (!query) return true; return item.title.toLowerCase().includes(query) || item.action.toLowerCase().includes(query) || String(item.raw.review_type || '').toLowerCase().includes(query); }); }, [allDecisions, reviewQuery, reviewSeverity]);
   const selectedDecision = useMemo(() => visibleDecisions.find((item) => item.id === selectedDecisionId) || visibleDecisions[0] || null, [visibleDecisions, selectedDecisionId]);
   const selectedDecisionChoice = selectedDecision ? reviewDecisionChoices[selectedDecision.id] : undefined;
@@ -304,8 +302,21 @@ export function App() {
   async function loadEditorNote(projectId: string, notePath: string) { try { const payload = await fetchNote(projectId, notePath); setEditorMarkdown(String(payload.markdown || 'Sin contenido de capítulo disponible.')); } catch (_err) { setEditorMarkdown('Sin contenido de capítulo disponible.'); } }
 
   const warningsVisible = visibleDecisions.length;
+  const runStatus = projectDetail?.run_status;
+  const reviewSummary = projectDetail?.canon?.review_queue?.decision_summary || {};
   const graphVm = useMemo(() => mapGraphPayload(graphPayload), [graphPayload]);
-  const filteredGraph = useMemo(() => filterGraph(graphVm, graphKindFilter, graphQuery, graphRelatedOnly ? selectedGraphNodeId : null), [graphVm, graphKindFilter, graphQuery, graphRelatedOnly, selectedGraphNodeId]);
+  const selectedGraphKinds = useMemo(() => new Set(Array.from(graphKindFilter).filter((kind) => kind !== 'all') as any), [graphKindFilter]);
+  const filteredGraph = useMemo(() => filterGraph(graphVm, selectedGraphKinds, graphQuery, graphRelatedOnly ? selectedGraphNodeId : null), [graphVm, selectedGraphKinds, graphQuery, graphRelatedOnly, selectedGraphNodeId]);
+  const resetGraphFilters = () => { setGraphKindFilter(new Set()); setGraphQuery(''); setGraphRelatedOnly(false); };
+  const toggleGraphKind = (kind: string) => {
+    if (kind === 'all') { resetGraphFilters(); return; }
+    setGraphKindFilter((previous) => {
+      const next = new Set(previous);
+      if (next.has(kind)) next.delete(kind); else next.add(kind);
+      next.delete('all');
+      return next;
+    });
+  };
   const selectedGraphEntity = useMemo(() => {
     if (!selectedGraphNodeId || !projectDetail) return null;
     return (projectDetail?.canon?.primaries || []).find((entity) => {
@@ -334,21 +345,21 @@ export function App() {
 
   if (active === 'overview') content = <OverviewBoard setActive={setActive} />;
   if (active === 'hub') content = <section><TopBar title="Project Hub" subtitle="Abrir o reanudar proyecto TextifAI completo. El runtime real 20ch se prefiere si existe." actions={<><Button>New ingestion</Button><Button variant="secondary">Open .txtfai / manifest</Button></>} /><div className="p-5 grid grid-cols-12 gap-5"><div className="col-span-12 lg:col-span-8 space-y-4"><div className="rounded-3xl border border-neutral-200 p-5 bg-neutral-50"><div className="flex items-center justify-between"><div><h2 className="font-semibold text-lg">Workspaces disponibles</h2><p className="text-sm text-neutral-500">Datos reales desde /api/projects. Se evita seleccionar fixture 2ch si hay base 20ch.</p></div><Search size={18} className="text-neutral-500" /></div><div className="mt-4 space-y-3">{projects.map((project) => <ProjectRow key={project.project_id} project={project} selected={project.project_id === selectedProjectId} onSelect={() => setSelectedProjectId(project.project_id)} />)}</div>{isMinimalFixture(selectedProject) ? <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800"><AlertTriangle size={16} className="inline" /> Proyecto reducido detectado: no usar como base UX final si runtime 20ch existe.</div> : null}</div></div><aside className="col-span-12 lg:col-span-4 space-y-4"><Metric label="Contrato" value="manifest.json" note="Un archivo abre el bundle completo." /><Metric label="Futuro" value=".txtfai" note="Formato empaquetado de workspace." /><div className="rounded-3xl border border-neutral-200 p-5"><h3 className="font-semibold">Salud del proyecto</h3><div className="mt-4 space-y-3 text-sm"><div className="flex items-center gap-2"><CheckCircle2 size={16} /> {selectedProject?.workspace_status?.chapters_detected_label || `Capítulos indexados: ${projectDetail?.overview?.chapters_processed ?? 0}`}</div><div className="flex items-center gap-2"><CheckCircle2 size={16} /> {selectedProject?.workspace_status?.chapters_ready_label || `VaERL/artifacts: ${artifactsCount}`}</div><div className="flex items-center gap-2"><AlertTriangle size={16} /> {selectedProject?.workspace_status?.chapters_still_failed_label || `Warnings visibles: ${warningsVisible}`}</div></div></div></aside></div></section>;
-  if (active === 'ingest') content = <section><TopBar title="Ingestion" subtitle="Crear proyecto TextifAI local-first sin provider calls en esta fase." actions={<Button variant="secondary" disabled>Run ingestion disabled</Button>} /><div className="p-5 grid grid-cols-12 gap-5"><div className="col-span-12 lg:col-span-7 rounded-3xl border border-neutral-200 p-5"><h2 className="font-semibold">Source setup</h2><p className="mt-2 text-sm text-neutral-600">Después de generar proyecto, abrir `manifest.json`. `.txtfai` queda como dirección futura.</p><div className="mt-5 grid gap-3 text-sm md:grid-cols-2"><div className="rounded-2xl bg-neutral-50 border border-neutral-200 p-4">Source root</div><div className="rounded-2xl bg-neutral-50 border border-neutral-200 p-4">Artifacts root</div><div className="rounded-2xl bg-neutral-50 border border-neutral-200 p-4">Vault</div><div className="rounded-2xl bg-neutral-50 border border-neutral-200 p-4">Reports</div></div></div><aside className="col-span-12 lg:col-span-5 space-y-4"><Metric label="Mode" value={ingestionConfig?.mode || 'local'} note={ingestionConfig?.local_only_warning || 'No provider execution.'} /><div className="rounded-3xl border border-neutral-200 bg-neutral-50 p-5"><h2 className="font-semibold">Jobs</h2><div className="mt-3 space-y-2 text-sm">{ingestionJobs.length ? ingestionJobs.map((job) => <div key={job.job_id} className="rounded-xl bg-white border border-neutral-200 px-3 py-2">{job.run_name || job.job_id} · {job.status}</div>) : <div className="text-neutral-500">Sin jobs activos.</div>}</div></div></aside></div></section>;
+  if (active === 'ingest') content = <section><TopBar title="Ingestion" subtitle="Crear proyecto TextifAI local-first sin provider calls en esta fase." actions={<Button variant="secondary" disabled>Run ingestion disabled</Button>} /><div className="p-5 grid grid-cols-12 gap-5"><div className="col-span-12 lg:col-span-7 rounded-3xl border border-neutral-200 p-5"><h2 className="font-semibold">Source setup</h2><p className="mt-2 text-sm text-neutral-600">Después de generar proyecto, abrir `manifest.json`. `.txtfai` queda como dirección futura.</p><div className="mt-5 grid gap-3 text-sm md:grid-cols-2">{(runStatus?.steps || []).map((step) => <div key={step.id || step.label} className="rounded-2xl bg-neutral-50 border border-neutral-200 p-4"><div className="font-medium">{step.label || step.id || 'Step'}</div><div className="mt-1 text-xs text-neutral-600">{step.status || 'pending'} · {step.progress ?? 0}%</div></div>)}{!(runStatus?.steps || []).length ? <div className="rounded-2xl bg-neutral-50 border border-neutral-200 p-4">Sin pasos disponibles</div> : null}</div></div><aside className="col-span-12 lg:col-span-5 space-y-4"><Metric label="Estado" value={runStatus?.status || ingestionConfig?.mode || 'local'} note={runStatus?.final_state_detail || ingestionConfig?.local_only_warning || 'No provider execution.'} /><div className="rounded-3xl border border-neutral-200 bg-neutral-50 p-5"><h2 className="font-semibold">Progreso</h2><div className="mt-3 space-y-2 text-sm"><div className="rounded-xl bg-white border border-neutral-200 px-3 py-2">Run: {runStatus?.run_id || 'sin run_id'}</div><div className="rounded-xl bg-white border border-neutral-200 px-3 py-2">Workspace seguro: {runStatus?.safe_to_open_workspace ? 'sí' : 'no'}</div>{ingestionJobs.length ? ingestionJobs.map((job) => <div key={job.job_id} className="rounded-xl bg-white border border-neutral-200 px-3 py-2">{job.run_name || job.job_id} · {job.status}</div>) : null}</div></div></aside></div></section>;
   if (active === 'codex') content = <section><TopBar title="Codex / VaERL" subtitle="Tabla estructurada sobre source of truth semántico. Primaries se editan aquí, Graph o Story Bible." actions={<><Button variant="secondary">Export selection</Button><Button variant="secondary">Open evidence</Button></>} /><div className="p-5 grid grid-cols-12 gap-5"><div className="col-span-12 lg:col-span-8"><EntityRecordTable entities={projectDetail?.canon?.primaries || []} selectedKey={selectedEntityKey} onSelect={setSelectedEntityKey} /></div><aside className="col-span-12 lg:col-span-4"><InspectorCard entity={selectedEntity} /></aside></div></section>;
   if (active === 'graph') content = (
     <section>
-      <TopBar title="Graph" subtitle="Exploración visual author-facing con física viva e inspector editorial." actions={<Button variant="secondary" onClick={() => { setGraphKindFilter('all'); setGraphQuery(''); setGraphRelatedOnly(false); }}>Mostrar todo</Button>} />
+      <TopBar title="Graph" subtitle="Exploración visual author-facing con física viva e inspector editorial." actions={<Button variant="secondary" onClick={resetGraphFilters}>Restablecer filtros</Button>} />
       <div className="p-5 grid grid-cols-12 gap-5">
         <aside className="col-span-12 xl:col-span-3">
           <GraphToolbar
-            activeKind={graphKindFilter}
-            onKindChange={setGraphKindFilter}
+            selectedKinds={graphKindFilter}
+            toggleKind={toggleGraphKind}
             query={graphQuery}
             onQueryChange={setGraphQuery}
             relatedOnly={graphRelatedOnly}
             onRelatedOnlyChange={setGraphRelatedOnly}
-            onResetViewport={() => { setGraphKindFilter('all'); setGraphQuery(''); setGraphRelatedOnly(false); }}
+            onResetViewport={resetGraphFilters}
           />
         </aside>
         <div className="col-span-12 xl:col-span-6">
@@ -364,7 +375,7 @@ export function App() {
   if (active === 'review') content = <section>
     <TopBar
       title="Review Queue"
-      subtitle="Author decisions turn uncertain extraction into stable canon. Warnings must be counted consistently across summary and list."
+      subtitle="Decisiones del autor convierten ambigüedad semántica en canon estable."
       actions={<><Button>Apply decisions</Button><Button variant="secondary">Re-run checks</Button></>}
     />
     <div className="p-5 grid grid-cols-12 gap-5">
@@ -376,14 +387,30 @@ export function App() {
         {visibleDecisions.map((item) => <DecisionCard key={item.id} item={item} selected={selectedDecision?.id === item.id} choice={reviewDecisionChoices[item.id]} onSelect={() => setSelectedDecisionId(item.id)} onChoose={(choice) => setReviewDecisionChoices((previous) => ({ ...previous, [item.id]: choice }))} onOpenEvidence={() => setEvidenceModalDecisionId(item.id)} />)}
       </div>
       <aside className="col-span-12 lg:col-span-4 space-y-4">
-        <Metric label="Pending warnings" value={warningsVisible} note="Must match visible queue count." />
-        <Metric label="Decision model" value="Explicit" note="No silent canon changes." />
+        <Metric label="Decisiones pendientes" value={reviewSummary.total_pending ?? warningsVisible} note="Resumen dinámico de cola editorial." />
+        <Metric label="Modelo de decisión" value="Explícito" note="Sin cambios silenciosos de canon." />
+        <div className="rounded-3xl border border-neutral-200 bg-neutral-50 p-5 text-xs grid grid-cols-2 gap-2">
+          {([
+            ['possible_merges', 'Posibles fusiones'],
+            ['probable_aliases', 'Aliases probables'],
+            ['uncertain_relationships', 'Relaciones inciertas'],
+            ['insufficient_evidence', 'Evidencia insuficiente'],
+            ['pronoun_pov', 'Pronombres/POV'],
+            ['unconfirmed_local_candidates', 'Candidatos no confirmados'],
+          ] as const)
+            .filter(([key]) => Number((reviewSummary as Record<string, number>)[key] || 0) > 0)
+            .map(([key, label]) => (
+              <div key={key} className="rounded-xl border border-neutral-200 bg-white px-2 py-1">
+                <b>{Number((reviewSummary as Record<string, number>)[key] || 0)}</b> {label}
+              </div>
+            ))}
+        </div>
         <div className="rounded-3xl border border-neutral-200 bg-neutral-50 p-5">
           <h2 className="font-semibold">Decision drawer</h2>
           <p className="mt-2 text-sm text-neutral-600">{selectedDecision?.action || 'Selecciona aviso.'}</p>
           <p className="mt-3 text-sm font-medium text-neutral-900">Decisión local: {selectedDecisionChoice ? selectedDecisionChoice : 'sin marcar'}</p>
-          <p className="mt-3 text-xs text-neutral-500">Every decision stores: action, target ids, previous state, resulting VaERL change, author note, and replay metadata.</p>
-          <div className="mt-4 flex flex-wrap gap-2"><Button variant="secondary" onClick={() => selectedDecision && setEvidenceModalDecisionId(selectedDecision.id)}>Open evidence</Button><Button variant="secondary">Edit canonical label</Button></div>
+          <p className="mt-3 text-xs text-neutral-500">Estado local explícito. Sin write-back automático en esta fase.</p>
+          <div className="mt-4 flex flex-wrap gap-2"><Button variant="secondary" onClick={() => selectedDecision && setEvidenceModalDecisionId(selectedDecision.id)}>Open evidence</Button><Button variant="secondary">Editar etiqueta canónica</Button></div>
         </div>
       </aside>
     </div>

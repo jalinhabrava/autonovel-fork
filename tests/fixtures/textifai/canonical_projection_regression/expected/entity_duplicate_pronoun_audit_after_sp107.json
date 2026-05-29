@@ -1,0 +1,15 @@
+{
+  "assessment": "entity_duplicate_pronoun_audit_ready",
+  "before": {
+    "ren_visible_nodes": 2,
+    "sera_visible_nodes": 2,
+    "pronoun_visible_nodes": 4,
+    "total_nodes": 576
+  },
+  "after": {
+    "ren_visible_nodes": 1,
+    "sera_visible_nodes": 1,
+    "pronoun_visible_nodes": 0,
+    "total_nodes": 458
+  }
+}

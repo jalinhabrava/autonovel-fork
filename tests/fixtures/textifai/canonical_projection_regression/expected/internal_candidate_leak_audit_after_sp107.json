@@ -1,0 +1,14 @@
+{
+  "assessment": "internal_candidate_leak_audit_ready",
+  "before": {
+    "internal_candidate_nodes": 25,
+    "dev_runs_nodes": 0,
+    "pronoun_nodes_before": 4
+  },
+  "after": {
+    "internal_candidate_nodes": 0,
+    "dev_runs_nodes": 0,
+    "pronoun_nodes": 0,
+    "duplicate_alias_nodes": 89
+  }
+}

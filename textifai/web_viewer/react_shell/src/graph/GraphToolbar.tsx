@@ -12,8 +12,8 @@ const CHIP_LABELS = [
 ];
 
 export type GraphToolbarProps = {
-  activeKind: string;
-  onKindChange: (kind: string) => void;
+  selectedKinds: Set<string>;
+  toggleKind: (kind: string) => void;
   query: string;
   onQueryChange: (value: string) => void;
   relatedOnly: boolean;
@@ -22,8 +22,8 @@ export type GraphToolbarProps = {
 };
 
 export function GraphToolbar({
-  activeKind,
-  onKindChange,
+  selectedKinds,
+  toggleKind,
   query,
   onQueryChange,
   relatedOnly,
@@ -37,8 +37,8 @@ export function GraphToolbar({
           <button
             key={chip.id}
             type="button"
-            onClick={() => onKindChange(chip.id)}
-            className={`rounded-2xl px-3 py-1.5 text-sm ${activeKind === chip.id ? 'bg-neutral-900 text-white' : 'border border-neutral-200 bg-white text-neutral-700'}`}
+            onClick={() => toggleKind(chip.id)}
+            className={`rounded-2xl px-3 py-1.5 text-sm ${selectedKinds.has(chip.id) || (chip.id === 'all' && selectedKinds.size === 0) ? 'bg-neutral-900 text-white' : 'border border-neutral-200 bg-white text-neutral-700'}`}
           >
             {chip.label}
           </button>
@@ -66,10 +66,9 @@ export function GraphToolbar({
           onClick={onResetViewport}
           className="rounded-2xl border border-neutral-200 bg-white px-3 py-1.5 text-sm text-neutral-700"
         >
-          Mostrar todo
+          Restablecer filtros
         </button>
       </div>
     </div>
   );
 }
-

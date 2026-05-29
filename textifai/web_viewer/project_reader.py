@@ -8,7 +8,7 @@ from typing import Any
 
 from textifai.obsidian.parser import extract_obsidian_links, parse_obsidian_frontmatter
 from vault.schema import slugify
-from textifai.import_review.markdown_graph_index import build_markdown_graph_index, local_graph
+from textifai.import_review.markdown_graph_index import build_author_graph, build_markdown_graph_index, local_graph
 from textifai.import_review.viewer_graph_adapter import adapt_ingestion_graph_to_viewer_graph
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -231,6 +231,7 @@ def read_project(project: ProjectRef) -> dict[str, Any]:
         "workspace_status": _build_workspace_status_summary(writer_outcome if isinstance(writer_outcome, dict) else {}, project.manifest if isinstance(project.manifest, dict) else {}),
         "health": build_semantic_health(project, canon=canon, artifacts=artifacts, graph=graph),
         "canonicalization": build_canonicalization_payload(project, canon=canon, artifacts=artifacts),
+        "run_status": _read_json(project.root / 'reports' / 'run_status.json') or {},
     }
 
 def _build_workspace_status_summary(writer_outcome: dict[str, Any], manifest: dict[str, Any]) -> dict[str, Any]:
@@ -378,12 +379,13 @@ def read_canon(project: ProjectRef) -> dict[str, Any]:
     review_queue = _read_project_json(project, 'review_queue') or (_read_json(system / "review_queue.json") if system else {})
     entities = obsidian_import.get("entities") if isinstance(obsidian_import, dict) else []
     chapters = obsidian_import.get("chapters") if isinstance(obsidian_import, dict) else []
+    hydrated_queue = _hydrate_review_queue(review_queue if isinstance(review_queue, dict) else {}, entities if isinstance(entities, list) else [], chapters if isinstance(chapters, list) else [])
     return {
         "work": _project_work(project, obsidian_import),
         "chapters": chapters or [],
         "primaries": [item for item in entities or [] if _is_primary(item)],
         "review_entities": [item for item in entities or [] if not _is_primary(item)],
-        "review_queue": review_queue if isinstance(review_queue, dict) else {},
+        "review_queue": hydrated_queue,
     }
 
 
@@ -454,8 +456,32 @@ def read_artifact(project: ProjectRef, artifact_path: str) -> dict[str, Any]:
 
 
 def build_graph(project: ProjectRef, canon: dict[str, Any] | None = None) -> dict[str, Any]:
+    author_graph_path = project.root / 'graph' / 'author_graph.json'
+    if author_graph_path.exists():
+        payload = _read_json(author_graph_path)
+        if isinstance(payload, dict) and isinstance(payload.get('nodes'), list):
+            return {
+                'nodes': payload.get('nodes') or [],
+                'edges': payload.get('edges') or [],
+                'metadata': {
+                    'graph_mode': 'author_graph',
+                    'author_graph_ready': True,
+                    'excluded_counts': payload.get('excluded') or {},
+                    'graph_summary': {
+                        'node_count': len(payload.get('nodes') or []),
+                        'edge_count': len(payload.get('edges') or []),
+                        'node_counts_by_kind': _count_nodes_by_kind([row for row in payload.get('nodes') or [] if isinstance(row, dict)]),
+                        'synthetic_label_count': 0,
+                    },
+                    'source_path': 'graph/author_graph.json',
+                },
+            }
     markdown_graph = _build_graph_from_markdown_index(project)
     if markdown_graph is not None:
+        metadata = markdown_graph.setdefault('metadata', {})
+        if isinstance(metadata, dict):
+            metadata.setdefault('graph_mode', 'legacy_markdown_index')
+            metadata.setdefault('author_graph_ready', False)
         return markdown_graph
 
     ingestion_graph = _build_graph_from_ingestion_artifact(project)
@@ -1012,6 +1038,8 @@ def _build_graph_from_markdown_index(project: ProjectRef) -> dict[str, Any] | No
         "metadata": {
             "graph_contract_version": 2,
             "source": "markdown_graph_index",
+            "graph_mode": "legacy_markdown_index",
+            "author_graph_ready": False,
             "canonical_redirects": canonical_redirects,
             "canonical_note_redirects": canonical_note_redirects,
             "local_graph": {
@@ -1125,7 +1153,106 @@ def _build_graph_from_ingestion_artifact(project: ProjectRef) -> dict[str, Any] 
         return None
     if not any(key in ingestion for key in ("nodes", "characters", "places", "concepts", "objects", "events")):
         return None
-    return adapt_ingestion_graph_to_viewer_graph(ingestion)
+    payload = adapt_ingestion_graph_to_viewer_graph(ingestion)
+    if isinstance(payload, dict):
+        metadata = payload.setdefault('metadata', {})
+        if isinstance(metadata, dict):
+            metadata.setdefault('graph_mode', 'legacy_ingestion')
+            metadata.setdefault('author_graph_ready', False)
+    return payload
+
+
+def _hydrate_review_queue(raw_review_queue: dict[str, Any], entities: list[dict[str, Any]], chapters: list[dict[str, Any]]) -> dict[str, Any]:
+    items = [row for row in (raw_review_queue.get('items') or []) if isinstance(row, dict)]
+    decision_items: list[dict[str, Any]] = []
+    summary_counts = {
+        'total_pending': 0,
+        'possible_merges': 0,
+        'probable_aliases': 0,
+        'uncertain_relationships': 0,
+        'insufficient_evidence': 0,
+        'pronoun_pov': 0,
+        'unconfirmed_local_candidates': 0,
+        'deferred': 0,
+        'local_unapplied': 0,
+    }
+    entity_names = [str(row.get('canonical_name') or '') for row in entities if isinstance(row, dict)]
+    chapter_titles = {str(row.get('chapter_id') or ''): str(row.get('chapter_title_original') or row.get('chapter_title_canonical') or row.get('chapter_id') or '') for row in chapters if isinstance(row, dict)}
+    for item in items:
+        target_label = str(item.get('target_label') or 'referencia').strip()
+        summary = str(item.get('summary') or 'Necesita revisión editorial').strip()
+        source_refs = [row for row in (item.get('source_refs') or []) if isinstance(row, dict)]
+        chapter_id = str(item.get('chapter_id') or '')
+        chapter_label = chapter_titles.get(chapter_id) or chapter_id or 'capítulo sin resolver'
+        normalized_target = _key(target_label)
+
+        if normalized_target in {'yo', 'ella', 'el', 'él', 'la', 'tu', 'tú'}:
+            review_type = 'pronoun_pov'
+            summary_key = 'pronoun_pov'
+            severity = 'medium'
+            title = f'Pronombre a resolver: {target_label}'
+            suggested_action = 'review'
+        elif any(token in summary.casefold() for token in ['no nombrad', 'identidad no especificada', 'no se describe']):
+            review_type = 'insufficient_evidence'
+            summary_key = 'insufficient_evidence'
+            severity = 'medium'
+            title = f'Revisar “{target_label}”'
+            suggested_action = 'review'
+        elif any(normalized_target == _key(name) for name in entity_names):
+            review_type = 'possible_merge'
+            summary_key = 'possible_merges'
+            severity = 'low'
+            title = f'Entidad a revisar → {target_label}'
+            suggested_action = 'merge'
+        elif target_label.casefold().startswith('local candidate') or 'local_candidate' in target_label.casefold():
+            review_type = 'unconfirmed_local_candidate'
+            summary_key = 'unconfirmed_local_candidates'
+            severity = 'medium'
+            title = f'Candidato no confirmado: {target_label}'
+            suggested_action = 'review'
+        else:
+            review_type = 'uncertain_relationships'
+            summary_key = 'uncertain_relationships'
+            severity = 'low'
+            title = f'Posible referencia ambigua: {target_label}'
+            suggested_action = 'review'
+
+        subtitle = f'{summary}. Detectado en {chapter_label}.' if summary else f'Detectado en {chapter_label}.'
+        evidence_refs = [
+            {
+                'chapter_id': str(ref.get('chapter_id') or chapter_id or ''),
+                'pointer': str(ref.get('chunk_id') or ''),
+                'char_start': ref.get('char_start'),
+                'char_end': ref.get('char_end'),
+            }
+            for ref in source_refs
+        ]
+        decision_items.append(
+            {
+                'id': str(item.get('id') or f'review:{len(decision_items)+1}'),
+                'type': review_type,
+                'severity': severity,
+                'title': title,
+                'subtitle': subtitle,
+                'source_entity': None,
+                'target_entity': {'label': target_label},
+                'suggested_action': suggested_action,
+                'human_reason': summary or 'Necesita decisión editorial.',
+                'evidence_summary': f'{len(evidence_refs)} referencias de evidencia' if evidence_refs else 'Sin evidencia estructurada adicional',
+                'evidence_refs': evidence_refs,
+                'local_state': 'pending',
+                'impact_if_accept': 'Refina la proyección canónica y reduce ambigüedad visible.',
+                'impact_if_reject': 'Mantiene la referencia fuera del canon visible hasta nueva evidencia.',
+                'technical_details': {'chapter_id': chapter_id, 'status': item.get('status'), 'raw_target_label': target_label},
+            }
+        )
+        summary_counts['total_pending'] += 1
+        summary_counts[summary_key] = summary_counts.get(summary_key, 0) + 1
+
+    hydrated = dict(raw_review_queue)
+    hydrated['decision_items'] = decision_items
+    hydrated['decision_summary'] = summary_counts
+    return hydrated
 
 
 def _project_id(path: Path) -> str:
