@@ -49,7 +49,7 @@ export type ReviewItem = {
   human_reason?: string;
   evidence_summary?: string;
   local_state?: string;
-  evidence_refs?: Array<{ chapter_id?: string; pointer?: string; excerpt?: string | null; char_start?: number; char_end?: number }>;
+  evidence_refs?: Array<{ chapter_id?: string; chapter_label?: string; pointer?: string; pointer_short?: string; excerpt?: string | null; char_start?: number; char_end?: number; has_text?: boolean; reason?: string | null }>;
   technical_details?: Record<string, unknown>;
   impact_if_accept?: string;
   impact_if_reject?: string;

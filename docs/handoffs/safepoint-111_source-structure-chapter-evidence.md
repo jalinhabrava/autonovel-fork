@@ -51,10 +51,10 @@ source_structure: chaptered. chapter_manifest_ready: true. evidence_store_ready:
 Private handoff path: `docs/handoffs/private/safepoint-111_source-structure-chapter-evidence/decision_handoff_private.md`
 
 ## Product Decision
-Assessment: `chapter_manifest_evidence_entitycard_ready`.
+Assessment: `chapter_manifest_ready_evidence_partial_entitycard_fixed`.
 
 ## Recommended Next Phase
-Implement persisted draft/patch queue and manual resolve entity picker with source resolution.
+Run next ingestion only after materializing `source_map.chunks[]` with resolvable chunk/source ranges.
 
 ## What Worked
 - Chapter manifest with 20 chapters in order.
@@ -63,7 +63,7 @@ Implement persisted draft/patch queue and manual resolve entity picker with sour
 - Evidence modal shows chapter_label.
 
 ## What Failed
-- Evidence excerpt still resolves from chapter markdown start, not from source chunks. Needs chunk-level resolution.
+- Evidence excerpt resolution is partial: `evidence_excerpt_resolved_count=4` via markdown offsets; `source_map_chunks_count=0` blocks full hydration.
 - Source splitter found 64 H1 headings in source; only 20 chapters were selected.
 
 ## Data Written
@@ -83,6 +83,7 @@ No provider calls. No VaERL write-back. No new ingestion.
 
 ## Known Limitations
 Evidence excerpt resolution from chunk-level source refs needs improvement.
+Next ingestion must materialize `source_map.chunks[]`.
 
 ## Future Extensions
 Chunk-level evidence resolution, draft persistence, entity picker, source resolution.

@@ -45,6 +45,7 @@ import { GraphCanvas } from './graph/GraphCanvas';
 import { GraphToolbar } from './graph/GraphToolbar';
 import { GraphNodeEditDraftModal } from './graph/GraphNodeEditDraftModal';
 import { GraphCanvasNode } from './graph/types';
+import { GraphInspector as GraphInspectorPanel } from './graph/GraphInspector';
 
 type SectionId = 'hub' | 'ingest' | 'codex' | 'graph' | 'review' | 'editor' | 'story' | 'ask' | 'overview';
 type ScreenConfig = { id: SectionId; label: string; icon: React.ComponentType<{ size?: number; className?: string }> };
@@ -52,6 +53,7 @@ type DecisionItem = { id: string; title: string; severity: string; source: strin
 type ReviewDecisionChoice = 'accept' | 'reject' | 'manual' | 'create' | 'discard' | 'context' | 'defer';
 type EvidenciaModalItem = DecisionItem | null;
 type EditDraft = { title: string; notePath?: string; body: string } | null;
+type EditorChapter = { chapter_id?: string; path: string; title: string; display_title?: string; order?: number | null; source_used?: string };
 
 const screens: ScreenConfig[] = [
   { id: 'hub', label: 'Project Hub', icon: BookOpen },
@@ -238,10 +240,34 @@ function DecisionCard({ item, selected, choice, onSelect, onChoose, onOpenEviden
   </article>;
 }
 
+function sanitizeEditorMarkdown(raw: string): string {
+  const text = String(raw || '');
+  if (!text.trim()) return '';
+  let body = text;
+  if (body.startsWith('---\n')) {
+    const end = body.indexOf('\n---\n', 4);
+    if (end > 0) body = body.slice(end + 5);
+  }
+  const lines = body.split('\n');
+  while (lines.length && !lines[0].trim()) lines.shift();
+  if (lines[0]?.trim().startsWith('#')) lines.shift();
+  while (lines.length && !lines[0].trim()) lines.shift();
+  return lines.join('\n').trim();
+}
+
+function evidenceMissingReason(sourceMapChunksCount: number): string {
+  if (sourceMapChunksCount <= 0) return 'No hay fragmento textual resoluble porque source_map.chunks está vacío para este source_ref.';
+  return 'No hay fragmento resoluble porque source_ref no se pudo mapear a chunk narrativo.';
+}
+
 function EvidenciaModal({ item, onClose }: { item: EvidenciaModalItem; onClose: () => void }) {
   if (!item) return null;
   const refs = item.raw.evidence_refs || [];
-  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"><div className="w-full max-w-3xl rounded-3xl border border-neutral-200 bg-white shadow-2xl"><div className="flex items-center justify-between border-b border-neutral-200 p-5"><div><div className="text-xs uppercase tracking-wide text-neutral-500">Evidencia</div><h2 className="mt-1 text-xl font-semibold">{item.title}</h2><p className="mt-1 text-sm text-neutral-500">{item.action}</p></div><button type="button" onClick={onClose} className="rounded-full p-2 hover:bg-neutral-100"><X size={18} /></button></div><div className="grid gap-4 p-5 lg:grid-cols-[1.3fr_0.7fr]"><div className="space-y-3">{refs.length ? refs.map((ref, index) => <div key={`${ref.chapter_id || ref.pointer || 'evidence'}-${index}`} className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4"><div className="text-xs uppercase tracking-wide text-neutral-500">Evidencia {index + 1}</div><div className="mt-2 text-sm text-neutral-800">Capítulo: {ref.chapter_label || ref.chapter_id || 'pendiente'}</div><div className="mt-1 text-sm text-neutral-600">Referencia: {ref.pointer_short || ref.pointer || 'sin referencia estructurada'}</div>{ref.has_text && ref.excerpt ? <div className="mt-2 rounded-xl bg-white border border-neutral-200 p-3 text-sm text-neutral-700 italic">{'«' + ref.excerpt.slice(0, 240) + '»'}</div> : <div className="mt-2 rounded-xl bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">Fragmento textual no disponible. La referencia apunta a un chunk de extracción semántica.</div>}</div>) : <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-600">No hay evidence_refs estructurados todavía para este caso.</div>}</div><aside className="space-y-3"><div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4"><div className="text-xs uppercase tracking-wide text-neutral-500">Tipo</div><div className="mt-2 text-sm text-neutral-800">{item.raw.review_type || 'decisión editorial'}</div></div><div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4"><div className="text-xs uppercase tracking-wide text-neutral-500">Recomendación</div><div className="mt-2 text-sm text-neutral-800">{item.raw.recommendation || 'Necesita decisión explícita del autor.'}</div></div><div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4"><div className="text-xs uppercase tracking-wide text-neutral-500">Severidad</div><div className={`mt-2 inline-flex rounded-full border px-3 py-1 text-xs uppercase tracking-wide ${severityClass(item.severity)}`}>{item.severity}</div></div></aside></div><div className="flex justify-end border-t border-neutral-200 p-5"><Button variant="secondary" onClick={onClose}>Cerrar</Button></div></div></div>;
+  const technicalDetails = item.raw.technical_details as Record<string, unknown> | undefined;
+  const sourceMapChunksCount = Number(technicalDetails?.source_map_chunks_count || 0);
+  const evidenceStoreUsed = Boolean(technicalDetails?.evidence_store_used);
+  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"><div className="w-full max-w-3xl rounded-3xl border border-neutral-200 bg-white shadow-2xl"><div className="flex items-center justify-between border-b border-neutral-200 p-5"><div><div className="text-xs uppercase tracking-wide text-neutral-500">Evidencia</div><h2 className="mt-1 text-xl font-semibold">{item.title}</h2><p className="mt-1 text-sm text-neutral-500">{item.action}</p></div><button type="button" onClick={onClose} className="rounded-full p-2 hover:bg-neutral-100"><X size={18} /></button></div><div className="grid gap-4 p-5 lg:grid-cols-[1.3fr_0.7fr]"><div className="space-y-3">{refs.length ? refs.map((ref, index) => <div key={`${ref.chapter_id || ref.pointer || 'evidence'}-${index}`} className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4"><div className="text-xs uppercase tracking-wide text-neutral-500">Evidencia {index + 1}</div><div className="mt-2 text-sm text-neutral-800">Capítulo: {ref.chapter_label || ref.chapter_id || 'pendiente'}</div>{ref.has_text && ref.excerpt ? <div className="mt-2 rounded-xl bg-white border border-neutral-200 p-3 text-sm text-neutral-700 italic">{'«' + ref.excerpt.slice(0, 240) + '»'}</div> : <div className="mt-2 rounded-xl bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">{evidenceMissingReason(sourceMapChunksCount)}</div>}<details className="mt-2"><summary className="cursor-pointer text-xs text-neutral-500">Detalles técnicos</summary><div className="mt-2 text-xs text-neutral-500">Pointer: {ref.pointer_short || ref.pointer || 'sin referencia estructurada'}</div></details></div>) : <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-600">No hay evidence_refs estructurados todavía para este caso.</div>}</div><aside className="space-y-3"><div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4"><div className="text-xs uppercase tracking-wide text-neutral-500">Tipo</div><div className="mt-2 text-sm text-neutral-800">{item.raw.review_type || 'decisión editorial'}</div></div><div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4"><div className="text-xs uppercase tracking-wide text-neutral-500">Recomendación</div><div className="mt-2 text-sm text-neutral-800">{item.raw.recommendation || 'Necesita decisión explícita del autor.'}</div></div><div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4"><div className="text-xs uppercase tracking-wide text-neutral-500">Severidad</div><div className={`mt-2 inline-flex rounded-full border px-3 py-1 text-xs uppercase tracking-wide ${severityClass(item.severity)}`}>{item.severity}</div></div></aside></div><div className="flex justify-end border-t border-neutral-200 p-5"><Button variant="secondary" onClick={onClose}>Cerrar</Button></div></div></div>;
+  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"><div className="w-full max-w-3xl rounded-3xl border border-neutral-200 bg-white shadow-2xl"><div className="flex items-center justify-between border-b border-neutral-200 p-5"><div><div className="text-xs uppercase tracking-wide text-neutral-500">Evidencia</div><h2 className="mt-1 text-xl font-semibold">{item.title}</h2><p className="mt-1 text-sm text-neutral-500">{item.action}</p></div><button type="button" onClick={onClose} className="rounded-full p-2 hover:bg-neutral-100"><X size={18} /></button></div><div className="grid gap-4 p-5 lg:grid-cols-[1.3fr_0.7fr]"><div className="space-y-3">{refs.length ? refs.map((ref, index) => <div key={`${ref.chapter_id || ref.pointer || 'evidence'}-${index}`} className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4"><div className="text-xs uppercase tracking-wide text-neutral-500">Evidencia {index + 1}</div><div className="mt-2 text-sm text-neutral-800">Capítulo: {ref.chapter_label || ref.chapter_id || 'pendiente'}</div>{ref.has_text && ref.excerpt ? <div className="mt-2 rounded-xl bg-white border border-neutral-200 p-3 text-sm text-neutral-700 italic">{'«' + ref.excerpt.slice(0, 240) + '»'}</div> : <div className="mt-2 rounded-xl bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">{ref.reason || evidenceMissingReason(sourceMapChunksCount)}</div>}<details className="mt-2"><summary className="cursor-pointer text-xs text-neutral-500">Detalles técnicos</summary><div className="mt-2 text-xs text-neutral-500">Pointer: {ref.pointer_short || ref.pointer || 'sin referencia estructurada'}</div></details></div>) : <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-600">No hay evidence_refs estructurados todavía para este caso.</div>}</div><aside className="space-y-3"><div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4"><div className="text-xs uppercase tracking-wide text-neutral-500">Tipo</div><div className="mt-2 text-sm text-neutral-800">{item.raw.review_type || 'decisión editorial'}</div></div><div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4"><div className="text-xs uppercase tracking-wide text-neutral-500">Recomendación</div><div className="mt-2 text-sm text-neutral-800">{item.raw.recommendation || 'Necesita decisión explícita del autor.'}</div></div><div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4"><div className="text-xs uppercase tracking-wide text-neutral-500">Severidad</div><div className={`mt-2 inline-flex rounded-full border px-3 py-1 text-xs uppercase tracking-wide ${severityClass(item.severity)}`}>{item.severity}</div></div><div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-xs text-neutral-500">Evidence store: {evidenceStoreUsed ? 'sí' : 'no'} · source_map.chunks: {sourceMapChunksCount}</div></aside></div><div className="flex justify-end border-t border-neutral-200 p-5"><Button variant="secondary" onClick={onClose}>Cerrar</Button></div></div></div>;
 }
 function EntityRecordTable({ entities, selectedKey, onSelect }: { entities: CanonEntity[]; selectedKey: string; onSelect: (key: string) => void }) { return <div className="overflow-hidden rounded-3xl border border-neutral-200"><div className="grid grid-cols-12 bg-neutral-100 px-4 py-3 text-xs uppercase tracking-wide text-neutral-500"><span className="col-span-5">Entidad</span><span className="col-span-2">Tipo</span><span className="col-span-2">Confianza</span><span className="col-span-3">Estado</span></div>{entities.slice(0, 18).map((entity) => { const key = entity.preferred_slug || entity.canonical_name || ''; const active = key === selectedKey; return <button key={key} onClick={() => onSelect(key)} className={`w-full grid grid-cols-12 px-4 py-3 text-sm border-t border-neutral-200 items-center text-left ${active ? 'bg-neutral-50' : 'bg-white hover:bg-neutral-50'}`}><span className="col-span-5 font-medium">{entity.canonical_name || key}</span><span className="col-span-2 text-neutral-500">{entity.entity_kind || 'entity'}</span><span className="col-span-2 text-neutral-500">{entity.confidence ?? '—'}</span><span className="col-span-3 text-neutral-500">{entity.review_state || 'ready'}</span></button>; })}</div>; }
 function InspectorCard({ entity }: { entity: CanonEntity | undefined }) { if (!entity) return <div className="rounded-3xl border border-neutral-200 p-5 text-sm text-neutral-500">Selecciona un record para abrir inspector.</div>; return <div className="rounded-3xl border border-neutral-200 bg-neutral-50 p-5"><div className="text-xs uppercase tracking-wide text-neutral-500">Inspector</div><h2 className="mt-2 text-xl font-semibold">{entity.canonical_name}</h2><p className="mt-3 text-sm leading-6 text-neutral-600">{entity.summary || 'Sin resumen author-facing disponible todavía.'}</p><div className="mt-4 flex flex-wrap gap-2">{(entity.aliases || []).slice(0, 6).map((alias) => <span key={alias} className="rounded-full bg-white border border-neutral-200 px-3 py-1 text-xs">{alias}</span>)}</div><Button variant="secondary">Editar ficha · draft</Button></div>; }
@@ -260,7 +286,20 @@ function NativeGraphSurface({ graph, selectedNodeId, setSelectedNodeId, setEditD
   const selected = nodes.find((node) => node.id === selectedNodeId) || visibleNodes[0];
   const positioned = visibleNodes.map((node, index) => { const angle = (index / Math.max(visibleNodes.length, 1)) * Math.PI * 2; const ring = 180 + (index % 3) * 35; return { ...node, x: 380 + Math.cos(angle) * ring, y: 260 + Math.sin(angle) * ring }; });
   const byId = new Map(positioned.map((node) => [node.id, node]));
-  return <div className="grid grid-cols-12 gap-5 p-5"><aside className="col-span-12 xl:col-span-2 rounded-3xl border border-neutral-200 bg-neutral-50 p-4"><h2 className="font-semibold">Filtros</h2><div className="mt-4 flex flex-wrap gap-2 xl:block xl:space-y-2">{['all', ...kinds].map((kind) => <button key={kind} onClick={() => setKindFilter(kind)} className={`rounded-2xl px-3 py-2 text-sm xl:w-full xl:text-left ${kindFilter === kind ? 'bg-neutral-900 text-white' : 'bg-white border border-neutral-200 text-neutral-700'}`}>{kind === 'all' ? 'Todo' : kindLabels[kind] || kind}</button>)}</div></aside><div className="col-span-12 xl:col-span-7 rounded-3xl border border-neutral-200 bg-neutral-50 p-4"><div className="mb-3 flex items-center justify-between"><div><h2 className="font-semibold">Grafo VaERL</h2><p className="text-sm text-neutral-500">SVG React nativo sobre `/graph`. Sin iframe legacy como primary.</p></div><StatusChip>{visibleNodes.length} nodos</StatusChip></div><svg viewBox="0 0 760 520" className="h-[560px] w-full rounded-2xl bg-white border border-neutral-200">{visibleEdges.map((edge) => { const source = byId.get(String(edge.source)); const target = byId.get(String(edge.target)); if (!source || !target) return null; return <line key={edge.id || `${edge.source}-${edge.target}`} x1={source.x} y1={source.y} x2={target.x} y2={target.y} stroke="#d4d4d4" strokeWidth="1.5" />; })}{positioned.map((node) => { const kind = String(node.display_kind || node.kind || 'note'); const active = selected?.id === node.id; return <g key={node.id} onClick={() => setSelectedNodeId(node.id || '')} className="cursor-pointer"><circle cx={node.x} cy={node.y} r={active ? 16 : Number(node.radius || 11)} fill={graphPalette[kind] || '#525252'} stroke={active ? '#111827' : '#ffffff'} strokeWidth={active ? 4 : 2} /><text x={node.x + 18} y={node.y + 4} fontSize="12" fill="#171717">{node.label || node.id}</text></g>; })}</svg></div><GraphInspector node={selected} setEditDraft={setEditDraft} /></div>;
+  return <div className="grid grid-cols-12 gap-5 p-5"><aside className="col-span-12 xl:col-span-2 rounded-3xl border border-neutral-200 bg-neutral-50 p-4"><h2 className="font-semibold">Filtros</h2><div className="mt-4 flex flex-wrap gap-2 xl:block xl:space-y-2">{['all', ...kinds].map((kind) => <button key={kind} onClick={() => setKindFilter(kind)} className={`rounded-2xl px-3 py-2 text-sm xl:w-full xl:text-left ${kindFilter === kind ? 'bg-neutral-900 text-white' : 'bg-white border border-neutral-200 text-neutral-700'}`}>{kind === 'all' ? 'Todo' : kindLabels[kind] || kind}</button>)}</div></aside><div className="col-span-12 xl:col-span-7 rounded-3xl border border-neutral-200 bg-neutral-50 p-4"><div className="mb-3 flex items-center justify-between"><div><h2 className="font-semibold">Grafo VaERL</h2><p className="text-sm text-neutral-500">SVG React nativo sobre `/graph`. Sin iframe legacy como primary.</p></div><StatusChip>{visibleNodes.length} nodos</StatusChip></div><svg viewBox="0 0 760 520" className="h-[560px] w-full rounded-2xl bg-white border border-neutral-200">{visibleEdges.map((edge) => { const source = byId.get(String(edge.source)); const target = byId.get(String(edge.target)); if (!source || !target) return null; return <line key={edge.id || `${edge.source}-${edge.target}`} x1={source.x} y1={source.y} x2={target.x} y2={target.y} stroke="#d4d4d4" strokeWidth="1.5" />; })}{positioned.map((node) => { const kind = String(node.display_kind || node.kind || 'note'); const active = selected?.id === node.id; return <g key={node.id} onClick={() => setSelectedNodeId(node.id || '')} className="cursor-pointer"><circle cx={node.x} cy={node.y} r={active ? 16 : Number(node.radius || 11)} fill={graphPalette[kind] || '#525252'} stroke={active ? '#111827' : '#ffffff'} strokeWidth={active ? 4 : 2} /><text x={node.x + 18} y={node.y + 4} fontSize="12" fill="#171717">{node.label || node.id}</text></g>; })}</svg></div><GraphInspectorPanel
+            node={selected}
+            entityCard={null}
+            entityCardVm={null}
+            noteContent=""
+            noteDetail={null}
+            onEdit={(node: GraphCanvasNode) =>
+              setEditDraft?.({
+                title: `Editar ${node.label || node.id}`,
+                notePath: String((node as any).notePath || (node as any).note_path || ''),
+                body: 'Draft local/read-only. Guardar cambios llegará con patch queue.',
+              })
+            }
+          /></div>;
 }
 
 function GraphInspector({ node, entityCard, noteContent, noteDetail, onEdit, setEditDraft }: { node?: any; entityCard?: CanonEntity | null; noteContent?: string; noteDetail?: NoteDetail | null; onEdit?: (node: GraphCanvasNode) => void; setEditDraft?: (draft: EditDraft) => void }) {
@@ -305,6 +344,7 @@ export function App() {
   const [graphKindFilter, setGraphKindFilter] = useState<Set<string>>(new Set());
   const [graphQuery, setGraphQuery] = useState('');
   const [graphRelatedOnly, setGraphRelatedOnly] = useState(false);
+  const [graphInspectorFullscreen, setGraphInspectorFullscreen] = useState(false);
   const [graphEditNodeId, setGraphEditNodeId] = useState<string | null>(null);
   const [selectedGraphEntityKey, setSelectedGraphEntityKey] = useState<string>('');
   const [selectedGraphNoteContent, setSelectedGraphNoteContent] = useState<string>('');
@@ -315,7 +355,21 @@ export function App() {
 
   const selectedProject = useMemo(() => projects.find((project) => project.project_id === selectedProjectId) || null, [projects, selectedProjectId]);
   const selectedEntity = useMemo(() => (projectDetail?.canon?.primaries || []).find((entity) => (entity.preferred_slug || entity.canonical_name || '') === selectedEntityKey), [projectDetail, selectedEntityKey]);
-  const chapterNotes = useMemo(() => (projectDetail?.notes || []).filter(isChapterNote), [projectDetail]);
+  const editorSource = (projectDetail as any)?.editor_chapters;
+  const chapterNotes = useMemo(() => {
+    const chapters = Array.isArray(editorSource?.chapters) ? editorSource.chapters : [];
+    return chapters
+      .filter((chapter: any) => String(chapter?.path || '').trim())
+      .map((chapter: any) => ({
+        path: String(chapter.path || ''),
+        name: String(chapter.display_title || chapter.title || chapter.path || ''),
+        display_title: String(chapter.display_title || chapter.title || chapter.path || ''),
+        kind: 'chapter',
+        role: 'chapter',
+        status: 'ready',
+        source_used: String(chapter.source_used || editorSource?.source_used || 'chapter_manifest'),
+      }));
+  }, [editorSource]);
   const allDecisions = useMemo(() => ((projectDetail?.canon?.review_queue?.decision_items || projectDetail?.canon?.review_queue?.items || []) as ReviewItem[]).map(toDecisionItem), [projectDetail]);
   const visibleDecisions = useMemo(() => { const query = reviewQuery.trim().toLowerCase(); return allDecisions.filter((item) => { if (reviewSeverity !== 'all' && item.severity.toLowerCase() !== reviewSeverity) return false; if (!query) return true; return item.title.toLowerCase().includes(query) || item.action.toLowerCase().includes(query) || String(item.raw.review_type || '').toLowerCase().includes(query); }); }, [allDecisions, reviewQuery, reviewSeverity]);
   const selectedDecision = useMemo(() => visibleDecisions.find((item) => item.id === selectedDecisionId) || visibleDecisions[0] || null, [visibleDecisions, selectedDecisionId]);
@@ -327,8 +381,8 @@ export function App() {
   useEffect(() => { if (selectedProjectId && editorNotePath) void loadEditorNote(selectedProjectId, editorNotePath); }, [selectedProjectId, editorNotePath]);
 
   async function loadInitial() { try { const [projectList, config, jobs] = await Promise.all([fetchProjects(), fetchIngestionConfig(), fetchIngestionJobs()]); setProjects(projectList); setIngestionConfig(config); setIngestionJobs(jobs); const preferred = choosePreferredProject(projectList); if (preferred) setSelectedProjectId(preferred.project_id); } catch (err) { setError(String(err)); } }
-  async function loadProjectContext(projectId: string) { try { const [detail, graph, reviewQueue, artifacts] = await Promise.all([fetchProjectDetail(projectId), fetchGraph(projectId), fetchReviewQueue(projectId), fetchArtifacts(projectId)]); setProjectDetail({ ...detail, canon: { ...detail.canon, review_queue: reviewQueue } }); setGraphPayload(graph || null); setArtifactsCount((artifacts.artifacts || []).length); const firstEntity = detail.canon?.primaries?.[0]; if (firstEntity) setSelectedEntityKey(firstEntity.preferred_slug || firstEntity.canonical_name || ''); const firstNode = graph?.nodes?.[0]; if (firstNode?.id) setSelectedGraphNodeId(firstNode.id); const firstChapter = detail.notes?.find(isChapterNote); if (firstChapter?.path) setEditorNotePath(firstChapter.path); } catch (err) { setError(String(err)); } }
-  async function loadEditorNote(projectId: string, notePath: string) { try { const payload = await fetchNote(projectId, notePath); setEditorMarkdown(String(payload.markdown || 'Sin contenido de capítulo disponible.')); } catch (_err) { setEditorMarkdown('Sin contenido de capítulo disponible.'); } }
+  async function loadProjectContext(projectId: string) { try { const [detail, graph, reviewQueue, artifacts] = await Promise.all([fetchProjectDetail(projectId), fetchGraph(projectId), fetchReviewQueue(projectId), fetchArtifacts(projectId)]); setProjectDetail({ ...detail, canon: { ...detail.canon, review_queue: reviewQueue } }); setGraphPayload(graph || null); setArtifactsCount((artifacts.artifacts || []).length); const firstEntity = detail.canon?.primaries?.[0]; if (firstEntity) setSelectedEntityKey(firstEntity.preferred_slug || firstEntity.canonical_name || ''); const firstNode = graph?.nodes?.[0]; if (firstNode?.id) setSelectedGraphNodeId(firstNode.id); const firstChapter = ((detail as any)?.editor_chapters?.chapters || [])[0]; if (firstChapter?.path) setEditorNotePath(String(firstChapter.path)); } catch (err) { setError(String(err)); } }
+  async function loadEditorNote(projectId: string, notePath: string) { try { const payload = await fetchNote(projectId, notePath); setEditorMarkdown(sanitizeEditorMarkdown(String(payload.markdown || '')) || 'Sin contenido de capítulo disponible.'); } catch (_err) { setEditorMarkdown('Sin contenido de capítulo disponible.'); } }
 
   const warningsVisible = visibleDecisions.length;
   const runStatus = projectDetail?.run_status;
@@ -355,17 +409,30 @@ export function App() {
     }) || null;
   }, [selectedGraphNodeId, projectDetail, filteredGraph]);
 
+  const selectedGraphEntityCard = useMemo(() => {
+    if (!selectedGraphNodeId || !selectedProjectId) return null;
+    const node = filteredGraph.byId[selectedGraphNodeId];
+    const label = node?.label || node?.display_label || '';
+    const notePath = node?.notePath || node?.id || '';
+    if (!label && !notePath) return null;
+    return selectedGraphEntityCardVm;
+  }, [selectedGraphNodeId, selectedProjectId, filteredGraph, selectedGraphEntityCardVm]);
+
   async function handleGraphNodeSelect(nodeId: string | null) {
     setSelectedGraphNodeId(nodeId);
-    if (!nodeId || !selectedProjectId) { setSelectedGraphNoteContent(''); setSelectedGraphNoteDetail(null); return; }
+    if (!nodeId || !selectedProjectId) { setSelectedGraphNoteContent(''); setSelectedGraphNoteDetail(null); setSelectedGraphEntityCardVm(null); return; }
     const node = filteredGraph.byId[nodeId];
     const notePath = node?.notePath || node?.id || '';
-    if (!notePath) { setSelectedGraphNoteContent(''); setSelectedGraphNoteDetail(null); return; }
+    if (!notePath) { setSelectedGraphNoteContent(''); setSelectedGraphNoteDetail(null); setSelectedGraphEntityCardVm(null); return; }
     try {
       const payload = await fetchNote(selectedProjectId, notePath);
       setSelectedGraphNoteContent(String(payload.markdown || ''));
       setSelectedGraphNoteDetail(payload);
     } catch { setSelectedGraphNoteContent(''); setSelectedGraphNoteDetail(null); }
+    try {
+      const card = await fetchEntityCard(selectedProjectId, { node_id: nodeId, note_path: notePath, canonical_label: node?.label || '' });
+      setSelectedGraphEntityCardVm(card);
+    } catch { setSelectedGraphEntityCardVm(null); }
   }
   const selectedGraphNode = useMemo(() => (selectedGraphNodeId ? filteredGraph.byId[selectedGraphNodeId] || null : null), [filteredGraph, selectedGraphNodeId]);
   const graphEditNode = useMemo(() => (graphEditNodeId ? filteredGraph.byId[graphEditNodeId] || null : null), [filteredGraph, graphEditNodeId]);
@@ -380,8 +447,7 @@ export function App() {
     <section>
       <TopBar title="Graph" subtitle="Exploración visual author-facing con física viva e inspector editorial." actions={<Button variant="secondary" onClick={resetGraphFilters}>Restablecer filtros</Button>} />
       <div className="p-5 grid grid-cols-12 gap-5">
-        {/* setSelectedGraphNodeId via handleGraphNodeSelect */}
-        <aside className="col-span-12 xl:col-span-3">
+        <aside className="col-span-12">
           <GraphToolbar
             selectedKinds={graphKindFilter}
             toggleKind={toggleGraphKind}
@@ -392,13 +458,26 @@ export function App() {
             onResetViewport={resetGraphFilters}
           />
         </aside>
-        <div className="col-span-12 xl:col-span-6">
-          {selectedProjectId ? <GraphCanvas nodes={filteredGraph.nodes} edges={filteredGraph.edges} selectedNodeId={selectedGraphNodeId} onSelectNode={handleGraphNodeSelect} /> : <div className="rounded-3xl border border-neutral-200 p-5 text-sm text-neutral-500">Selecciona un proyecto para abrir Graph.</div>}
+        <div className="col-span-12 grid grid-cols-12 xl:grid-cols-5 gap-5">
+          <div className="col-span-12 xl:col-span-4">
+            {selectedProjectId ? <GraphCanvas nodes={filteredGraph.nodes} edges={filteredGraph.edges} selectedNodeId={selectedGraphNodeId} onSelectNode={handleGraphNodeSelect} /> : <div className="rounded-3xl border border-neutral-200 p-5 text-sm text-neutral-500">Selecciona un proyecto para abrir Graph.</div>}
+          </div>
+          <aside className="col-span-12 xl:col-span-1 space-y-2">
+            <div className="flex justify-end">
+              <Button variant="secondary" onClick={() => setGraphInspectorFullscreen(true)}>
+                <Maximize2 size={14} className="inline" /> Pantalla completa
+              </Button>
+            </div>
+            <GraphInspectorPanel
+              node={selectedGraphNode}
+              entityCard={selectedGraphEntity}
+              entityCardVm={selectedGraphEntityCardVm}
+              noteContent={selectedGraphNoteContent}
+              noteDetail={selectedGraphNoteDetail}
+              onEdit={(node: GraphCanvasNode) => setGraphEditNodeId(node.id)}
+            />
+          </aside>
         </div>
-        <aside className="col-span-12 xl:col-span-3">
-          <GraphInspector node={selectedGraphNode} entityCard={selectedGraphEntity}
-            entityCardVm={selectedGraphEntityCardVm} noteContent={selectedGraphNoteContent} noteDetail={selectedGraphNoteDetail} onEdit={(node: GraphCanvasNode) => setGraphEditNodeId(node.id)} />
-        </aside>
       </div>
       <GraphNodeEditDraftModal node={graphEditNode} onClose={() => setGraphEditNodeId(null)} />
     </section>
@@ -437,11 +516,11 @@ export function App() {
       </aside>
     </div>
   </section>;
-    if (active === 'editor') content = <section className={editorFullscreen ? 'fixed inset-0 z-30 bg-white overflow-y-auto' : ''}><TopBar title="Editor" subtitle="Solo capítulos/manuscrito. Fichas primarias viven en Codex, Graph o Story Bible." actions={<Button onClick={() => setEditDraft({ title: 'Añadir capítulo', body: 'Draft local pendiente de SP-106. No hay persistencia ni write-back en SP-105D.' })}><Plus size={14} className="inline" /> Añadir capítulo</Button>} /><div className="p-5 grid grid-cols-12 gap-5"><aside className={editorFullscreen && editorChapterRailCollapsed ? 'col-span-12 lg:col-span-1 rounded-3xl border border-neutral-200 bg-neutral-50 p-4' : 'col-span-12 lg:col-span-3 rounded-3xl border border-neutral-200 bg-neutral-50 p-4'}><div className="flex items-center justify-between gap-2"><h2 className="font-semibold">{editorFullscreen && editorChapterRailCollapsed ? 'Cap.' : 'Capítulos'}</h2>{editorFullscreen ? <button type="button" onClick={() => setEditorChapterRailCollapsed(!editorChapterRailCollapsed)} className="rounded-xl border border-neutral-200 bg-white px-2 py-1 text-xs">{editorChapterRailCollapsed ? 'Mostrar' : 'Ocultar'}</button> : null}</div>{editorFullscreen && editorChapterRailCollapsed ? null : <div className="mt-4 space-y-2 text-sm">{chapterNotes.map((note) => <button key={note.path} onClick={() => setEditorNotePath(note.path)} className={`w-full rounded-xl border px-3 py-2 text-left ${editorNotePath === note.path ? 'bg-neutral-900 text-white border-neutral-900' : 'bg-white border-neutral-200'}`}>{note.name || note.path}</button>)}</div>}</aside><div className={editorFullscreen && editorChapterRailCollapsed ? 'col-span-12 lg:col-span-8' : 'col-span-12 lg:col-span-6'}><div className="rounded-3xl border border-neutral-200 bg-white p-5 min-h-[620px]"><div className="flex items-center justify-between gap-3"><div><div className="text-xs uppercase text-neutral-500">Editor preview · capítulo real</div><h2 className="mt-2 font-semibold">{editorNotePath || 'Selecciona capítulo'}</h2></div><Button variant="secondary" onClick={() => setEditorFullscreen(!editorFullscreen)}><Maximize2 size={14} className="inline" /> {editorFullscreen ? 'Salir fullscreen' : 'Pantalla completa'}</Button></div><pre className="mt-4 whitespace-pre-wrap rounded-2xl bg-neutral-50 p-4 text-sm leading-7 text-neutral-700 max-h-[620px] overflow-auto">{editorMarkdown}</pre></div></div><aside className="col-span-12 lg:col-span-3 space-y-4"><Metric label="Contexto" value="VaERL" note="Panel derecho retenido también en fullscreen." /><div className="rounded-3xl border border-neutral-200 bg-neutral-50 p-5 text-sm text-neutral-600"><div className="rounded-2xl bg-white border border-neutral-200 p-3"><b>Rewrite selection</b><br />Placeholder. Sin LLM.</div><div className="mt-3 rounded-2xl bg-white border border-neutral-200 p-3"><b>Canon risks</b><br />No write-back en esta fase.</div></div></aside></div></section>;
+    if (active === 'editor') content = <section className={editorFullscreen ? 'fixed inset-0 z-30 bg-white overflow-y-auto' : ''}><TopBar title="Editor" subtitle="Solo capítulos/manuscrito desde chapter manifest canónico." actions={<Button onClick={() => setEditDraft({ title: 'Añadir capítulo', body: 'Draft local pendiente de SP-106. No hay persistencia ni write-back en SP-105D.' })}><Plus size={14} className="inline" /> Añadir capítulo</Button>} /><div className="p-5 grid grid-cols-12 gap-5"><aside className={editorFullscreen && editorChapterRailCollapsed ? 'col-span-12 lg:col-span-1 rounded-3xl border border-neutral-200 bg-neutral-50 p-4' : 'col-span-12 lg:col-span-3 rounded-3xl border border-neutral-200 bg-neutral-50 p-4'}><div className="flex items-center justify-between gap-2"><h2 className="font-semibold">{editorFullscreen && editorChapterRailCollapsed ? 'Cap.' : 'Capítulos'}</h2>{editorFullscreen ? <button type="button" onClick={() => setEditorChapterRailCollapsed(!editorChapterRailCollapsed)} className="rounded-xl border border-neutral-200 bg-white px-2 py-1 text-xs">{editorChapterRailCollapsed ? 'Mostrar' : 'Ocultar'}</button> : null}</div>{editorFullscreen && editorChapterRailCollapsed ? null : <div className="mt-4 space-y-2 text-sm">{chapterNotes.map((note) => <button key={note.path} onClick={() => setEditorNotePath(note.path)} className={`w-full rounded-xl border px-3 py-2 text-left ${editorNotePath === note.path ? 'bg-neutral-900 text-white border-neutral-900' : 'bg-white border-neutral-200'}`}>{(note as EditorChapter & { name?: string }).display_title || note.name || note.path}</button>)}</div>}</aside><div className={editorFullscreen && editorChapterRailCollapsed ? 'col-span-12 lg:col-span-8' : 'col-span-12 lg:col-span-6'}><div className="rounded-3xl border border-neutral-200 bg-white p-5 min-h-[620px]"><div className="flex items-center justify-between gap-3"><div><div className="text-xs uppercase text-neutral-500">Editor preview · capítulo real</div><h2 className="mt-2 font-semibold">{((chapterNotes.find((note) => note.path === editorNotePath) as (EditorChapter & { name?: string }) | undefined)?.display_title) || editorNotePath || 'Selecciona capítulo'}</h2></div><Button variant="secondary" onClick={() => setEditorFullscreen(!editorFullscreen)}><Maximize2 size={14} className="inline" /> {editorFullscreen ? 'Salir fullscreen' : 'Pantalla completa'}</Button></div><pre className="mt-4 whitespace-pre-wrap rounded-2xl bg-neutral-50 p-4 text-sm leading-7 text-neutral-700 max-h-[620px] overflow-auto">{editorMarkdown}</pre></div></div><aside className="col-span-12 lg:col-span-3 space-y-4"><Metric label="Origen" value={String(editorSource?.source_used || 'chapter_manifest')} note={`${chapterNotes.length} capítulos canónicos cargados`} /><div className="rounded-3xl border border-neutral-200 bg-neutral-50 p-5 text-sm text-neutral-600"><div className="rounded-2xl bg-white border border-neutral-200 p-3"><b>Rewrite selection</b><br />Placeholder. Sin LLM.</div><div className="mt-3 rounded-2xl bg-white border border-neutral-200 p-3"><b>Canon risks</b><br />No write-back en esta fase.</div></div></aside></div></section>;
   if (active === 'story') content = <section><TopBar title="Story Bible" subtitle="Wiki Markdown author-facing. Legacy boundary transicional documentado." actions={<><Button variant="secondary">Sync Markdown</Button><Button variant="secondary">Open graph side-by-side</Button></>} /><div className="p-5 grid grid-cols-12 gap-5"><aside className="col-span-12 lg:col-span-3 rounded-3xl border border-neutral-200 bg-neutral-50 p-4"><h2 className="font-semibold">Vault tree</h2><div className="mt-4 space-y-2 text-sm">{(projectDetail?.notes || []).slice(0, 16).map((note) => <div key={note.path} className="rounded-xl bg-white border border-neutral-200 px-3 py-2">{note.name || note.path}</div>)}</div></aside><div className="col-span-12 lg:col-span-9">{selectedProjectId ? <LegacyEmbed title="Story Bible transitional legacy boundary" src={legacyUrl('notes', selectedProjectId)} /> : <div className="rounded-3xl border border-neutral-200 p-5 text-sm text-neutral-500">Selecciona proyecto.</div>}</div></div></section>;
   if (active === 'ask') content = <section><TopBar title="Ask Canon" subtitle="Q&A shell grounded futuro en VaERL, evidencia y review state." actions={<><Button variant="secondary">Open answer history</Button><Button variant="secondary">Check source coverage</Button></>} /><div className="p-5 grid grid-cols-12 gap-5"><div className="col-span-12 lg:col-span-7 rounded-3xl border border-neutral-200 p-5 min-h-[560px] flex flex-col"><div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-500">Pregunta: “¿Qué sabe Sera antes del capítulo 6?”</div><div className="mt-5 rounded-3xl border border-neutral-200 p-5 bg-white shadow-sm"><div className="font-semibold">Respuesta grounded</div><p className="mt-3 text-sm leading-7">Placeholder. No se genera canon sin backend de evidencia.</p></div><div className="mt-auto pt-5 flex gap-2"><input className="flex-1 rounded-2xl border border-neutral-300 px-4 py-3 text-sm" placeholder="Pregunta sobre canon, continuidad o capítulos..." /><Button variant="secondary" disabled>Enviar</Button></div></div><aside className="col-span-12 lg:col-span-5 space-y-4"><Metric label="Grounding" value="Evidencia-first" note="Sin claims no soportados." /></aside></div></section>;
 
-  return <Shell active={active} setActive={setActive}><motion.div key={active} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 }}>{content}</motion.div>{error ? <div className="mx-5 mb-5 rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div> : null}<EvidenciaModal item={evidenceModalItem} onClose={() => setEvidenciaModalDecisionId('')} />{editDraft ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"><div className="w-full max-w-2xl rounded-3xl border border-neutral-200 bg-white shadow-2xl"><div className="flex items-center justify-between border-b border-neutral-200 p-5"><div><h2 className="font-semibold">{editDraft.title}</h2><p className="text-sm text-neutral-500">{editDraft.notePath || 'nuevo draft local'}</p></div><button onClick={() => setEditDraft(null)} className="rounded-full p-2 hover:bg-neutral-100"><X size={18} /></button></div><div className="p-5"><textarea readOnly value={editDraft.body} className="h-48 w-full rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-sm" /><p className="mt-3 text-sm text-neutral-500">Guardar cambios llega con drafts/patch queue. No write-back en SP-105D.</p></div></div></div> : null}</Shell>;
+  return <Shell active={active} setActive={setActive}><motion.div key={active} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 }}>{content}</motion.div>{error ? <div className="mx-5 mb-5 rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div> : null}<EvidenciaModal item={evidenceModalItem} onClose={() => setEvidenciaModalDecisionId('')} />{graphInspectorFullscreen ? <div className="fixed inset-0 z-50 bg-black/30 p-4"><div className="h-full w-full rounded-3xl border border-neutral-200 bg-white shadow-2xl overflow-y-auto"><div className="sticky top-0 z-10 flex items-center justify-between border-b border-neutral-200 bg-white p-4"><h2 className="text-lg font-semibold">Ficha del nodo</h2><Button variant="secondary" onClick={() => setGraphInspectorFullscreen(false)}><X size={14} className="inline" /> Salir fullscreen</Button></div><div className="p-4"><GraphInspectorPanel node={selectedGraphNode} entityCard={selectedGraphEntity} entityCardVm={selectedGraphEntityCardVm} noteContent={selectedGraphNoteContent} noteDetail={selectedGraphNoteDetail} onEdit={(node: GraphCanvasNode) => setGraphEditNodeId(node.id)} /></div></div></div> : null}{editDraft ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"><div className="w-full max-w-2xl rounded-3xl border border-neutral-200 bg-white shadow-2xl"><div className="flex items-center justify-between border-b border-neutral-200 p-5"><div><h2 className="font-semibold">{editDraft.title}</h2><p className="text-sm text-neutral-500">{editDraft.notePath || 'nuevo draft local'}</p></div><button onClick={() => setEditDraft(null)} className="rounded-full p-2 hover:bg-neutral-100"><X size={18} /></button></div><div className="p-5"><textarea readOnly value={editDraft.body} className="h-48 w-full rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-sm" /><p className="mt-3 text-sm text-neutral-500">Guardar cambios llega con drafts/patch queue. No write-back en SP-105D.</p></div></div></div> : null}</Shell>;
 }
 
 export default App;

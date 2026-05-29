@@ -185,6 +185,8 @@ def read_project(project: ProjectRef) -> dict[str, Any]:
     graph = build_graph(project, canon=canon)
     markdown_manifest = read_markdown_manifest(project) or {}
     markdown_graph_index = read_markdown_graph_index(project) or {}
+    editor_chapters = read_editor_chapters(project, markdown_manifest=markdown_manifest)
+    source_map = read_source_map(project) or {}
     graph_metadata = graph.get("metadata") if isinstance(graph, dict) else {}
     writer_outcome = _read_writer_outcome(project)
     if not writer_outcome:
@@ -221,8 +223,10 @@ def read_project(project: ProjectRef) -> dict[str, Any]:
             "work": canon.get("work") if isinstance(canon.get("work"), dict) else {},
         },
         "notes": list_notes(project.root, markdown_manifest=markdown_manifest, markdown_index=markdown_graph_index),
+        "editor_chapters": editor_chapters,
         "markdown_manifest": markdown_manifest,
         "markdown_graph_index": markdown_graph_index,
+        "source_map": source_map,
         "canon": canon,
         "artifacts": artifacts,
         "graph": graph,
@@ -955,6 +959,82 @@ def _markdown_manifest_candidates(project: ProjectRef) -> list[Path]:
     ])
     return candidates
 
+def _chapter_manifest_candidates(project: ProjectRef) -> list[Path]:
+    candidates: list[Path] = []
+    manifest_path = _project_path(project, 'chapter_manifest')
+    if manifest_path:
+        candidates.append(manifest_path)
+    candidates.append(project.root / 'chapters' / 'chapter_manifest.json')
+    return candidates
+
+def read_chapter_manifest(project: ProjectRef) -> dict[str, Any] | None:
+    for path in _chapter_manifest_candidates(project):
+        payload = _read_json(path)
+        if isinstance(payload, dict) and isinstance(payload.get('chapters'), list):
+            return payload
+    return None
+
+def _normalize_editor_chapter_title(value: Any, fallback: str) -> str:
+    title = str(value or '').strip()
+    if not title:
+        title = fallback
+    title = re.sub(r'\s+', ' ', title).strip()
+    return title.strip('*').strip()
+
+def read_editor_chapters(project: ProjectRef, *, markdown_manifest: dict[str, Any] | None = None) -> dict[str, Any]:
+    chapter_manifest = read_chapter_manifest(project)
+    if isinstance(chapter_manifest, dict):
+        rows = []
+        for chapter in chapter_manifest.get('chapters') or []:
+            if not isinstance(chapter, dict):
+                continue
+            chapter_id = str(chapter.get('chapter_id') or '').strip()
+            path = str(chapter.get('markdown_path') or '').strip()
+            order = chapter.get('sequence_index') or chapter.get('order')
+            fallback = chapter_id or path or 'chapter'
+            display_title = _normalize_editor_chapter_title(
+                chapter.get('display_title') or chapter.get('title') or chapter.get('heading_text'),
+                fallback,
+            )
+            rows.append({
+                'chapter_id': chapter_id,
+                'path': path,
+                'title': display_title,
+                'display_title': display_title,
+                'order': int(order) if isinstance(order, int) or (isinstance(order, str) and order.isdigit()) else None,
+                'kind': 'chapter',
+                'source_used': 'chapter_manifest',
+            })
+        rows.sort(key=lambda row: (row.get('order') is None, row.get('order') or 0, row.get('path') or ''))
+        return {
+            'source_used': 'chapter_manifest',
+            'manifest_used': True,
+            'chapters': [row for row in rows if row.get('path')],
+        }
+
+    manifest_notes = (markdown_manifest or {}).get('notes') if isinstance(markdown_manifest, dict) else []
+    rows = []
+    for note in manifest_notes or []:
+        if not isinstance(note, dict) or str(note.get('kind') or '').lower() != 'chapter':
+            continue
+        path = str(note.get('path') or '').strip()
+        fallback = path or 'chapter'
+        display_title = _normalize_editor_chapter_title(note.get('display_title') or note.get('title') or note.get('canonical_label'), fallback)
+        rows.append({
+            'chapter_id': str(note.get('chapter_id') or '').strip(),
+            'path': path,
+            'title': display_title,
+            'display_title': display_title,
+            'order': None,
+            'kind': 'chapter',
+            'source_used': 'markdown_manifest.notes_fallback',
+        })
+    return {
+        'source_used': 'markdown_manifest.notes_fallback',
+        'manifest_used': False,
+        'chapters': [row for row in rows if row.get('path')],
+    }
+
 def _markdown_index_candidates(project: ProjectRef) -> list[Path]:
     candidates: list[Path] = []
     manifest_path = _project_path(project, 'markdown_graph_index')
@@ -985,6 +1065,23 @@ def read_markdown_graph_index(project: ProjectRef) -> dict[str, Any] | None:
             return build_markdown_graph_index(project.root)
         except OSError:
             return None
+    return None
+
+def read_source_map(project: ProjectRef) -> dict[str, Any] | None:
+    candidates = []
+    manifest_path = _project_path(project, 'source_map')
+    if manifest_path:
+        candidates.append(manifest_path)
+    if project.system_root:
+        candidates.append(project.system_root / 'source_map.json')
+    candidates.extend([
+        project.root / 'evidence' / 'source_map.json',
+        project.root / '99_System' / 'source_map.json',
+    ])
+    for path in candidates:
+        payload = _read_json(path)
+        if isinstance(payload, dict) and isinstance(payload.get('chapters'), dict):
+            return payload
     return None
 
 def _markdown_index_note(markdown_index: dict[str, Any], note_path: str) -> dict[str, Any]:
@@ -1230,6 +1327,19 @@ def _hydrate_review_queue(raw_review_queue: dict[str, Any], entities: list[dict[
         'deferred': 0,
         'local_unapplied': 0,
     }
+    source_map_payload = _read_json(project_root / 'evidence' / 'source_map.json')
+    evidence_index_payload = _read_json(project_root / 'evidence' / 'evidence_index.json')
+    source_map_chunks_count = len((source_map_payload or {}).get('chunks') or []) if isinstance(source_map_payload, dict) else 0
+    evidence_index_items = [row for row in (evidence_index_payload or {}).get('items') or [] if isinstance(row, dict)] if isinstance(evidence_index_payload, dict) else []
+    evidence_by_review_id: dict[str, dict[str, Any]] = {}
+    evidence_by_source_ref: dict[str, dict[str, Any]] = {}
+    for row in evidence_index_items:
+        review_id = str(row.get('review_item_id') or row.get('review_id') or row.get('review_item') or '').strip()
+        source_ref = str(row.get('source_ref') or row.get('pointer') or row.get('chunk_id') or '').strip()
+        if review_id and review_id not in evidence_by_review_id:
+            evidence_by_review_id[review_id] = row
+        if source_ref and source_ref not in evidence_by_source_ref:
+            evidence_by_source_ref[source_ref] = row
     entity_map: dict[str, dict[str, Any]] = {
         _key(str(row.get('canonical_name') or '')): row
         for row in entities if isinstance(row, dict) and row.get('canonical_name')
@@ -1296,6 +1406,7 @@ def _hydrate_review_queue(raw_review_queue: dict[str, Any], entities: list[dict[
         normalized_target = _key(target_label)
         matched_entity = entity_map.get(normalized_target)
         matched_label = format_author_facing_label(str(matched_entity.get('canonical_name') or target_label)) if matched_entity else target_label
+        materiality_class, materiality_action, materiality_reason = _review_materiality(target_label, summary, normalized_target)
 
         if not target_label or normalized_target in {'yo', 'ella', 'el', 'él', 'la', 'tu', 'tú'}:
             review_type = 'pronoun_pov'
@@ -1304,7 +1415,7 @@ def _hydrate_review_queue(raw_review_queue: dict[str, Any], entities: list[dict[
             title = f'{target_label or "Pronombre"} · sin entidad sugerida'
             source_entity = {'label': target_label or 'pronoun'}
             target_entity = None
-            suggested_action = 'review'
+            suggested_action = materiality_action
             human_reason = 'Pronombre de POV detectado; necesita resolución explícita antes de entrar al canon.'
         elif normalized_target in entity_map:
             review_type = 'possible_merge'
@@ -1322,7 +1433,7 @@ def _hydrate_review_queue(raw_review_queue: dict[str, Any], entities: list[dict[
             title = f'{target_label} · sin entidad sugerida'
             source_entity = None
             target_entity = {'label': target_label}
-            suggested_action = 'review'
+            suggested_action = materiality_action
             human_reason = summary or 'Candidato local detectado; necesita confirmación antes de ser proyección canónica.'
         elif any(token in (summary or '').casefold() for token in ['no nombrad', 'identidad no especificada', 'no se describe', 'ambiguo', 'sin identificar']):
             review_type = 'insufficient_evidence'
@@ -1331,8 +1442,8 @@ def _hydrate_review_queue(raw_review_queue: dict[str, Any], entities: list[dict[
             title = f'{target_label} · sin entidad sugerida'
             source_entity = None
             target_entity = {'label': target_label} if target_label else None
-            suggested_action = 'review'
-            human_reason = summary or f'Referencia ambigua: {target_label}. No hay suficiente evidencia para resolverla automáticamente.'
+            suggested_action = materiality_action
+            human_reason = summary or materiality_reason or f'Referencia ambigua: {target_label}. No hay suficiente evidencia para resolverla automáticamente.'
         else:
             review_type = 'uncertain_relationships'
             summary_key = 'uncertain_relationships'
@@ -1340,10 +1451,10 @@ def _hydrate_review_queue(raw_review_queue: dict[str, Any], entities: list[dict[
             title = f'{target_label} · sin entidad sugerida' if not matched_entity else f'{target_label} → {matched_label}'
             source_entity = None
             target_entity = {'label': target_label}
-            suggested_action = 'review'
-            human_reason = summary or f'Referencia ambigua: {target_label}. El modelo no la resolvió a una entidad canónica con suficiente confianza.'
+            suggested_action = materiality_action
+            human_reason = summary or materiality_reason or f'Referencia ambigua: {target_label}. El modelo no la resolvió a una entidad canónica con suficiente confianza.'
 
-        subtitle = human_reason or summary or 'Necesita decisión editorial.'
+        subtitle = materiality_reason or human_reason or summary or 'Necesita decisión editorial.'
         if subtitle.strip().casefold() == 'review':
             subtitle = 'Necesita decisión editorial basada en evidencia narrativa.'
         # Build chapter label from chapter_id
@@ -1360,10 +1471,21 @@ def _hydrate_review_queue(raw_review_queue: dict[str, Any], entities: list[dict[
             ev_ch_id = str(ref.get('chapter_id') or chapter_id or '')
             ev_ch_label = chapter_titles.get(ev_ch_id) or chapter_note or ev_ch_id or ''
             ev_chunk_id = str(ref.get('chunk_id') or '')
-            ev_has_excerpt = False
-            ev_excerpt = _resolve_evidence_excerpt(chapter_paths, ev_ch_id, ref)
-            if ev_excerpt:
-                ev_has_excerpt = True
+            ev_excerpt = str(ref.get('excerpt') or '').strip() or None
+            ev_reason = ''
+            evidence_row = evidence_by_review_id.get(str(item.get('id') or '')) or evidence_by_source_ref.get(ev_chunk_id)
+            if not ev_excerpt and isinstance(evidence_row, dict):
+                ev_excerpt = str(evidence_row.get('excerpt') or evidence_row.get('text_excerpt') or '').strip() or None
+                ev_reason = str(evidence_row.get('reason') or evidence_row.get('why') or '').strip()
+            ev_has_excerpt = bool(ev_excerpt)
+            if not ev_has_excerpt:
+                resolved_excerpt = _resolve_evidence_excerpt(chapter_paths, ev_ch_id, ref)
+                if resolved_excerpt:
+                    ev_excerpt = resolved_excerpt
+                    ev_has_excerpt = True
+                    ev_reason = ev_reason or 'Fragmento resoluble desde markdown del capítulo.'
+                else:
+                    ev_reason = ev_reason or ('No hay fragmento textual resoluble porque source_map.chunks está vacío para este source_ref.' if source_map_chunks_count <= 0 else 'No hay fragmento textual resoluble porque source_ref no mapea a chunk narrativo.')
             # pointer as technical detail, not main evidence
             ev_pointer_parts = [p for p in ev_chunk_id.split('_') if p and p not in ('source','chunk','')]
             ev_pointer_short = ' → '.join(ev_pointer_parts[-2:]) if len(ev_pointer_parts) > 2 else ev_chunk_id
@@ -1376,6 +1498,7 @@ def _hydrate_review_queue(raw_review_queue: dict[str, Any], entities: list[dict[
                 'char_end': ref.get('char_end'),
                 'has_text': ev_has_excerpt,
                 'excerpt': ev_excerpt,
+                'reason': ev_reason,
             }
             evidence_refs.append(ev)
         decision_items.append(
@@ -1394,9 +1517,11 @@ def _hydrate_review_queue(raw_review_queue: dict[str, Any], entities: list[dict[
                 'local_state': 'pending',
                 'impact_if_accept': 'Refina la proyección canónica y reduce ambigüedad visible.',
                 'impact_if_reject': 'Mantiene la referencia fuera del canon visible hasta nueva evidencia.',
-                'technical_details': {'chapter_id': chapter_id, 'status': item.get('status'), 'raw_target_label': target_label, 'matched_entity': matched_label if matched_entity else None},
+                'technical_details': {'chapter_id': chapter_id, 'status': item.get('status'), 'raw_target_label': target_label, 'matched_entity': matched_label if matched_entity else None, 'materiality_class': materiality_class, 'evidence_index_item_count': len(evidence_index_items), 'evidence_excerpt_resolved_count': sum(1 for ref in evidence_refs if ref.get('has_text'))},
             }
         )
+        decision_items[-1]['technical_details']['source_map_chunks_count'] = source_map_chunks_count
+        decision_items[-1]['technical_details']['evidence_store_used'] = bool(evidence_index_items or source_map_payload)
         summary_counts['total_pending'] += 1
         summary_counts[summary_key] = summary_counts.get(summary_key, 0) + 1
 
@@ -1445,6 +1570,16 @@ def _is_meaningful_excerpt(text_snippet: str) -> bool:
     content_words = [w for w in words if len(w) > 3 and not all(c in '0123456789-:[]{}' for c in w)]
     return len(content_words) >= 3
 
+def _review_materiality(target_label: str, summary: str, normalized_target: str) -> tuple[str, str, str]:
+    text = f'{target_label} {summary}'.casefold()
+    if not normalized_target or normalized_target in {'yo', 'ella', 'el', 'él', 'la', 'tu', 'tú'}:
+        return 'manual_resolution_required', 'manual_resolution_required', 'Pronombre o target ausente; requiere resolución manual.'
+    if any(token in text for token in ('title of the episode', 'ruido', 'noise', 'origen desconocido', 'frase oída', 'aparece solo en el título')):
+        return 'noise_candidate', 'discard_from_canon', 'Señal compatible con ruido o referencia no canónica.'
+    if any(token in text for token in ('no se describe', 'identidad no especificada', 'figura de autoridad no nombrada', 'persona con la que', 'referencia ambigua', 'no cuenta', 'lo que sea', 'cuando sea el momento', 'es mejor que no sepa')) or len(normalized_target) <= 5:
+        return 'low_materiality_candidate', 'keep_context', 'Señal de baja materialidad; útil como contexto, no canon directo.'
+    return 'manual_resolution_required', 'review', ''
+
 
 def _resolve_evidence_excerpt(chapter_paths: dict[str, Path], chapter_id: str, ref: dict[str, Any]) -> str | None:
     import math
@@ -1464,7 +1599,7 @@ def _resolve_evidence_excerpt(chapter_paths: dict[str, Path], chapter_id: str, r
         end = min(len(text), int(char_end) + 120) if isinstance(char_end, (int, float)) and char_end >= 0 else min(start + 240, len(text))
         if start < len(text):
             pad = max(0, start - 40)
-            snippet = text[pad:min(end, len(text)):360].replace('\r','\n')
+            snippet = text[pad:min(end, len(text))].replace('\r','\n')
             lines = [l.strip() for l in snippet.split('\n') if l.strip()]
             candidate = ' '.join(lines[:8]) if lines else ''
             if _is_meaningful_excerpt(candidate):
