@@ -18,9 +18,11 @@
 
 ## UI Integration Result
 - Left chapter rail unchanged (manifest-backed).
-- Center panel now has experimental MDXEditor rich mode + source preview toggle.
+- Center panel now defaults to MDXEditor visual mode when opening chapter.
+- Source mode remains secondary toggle with product copy: “Modo Markdown” / “Modo visual”.
 - Right context panel preserved.
-- Fullscreen behavior preserved.
+- Fullscreen now uses viewport, removes card-constrained feel, and collapses left rail by default.
+- Chapter rail in normal layout now compact (`fit-content` with `min/max` guardrails) to recover editor width.
 - Save disabled with explicit copy: “Guardar llegará en SP-113B”.
 
 ## Limitations
