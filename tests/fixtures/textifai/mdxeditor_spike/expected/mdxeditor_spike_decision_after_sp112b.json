@@ -1,0 +1,11 @@
+{
+  "assessment": "mdxeditor_spike_go_with_source_mode_constraint",
+  "decision": "go",
+  "reason": "license compatible; React integration viable; no write-back path enabled",
+  "constraints": [
+    "no_write_back_sp113a",
+    "frontmatter_wikilink_contract_enforced",
+    "source_mode_available_for_manual_verification"
+  ],
+  "next_phase": "SP-113B write-back design and guarded persistence"
+}

@@ -1,0 +1,23 @@
+{
+  "assessment": "roundtrip_contract_documented",
+  "fixture_path": "tests/fixtures/textifai/mdxeditor_spike/markdown_roundtrip_input.md",
+  "must_preserve": {
+    "frontmatter": true,
+    "wikilinks": true,
+    "headings": true,
+    "unicode_japanese": true,
+    "unicode_spanish_accents": true,
+    "url": true,
+    "thematic_break": true
+  },
+  "allowed_format_drift": [
+    "list_spacing",
+    "emphasis_marker_style",
+    "quote_style_normalization"
+  ],
+  "failure_conditions": [
+    "frontmatter_removed",
+    "wikilink_destructive_transform",
+    "unicode_loss"
+  ]
+}

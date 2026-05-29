@@ -1,0 +1,25 @@
+{
+  "assessment": "license_compatible",
+  "candidate_package": "@mdxeditor/editor",
+  "license": "MIT",
+  "react_compatibility": ">=18",
+  "vite_compatibility": "compatible",
+  "packages_to_install": [
+    "@mdxeditor/editor"
+  ],
+  "required_css_import": "@mdxeditor/editor/style.css",
+  "plugins_selected": [
+    "headingsPlugin",
+    "listsPlugin",
+    "quotePlugin",
+    "linkPlugin",
+    "thematicBreakPlugin",
+    "markdownShortcutPlugin",
+    "toolbarPlugin"
+  ],
+  "risks": [
+    "bundle_size_heavier_than_plain_preview",
+    "frontmatter_roundtrip_requires_source_or_contract_test"
+  ],
+  "recommendation": "go"
+}

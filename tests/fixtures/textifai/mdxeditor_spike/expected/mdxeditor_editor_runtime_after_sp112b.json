@@ -1,0 +1,11 @@
+{
+  "assessment": "editor_runtime_contract_documented",
+  "editor_source": "chapter_manifest",
+  "experimental_mode": true,
+  "write_back_enabled": false,
+  "save_action": "disabled_or_non_functional",
+  "right_context_panel_preserved": true,
+  "fullscreen_preserved": true,
+  "project_package_staged": false,
+  "private_prose_in_report": false
+}
