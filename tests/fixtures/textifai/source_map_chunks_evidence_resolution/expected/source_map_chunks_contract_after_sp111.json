@@ -1,0 +1,1 @@
+{"assessment":"source_map_chunks_contract_ready_no_runtime","required_fields":["chunk_id","chapter_id","chapter_path","char_start","char_end","text_hash","excerpt|resolvable_range"],"commit_safe":true}

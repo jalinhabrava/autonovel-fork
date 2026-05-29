@@ -1,0 +1,43 @@
+{
+  "assessment": "evidence_coverage_blocked_by_legacy_refs",
+  "evidence_total": 70,
+  "excerpt_before": 6,
+  "excerpt_after": 6,
+  "backfilled_count": 0,
+  "unresolved_count": 64,
+  "blocker_counts": {
+    "missing_chunk": 0,
+    "missing_offsets": 0,
+    "offsets_out_of_range": 1,
+    "chunk_relative_offsets_without_chunk_text": 61,
+    "missing_chapter_mapping": 0,
+    "malformed_source_ref": 2,
+    "resolvable_from_chapter_markdown": 0,
+    "already_resolved": 6
+  },
+  "can_improve_current_project_without_provider": false,
+  "next_ingestion_requirements": {
+    "source_map_chunks": [
+      "chunk_id",
+      "chapter_id",
+      "chapter_path",
+      "char_start",
+      "char_end",
+      "text_hash",
+      "excerpt_or_resolvable_range"
+    ],
+    "source_ref_contract": [
+      "source_ref_key_stable",
+      "chunk_id",
+      "chapter_id",
+      "chapter_path",
+      "char_start",
+      "char_end"
+    ],
+    "notes": "legacy refs appear chunk-relative or malformed; chapter-level excerpt recovery cannot safely reconstruct missing chunk text"
+  },
+  "no_source_prose": true,
+  "provider_calls": false,
+  "write_back": false,
+  "project_package_staged": false
+}

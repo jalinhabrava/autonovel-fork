@@ -29,7 +29,7 @@
   "evidence_store_used": true,
   "evidence_source_map_chunks_count": 0,
   "evidence_index_item_count": 70,
-  "evidence_excerpt_resolved_count": 4,
+  "evidence_excerpt_resolved_count": 6,
   "server_port": 8872,
   "no_project_package_committed": true,
   "graphinspector_primary_source": "entity-card",
@@ -48,11 +48,23 @@
   "review_low_materiality_count": 8,
   "review_noise_candidate_count": 6,
   "evidence_items_with_excerpt_count": 6,
-  "source_map_chunks_count": 0,
-  "evidence_resolution_blocker": "source_map.chunks empty; only source_refs with chapter-relative offsets can be reconstructed from markdown; most offsets are not valid chapter markdown ranges",
+  "source_map_chunks_count": 18,
+  "evidence_resolution_blocker": "legacy source_refs are mostly chunk-relative or malformed; chapter markdown cannot deterministically recover 64 unresolved excerpts without chunk text",
   "evidence_resolution_blocked_by_missing_chunk_map": true,
   "next_ingestion_contract_needed": {
     "required": true,
     "source_map_chunks": "materialize chunk_id, chapter_id, char_start, char_end, and text/excerpt or a resolvable range for every source_ref"
+  },
+  "sp112a_expected_status_flags": [
+    "source_map_chunks_ready",
+    "evidence_resolution_ready",
+    "evidence_excerpt_resolved_count"
+  ],
+  "source_map_chunks_contract_added_after_sp111": true,
+  "evidence_coverage_backfill_after_sp112a": {
+    "excerpt_before": 6,
+    "excerpt_after": 6,
+    "backfilled_count": 0,
+    "unresolved_count": 64
   }
 }

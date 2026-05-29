@@ -1,0 +1,1 @@
+{"assessment":"evidence_runtime_ready_ui_partial","endpoint":"/api/projects/<id>","payload_path":"canon.review_queue.decision_items[].evidence_refs[]","fields":["chunk_id","chapter_id","chapter_path","char_start","char_end","excerpt","reason","reason_code","pointer_short"]}

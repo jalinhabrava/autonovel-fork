@@ -113,6 +113,7 @@ def _review_entity_items(*, reviews: list[dict[str, Any]], primaries: list[dict[
                     *_evidence("key_fact", review.get("key_facts") or [], limit=3),
                     *_evidence("source_mention", review.get("source_mentions") or [], limit=3),
                 ],
+                source_refs=review.get("source_refs") or [],
                 confidence=confidence,
                 metadata={
                     "entity_kind": review.get("entity_kind") or "",
@@ -155,6 +156,7 @@ def _normalized_object_retention_item(
             *_evidence("key_fact", review.get("key_facts") or [], limit=3),
             *_evidence("source_mention", review.get("source_mentions") or [], limit=3),
         ],
+        source_refs=review.get("source_refs") or [],
         confidence=confidence,
         metadata={
             "entity_kind": review.get("entity_kind") or "",
@@ -201,9 +203,10 @@ def _unresolved_relationship_items(
                     suggested_action="resolve_target_or_keep_unmaterialized",
                     source_entity=primary.get("canonical_name") or "",
                     target_text=target,
-                    candidate_entities=candidate_reviews,
-                    evidence=_evidence("relationship_fact", rel.get("facts") or [], limit=3),
-                    confidence=0.0,
+                candidate_entities=candidate_reviews,
+                evidence=_evidence("relationship_fact", rel.get("facts") or [], limit=3),
+                source_refs=rel.get("source_refs") or primary.get("source_refs") or [],
+                confidence=0.0,
                     metadata={
                         "relationship_type": rel.get("type") or rel.get("relation_type") or "",
                         "source_entity_kind": primary.get("entity_kind") or "",
@@ -259,6 +262,7 @@ def _weak_canonical_items(*, primaries: list[dict[str, Any]]) -> list[dict[str, 
                 target_text=primary.get("canonical_name") or "",
                 candidate_entities=[{"canonical_name": value, "reason": "specific_alias_or_source_mention", "score": 0.75} for value in sorted(set(stronger))[:5]],
                 evidence=_evidence("alias_or_source_mention", stronger, limit=5),
+                source_refs=primary.get("source_refs") or [],
                 confidence=0.75,
                 metadata={"naming_quality": quality, "preferred_slug": primary.get("preferred_slug") or ""},
             )
@@ -361,6 +365,7 @@ def _retention_signal_items(*, primaries: list[dict[str, Any]], retention_contex
                     *_evidence("key_fact", discarded_entity.get("key_facts") or [], limit=3),
                     *_evidence("source_mention", discarded_entity.get("source_mentions") or [], limit=3),
                 ],
+                source_refs=discarded_entity.get("source_refs") or [],
                 confidence=_safe_float(discarded_entity.get("confidence")),
                 metadata={
                     "entity_kind": discarded_entity.get("entity_kind") or "",
@@ -789,6 +794,7 @@ def _item(
     evidence: list[dict[str, str]],
     confidence: float,
     metadata: dict[str, Any],
+    source_refs: list[dict[str, Any]] | None = None,
     blocking_phase1_gate: bool = False,
 ) -> dict[str, Any]:
     return {
@@ -799,6 +805,7 @@ def _item(
         "target_text": str(target_text or ""),
         "candidate_entities": candidate_entities,
         "evidence": evidence,
+        "source_refs": [row for row in (source_refs or []) if isinstance(row, dict)],
         "confidence": round(float(confidence or 0.0), 3),
         "blocking_phase1_gate": bool(blocking_phase1_gate),
         "can_auto_apply": False,

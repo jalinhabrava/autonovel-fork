@@ -1,0 +1,9 @@
+{
+  "assessment": "evidence_coverage_blocked_by_legacy_refs",
+  "provider_calls": false,
+  "write_back": false,
+  "project_package_staged": false,
+  "source_prose_in_reports": false,
+  "evidence_coverage_report": "evidence_coverage_backfill_after_sp112a.json",
+  "can_improve_current_project_without_provider": false
+}

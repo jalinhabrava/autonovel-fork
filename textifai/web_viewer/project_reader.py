@@ -1329,13 +1329,14 @@ def _hydrate_review_queue(raw_review_queue: dict[str, Any], entities: list[dict[
     }
     source_map_payload = _read_json(project_root / 'evidence' / 'source_map.json')
     evidence_index_payload = _read_json(project_root / 'evidence' / 'evidence_index.json')
-    source_map_chunks_count = len((source_map_payload or {}).get('chunks') or []) if isinstance(source_map_payload, dict) else 0
+    source_map_chunks = (source_map_payload or {}).get('chunks') or {} if isinstance(source_map_payload, dict) else {}
+    source_map_chunks_count = len(source_map_chunks) if isinstance(source_map_chunks, dict) else 0
     evidence_index_items = [row for row in (evidence_index_payload or {}).get('items') or [] if isinstance(row, dict)] if isinstance(evidence_index_payload, dict) else []
     evidence_by_review_id: dict[str, dict[str, Any]] = {}
     evidence_by_source_ref: dict[str, dict[str, Any]] = {}
     for row in evidence_index_items:
         review_id = str(row.get('review_item_id') or row.get('review_id') or row.get('review_item') or '').strip()
-        source_ref = str(row.get('source_ref') or row.get('pointer') or row.get('chunk_id') or '').strip()
+        source_ref = str(row.get('source_ref_key') or row.get('source_ref') or row.get('pointer') or row.get('chunk_id') or '').strip()
         if review_id and review_id not in evidence_by_review_id:
             evidence_by_review_id[review_id] = row
         if source_ref and source_ref not in evidence_by_source_ref:
@@ -1473,19 +1474,45 @@ def _hydrate_review_queue(raw_review_queue: dict[str, Any], entities: list[dict[
             ev_chunk_id = str(ref.get('chunk_id') or '')
             ev_excerpt = str(ref.get('excerpt') or '').strip() or None
             ev_reason = ''
-            evidence_row = evidence_by_review_id.get(str(item.get('id') or '')) or evidence_by_source_ref.get(ev_chunk_id)
+            ev_reason_code = ''
+            chunk_row = source_map_chunks.get(ev_chunk_id) if isinstance(source_map_chunks, dict) else None
+            evidence_row = evidence_by_review_id.get(str(item.get('id') or item.get('review_item_id') or '')) or evidence_by_source_ref.get(ev_chunk_id)
             if not ev_excerpt and isinstance(evidence_row, dict):
                 ev_excerpt = str(evidence_row.get('excerpt') or evidence_row.get('text_excerpt') or '').strip() or None
                 ev_reason = str(evidence_row.get('reason') or evidence_row.get('why') or '').strip()
+                ev_reason_code = ev_reason
+            if not ev_excerpt and isinstance(chunk_row, dict):
+                ev_excerpt = str(chunk_row.get('excerpt') or '').strip() or None
+            ev_ch_path = ''
+            if isinstance(chunk_row, dict):
+                ev_ch_id = str(chunk_row.get('chapter_id') or ev_ch_id)
+                ev_ch_path = str(chunk_row.get('chapter_path') or '')
+                ref = {**ref, 'char_start': chunk_row.get('char_start'), 'char_end': chunk_row.get('char_end')}
+            elif isinstance(evidence_row, dict):
+                ev_ch_path = str(evidence_row.get('chapter_path') or '')
             ev_has_excerpt = bool(ev_excerpt)
             if not ev_has_excerpt:
-                resolved_excerpt = _resolve_evidence_excerpt(chapter_paths, ev_ch_id, ref)
+                resolved_excerpt = _resolve_evidence_excerpt(chapter_paths, ev_ch_id, ref) if isinstance(chunk_row, dict) else None
                 if resolved_excerpt:
                     ev_excerpt = resolved_excerpt
                     ev_has_excerpt = True
-                    ev_reason = ev_reason or 'Fragmento resoluble desde markdown del capítulo.'
+                    ev_reason = ev_reason or 'Fragmento resoluble desde source_map.chunks.'
                 else:
-                    ev_reason = ev_reason or ('No hay fragmento textual resoluble porque source_map.chunks está vacío para este source_ref.' if source_map_chunks_count <= 0 else 'No hay fragmento textual resoluble porque source_ref no mapea a chunk narrativo.')
+                    if source_map_chunks_count <= 0:
+                        ev_reason_code = 'source_map_chunks_empty'
+                        ev_reason = ev_reason or 'No hay fragmento textual resoluble porque source_map.chunks está vacío para este source_ref.'
+                    elif not ev_chunk_id:
+                        ev_reason_code = 'missing_chunk_id'
+                        ev_reason = ev_reason or 'No hay fragmento textual resoluble porque source_ref no incluye chunk_id.'
+                    elif not isinstance(chunk_row, dict):
+                        ev_reason_code = 'missing_chunk'
+                        ev_reason = ev_reason or 'No hay fragmento textual resoluble porque chunk_id no existe en source_map.chunks.'
+                    elif not ev_ch_path:
+                        ev_reason_code = 'chapter_not_found'
+                        ev_reason = ev_reason or 'No hay fragmento textual resoluble porque el chunk no tiene chapter_path.'
+                    else:
+                        ev_reason_code = 'range_unresolvable'
+                        ev_reason = ev_reason or 'No hay fragmento textual resoluble porque el rango del chunk no produce contexto narrativo.'
             # pointer as technical detail, not main evidence
             ev_pointer_parts = [p for p in ev_chunk_id.split('_') if p and p not in ('source','chunk','')]
             ev_pointer_short = ' → '.join(ev_pointer_parts[-2:]) if len(ev_pointer_parts) > 2 else ev_chunk_id
@@ -1494,11 +1521,14 @@ def _hydrate_review_queue(raw_review_queue: dict[str, Any], entities: list[dict[
                 'chapter_label': ev_ch_label,
                 'pointer': ev_chunk_id,
                 'pointer_short': ev_pointer_short,
+                'chunk_id': ev_chunk_id,
+                'chapter_path': ev_ch_path,
                 'char_start': ref.get('char_start'),
                 'char_end': ref.get('char_end'),
                 'has_text': ev_has_excerpt,
                 'excerpt': ev_excerpt,
                 'reason': ev_reason,
+                'reason_code': ev_reason_code,
             }
             evidence_refs.append(ev)
         decision_items.append(
