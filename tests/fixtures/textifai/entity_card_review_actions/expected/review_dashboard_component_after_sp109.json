@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "source_prose_included": false,
+  "provider_raw_output_included": false,
+  "provider_calls": false,
+  "write_back": false,
+  "panel_right_clean": true,
+  "summary_cards_individual": true,
+  "removed": [
+    "Decision model",
+    "Decision drawer",
+    "Decisiones locales sin aplicar",
+    "Resumen dinámico de decisión"
+  ]
+}

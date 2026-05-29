@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "source_prose_included": false,
+  "provider_raw_output_included": false,
+  "provider_calls": false,
+  "write_back": false,
+  "endpoint": "/api/projects/<id>/entity-card",
+  "params": [
+    "node_id",
+    "note_path",
+    "canonical_label"
+  ],
+  "breaks_note_endpoint": false
+}

@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "source_prose_included": false,
+  "provider_raw_output_included": false,
+  "provider_calls": false,
+  "write_back": false,
+  "uses_entity_card_vm": true,
+  "relationship_count_source": "incident_graph_edges_plus_vaerl_relationships",
+  "markdown_frontmatter_hidden": true
+}

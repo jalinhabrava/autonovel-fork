@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "source_prose_included": false,
+  "provider_raw_output_included": false,
+  "provider_calls": false,
+  "write_back": false,
+  "schema": "textifai.semantic_feedback_event",
+  "scope_default": "project_local",
+  "user_level_learning": "optional",
+  "product_learning": "explicit_opt_in",
+  "contains_source_prose": false,
+  "telemetry_real": false
+}

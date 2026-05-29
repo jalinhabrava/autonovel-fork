@@ -10,7 +10,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
 
 from textifai.web_viewer.ingestion_jobs import IngestionJobRegistry, job_to_json, jobs_history_json
-from textifai.web_viewer.project_reader import ProjectCatalog, read_artifact, read_note, read_project
+from textifai.web_viewer.project_reader import ProjectCatalog, read_artifact, read_note, read_project, read_entity_card
 
 
 STATIC_ROOT = Path(__file__).with_name("static")
@@ -170,6 +170,12 @@ def _make_handler(catalog: ProjectCatalog, registry: IngestionJobRegistry):
                 if len(parts) == 5 and parts[4] == "note":
                     note_path = query.get("path", [""])[0]
                     self._json(read_note(project, note_path))
+                    return
+                if len(parts) == 5 and parts[4] == "entity-card":
+                    node_id = query.get("node_id", [""])[0]
+                    note_path = query.get("note_path", [""])[0]
+                    canonical_label = query.get("canonical_label", [""])[0]
+                    self._json(read_entity_card(project, node_id=node_id or None, note_path=note_path or None, canonical_label=canonical_label or None))
                     return
                 if len(parts) == 5 and parts[4] == "artifact":
                     artifact_path = query.get("path", [""])[0]

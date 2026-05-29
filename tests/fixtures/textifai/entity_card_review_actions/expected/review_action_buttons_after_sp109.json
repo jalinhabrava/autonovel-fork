@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "source_prose_included": false,
+  "provider_raw_output_included": false,
+  "provider_calls": false,
+  "write_back": false,
+  "generic_merge_removed": true,
+  "accept_is_suggested_action": true,
+  "manual_buttons": [
+    "Resolver manualmente…",
+    "Elegir otra entidad…",
+    "Crear entidad nueva"
+  ],
+  "discard_button": "Descartar del canon"
+}

@@ -187,6 +187,55 @@ async function api<T>(path: string): Promise<T> {
   return response.json();
 }
 
+
+export type EntityCard = {
+  schema?: string;
+  schema_version?: number;
+  id?: string;
+  canonical_label?: string;
+  display_label?: string;
+  kind?: string;
+  status?: string;
+  summary?: string;
+  degree?: number;
+  relation_count?: number;
+  evidence_count?: number;
+  aliases?: {
+    canonical?: string[];
+    contextual?: string[];
+    needs_review?: string[];
+    suppressed?: string[];
+  };
+  relationships?: Array<{
+    source?: string;
+    predicate?: string;
+    target?: string;
+    kind?: string;
+    evidence_count?: number;
+    review_state?: string;
+  }>;
+  backlinks?: string[];
+  outgoing_links?: Array<{ label?: string }>;
+  local_graph?: { node_count?: number; edge_count?: number };
+  review?: { count?: number; items?: ReviewItem[] };
+  markdown?: {
+    note_path?: string;
+    sections?: Array<{ title?: string; body?: string }>;
+    author_markdown?: string;
+    technical_markdown?: string;
+  };
+  evidence_refs?: Array<{ chapter_id?: string; pointer?: string }>;
+  technical?: Record<string, unknown>;
+};
+
+export async function fetchEntityCard(projectId: string, params: { node_id?: string; note_path?: string; canonical_label?: string }): Promise<EntityCard> {
+  const q = new URLSearchParams();
+  if (params.node_id) q.set('node_id', params.node_id);
+  if (params.note_path) q.set('note_path', params.note_path);
+  if (params.canonical_label) q.set('canonical_label', params.canonical_label);
+  return api<EntityCard>(`/api/projects/${encodeURIComponent(projectId)}/entity-card?${q.toString()}`);
+}
+
 export async function fetchProjects(): Promise<ProjectSummary[]> {
   const payload = await api<{ projects?: ProjectSummary[] }>('/api/projects');
   return payload.projects || [];

@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "source_prose_included": false,
+  "provider_raw_output_included": false,
+  "provider_calls": false,
+  "write_back": false,
+  "schema": "textifai.entity_card",
+  "required_fields": [
+    "id",
+    "canonical_label",
+    "display_label",
+    "kind",
+    "status",
+    "summary",
+    "aliases",
+    "relationships",
+    "evidence_count",
+    "backlinks",
+    "outgoing_links",
+    "local_graph",
+    "review",
+    "markdown",
+    "technical"
+  ],
+  "ren_relation_count": 15
+}

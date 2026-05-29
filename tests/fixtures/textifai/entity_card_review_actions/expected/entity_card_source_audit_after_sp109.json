@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "source_prose_included": false,
+  "provider_raw_output_included": false,
+  "provider_calls": false,
+  "write_back": false,
+  "assessment": "entity_card_source_audit_ready",
+  "labels_checked": [
+    "Ren",
+    "Sera",
+    "Nael"
+  ],
+  "ren": {
+    "kind": "character",
+    "relation_count": 15,
+    "evidence_count": 0,
+    "aliases": {
+      "canonical": [],
+      "contextual": [
+        "yo",
+        "yo (narrador)"
+      ],
+      "needs_review": [
+        "una chica"
+      ],
+      "suppressed": []
+    }
+  },
+  "sera": {
+    "kind": "character",
+    "relation_count": 9,
+    "aliases": {
+      "canonical": [],
+      "contextual": [
+        "Yo"
+      ],
+      "needs_review": [],
+      "suppressed": []
+    }
+  },
+  "nael": {
+    "kind": "character",
+    "relation_count": 3
+  }
+}

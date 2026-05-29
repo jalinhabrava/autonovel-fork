@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "source_prose_included": false,
+  "provider_raw_output_included": false,
+  "provider_calls": false,
+  "write_back": false,
+  "frontmatter_primary_content": false,
+  "sections": [
+    "Bio",
+    "Aliases",
+    "Relationships",
+    "Evidence/Appearances",
+    "Backlinks",
+    "Technical details"
+  ],
+  "synthesizes_when_markdown_too_technical": true
+}

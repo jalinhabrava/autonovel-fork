@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "source_prose_included": false,
+  "provider_raw_output_included": false,
+  "provider_calls": false,
+  "write_back": false,
+  "minimum_flow": "local_state_placeholder",
+  "write_back_real": false,
+  "future_modal_or_codex_filter": true
+}

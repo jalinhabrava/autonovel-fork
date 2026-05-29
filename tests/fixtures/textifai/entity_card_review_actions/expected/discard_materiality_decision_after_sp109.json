@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "source_prose_included": false,
+  "provider_raw_output_included": false,
+  "provider_calls": false,
+  "write_back": false,
+  "action": "discard_from_canon",
+  "preserves_evidence": true,
+  "local_state_only": true,
+  "semantic": "no_primary_or_graph_node_for_reference"
+}

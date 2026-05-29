@@ -38,7 +38,8 @@ import {
   fetchProjectDetail,
   fetchProjects,
   fetchReviewQueue,
-} from './api';
+  EntityCard,
+  fetchEntityCard } from './api';
 import { mapGraphPayload, filterGraph } from './graph/GraphDataAdapter';
 import { GraphCanvas } from './graph/GraphCanvas';
 import { GraphToolbar } from './graph/GraphToolbar';
@@ -47,8 +48,8 @@ import { GraphCanvasNode } from './graph/types';
 
 type SectionId = 'hub' | 'ingest' | 'codex' | 'graph' | 'review' | 'editor' | 'story' | 'ask' | 'overview';
 type ScreenConfig = { id: SectionId; label: string; icon: React.ComponentType<{ size?: number; className?: string }> };
-type DecisionItem = { id: string; title: string; severity: string; source: string; action: string; raw: ReviewItem };
-type ReviewDecisionChoice = 'accept' | 'reject' | 'merge';
+type DecisionItem = { id: string; title: string; severity: string; source: string; action: string; raw: ReviewItem; actionKind?: string; hasTarget?: boolean; materiality?: 'normal' | 'low' | 'noise' };
+type ReviewDecisionChoice = 'accept' | 'reject' | 'manual' | 'create' | 'discard' | 'context' | 'defer';
 type EvidenciaModalItem = DecisionItem | null;
 type EditDraft = { title: string; notePath?: string; body: string } | null;
 
@@ -101,13 +102,25 @@ function choosePreferredProject(projects: ProjectSummary[]): ProjectSummary | un
 
 function toDecisionItem(item: ReviewItem, index: number): DecisionItem {
   const severity = String(item.severity || 'low');
-  const title = item.title || `${item.source_entity || 'Candidato'} / ${typeof item.target_entity === 'object' ? item.target_entity?.label : item.target_entity || item.target_label || 'entidad relacionada'}`;
+  const target = item.target_label || (typeof item.target_entity === 'object' ? item.target_entity?.label : item.target_entity) || '';
+  const title = item.title || (target ? `Revisar “${target}”` : `${item.source_entity || 'Candidato'} · sin entidad sugerida`);
+  const summary = item.human_reason || item.subtitle || item.recommendation || item.suggested_action || item.review_type || item.type || item.evidence_summary || 'Necesita decisión editorial.';
+  const lower = `${target} ${summary} ${item.review_type || ''} ${item.type || ''}`.toLowerCase();
+  let actionKind = target ? 'accept_suggested_action' : 'manual_resolution_required';
+  if (lower.includes('ruido') || lower.includes('noise')) actionKind = 'discard_from_canon';
+  else if (lower.includes('alias')) actionKind = 'alias_candidate';
+  else if (lower.includes('relación') || lower.includes('relationship')) actionKind = 'relationship_candidate';
+  else if (target) actionKind = 'merge_candidate';
+  const materiality = lower.includes('ruido') || lower.includes('noise') ? 'noise' : (lower.includes('ambigua') || lower.includes('no nombrada') || lower.includes('sin entidad') ? 'low' : 'normal');
   return {
     id: item.id || `${title}-${index}`,
     title,
     severity,
-    source: item.evidence_summary || item.subtitle || (item.evidence_refs || []).map((row) => row.chapter_id || row.pointer || 'evidencia').slice(0, 2).join(', ') || 'Evidencia pendiente',
-    action: item.recommendation || item.suggested_action || item.review_type || item.type || 'Necesita decisión del autor',
+    source: item.evidence_summary || (item.evidence_refs || []).map((row) => row.chapter_id || row.pointer || 'evidencia').slice(0, 2).join(', ') || 'Evidencia pendiente',
+    action: summary,
+    actionKind,
+    hasTarget: Boolean(target),
+    materiality,
     raw: item,
   };
 }
@@ -131,9 +144,9 @@ function decisionButtonClass(active: boolean): string {
 }
 
 function formatDecisionChoice(choice?: ReviewDecisionChoice): string {
-  if (choice === 'accept') return 'Accept';
-  if (choice === 'reject') return 'Reject';
-  if (choice === 'merge') return 'Merge';
+  if (choice === 'accept') return 'Aceptar';
+  if (choice === 'reject') return 'Rechazar';
+  if (choice === 'merge') return 'Fusionar';
   return 'sin marcar';
 }
 
@@ -209,14 +222,17 @@ function DecisionCard({ item, selected, choice, onSelect, onChoose, onOpenEviden
       <button type="button" onClick={onSelect} className="min-w-0 flex-1 text-left">
         <div className={`inline-flex rounded-full border px-3 py-1 text-xs uppercase tracking-wide ${severityClass(item.severity)}`}>{String(item.severity).toUpperCase()} SEVERITY · {item.source || 'Sin capítulos vinculados'}</div>
         <h3 className="mt-2 text-2xl font-semibold tracking-tight">{item.title}</h3>
-        <p className="mt-2 text-sm text-neutral-600">{item.action}</p>
+        <p className="mt-2 text-sm text-neutral-600">{item.human_reason || item.summary || item.evidence_summary || item.action}</p>
       </button>
       <AlertTriangle size={18} className={`mt-1 shrink-0 ${severityIconClass(item.severity)}`} />
     </div>
     <div className="mt-5 flex flex-wrap gap-2">
-      <button type="button" onClick={() => choose('accept')} className={decisionButtonClass(choice === 'accept')}>Accept</button>
-      <button type="button" onClick={() => choose('reject')} className={decisionButtonClass(choice === 'reject')}>Reject</button>
-      <button type="button" onClick={() => choose('merge')} className={decisionButtonClass(choice === 'merge')}>Merge</button>
+      <button type="button" onClick={() => choose('accept')} className={decisionButtonClass(choice === 'accept')}>{item.actionKind === 'relationship_candidate' ? 'Aceptar relación' : item.actionKind === 'alias_candidate' ? 'Aceptar alias' : item.hasTarget ? 'Aceptar sugerencia' : 'Aceptar'}</button>
+      <button type="button" onClick={() => choose('reject')} className={decisionButtonClass(choice === 'reject')}>Rechazar</button>
+      {item.hasTarget ? <button type="button" onClick={() => choose('manual')} className={decisionButtonClass(choice === 'manual')}>Elegir otra entidad…</button> : <button type="button" onClick={() => choose('manual')} className={decisionButtonClass(choice === 'manual')}>Resolver manualmente…</button>}
+      {!item.hasTarget ? <button type="button" onClick={() => choose('create')} className={decisionButtonClass(choice === 'create')}>Crear entidad nueva</button> : null}
+      {(item.materiality === 'low' || item.materiality === 'noise' || !item.hasTarget) ? <button type="button" onClick={() => choose('discard')} className={decisionButtonClass(choice === 'discard')}>Descartar del canon</button> : null}
+      <button type="button" onClick={() => choose('context')} className={decisionButtonClass(choice === 'context')}>Mantener como contexto</button>
       <Button variant="secondary" onClick={() => { onSelect(); onOpenEvidencia(); }}>Ver evidencia</Button>
     </div>
   </article>;
@@ -225,7 +241,7 @@ function DecisionCard({ item, selected, choice, onSelect, onChoose, onOpenEviden
 function EvidenciaModal({ item, onClose }: { item: EvidenciaModalItem; onClose: () => void }) {
   if (!item) return null;
   const refs = item.raw.evidence_refs || [];
-  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"><div className="w-full max-w-3xl rounded-3xl border border-neutral-200 bg-white shadow-2xl"><div className="flex items-center justify-between border-b border-neutral-200 p-5"><div><div className="text-xs uppercase tracking-wide text-neutral-500">Evidencia</div><h2 className="mt-1 text-xl font-semibold">{item.title}</h2><p className="mt-1 text-sm text-neutral-500">{item.action}</p></div><button type="button" onClick={onClose} className="rounded-full p-2 hover:bg-neutral-100"><X size={18} /></button></div><div className="grid gap-4 p-5 lg:grid-cols-[1.3fr_0.7fr]"><div className="space-y-3">{refs.length ? refs.map((ref, index) => <div key={`${ref.chapter_id || ref.pointer || 'evidence'}-${index}`} className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4"><div className="text-xs uppercase tracking-wide text-neutral-500">Evidencia {index + 1}</div><div className="mt-2 text-sm text-neutral-800">Capítulo: {ref.chapter_id || 'pendiente'}</div><div className="mt-1 text-sm text-neutral-600">Pointer: {ref.pointer || 'sin pointer estructurado'}</div></div>) : <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-600">No hay `evidence_refs` estructurados todavía para este caso.</div>}</div><aside className="space-y-3"><div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4"><div className="text-xs uppercase tracking-wide text-neutral-500">Tipo</div><div className="mt-2 text-sm text-neutral-800">{item.raw.review_type || 'decisión editorial'}</div></div><div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4"><div className="text-xs uppercase tracking-wide text-neutral-500">Recomendación</div><div className="mt-2 text-sm text-neutral-800">{item.raw.recommendation || 'Necesita decisión explícita del autor.'}</div></div><div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4"><div className="text-xs uppercase tracking-wide text-neutral-500">Severidad</div><div className={`mt-2 inline-flex rounded-full border px-3 py-1 text-xs uppercase tracking-wide ${severityClass(item.severity)}`}>{item.severity}</div></div></aside></div><div className="flex justify-end border-t border-neutral-200 p-5"><Button variant="secondary" onClick={onClose}>Cerrar</Button></div></div></div>;
+  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"><div className="w-full max-w-3xl rounded-3xl border border-neutral-200 bg-white shadow-2xl"><div className="flex items-center justify-between border-b border-neutral-200 p-5"><div><div className="text-xs uppercase tracking-wide text-neutral-500">Evidencia</div><h2 className="mt-1 text-xl font-semibold">{item.title}</h2><p className="mt-1 text-sm text-neutral-500">{item.action}</p></div><button type="button" onClick={onClose} className="rounded-full p-2 hover:bg-neutral-100"><X size={18} /></button></div><div className="grid gap-4 p-5 lg:grid-cols-[1.3fr_0.7fr]"><div className="space-y-3">{refs.length ? refs.map((ref, index) => <div key={`${ref.chapter_id || ref.pointer || 'evidence'}-${index}`} className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4"><div className="text-xs uppercase tracking-wide text-neutral-500">Evidencia {index + 1}</div><div className="mt-2 text-sm text-neutral-800">Capítulo: {ref.chapter_label || ref.chapter_id || 'pendiente'}</div><div className="mt-1 text-sm text-neutral-600">Referencia: {ref.pointer_short || ref.pointer || 'sin referencia estructurada'}</div>{ref.has_text && ref.excerpt ? <div className="mt-2 rounded-xl bg-white border border-neutral-200 p-3 text-sm text-neutral-700 italic">{'«' + ref.excerpt.slice(0, 240) + '»'}</div> : <div className="mt-2 rounded-xl bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">Fragmento textual no disponible. La referencia apunta a un chunk de extracción semántica.</div>}</div>) : <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-600">No hay evidence_refs estructurados todavía para este caso.</div>}</div><aside className="space-y-3"><div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4"><div className="text-xs uppercase tracking-wide text-neutral-500">Tipo</div><div className="mt-2 text-sm text-neutral-800">{item.raw.review_type || 'decisión editorial'}</div></div><div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4"><div className="text-xs uppercase tracking-wide text-neutral-500">Recomendación</div><div className="mt-2 text-sm text-neutral-800">{item.raw.recommendation || 'Necesita decisión explícita del autor.'}</div></div><div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4"><div className="text-xs uppercase tracking-wide text-neutral-500">Severidad</div><div className={`mt-2 inline-flex rounded-full border px-3 py-1 text-xs uppercase tracking-wide ${severityClass(item.severity)}`}>{item.severity}</div></div></aside></div><div className="flex justify-end border-t border-neutral-200 p-5"><Button variant="secondary" onClick={onClose}>Cerrar</Button></div></div></div>;
 }
 function EntityRecordTable({ entities, selectedKey, onSelect }: { entities: CanonEntity[]; selectedKey: string; onSelect: (key: string) => void }) { return <div className="overflow-hidden rounded-3xl border border-neutral-200"><div className="grid grid-cols-12 bg-neutral-100 px-4 py-3 text-xs uppercase tracking-wide text-neutral-500"><span className="col-span-5">Entidad</span><span className="col-span-2">Tipo</span><span className="col-span-2">Confianza</span><span className="col-span-3">Estado</span></div>{entities.slice(0, 18).map((entity) => { const key = entity.preferred_slug || entity.canonical_name || ''; const active = key === selectedKey; return <button key={key} onClick={() => onSelect(key)} className={`w-full grid grid-cols-12 px-4 py-3 text-sm border-t border-neutral-200 items-center text-left ${active ? 'bg-neutral-50' : 'bg-white hover:bg-neutral-50'}`}><span className="col-span-5 font-medium">{entity.canonical_name || key}</span><span className="col-span-2 text-neutral-500">{entity.entity_kind || 'entity'}</span><span className="col-span-2 text-neutral-500">{entity.confidence ?? '—'}</span><span className="col-span-3 text-neutral-500">{entity.review_state || 'ready'}</span></button>; })}</div>; }
 function InspectorCard({ entity }: { entity: CanonEntity | undefined }) { if (!entity) return <div className="rounded-3xl border border-neutral-200 p-5 text-sm text-neutral-500">Selecciona un record para abrir inspector.</div>; return <div className="rounded-3xl border border-neutral-200 bg-neutral-50 p-5"><div className="text-xs uppercase tracking-wide text-neutral-500">Inspector</div><h2 className="mt-2 text-xl font-semibold">{entity.canonical_name}</h2><p className="mt-3 text-sm leading-6 text-neutral-600">{entity.summary || 'Sin resumen author-facing disponible todavía.'}</p><div className="mt-4 flex flex-wrap gap-2">{(entity.aliases || []).slice(0, 6).map((alias) => <span key={alias} className="rounded-full bg-white border border-neutral-200 px-3 py-1 text-xs">{alias}</span>)}</div><Button variant="secondary">Editar ficha · draft</Button></div>; }
@@ -247,11 +263,24 @@ function NativeGraphSurface({ graph, selectedNodeId, setSelectedNodeId, setEditD
   return <div className="grid grid-cols-12 gap-5 p-5"><aside className="col-span-12 xl:col-span-2 rounded-3xl border border-neutral-200 bg-neutral-50 p-4"><h2 className="font-semibold">Filtros</h2><div className="mt-4 flex flex-wrap gap-2 xl:block xl:space-y-2">{['all', ...kinds].map((kind) => <button key={kind} onClick={() => setKindFilter(kind)} className={`rounded-2xl px-3 py-2 text-sm xl:w-full xl:text-left ${kindFilter === kind ? 'bg-neutral-900 text-white' : 'bg-white border border-neutral-200 text-neutral-700'}`}>{kind === 'all' ? 'Todo' : kindLabels[kind] || kind}</button>)}</div></aside><div className="col-span-12 xl:col-span-7 rounded-3xl border border-neutral-200 bg-neutral-50 p-4"><div className="mb-3 flex items-center justify-between"><div><h2 className="font-semibold">Grafo VaERL</h2><p className="text-sm text-neutral-500">SVG React nativo sobre `/graph`. Sin iframe legacy como primary.</p></div><StatusChip>{visibleNodes.length} nodos</StatusChip></div><svg viewBox="0 0 760 520" className="h-[560px] w-full rounded-2xl bg-white border border-neutral-200">{visibleEdges.map((edge) => { const source = byId.get(String(edge.source)); const target = byId.get(String(edge.target)); if (!source || !target) return null; return <line key={edge.id || `${edge.source}-${edge.target}`} x1={source.x} y1={source.y} x2={target.x} y2={target.y} stroke="#d4d4d4" strokeWidth="1.5" />; })}{positioned.map((node) => { const kind = String(node.display_kind || node.kind || 'note'); const active = selected?.id === node.id; return <g key={node.id} onClick={() => setSelectedNodeId(node.id || '')} className="cursor-pointer"><circle cx={node.x} cy={node.y} r={active ? 16 : Number(node.radius || 11)} fill={graphPalette[kind] || '#525252'} stroke={active ? '#111827' : '#ffffff'} strokeWidth={active ? 4 : 2} /><text x={node.x + 18} y={node.y + 4} fontSize="12" fill="#171717">{node.label || node.id}</text></g>; })}</svg></div><GraphInspector node={selected} setEditDraft={setEditDraft} /></div>;
 }
 
-function GraphInspector({ node, setEditDraft }: { node?: GraphNode; setEditDraft: (draft: EditDraft) => void }) {
+function GraphInspector({ node, entityCard, noteContent, noteDetail, onEdit, setEditDraft }: { node?: any; entityCard?: CanonEntity | null; noteContent?: string; noteDetail?: NoteDetail | null; onEdit?: (node: GraphCanvasNode) => void; setEditDraft?: (draft: EditDraft) => void }) {
   if (!node) return <aside className="col-span-12 xl:col-span-3 rounded-3xl border border-neutral-200 p-5 text-sm text-neutral-500">Selecciona un nodo.</aside>;
   const kind = String(node.display_kind || node.kind || 'note');
-  return <aside className="col-span-12 xl:col-span-3 rounded-3xl border border-neutral-200 bg-white p-5 shadow-sm"><div className="text-xs uppercase tracking-wide text-neutral-500">Ficha del nodo</div><h2 className="mt-2 text-xl font-semibold">{node.label || node.id}</h2><div className="mt-2 flex flex-wrap gap-2"><span className="rounded-full bg-neutral-100 px-3 py-1 text-xs">{kindLabels[kind] || kind}</span><span className="rounded-full bg-neutral-100 px-3 py-1 text-xs">{node.review_state || node.status || 'sin estado'}</span></div><p className="mt-4 text-sm leading-6 text-neutral-600">{node.summary_excerpt || 'Resumen no disponible todavía.'}</p><div className="mt-4 grid gap-2 text-sm"><div className="rounded-2xl bg-neutral-50 border border-neutral-200 p-3">Relaciones: {node.relationship_count ?? node.degree ?? 0}</div><div className="rounded-2xl bg-neutral-50 border border-neutral-200 p-3">Nota: {node.note_path || node.canonical_note_path || 'pendiente'}</div></div><div className="mt-5 flex flex-wrap gap-2"><Button onClick={() => setEditDraft({ title: `Editar ${node.label || node.id}`, notePath: node.note_path || node.canonical_note_path, body: 'Draft local/read-only. Guardar cambios llegará con SP-106 drafts/patch queue.' })}>Editar</Button><Button variant="secondary">Abrir ficha</Button></div></aside>;
+  const label = entityCard?.canonical_name || node.label || node.id;
+  const notePath = node.notePath || node.note_path || node.canonical_note_path || '';
+  const summary = entityCard?.summary || node.summaryExcerpt || node.summary_excerpt || noteDetail?.summary_excerpt || '';
+  const aliases = Array.from(new Set([...(entityCard?.aliases || []), ...((node.aliases || []) as string[])].filter(Boolean)));
+  const facts = entityCard?.key_facts || noteDetail?.key_facts_preview || [];
+  const relationships = entityCard?.relationships || [];
+  const backlinks = noteDetail?.backlinks || node.backlinks || [];
+  const outgoing = noteDetail?.outgoing_wikilinks || node.outgoingWikilinks || [];
+  const preview = String(noteContent || noteDetail?.markdown || '').split('\n').map((line) => line.trim()).filter((line) => line && line !== '---').slice(0, 10).join('\n').slice(0, 1200);
+  const relationCount = relationships.length || node.relationshipCount || node.relationship_count || noteDetail?.relationship_count || node.degree || 0;
+  const evidenceCount = entityCard?.evidence_refs?.length || node.evidenceCount || node.evidence_count || noteDetail?.evidence_count || 0;
+  const runEdit = () => onEdit ? onEdit(node as GraphCanvasNode) : setEditDraft ? setEditDraft({ title: `Editar ${label}`, notePath, body: 'Draft local/read-only. Guardar cambios llegará con patch queue.' }) : undefined;
+  return <aside className="col-span-12 xl:col-span-3 rounded-3xl border border-neutral-200 bg-white p-5 shadow-sm max-h-[720px] overflow-y-auto"><div className="text-xs uppercase tracking-wide text-neutral-500">Ficha del nodo</div><h2 className="mt-2 text-xl font-semibold">{label}</h2><div className="mt-2 flex flex-wrap gap-2"><span className="rounded-full bg-neutral-100 px-3 py-1 text-xs">{kindLabels[kind] || kind}</span><span className="rounded-full bg-neutral-100 px-3 py-1 text-xs">{node.reviewState || node.review_state || node.status || 'ready'}</span><span className="rounded-full bg-neutral-100 px-3 py-1 text-xs">{relationCount} relaciones</span><span className="rounded-full bg-neutral-100 px-3 py-1 text-xs">{evidenceCount} evidencias</span></div><div className="mt-4 rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-sm leading-6 text-neutral-700">{summary || 'Resumen no disponible todavía. Se muestran enlaces, rutas y datos disponibles para revisión.'}</div>{aliases.length ? <div className="mt-4"><div className="mb-2 text-xs uppercase tracking-wide text-neutral-400">Aliases</div><div className="flex flex-wrap gap-1">{aliases.slice(0, 10).map((alias) => <span key={alias} className="rounded-full border border-neutral-200 bg-white px-2 py-0.5 text-xs">{alias}</span>)}</div></div> : null}{facts.length ? <div className="mt-4"><div className="mb-2 text-xs uppercase tracking-wide text-neutral-400">Hechos / bio</div><ul className="list-inside list-disc space-y-1 text-sm text-neutral-600">{facts.slice(0, 6).map((fact, i) => <li key={i}>{fact}</li>)}</ul></div> : null}{relationships.length ? <div className="mt-4"><div className="mb-2 text-xs uppercase tracking-wide text-neutral-400">Relaciones principales</div><div className="space-y-1">{relationships.slice(0, 6).map((rel, i) => <div key={i} className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm">{rel.target || 'sin destino'} — {rel.type || rel.relation_type || 'relacionado'}</div>)}</div></div> : null}<div className="mt-4 grid gap-2 text-sm"><div className="rounded-2xl bg-neutral-50 border border-neutral-200 p-3">Backlinks: {backlinks.length}</div><div className="rounded-2xl bg-neutral-50 border border-neutral-200 p-3">Enlaces salientes: {outgoing.length}</div><div className="rounded-2xl bg-neutral-50 border border-neutral-200 p-3">Grafo local: {noteDetail?.local_graph?.nodes?.length || 0} nodos</div><div className="rounded-2xl bg-neutral-50 border border-neutral-200 p-3">Nota: {notePath || 'pendiente'}</div></div>{backlinks.length ? <div className="mt-4"><div className="mb-2 text-xs uppercase tracking-wide text-neutral-400">Backlinks</div><div className="space-y-1">{backlinks.slice(0, 8).map((backlink) => <div key={backlink} className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs">{backlink}</div>)}</div></div> : null}{outgoing.length ? <div className="mt-4"><div className="mb-2 text-xs uppercase tracking-wide text-neutral-400">Enlaces salientes</div><div className="space-y-1">{outgoing.slice(0, 8).map((link) => <div key={link.target || link.label} className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs">{link.label || link.target}</div>)}</div></div> : null}{preview ? <details className="mt-4" open><summary className="cursor-pointer rounded-2xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs font-semibold">Vista Markdown</summary><pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap rounded-2xl bg-neutral-50 p-3 text-xs text-neutral-600">{preview}</pre></details> : null}<div className="mt-5 flex flex-wrap gap-2"><Button onClick={runEdit}>Editar</Button><Button variant="secondary">Abrir ficha</Button><Button variant="secondary">Ver en Review</Button></div></aside>;
 }
+
 
 export function App() {
   const [active, setActive] = useState<SectionId>('overview');
@@ -272,6 +301,7 @@ export function App() {
   const [editorChapterRailCollapsed, setEditorChapterRailCollapsed] = useState(false);
   const [graphPayload, setGraphPayload] = useState<GraphPayload | null>(null);
   const [selectedGraphNodeId, setSelectedGraphNodeId] = useState<string>('');
+  const [selectedGraphEntityCardVm, setSelectedGraphEntityCardVm] = useState<EntityCard | null>(null);
   const [graphKindFilter, setGraphKindFilter] = useState<Set<string>>(new Set());
   const [graphQuery, setGraphQuery] = useState('');
   const [graphRelatedOnly, setGraphRelatedOnly] = useState(false);
@@ -350,6 +380,7 @@ export function App() {
     <section>
       <TopBar title="Graph" subtitle="Exploración visual author-facing con física viva e inspector editorial." actions={<Button variant="secondary" onClick={resetGraphFilters}>Restablecer filtros</Button>} />
       <div className="p-5 grid grid-cols-12 gap-5">
+        {/* setSelectedGraphNodeId via handleGraphNodeSelect */}
         <aside className="col-span-12 xl:col-span-3">
           <GraphToolbar
             selectedKinds={graphKindFilter}
@@ -365,13 +396,14 @@ export function App() {
           {selectedProjectId ? <GraphCanvas nodes={filteredGraph.nodes} edges={filteredGraph.edges} selectedNodeId={selectedGraphNodeId} onSelectNode={handleGraphNodeSelect} /> : <div className="rounded-3xl border border-neutral-200 p-5 text-sm text-neutral-500">Selecciona un proyecto para abrir Graph.</div>}
         </div>
         <aside className="col-span-12 xl:col-span-3">
-          <GraphInspector node={selectedGraphNode} entityCard={selectedGraphEntity} noteContent={selectedGraphNoteContent} noteDetail={selectedGraphNoteDetail} onEdit={(node: GraphCanvasNode) => setGraphEditNodeId(node.id)} />
+          <GraphInspector node={selectedGraphNode} entityCard={selectedGraphEntity}
+            entityCardVm={selectedGraphEntityCardVm} noteContent={selectedGraphNoteContent} noteDetail={selectedGraphNoteDetail} onEdit={(node: GraphCanvasNode) => setGraphEditNodeId(node.id)} />
         </aside>
       </div>
       <GraphNodeEditDraftModal node={graphEditNode} onClose={() => setGraphEditNodeId(null)} />
     </section>
   );
-  if (active === 'review') content = <section>
+    if (active === 'review') content = <section>
     <TopBar
       title="Review Queue"
       subtitle="Decisiones del autor convierten ambigüedad semántica en canon estable."
@@ -387,9 +419,7 @@ export function App() {
       </div>
       <aside className="col-span-12 lg:col-span-4 space-y-4">
         <Metric label="Decisiones pendientes" value={reviewSummary.total_pending ?? warningsVisible} note="Resumen dinámico de cola editorial." />
-        <Metric label="Decisiones locales sin aplicar" value="Explícito" note="Sin cambios silenciosos de canon." />
-        <div className="rounded-3xl border border-neutral-200 bg-neutral-50 p-5 text-xs grid grid-cols-2 gap-2">
-          {([
+        {([
             ['possible_merges', 'Posibles fusiones'],
             ['probable_aliases', 'Aliases probables'],
             ['uncertain_relationships', 'Relaciones inciertas'],
@@ -399,22 +429,15 @@ export function App() {
           ] as const)
             .filter(([key]) => Number((reviewSummary as Record<string, number>)[key] || 0) > 0)
             .map(([key, label]) => (
-              <div key={key} className="rounded-xl border border-neutral-200 bg-white px-2 py-1">
-                <b>{Number((reviewSummary as Record<string, number>)[key] || 0)}</b> {label}
+              <div key={key} className="rounded-3xl border border-neutral-200 bg-white p-5 text-left shadow-sm">
+                <div className="text-xs uppercase tracking-wide text-neutral-700">{label}</div>
+                <div className="mt-1 text-2xl font-semibold">{Number((reviewSummary as Record<string, number>)[key] || 0)}</div>
               </div>
             ))}
-        </div>
-        <div className="rounded-3xl border border-neutral-200 bg-neutral-50 p-5">
-          <h2 className="font-semibold">Resumen dinámico de decisión</h2>
-          <p className="mt-2 text-sm text-neutral-600">{selectedDecision?.action || 'Selecciona aviso.'}</p>
-          <p className="mt-3 text-sm font-medium text-neutral-900">Decisión local: {selectedDecisionChoice ? selectedDecisionChoice : 'sin marcar'}</p>
-          <p className="mt-3 text-xs text-neutral-500">Estado local explícito. Sin write-back automático en esta fase.</p>
-          <div className="mt-4 flex flex-wrap gap-2"><Button variant="secondary" onClick={() => selectedDecision && setEvidenciaModalDecisionId(selectedDecision.id)}>Ver evidencia</Button><Button variant="secondary">Editar etiqueta canónica</Button></div>
-        </div>
       </aside>
     </div>
   </section>;
-  if (active === 'editor') content = <section className={editorFullscreen ? 'fixed inset-0 z-30 bg-white overflow-y-auto' : ''}><TopBar title="Editor" subtitle="Solo capítulos/manuscrito. Fichas primarias viven en Codex, Graph o Story Bible." actions={<Button onClick={() => setEditDraft({ title: 'Añadir capítulo', body: 'Draft local pendiente de SP-106. No hay persistencia ni write-back en SP-105D.' })}><Plus size={14} className="inline" /> Añadir capítulo</Button>} /><div className="p-5 grid grid-cols-12 gap-5"><aside className={editorFullscreen && editorChapterRailCollapsed ? 'col-span-12 lg:col-span-1 rounded-3xl border border-neutral-200 bg-neutral-50 p-4' : 'col-span-12 lg:col-span-3 rounded-3xl border border-neutral-200 bg-neutral-50 p-4'}><div className="flex items-center justify-between gap-2"><h2 className="font-semibold">{editorFullscreen && editorChapterRailCollapsed ? 'Cap.' : 'Capítulos'}</h2>{editorFullscreen ? <button type="button" onClick={() => setEditorChapterRailCollapsed(!editorChapterRailCollapsed)} className="rounded-xl border border-neutral-200 bg-white px-2 py-1 text-xs">{editorChapterRailCollapsed ? 'Mostrar' : 'Ocultar'}</button> : null}</div>{editorFullscreen && editorChapterRailCollapsed ? null : <div className="mt-4 space-y-2 text-sm">{chapterNotes.map((note) => <button key={note.path} onClick={() => setEditorNotePath(note.path)} className={`w-full rounded-xl border px-3 py-2 text-left ${editorNotePath === note.path ? 'bg-neutral-900 text-white border-neutral-900' : 'bg-white border-neutral-200'}`}>{note.name || note.path}</button>)}</div>}</aside><div className={editorFullscreen && editorChapterRailCollapsed ? 'col-span-12 lg:col-span-8' : 'col-span-12 lg:col-span-6'}><div className="rounded-3xl border border-neutral-200 bg-white p-5 min-h-[620px]"><div className="flex items-center justify-between gap-3"><div><div className="text-xs uppercase text-neutral-500">Editor preview · capítulo real</div><h2 className="mt-2 font-semibold">{editorNotePath || 'Selecciona capítulo'}</h2></div><Button variant="secondary" onClick={() => setEditorFullscreen(!editorFullscreen)}><Maximize2 size={14} className="inline" /> {editorFullscreen ? 'Salir fullscreen' : 'Pantalla completa'}</Button></div><pre className="mt-4 whitespace-pre-wrap rounded-2xl bg-neutral-50 p-4 text-sm leading-7 text-neutral-700 max-h-[620px] overflow-auto">{editorMarkdown}</pre></div></div><aside className="col-span-12 lg:col-span-3 space-y-4"><Metric label="Contexto" value="VaERL" note="Panel derecho retenido también en fullscreen." /><div className="rounded-3xl border border-neutral-200 bg-neutral-50 p-5 text-sm text-neutral-600"><div className="rounded-2xl bg-white border border-neutral-200 p-3"><b>Rewrite selection</b><br />Placeholder. Sin LLM.</div><div className="mt-3 rounded-2xl bg-white border border-neutral-200 p-3"><b>Canon risks</b><br />No write-back en esta fase.</div></div></aside></div></section>;
+    if (active === 'editor') content = <section className={editorFullscreen ? 'fixed inset-0 z-30 bg-white overflow-y-auto' : ''}><TopBar title="Editor" subtitle="Solo capítulos/manuscrito. Fichas primarias viven en Codex, Graph o Story Bible." actions={<Button onClick={() => setEditDraft({ title: 'Añadir capítulo', body: 'Draft local pendiente de SP-106. No hay persistencia ni write-back en SP-105D.' })}><Plus size={14} className="inline" /> Añadir capítulo</Button>} /><div className="p-5 grid grid-cols-12 gap-5"><aside className={editorFullscreen && editorChapterRailCollapsed ? 'col-span-12 lg:col-span-1 rounded-3xl border border-neutral-200 bg-neutral-50 p-4' : 'col-span-12 lg:col-span-3 rounded-3xl border border-neutral-200 bg-neutral-50 p-4'}><div className="flex items-center justify-between gap-2"><h2 className="font-semibold">{editorFullscreen && editorChapterRailCollapsed ? 'Cap.' : 'Capítulos'}</h2>{editorFullscreen ? <button type="button" onClick={() => setEditorChapterRailCollapsed(!editorChapterRailCollapsed)} className="rounded-xl border border-neutral-200 bg-white px-2 py-1 text-xs">{editorChapterRailCollapsed ? 'Mostrar' : 'Ocultar'}</button> : null}</div>{editorFullscreen && editorChapterRailCollapsed ? null : <div className="mt-4 space-y-2 text-sm">{chapterNotes.map((note) => <button key={note.path} onClick={() => setEditorNotePath(note.path)} className={`w-full rounded-xl border px-3 py-2 text-left ${editorNotePath === note.path ? 'bg-neutral-900 text-white border-neutral-900' : 'bg-white border-neutral-200'}`}>{note.name || note.path}</button>)}</div>}</aside><div className={editorFullscreen && editorChapterRailCollapsed ? 'col-span-12 lg:col-span-8' : 'col-span-12 lg:col-span-6'}><div className="rounded-3xl border border-neutral-200 bg-white p-5 min-h-[620px]"><div className="flex items-center justify-between gap-3"><div><div className="text-xs uppercase text-neutral-500">Editor preview · capítulo real</div><h2 className="mt-2 font-semibold">{editorNotePath || 'Selecciona capítulo'}</h2></div><Button variant="secondary" onClick={() => setEditorFullscreen(!editorFullscreen)}><Maximize2 size={14} className="inline" /> {editorFullscreen ? 'Salir fullscreen' : 'Pantalla completa'}</Button></div><pre className="mt-4 whitespace-pre-wrap rounded-2xl bg-neutral-50 p-4 text-sm leading-7 text-neutral-700 max-h-[620px] overflow-auto">{editorMarkdown}</pre></div></div><aside className="col-span-12 lg:col-span-3 space-y-4"><Metric label="Contexto" value="VaERL" note="Panel derecho retenido también en fullscreen." /><div className="rounded-3xl border border-neutral-200 bg-neutral-50 p-5 text-sm text-neutral-600"><div className="rounded-2xl bg-white border border-neutral-200 p-3"><b>Rewrite selection</b><br />Placeholder. Sin LLM.</div><div className="mt-3 rounded-2xl bg-white border border-neutral-200 p-3"><b>Canon risks</b><br />No write-back en esta fase.</div></div></aside></div></section>;
   if (active === 'story') content = <section><TopBar title="Story Bible" subtitle="Wiki Markdown author-facing. Legacy boundary transicional documentado." actions={<><Button variant="secondary">Sync Markdown</Button><Button variant="secondary">Open graph side-by-side</Button></>} /><div className="p-5 grid grid-cols-12 gap-5"><aside className="col-span-12 lg:col-span-3 rounded-3xl border border-neutral-200 bg-neutral-50 p-4"><h2 className="font-semibold">Vault tree</h2><div className="mt-4 space-y-2 text-sm">{(projectDetail?.notes || []).slice(0, 16).map((note) => <div key={note.path} className="rounded-xl bg-white border border-neutral-200 px-3 py-2">{note.name || note.path}</div>)}</div></aside><div className="col-span-12 lg:col-span-9">{selectedProjectId ? <LegacyEmbed title="Story Bible transitional legacy boundary" src={legacyUrl('notes', selectedProjectId)} /> : <div className="rounded-3xl border border-neutral-200 p-5 text-sm text-neutral-500">Selecciona proyecto.</div>}</div></div></section>;
   if (active === 'ask') content = <section><TopBar title="Ask Canon" subtitle="Q&A shell grounded futuro en VaERL, evidencia y review state." actions={<><Button variant="secondary">Open answer history</Button><Button variant="secondary">Check source coverage</Button></>} /><div className="p-5 grid grid-cols-12 gap-5"><div className="col-span-12 lg:col-span-7 rounded-3xl border border-neutral-200 p-5 min-h-[560px] flex flex-col"><div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-500">Pregunta: “¿Qué sabe Sera antes del capítulo 6?”</div><div className="mt-5 rounded-3xl border border-neutral-200 p-5 bg-white shadow-sm"><div className="font-semibold">Respuesta grounded</div><p className="mt-3 text-sm leading-7">Placeholder. No se genera canon sin backend de evidencia.</p></div><div className="mt-auto pt-5 flex gap-2"><input className="flex-1 rounded-2xl border border-neutral-300 px-4 py-3 text-sm" placeholder="Pregunta sobre canon, continuidad o capítulos..." /><Button variant="secondary" disabled>Enviar</Button></div></div><aside className="col-span-12 lg:col-span-5 space-y-4"><Metric label="Grounding" value="Evidencia-first" note="Sin claims no soportados." /></aside></div></section>;
 

@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "source_prose_included": false,
+  "provider_raw_output_included": false,
+  "provider_calls": false,
+  "write_back": false,
+  "categories": [
+    "canonical",
+    "contextual",
+    "needs_review",
+    "suppressed"
+  ],
+  "ren_contextual": [
+    "yo",
+    "yo (narrador)"
+  ],
+  "ren_needs_review": [
+    "una chica"
+  ]
+}

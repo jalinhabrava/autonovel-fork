@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "source_prose_included": false,
+  "provider_raw_output_included": false,
+  "provider_calls": false,
+  "write_back": false,
+  "types": [
+    "merge_candidate",
+    "alias_candidate",
+    "relationship_candidate",
+    "manual_resolution_required",
+    "low_materiality_candidate",
+    "noise_candidate",
+    "pronoun_pov",
+    "unconfirmed_local_candidate"
+  ],
+  "actions": [
+    "accept_suggested_action",
+    "reject",
+    "resolve_manually",
+    "choose_existing_entity",
+    "create_new_entity",
+    "discard_from_canon",
+    "keep_as_context",
+    "view_evidence",
+    "defer"
+  ]
+}

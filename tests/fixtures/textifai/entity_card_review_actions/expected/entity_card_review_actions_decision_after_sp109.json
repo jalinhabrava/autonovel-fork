@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "source_prose_included": false,
+  "provider_raw_output_included": false,
+  "provider_calls": false,
+  "write_back": false,
+  "assessment": "entity_card_ready_review_actions_partial",
+  "no_provider_calls": true,
+  "no_vaerl_writeback": true,
+  "relationship_count_fixed_for_ren": 15
+}

@@ -9,6 +9,7 @@ from typing import Any
 from textifai.obsidian.parser import extract_obsidian_links, parse_obsidian_frontmatter
 from vault.schema import slugify
 from textifai.import_review.markdown_graph_index import build_author_graph, build_markdown_graph_index, local_graph
+from textifai.web_viewer.entity_card import build_entity_card
 from textifai.import_review.viewer_graph_adapter import adapt_ingestion_graph_to_viewer_graph
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -311,6 +312,23 @@ def list_notes(
     return notes
 
 
+
+def read_entity_card(
+    project: ProjectRef,
+    node_id: str | None = None,
+    note_path: str | None = None,
+    canonical_label: str | None = None,
+) -> dict[str, Any]:
+    """Build EntityCardViewModel combining author_graph, VaERL, Markdown, backlinks, review."""
+    root = project.root
+    if not root or not root.exists():
+        return {"error": "project_root_not_found"}
+    return build_entity_card(
+        project_root=root,
+        node_id=node_id,
+        note_path=note_path,
+        canonical_label=canonical_label,
+    )
 def read_note(project: ProjectRef, note_path: str) -> dict[str, Any]:
     path = _safe_child(project.root, note_path)
     if path.suffix != ".md" or not path.exists():
@@ -1216,10 +1234,58 @@ def _hydrate_review_queue(raw_review_queue: dict[str, Any], entities: list[dict[
         _key(str(row.get('canonical_name') or '')): row
         for row in entities if isinstance(row, dict) and row.get('canonical_name')
     }
-    chapter_titles = {
-        str(row.get('chapter_id') or ''): str(row.get('chapter_title_original') or row.get('chapter_title_canonical') or row.get('chapter_id') or '')
-        for row in chapters if isinstance(row, dict)
-    }
+    chapter_titles = {}
+    # Build from chapters list first
+    for row in (chapters or []):
+        if not isinstance(row, dict):
+            continue
+        cid = str(row.get('chapter_id') or '')
+        if not cid:
+            continue
+        title = str(row.get('chapter_title_original') or row.get('chapter_title_canonical') or '').strip()
+        if not title:
+            # Fallback: try to read the chapter markdown canonical_label from frontmatter or first H1
+            ch_filename = f'Ch_{cid.split("_", 1)[1] if cid.lower().startswith("ch_") else cid}.md'
+            ch_path = project_root / 'markdown' / 'Chapters' / ch_filename
+            if not ch_path.exists():
+                ch_path = project_root / 'markdown' / 'Chapters' / f'{cid}.md'
+            if ch_path.exists():
+                try:
+                    raw = ch_path.read_text(encoding='utf-8', errors='replace')
+                    # Try to parse canonical_label from frontmatter
+                    in_fm = False
+                    fm_lines = []
+                    body_started = False
+                    for line in raw.splitlines():
+                        stripped = line.strip()
+                        if stripped == '---' and not body_started:
+                            if in_fm:
+                                body_started = True
+                                continue
+                            else:
+                                in_fm = True
+                                continue
+                        if in_fm:
+                            fm_lines.append(stripped)
+                            if stripped.startswith('canonical_label:'):
+                                val = stripped.split(':', 1)[1].strip().strip('"').strip("'")
+                                if val and len(val) < 200:
+                                    title = val
+                                    break
+                            elif stripped.startswith('chapter_title:') or stripped.startswith('title:'):
+                                val = stripped.split(':', 1)[1].strip().strip('"').strip("'")
+                                if val and len(val) < 200:
+                                    title = val
+                                    break
+                        elif body_started:
+                            if stripped.startswith('# ') and not stripped.startswith('## '):
+                                val = stripped.lstrip('# ').strip('*').strip()
+                                if val and len(val) < 200:
+                                    title = val
+                                    break
+                except OSError:
+                    pass
+        chapter_titles[cid] = title or cid
     chapter_paths = _build_chapter_path_map(chapters, project_root) if hasattr(chapters, '__iter__') else {}
     for item in items:
         target_label = format_author_facing_label(str(item.get('target_label') or '').strip())
@@ -1280,16 +1346,37 @@ def _hydrate_review_queue(raw_review_queue: dict[str, Any], entities: list[dict[
         subtitle = human_reason or summary or 'Necesita decisión editorial.'
         if subtitle.strip().casefold() == 'review':
             subtitle = 'Necesita decisión editorial basada en evidencia narrativa.'
+        # Build chapter label from chapter_id
+        chapter_label = chapter_titles.get(chapter_id) or chapter_id or ''
+        # Get chapter note name from markdown manifest if available
+        chapter_note = None
+        if chapter_paths and chapter_id:
+            for p_ch, v_ch in chapter_paths.items():
+                if chapter_id in str(p_ch) or p_ch.replace('.md','').replace('Ch_','ch_') == chapter_id.replace('Ch_','ch_'):
+                    chapter_note = v_ch.name if hasattr(v_ch, 'name') else str(p_ch)
+                    break
         evidence_refs = []
         for ref in source_refs:
+            ev_ch_id = str(ref.get('chapter_id') or chapter_id or '')
+            ev_ch_label = chapter_titles.get(ev_ch_id) or chapter_note or ev_ch_id or ''
+            ev_chunk_id = str(ref.get('chunk_id') or '')
+            ev_has_excerpt = False
+            ev_excerpt = _resolve_evidence_excerpt(chapter_paths, ev_ch_id, ref)
+            if ev_excerpt:
+                ev_has_excerpt = True
+            # pointer as technical detail, not main evidence
+            ev_pointer_parts = [p for p in ev_chunk_id.split('_') if p and p not in ('source','chunk','')]
+            ev_pointer_short = ' → '.join(ev_pointer_parts[-2:]) if len(ev_pointer_parts) > 2 else ev_chunk_id
             ev = {
-                'chapter_id': str(ref.get('chapter_id') or chapter_id or ''),
-                'pointer': str(ref.get('chunk_id') or ''),
+                'chapter_id': ev_ch_id,
+                'chapter_label': ev_ch_label,
+                'pointer': ev_chunk_id,
+                'pointer_short': ev_pointer_short,
                 'char_start': ref.get('char_start'),
                 'char_end': ref.get('char_end'),
-                'excerpt': None,
+                'has_text': ev_has_excerpt,
+                'excerpt': ev_excerpt,
             }
-            ev['excerpt'] = _resolve_evidence_excerpt(chapter_paths, str(ev['chapter_id']), ref)
             evidence_refs.append(ev)
         decision_items.append(
             {
@@ -1328,9 +1415,35 @@ def _build_chapter_path_map(chapters: list[dict[str, Any]], project_root: Path) 
         if not cid:
             continue
         candidate = project_root / 'markdown' / 'Chapters' / f'{cid}.md'
+        if not candidate.exists() and cid.lower().startswith('ch_'):
+            candidate = project_root / 'markdown' / 'Chapters' / f'Ch_{cid.split("_", 1)[1]}.md'
         if candidate.exists():
             result[cid] = candidate
     return result
+
+
+def _is_meaningful_excerpt(text_snippet: str) -> bool:
+    """Return True if the snippet looks like narrative content, not frontmatter/metadata."""
+    if not text_snippet:
+        return False
+    # Skip if mostly frontmatter-like patterns
+    lower = text_snippet.lower()
+    frontmatter_indicators = [
+        'schema:', 'created_at:', 'updated_at:', 'source_refs:',
+        'chapter_id:', 'canonical_id:', 'vaerl_id:', 'kind:', 'tags:',
+        'review_state:', 'status:', 'aliases:', 'relationships:',
+        'character_count:', 'word_count:', 'chunk_id:',
+    ]
+    indicator_count = sum(1 for ind in frontmatter_indicators if ind in lower)
+    # If more than 30% of words look like frontmatter, discard
+    words = text_snippet.split()
+    if len(words) < 5:
+        return False
+    if indicator_count >= 2:
+        return False
+    # Must have some content words (length > 3, not all numbers/symbols)
+    content_words = [w for w in words if len(w) > 3 and not all(c in '0123456789-:[]{}' for c in w)]
+    return len(content_words) >= 3
 
 
 def _resolve_evidence_excerpt(chapter_paths: dict[str, Path], chapter_id: str, ref: dict[str, Any]) -> str | None:
@@ -1351,9 +1464,12 @@ def _resolve_evidence_excerpt(chapter_paths: dict[str, Path], chapter_id: str, r
         end = min(len(text), int(char_end) + 120) if isinstance(char_end, (int, float)) and char_end >= 0 else min(start + 240, len(text))
         if start < len(text):
             pad = max(0, start - 40)
-            snippet = text[pad:min(end, len(text))][:360].replace('\r','\n')
+            snippet = text[pad:min(end, len(text)):360].replace('\r','\n')
             lines = [l.strip() for l in snippet.split('\n') if l.strip()]
-            return ' '.join(lines[:8]) if lines else None
+            candidate = ' '.join(lines[:8]) if lines else ''
+            if _is_meaningful_excerpt(candidate):
+                return candidate
+            return None
     return None
 
 
