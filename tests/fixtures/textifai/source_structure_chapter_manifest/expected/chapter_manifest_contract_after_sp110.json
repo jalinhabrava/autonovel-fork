@@ -1,0 +1,23 @@
+{
+  "assessment": "chapter_manifest_evidence_entitycard_ready",
+  "source_prose_included": false,
+  "provider_raw_output_included": false,
+  "provider_calls": false,
+  "write_back": false,
+  "schema": "textifai.chapter_manifest",
+  "required_fields": [
+    "source_path",
+    "source_hash",
+    "total_chapters",
+    "chapters"
+  ],
+  "chapter_fields": [
+    "chapter_id",
+    "order",
+    "title",
+    "display_title",
+    "markdown_path",
+    "char_count"
+  ],
+  "paths_are_relative": true
+}

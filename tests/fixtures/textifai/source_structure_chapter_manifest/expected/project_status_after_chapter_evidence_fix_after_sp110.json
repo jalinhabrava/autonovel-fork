@@ -1,0 +1,14 @@
+{
+  "assessment": "chapter_manifest_evidence_entitycard_ready",
+  "source_prose_included": false,
+  "provider_raw_output_included": false,
+  "provider_calls": false,
+  "write_back": false,
+  "source_structure": "chaptered",
+  "chapter_manifest_ready": true,
+  "evidence_store_ready": true,
+  "total_chapters": 20,
+  "total_review_items": 59,
+  "safe_to_open_workspace": true,
+  "no_internal_paths_in_product": true
+}

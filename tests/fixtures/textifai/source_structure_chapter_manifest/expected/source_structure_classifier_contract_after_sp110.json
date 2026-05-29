@@ -1,0 +1,19 @@
+{
+  "assessment": "chapter_manifest_evidence_entitycard_ready",
+  "source_prose_included": false,
+  "provider_raw_output_included": false,
+  "provider_calls": false,
+  "write_back": false,
+  "schema": "textifai.source_structure_classification",
+  "structures": [
+    "chaptered",
+    "sectioned",
+    "unstructured"
+  ],
+  "chaptered_min_units": 3,
+  "recommended_pipelines": {
+    "chaptered": "chapter_manifest_first",
+    "sectioned": "direct_chunking",
+    "unstructured": "direct_chunking"
+  }
+}

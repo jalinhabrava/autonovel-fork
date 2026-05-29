@@ -1,0 +1,16 @@
+{
+  "assessment": "chapter_manifest_evidence_entitycard_ready",
+  "source_prose_included": false,
+  "provider_raw_output_included": false,
+  "provider_calls": false,
+  "write_back": false,
+  "editor_consumes_chapter_manifest": true,
+  "editor_excludes_vault_tree": true,
+  "editor_excludes_rglob": true,
+  "editor_excludes_story_bible": true,
+  "editor_excludes_concepts": true,
+  "editor_excludes_dev_runs": true,
+  "shows_only_chapters": true,
+  "in_order": true,
+  "no_duplicates": true
+}

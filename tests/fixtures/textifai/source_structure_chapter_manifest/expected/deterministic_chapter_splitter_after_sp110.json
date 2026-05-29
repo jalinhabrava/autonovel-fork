@@ -1,0 +1,19 @@
+{
+  "assessment": "chapter_manifest_evidence_entitycard_ready",
+  "source_prose_included": false,
+  "provider_raw_output_included": false,
+  "provider_calls": false,
+  "write_back": false,
+  "patterns_supported": [
+    "Prólogo",
+    "Capítulo",
+    "Episodio",
+    "Interludio",
+    "Epílogo"
+  ],
+  "fallback_titles": "localized",
+  "no_overlapping_ranges": true,
+  "no_duplicate_ids": true,
+  "no_duplicate_paths": true,
+  "order_strictly_increasing": true
+}

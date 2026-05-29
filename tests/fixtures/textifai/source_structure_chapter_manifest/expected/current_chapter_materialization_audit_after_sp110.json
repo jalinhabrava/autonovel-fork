@@ -1,0 +1,94 @@
+{
+  "assessment": "chapter_manifest_evidence_entitycard_ready",
+  "source_prose_included": false,
+  "provider_raw_output_included": false,
+  "provider_calls": false,
+  "write_back": false,
+  "total_chapters_detected": 20,
+  "files": [
+    {
+      "filename": "Ch_001.md",
+      "order": 1
+    },
+    {
+      "filename": "Ch_002.md",
+      "order": 2
+    },
+    {
+      "filename": "Ch_003.md",
+      "order": 3
+    },
+    {
+      "filename": "Ch_004.md",
+      "order": 4
+    },
+    {
+      "filename": "Ch_005.md",
+      "order": 5
+    },
+    {
+      "filename": "Ch_006.md",
+      "order": 6
+    },
+    {
+      "filename": "Ch_007.md",
+      "order": 7
+    },
+    {
+      "filename": "Ch_008.md",
+      "order": 8
+    },
+    {
+      "filename": "Ch_009.md",
+      "order": 9
+    },
+    {
+      "filename": "Ch_010.md",
+      "order": 10
+    },
+    {
+      "filename": "Ch_011.md",
+      "order": 11
+    },
+    {
+      "filename": "Ch_012.md",
+      "order": 12
+    },
+    {
+      "filename": "Ch_013.md",
+      "order": 13
+    },
+    {
+      "filename": "Ch_014.md",
+      "order": 14
+    },
+    {
+      "filename": "Ch_015.md",
+      "order": 15
+    },
+    {
+      "filename": "Ch_016.md",
+      "order": 16
+    },
+    {
+      "filename": "Ch_017.md",
+      "order": 17
+    },
+    {
+      "filename": "Ch_018.md",
+      "order": 18
+    },
+    {
+      "filename": "Ch_019.md",
+      "order": 19
+    },
+    {
+      "filename": "Ch_020.md",
+      "order": 20
+    }
+  ],
+  "duplicates": [],
+  "out_of_order": [],
+  "editor_uses_manifest": true,
+  "editor_excludes_vault_tree": true
+}

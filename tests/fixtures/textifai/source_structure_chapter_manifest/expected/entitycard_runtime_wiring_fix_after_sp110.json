@@ -1,0 +1,21 @@
+{
+  "assessment": "chapter_manifest_evidence_entitycard_ready",
+  "source_prose_included": false,
+  "provider_raw_output_included": false,
+  "provider_calls": false,
+  "write_back": false,
+  "graph_inspector_calls_entity_card_endpoint": true,
+  "ren_relationship_count": 15,
+  "ren_evidence_count": 0,
+  "ren_backlinks": 0,
+  "ren_outgoing_links": 0,
+  "author_markdown_hides_frontmatter": true,
+  "alias_classification_active": true,
+  "contextual_pov_aliases": [
+    "yo",
+    "yo (narrador)"
+  ],
+  "needs_review_aliases": [
+    "una chica"
+  ]
+}

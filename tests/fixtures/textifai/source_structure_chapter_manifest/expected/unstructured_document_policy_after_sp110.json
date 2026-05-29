@@ -1,0 +1,12 @@
+{
+  "assessment": "chapter_manifest_evidence_entitycard_ready",
+  "source_prose_included": false,
+  "provider_raw_output_included": false,
+  "provider_calls": false,
+  "write_back": false,
+  "policy": "no_fake_chapters",
+  "no_chapter_manifest": true,
+  "no_editor_chapters": true,
+  "direct_chunking": true,
+  "sections_manifest_optional": true
+}

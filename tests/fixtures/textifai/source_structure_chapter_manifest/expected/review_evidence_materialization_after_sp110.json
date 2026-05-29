@@ -1,0 +1,13 @@
+{
+  "assessment": "chapter_manifest_evidence_entitycard_ready",
+  "source_prose_included": false,
+  "provider_raw_output_included": false,
+  "provider_calls": false,
+  "write_back": false,
+  "review_items_enriched": true,
+  "evidence_refs_have_chapter_label": true,
+  "has_text_boolean": true,
+  "excerpt_when_resoluble": true,
+  "honest_missing_fragment_message": true,
+  "pointer_technical_only": true
+}

@@ -1,0 +1,12 @@
+{
+  "assessment": "chapter_manifest_evidence_entitycard_ready",
+  "source_prose_included": false,
+  "provider_raw_output_included": false,
+  "provider_calls": false,
+  "write_back": false,
+  "schema": "textifai.evidence_index",
+  "items_count": 70,
+  "contains_excerpts": true,
+  "excerpt_from_chapter_markdown": true,
+  "pointer_is_technical_detail": true
+}

@@ -1,0 +1,14 @@
+{
+  "assessment": "chapter_manifest_evidence_entitycard_ready",
+  "source_prose_included": false,
+  "provider_raw_output_included": false,
+  "provider_calls": false,
+  "write_back": false,
+  "schema": "textifai.source_map",
+  "maps": [
+    "chapter_id to markdown path",
+    "chunk refs to chapter/range"
+  ],
+  "does_not_depend_on_provider_outputs": true,
+  "source_ref_aliases": true
+}
