@@ -1,0 +1,9 @@
+{
+  "assessment": "chapter_manifest_clean_editor_verified",
+  "editor_source_used": "chapter_manifest",
+  "editor_chapter_count": 20,
+  "source_map_used": false,
+  "uses_rglob": false,
+  "provider_calls": false,
+  "write_back": false
+}

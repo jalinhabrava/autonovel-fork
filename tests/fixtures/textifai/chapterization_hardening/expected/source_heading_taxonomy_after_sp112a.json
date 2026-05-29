@@ -1,0 +1,18 @@
+{
+  "assessment": "chapterization_hardening_ready",
+  "h1_candidates_detected": 64,
+  "classified": {
+    "true_chapter": 20,
+    "prologue": 1,
+    "episode": 13,
+    "interlude": 2,
+    "internal_part": 4,
+    "decorative_title": 0,
+    "platform_metadata": 1,
+    "url_noise": 1,
+    "unknown": 2
+  },
+  "policy": "classify_then_promote_limit20",
+  "provider_calls": false,
+  "write_back": false
+}

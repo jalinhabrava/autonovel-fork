@@ -1,0 +1,17 @@
+{
+  "assessment": "chapter_manifest_clean_editor_verified",
+  "project_path": "/home/david/TextifAIProjects/OnT_Spanish_20ch.textifai",
+  "chapter_count": 20,
+  "editor_units_expected": 20,
+  "unique_chapter_ids": true,
+  "unique_markdown_paths": true,
+  "ranges_increasing": true,
+  "ranges_non_overlapping": true,
+  "display_title_not_null": true,
+  "unit_type_present": true,
+  "fallback_localized_es": true,
+  "no_raw_chapter_placeholders": true,
+  "no_urls_in_titles": true,
+  "provider_calls": false,
+  "write_back": false
+}

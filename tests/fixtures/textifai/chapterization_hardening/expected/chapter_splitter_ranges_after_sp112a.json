@@ -1,0 +1,13 @@
+{
+  "assessment": "chapterization_partial_needs_manual_rules",
+  "candidate_count": 64,
+  "editor_unit_count": 20,
+  "editor_unit_limit_applied": true,
+  "limit_target": 20,
+  "positive_ranges": true,
+  "increasing_starts": true,
+  "no_overlaps": true,
+  "gaps_reported_if_any": true,
+  "provider_calls": false,
+  "write_back": false
+}

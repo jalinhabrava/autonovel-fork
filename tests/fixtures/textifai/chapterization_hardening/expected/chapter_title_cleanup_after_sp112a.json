@@ -1,0 +1,19 @@
+{
+  "assessment": "chapterization_hardening_ready",
+  "cleaned_titles_sample": [
+    "Prólogo El Testigo",
+    "Episodio 1: La magia Rota y la herencia silenciosa de Sera",
+    "Episodio 2: La huída y el límite de la forma de Sera"
+  ],
+  "metadata_removed": [
+    "markdown_artifacts",
+    "urls",
+    "double_colon_spacing"
+  ],
+  "fallback_templates": [
+    "Episodio 11",
+    "Episodio 12"
+  ],
+  "provider_calls": false,
+  "write_back": false
+}

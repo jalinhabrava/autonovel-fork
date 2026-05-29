@@ -1,0 +1,13 @@
+{
+  "assessment": "chapterization_hardening_ready",
+  "editor_unit_limit_for_source": 20,
+  "noise_patterns": [
+    "url_noise",
+    "numeric_stub"
+  ],
+  "internal_part_policy": "retain_with_unit_type_only",
+  "manifest_rewrite_required": false,
+  "source_prose_in_reports": false,
+  "provider_calls": false,
+  "write_back": false
+}
