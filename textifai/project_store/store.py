@@ -1,0 +1,231 @@
+from __future__ import annotations
+
+import hashlib
+import json
+import sqlite3
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+SCHEMA_PATH = Path(__file__).with_name('schema.sql')
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _hash_text(text: str) -> str:
+    return hashlib.sha256(text.encode('utf-8')).hexdigest()
+
+
+def _read_json(path: Path) -> dict[str, Any] | None:
+    if not path.exists():
+        return None
+    payload = json.loads(path.read_text(encoding='utf-8'))
+    return payload if isinstance(payload, dict) else None
+
+
+def open_project(project_path: Path) -> 'ProjectStore':
+    return ProjectStore(project_path)
+
+
+@dataclass
+class ProjectStore:
+    project_path: Path
+
+    @property
+    def project_root(self) -> Path:
+        return self.project_path
+
+    @property
+    def live_root(self) -> Path:
+        return self.project_path / '.textifai'
+
+    @property
+    def sqlite_path(self) -> Path:
+        return self.live_root / 'db' / 'textifai.sqlite'
+
+    def validate_project(self) -> None:
+        if not (self.project_root / 'textifai.project.json').exists():
+            raise FileNotFoundError('textifai.project.json')
+        if not (self.project_root / 'chapters' / 'chapter_manifest.json').exists():
+            raise FileNotFoundError('chapters/chapter_manifest.json')
+
+    def _connect(self) -> sqlite3.Connection:
+        return sqlite3.connect(self.sqlite_path)
+
+    def ensure_sqlite(self) -> Path:
+        self.live_root.mkdir(parents=True, exist_ok=True)
+        (self.live_root / 'db').mkdir(parents=True, exist_ok=True)
+        with self._connect() as conn:
+            conn.row_factory = sqlite3.Row
+            conn.executescript(SCHEMA_PATH.read_text(encoding='utf-8'))
+            conn.execute(
+                'insert or replace into settings(key, value, updated_at) values (?, ?, ?)',
+                ('schema_version', '0', _now()),
+            )
+            conn.commit()
+        return self.sqlite_path
+
+    def _ensure_bootstrap_defaults(self) -> tuple[dict[str, Any], dict[str, Any], list[dict[str, Any]]]:
+        manifest = _read_json(self.project_root / 'textifai.project.json') or {}
+        chapter_manifest = _read_json(self.project_root / 'chapters' / 'chapter_manifest.json') or {}
+        chapters = chapter_manifest.get('chapters') if isinstance(chapter_manifest.get('chapters'), list) else []
+        return manifest, chapter_manifest, chapters
+
+    def bootstrap_from_project_files(self) -> None:
+        manifest, _, chapters = self._ensure_bootstrap_defaults()
+        self.ensure_sqlite()
+        with self._connect() as conn:
+            conn.row_factory = sqlite3.Row
+            conn.execute('delete from project_meta')
+            conn.execute('delete from files')
+            conn.execute('delete from chapters')
+            conn.execute('delete from dirty_states')
+
+            conn.execute(
+                'insert into project_meta(project_id, title, language, schema_version, created_at, updated_at) values (?, ?, ?, ?, ?, ?)',
+                (
+                    str(manifest.get('project_id') or self.project_root.name),
+                    str(manifest.get('title') or self.project_root.name),
+                    str(manifest.get('language') or ''),
+                    int(manifest.get('schema_version') or 1),
+                    str(manifest.get('created_at') or _now()),
+                    str(manifest.get('updated_at') or _now()),
+                ),
+            )
+
+            for chapter in chapters:
+                if not isinstance(chapter, dict):
+                    continue
+                chapter_id = str(chapter.get('chapter_id') or '').strip()
+                rel = str(chapter.get('markdown_path') or '').strip()
+                if not chapter_id or not rel:
+                    continue
+                path = self.project_root / rel
+                body = path.read_text(encoding='utf-8') if path.exists() else ''
+                content_hash = _hash_text(body)
+                order = int(chapter.get('order') or chapter.get('sequence_index') or 0)
+                unit_type = str(chapter.get('unit_type') or '').strip() or None
+                display_title = str(chapter.get('display_title') or chapter.get('title') or chapter_id)
+                title = str(chapter.get('title') or display_title)
+                char_count = int(chapter.get('char_count') or len(body) or 0)
+                source_start = chapter.get('source_start')
+                source_end = chapter.get('source_end')
+
+                conn.execute(
+                    'insert or replace into files(path, kind, checksum, char_count, last_seen_at) values (?, ?, ?, ?, ?)',
+                    (rel, 'chapter_markdown', content_hash, int(char_count), _now()),
+                )
+                conn.execute(
+                    'insert or replace into chapters(chapter_id, ordinal, unit_type, title, display_title, markdown_path, content_hash, char_count, source_start, source_end, status, dirty) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                    (
+                        chapter_id,
+                        order,
+                        unit_type,
+                        title,
+                        display_title,
+                        rel,
+                        content_hash,
+                        int(char_count),
+                        int(source_start) if isinstance(source_start, int) else None,
+                        int(source_end) if isinstance(source_end, int) else None,
+                        'ready',
+                        0,
+                    ),
+                )
+                conn.execute(
+                    'insert or replace into dirty_states(resource_type, resource_id, dirty_reason, updated_at) values (?, ?, ?, ?)',
+                    ('chapter', chapter_id, '', _now()),
+                )
+            conn.commit()
+
+    def get_chapters(self) -> list[dict[str, Any]]:
+        with self._connect() as conn:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute('select * from chapters order by ordinal asc, chapter_id asc').fetchall()
+        chapters = []
+        for row in rows:
+            path = self.project_root / row['markdown_path']
+            markdown_path = str(row['markdown_path'])
+            if path.exists():
+                body = path.read_text(encoding='utf-8')
+                content_hash = row['content_hash'] or _hash_text(body)
+            else:
+                body = ''
+                content_hash = str(row['content_hash'] or '')
+            dirty_state = self.get_dirty_state('chapter', row['chapter_id'])
+            chapters.append(
+                {
+                    'chapter_id': row['chapter_id'],
+                    'order': row['ordinal'],
+                    'unit_type': row['unit_type'],
+                    'title': row['title'],
+                    'display_title': row['display_title'] or row['title'],
+                    'path': markdown_path,
+                    'markdown_path': markdown_path,
+                    'content_hash': content_hash,
+                    'char_count': row['char_count'],
+                    'source_start': row['source_start'],
+                    'source_end': row['source_end'],
+                    'semantic_state': row['status'] or 'clean',
+                    'source_used': 'project_store',
+                    'dirty_state': bool(dirty_state['dirty']),
+                }
+            )
+        return chapters
+
+    def get_chapter(self, chapter_id: str) -> dict[str, Any]:
+        with self._connect() as conn:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute('select * from chapters where chapter_id = ?', (chapter_id,)).fetchone()
+        if row is None:
+            raise KeyError(chapter_id)
+        path = self.project_root / row['markdown_path']
+        markdown = path.read_text(encoding='utf-8') if path.exists() else ''
+        dirty_state = self.get_dirty_state('chapter', chapter_id)
+        return {
+            'chapter_id': row['chapter_id'],
+            'order': row['ordinal'],
+            'unit_type': row['unit_type'],
+            'title': row['title'],
+            'display_title': row['display_title'] or row['title'],
+            'markdown_path': row['markdown_path'],
+            'content_hash': row['content_hash'] or _hash_text(markdown),
+            'char_count': row['char_count'],
+            'source_start': row['source_start'],
+            'source_end': row['source_end'],
+            'semantic_state': row['status'] or 'clean',
+            'dirty_state': bool(dirty_state['dirty']),
+            'dirty_reason': dirty_state.get('reason'),
+            'markdown': markdown,
+        }
+
+    def get_dirty_state(self, scope: str, object_id: str) -> dict[str, Any]:
+        with self._connect() as conn:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute(
+                'select * from dirty_states where resource_type = ? and resource_id = ?',
+                (scope, object_id),
+            ).fetchone()
+        if row is None:
+            return {'dirty': False, 'reason': None}
+        reason = row['dirty_reason'] if row['dirty_reason'] is not None else ''
+        return {'dirty': bool(reason), 'reason': reason or None}
+
+    def mark_dirty(self, scope: str, object_id: str, reason: str) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                'insert or replace into dirty_states(resource_type, resource_id, dirty_reason, updated_at) values (?, ?, ?, ?)',
+                (scope, object_id, reason, _now()),
+            )
+            if scope == 'chapter':
+                conn.execute(
+                    'update chapters set dirty = 1, status = ? where chapter_id = ?',
+                    ('dirty', object_id),
+                )
+            conn.commit()
+
+    def export_chapter_snapshot(self) -> dict[str, Any]:
+        return {'chapters': self.get_chapters()}

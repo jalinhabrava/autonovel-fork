@@ -52,7 +52,7 @@ class ChapterizationHardeningTests(unittest.TestCase):
     def test_editor_payload_uses_manifest(self):
         payload = json.loads(urlopen(f'http://127.0.0.1:8872/api/projects/{PROJECT_ID}', timeout=5).read().decode('utf-8'))
         editor = payload.get('editor_chapters') or {}
-        self.assertEqual(editor.get('source_used'), 'chapter_manifest')
+        self.assertEqual(editor.get('source_used'), 'project_store')
         self.assertTrue(editor.get('manifest_used'))
         chapters = editor.get('chapters') or []
         self.assertEqual(len(chapters), 20)

@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from textifai.obsidian.parser import extract_obsidian_links, parse_obsidian_frontmatter
+from textifai.project_store import open_project
 from vault.schema import slugify
 from textifai.import_review.markdown_graph_index import build_author_graph, build_markdown_graph_index, local_graph
 from textifai.web_viewer.entity_card import build_entity_card
@@ -982,7 +983,23 @@ def _normalize_editor_chapter_title(value: Any, fallback: str) -> str:
     return title.strip('*').strip()
 
 def read_editor_chapters(project: ProjectRef, *, markdown_manifest: dict[str, Any] | None = None) -> dict[str, Any]:
-    chapter_manifest = read_chapter_manifest(project)
+    chapter_manifest = None
+    try:
+        if (project.root / '.textifai' / 'db' / 'textifai.sqlite').exists():
+            project_store = open_project(project.root)
+            chapters = project_store.get_chapters()
+            if chapters:
+                for chapter in chapters:
+                    chapter['kind'] = 'chapter'
+                return {
+                    'source_used': 'project_store',
+                    'manifest_used': True,
+                    'chapters': [chapter for chapter in chapters if chapter.get('markdown_path')],
+                }
+    except Exception:
+        chapter_manifest = read_chapter_manifest(project)
+    if chapter_manifest is None:
+        chapter_manifest = read_chapter_manifest(project)
     if isinstance(chapter_manifest, dict):
         rows = []
         for chapter in chapter_manifest.get('chapters') or []:

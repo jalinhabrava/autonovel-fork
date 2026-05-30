@@ -14,14 +14,21 @@ CREATE TABLE IF NOT EXISTS files (
   path TEXT NOT NULL UNIQUE,
   kind TEXT NOT NULL,
   checksum TEXT,
+  char_count INTEGER,
   last_seen_at TEXT
 );
 
 CREATE TABLE IF NOT EXISTS chapters (
   chapter_id TEXT PRIMARY KEY,
   ordinal INTEGER NOT NULL,
+  unit_type TEXT,
   title TEXT,
+  display_title TEXT,
   markdown_path TEXT NOT NULL,
+  content_hash TEXT,
+  char_count INTEGER,
+  source_start INTEGER,
+  source_end INTEGER,
   status TEXT,
   dirty INTEGER NOT NULL DEFAULT 0
 );
