@@ -1,0 +1,18 @@
+{
+  "assessment": "react_shell_modularization_i18n_ready",
+  "modules_created": [
+    "textifai/web_viewer/react_shell/src/shell/AppShell.tsx",
+    "textifai/web_viewer/react_shell/src/shell/navigation.ts",
+    "textifai/web_viewer/react_shell/src/common/ui.tsx",
+    "textifai/web_viewer/react_shell/src/modules/project/ProjectHubView.tsx",
+    "textifai/web_viewer/react_shell/src/modules/ingestion/IngestionView.tsx",
+    "textifai/web_viewer/react_shell/src/modules/review/ReviewQueueView.tsx",
+    "textifai/web_viewer/react_shell/src/modules/graph/GraphView.tsx",
+    "textifai/web_viewer/react_shell/src/modules/canon/CanonVaerlView.tsx",
+    "textifai/web_viewer/react_shell/src/modules/editor/EditorView.tsx",
+    "textifai/web_viewer/react_shell/src/modules/ai/AIStudioView.tsx"
+  ],
+  "app_tsx_role": "composer_router_light",
+  "required_keys_present": true,
+  "no_source_prose": true
+}

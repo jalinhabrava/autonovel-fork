@@ -1,0 +1,15 @@
+{
+  "assessment": "react_shell_modularization_ready_i18n_partial",
+  "allowed_hardcoded_strings": [
+    "internal IDs",
+    "route names",
+    "debug keys",
+    "schema field names",
+    "test names",
+    "CSS class names",
+    "log prefixes",
+    "report JSON keys"
+  ],
+  "hardcoded_strings_fixed_count": 40,
+  "no_source_prose": true
+}

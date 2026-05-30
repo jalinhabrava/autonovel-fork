@@ -1,0 +1,8 @@
+{
+  "assessment": "react_shell_modularization_i18n_ready",
+  "i18n_catalog_created": true,
+  "locales_checked": ["es", "en"],
+  "fallback_locale": "en",
+  "required_keys_present": true,
+  "no_source_prose": true
+}

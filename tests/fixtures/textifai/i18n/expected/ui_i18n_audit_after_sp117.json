@@ -1,0 +1,23 @@
+{
+  "assessment": "i18n_ui_strings_partial_missing_locale",
+  "audited_files": [
+    "textifai/web_viewer/react_shell/src/App.tsx",
+    "textifai/web_viewer/react_shell/src/i18n/ui.ts",
+    "textifai/web_viewer/react_shell/src/shell/AppShell.tsx",
+    "textifai/web_viewer/react_shell/src/common/ui.tsx",
+    "textifai/web_viewer/react_shell/src/modules/project/ProjectHubView.tsx",
+    "textifai/web_viewer/react_shell/src/modules/ingestion/IngestionView.tsx",
+    "textifai/web_viewer/react_shell/src/modules/ai/AIStudioView.tsx",
+    "textifai/web_viewer/react_shell/src/modules/canon/StoryAliasView.tsx"
+  ],
+  "hardcoded_strings_found_count_before": 120,
+  "hardcoded_strings_fixed_count": 40,
+  "remaining_allowed_hardcoded_strings": [
+    "technical/debug labels",
+    "remaining inline section literals pending full SP-118B extraction"
+  ],
+  "required_keys_present": true,
+  "locales_checked": ["es", "en"],
+  "fallback_policy": "browser/localStorage locale; fallback to en catalog",
+  "no_source_prose": true
+}
