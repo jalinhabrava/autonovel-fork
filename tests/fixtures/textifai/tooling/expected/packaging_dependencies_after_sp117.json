@@ -1,0 +1,6 @@
+{
+  "python_invocation": "uv run python",
+  "bare_python_allowed": false,
+  "packaging_dependency_classes": ["dev", "runtime", "build-time", "optional-provider"],
+  "assessment": "tooling_baseline_environment_doctor_ready"
+}

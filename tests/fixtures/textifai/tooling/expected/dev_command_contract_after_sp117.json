@@ -1,0 +1,9 @@
+{
+  "python_invocation": "uv run python",
+  "bare_python_allowed": false,
+  "react_shell_path": "textifai/web_viewer/react_shell",
+  "npm_build_command": "npm run build",
+  "viewer_start_command": "uv run python -m textifai.web_viewer.server --root <project> --host 127.0.0.1 --port 8872",
+  "doctor_script": "scripts/dev/textifai_doctor.py",
+  "assessment": "tooling_baseline_environment_doctor_ready"
+}

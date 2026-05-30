@@ -1,0 +1,7 @@
+{
+  "python_invocation": "uv run python",
+  "bare_python_allowed": false,
+  "doctor_script": "scripts/dev/textifai_doctor.py",
+  "generated_assets_policy": "textifai/web_viewer/static/react-shell/",
+  "assessment": "tooling_baseline_environment_doctor_ready"
+}
