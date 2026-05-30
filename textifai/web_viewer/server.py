@@ -11,6 +11,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 from textifai.web_viewer.ingestion_jobs import IngestionJobRegistry, job_to_json, jobs_history_json
 from textifai.web_viewer.project_reader import ProjectCatalog, read_artifact, read_note, read_project, read_entity_card
+from textifai.project_store import open_project
 
 
 STATIC_ROOT = Path(__file__).with_name("static")
@@ -99,6 +100,8 @@ def _make_handler(catalog: ProjectCatalog, registry: IngestionJobRegistry):
                 self._json({"error": "not_found", "message": str(exc)}, status=404)
             except ValueError as exc:
                 self._json({"error": "bad_request", "message": str(exc)}, status=400)
+            except RuntimeError as exc:
+                self._json({"error": "conflict", "message": str(exc)}, status=409)
             except Exception as exc:  # pragma: no cover - defensive server boundary
                 self._json({"error": "internal_error", "message": str(exc)}, status=500)
 
@@ -185,6 +188,26 @@ def _make_handler(catalog: ProjectCatalog, registry: IngestionJobRegistry):
 
         def _handle_post(self) -> None:
             parsed = urlparse(self.path)
+            if parsed.path.startswith('/api/projects/'):
+                parts = parsed.path.split('/')
+                if len(parts) == 7 and parts[4] == 'chapters' and parts[6] == 'save':
+                    project_id = unquote(parts[3])
+                    chapter_id = unquote(parts[5])
+                    payload = self._json_body()
+                    markdown = str(payload.get('markdown') or '')
+                    expected_hash = str(payload.get('expected_hash') or '')
+                    if not expected_hash:
+                        raise ValueError('expected_hash is required')
+                    project = catalog.get_project(project_id)
+                    if getattr(project, 'kind', '') != 'textifai_project':
+                        raise ValueError('save supported only for project roots')
+                    store = open_project(project.root)
+                    result = store.save_chapter_markdown(chapter_id, markdown, expected_hash)
+                    if not bool(result.get('ok')):
+                        self._json(result, status=409)
+                        return
+                    self._json(result)
+                    return
             if parsed.path != "/api/ingestion/jobs":
                 raise KeyError(parsed.path)
             payload = self._json_body()

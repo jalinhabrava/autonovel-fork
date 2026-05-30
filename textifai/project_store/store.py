@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shutil
 import sqlite3
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -226,6 +227,70 @@ class ProjectStore:
                     ('dirty', object_id),
                 )
             conn.commit()
+
+    def save_chapter_markdown(self, chapter_id: str, new_markdown: str, expected_hash: str, actor: str = 'local_user') -> dict[str, Any]:
+        del actor
+        now = _now()
+        with self._connect() as conn:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute('select * from chapters where chapter_id = ?', (chapter_id,)).fetchone()
+            if row is None:
+                raise KeyError(chapter_id)
+            rel_path = str(row['markdown_path'] or '').strip()
+            if not rel_path:
+                raise ValueError('chapter markdown_path is empty')
+            chapter_path = (self.project_root / rel_path).resolve()
+            root = self.project_root.resolve()
+            if root not in chapter_path.parents:
+                raise ValueError('chapter markdown_path escapes project root')
+            if not chapter_path.exists():
+                raise FileNotFoundError(rel_path)
+            current_markdown = chapter_path.read_text(encoding='utf-8')
+            old_hash = _hash_text(current_markdown)
+            if old_hash != expected_hash:
+                return {
+                    'ok': False,
+                    'error': 'hash_mismatch',
+                    'chapter_id': chapter_id,
+                    'current_hash': old_hash,
+                    'expected_hash': expected_hash,
+                    'message': 'El capítulo cambió en disco. Recarga antes de guardar.',
+                }
+
+            stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
+            backup_rel = Path('.textifai') / 'history' / 'chapters' / chapter_id / f'{stamp}_{old_hash[:12]}.md'
+            backup_abs = self.project_root / backup_rel
+            backup_abs.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(chapter_path, backup_abs)
+
+            chapter_path.write_text(new_markdown, encoding='utf-8')
+            new_hash = _hash_text(new_markdown)
+            char_count = len(new_markdown)
+            conn.execute(
+                'update files set checksum = ?, char_count = ?, last_seen_at = ? where path = ?',
+                (new_hash, char_count, now, rel_path),
+            )
+            conn.execute(
+                'update chapters set content_hash = ?, char_count = ?, status = ?, dirty = 1 where chapter_id = ?',
+                (new_hash, char_count, 'needs_reanalysis', chapter_id),
+            )
+            conn.execute(
+                'insert or replace into dirty_states(resource_type, resource_id, dirty_reason, updated_at) values (?, ?, ?, ?)',
+                ('chapter', chapter_id, 'chapter_markdown_edited', now),
+            )
+            conn.commit()
+        return {
+            'ok': True,
+            'chapter_id': chapter_id,
+            'old_hash': old_hash,
+            'new_hash': new_hash,
+            'backup_path': str(backup_rel),
+            'semantic_state': 'needs_reanalysis',
+            'dirty_state': True,
+            'saved_at': now,
+            'warning': 'VaERL, Graph y Review no han sido reanalizados todavía.',
+            'message': 'Capítulo guardado. VaERL/Graph/Review pendientes de reanálisis.',
+        }
 
     def export_chapter_snapshot(self) -> dict[str, Any]:
         return {'chapters': self.get_chapters()}

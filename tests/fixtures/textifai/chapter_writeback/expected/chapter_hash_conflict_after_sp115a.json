@@ -1,0 +1,12 @@
+{
+  "assessment": "sp116_chapter_markdown_writeback_contract",
+  "save_api_exists": true,
+  "backup_created": true,
+  "hash_conflict_supported": true,
+  "semantic_state_after_save": "needs_reanalysis",
+  "dirty_state_after_save": true,
+  "no_vaerl_writeback": true,
+  "no_graph_regeneration": true,
+  "no_review_regeneration": true,
+  "no_source_prose": true
+}

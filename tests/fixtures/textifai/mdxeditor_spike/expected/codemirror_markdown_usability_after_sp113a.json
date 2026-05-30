@@ -1,0 +1,16 @@
+{
+  "markdown_line_wrapping_enabled": true,
+  "markdown_toolbar_visual_match": true,
+  "markdown_selection_commands": true,
+  "markdown_undo_redo_status": "working",
+  "no_noop_toolbar_buttons": true,
+  "save_disabled": false,
+  "chapter_hash_unchanged": false,
+  "markdown_mode_editor": "codemirror",
+  "visual_mode_editor": "mdxeditor",
+  "single_draft_buffer": true,
+  "frontmatter_safe": true,
+  "no_writeback": false,
+  "no_source_prose": true,
+  "assessment": "chapter_markdown_writeback_enabled"
+}

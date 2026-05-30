@@ -1,5 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
+import '@mdxeditor/editor/style.css';
+import { MDXEditor, UndoRedo, BoldItalicUnderlineToggles, ListsToggle, CreateLink, BlockTypeSelect, Separator, toolbarPlugin, headingsPlugin, listsPlugin, quotePlugin, linkPlugin, linkDialogPlugin, thematicBreakPlugin, markdownShortcutPlugin } from '@mdxeditor/editor';
+import CodeMirror from '@uiw/react-codemirror';
+import { markdown } from '@codemirror/lang-markdown';
+import { history, undo, redo } from '@codemirror/commands';
+import { EditorView, keymap, placeholder } from '@codemirror/view';
 import {
   AlertTriangle,
   BookOpen,
@@ -19,23 +25,15 @@ import {
   SplitSquareHorizontal,
   Upload,
   X,
+  List,
+  ListOrdered,
+  ListChecks,
+  Link2,
+  Undo2,
+  Redo2,
 } from 'lucide-react';
 import {
-  MDXEditor,
-  headingsPlugin,
-  linkPlugin,
-  listsPlugin,
-  markdownShortcutPlugin,
-  quotePlugin,
-  thematicBreakPlugin,
-  toolbarPlugin,
-  UndoRedo,
-  BoldItalicUnderlineToggles,
-  ListsToggle,
-  CreateLink,
-  BlockTypeSelect,
-} from '@mdxeditor/editor';
-import {
+  ChapterSaveResponse,
   CanonEntity,
   GraphPayload,
   GraphNode,
@@ -53,6 +51,7 @@ import {
   fetchProjectDetail,
   fetchProjects,
   fetchReviewQueue,
+  saveChapterMarkdown,
   EntityCard,
   fetchEntityCard } from './api';
 import { mapGraphPayload, filterGraph } from './graph/GraphDataAdapter';
@@ -61,41 +60,52 @@ import { GraphToolbar } from './graph/GraphToolbar';
 import { GraphNodeEditDraftModal } from './graph/GraphNodeEditDraftModal';
 import { GraphCanvasNode } from './graph/types';
 import { GraphInspector as GraphInspectorPanel } from './graph/GraphInspector';
-import '@mdxeditor/editor/style.css';
 
-type SectionId = 'hub' | 'ingest' | 'codex' | 'graph' | 'review' | 'editor' | 'story' | 'ask' | 'overview';
+type SectionId = 'hub' | 'ingest' | 'review' | 'graph' | 'codex' | 'editor' | 'story' | 'ask' | 'overview';
 type ScreenConfig = { id: SectionId; label: string; icon: React.ComponentType<{ size?: number; className?: string }> };
 type DecisionItem = { id: string; title: string; severity: string; source: string; action: string; raw: ReviewItem; actionKind?: string; hasTarget?: boolean; materiality?: 'normal' | 'low' | 'noise' };
 type ReviewDecisionChoice = 'accept' | 'reject' | 'manual' | 'create' | 'discard' | 'context' | 'defer';
 type EvidenciaModalItem = DecisionItem | null;
 type EditDraft = { title: string; notePath?: string; body: string } | null;
 type EditorChapter = { chapter_id?: string; path: string; title: string; display_title?: string; order?: number | null; source_used?: string };
+type EditorMode = 'markdown' | 'visual';
+type EditorParseStatus = 'empty' | 'ready' | 'malformed_frontmatter';
+type EditorDraftState = {
+  rawMarkdown: string;
+  frontmatterRaw: string;
+  bodyMarkdown: string;
+  parseStatus: EditorParseStatus;
+  dirty: boolean;
+  loadedChapterId: string;
+  loadedContentHash: string;
+};
+
+type SaveStatus = 'idle' | 'saving' | 'saved' | 'error' | 'conflict';
 
 const screens: ScreenConfig[] = [
   { id: 'hub', label: 'Project Hub', icon: BookOpen },
   { id: 'ingest', label: 'Ingestion', icon: Upload },
-  { id: 'codex', label: 'Codex / VaERL', icon: Network },
-  { id: 'graph', label: 'Graph', icon: GitBranch },
   { id: 'review', label: 'Review Queue', icon: Inbox },
+  { id: 'graph', label: 'Graph', icon: GitBranch },
+  { id: 'codex', label: 'Canon / VaERL', icon: Network },
   { id: 'editor', label: 'Editor', icon: PenLine },
-  { id: 'story', label: 'Story Bible', icon: FileText },
-  { id: 'ask', label: 'Ask Canon', icon: MessageSquareText },
+  { id: 'ask', label: 'AI Studio', icon: MessageSquareText },
 ];
 
 const overviewCards: Array<{ id: SectionId; title: string; text: string; icon: ScreenConfig['icon'] }> = [
   { id: 'hub', title: '1. Project Hub', text: 'Abrir proyecto TextifAI completo vía manifest.json; .txtfai queda como dirección futura.', icon: Database },
   { id: 'ingest', title: '2. Ingestion', text: 'Preparar estructura estable de source, artifacts, vault y reportes.', icon: Upload },
-  { id: 'codex', title: '3. Codex / VaERL', text: 'Inspeccionar entidades, aliases, hechos, evidencia y estado de revisión.', icon: Network },
+  { id: 'review', title: '3. Review Queue', text: 'Resolver avisos mediante decisiones explícitas del autor.', icon: Inbox },
   { id: 'graph', title: '4. Graph', text: 'Exploración visual nativa de entidades, capítulos, vínculos y warnings.', icon: GitBranch },
-  { id: 'review', title: '5. Review Queue', text: 'Resolver avisos mediante decisiones explícitas del autor.', icon: Inbox },
+  { id: 'codex', title: '5. Canon / VaERL', text: 'Wiki author-facing de canon: entidades, aliases, hechos, evidencia, Story Bible y estado de revisión.', icon: Network },
   { id: 'editor', title: '6. Editor', text: 'Escritura y revisión de capítulos, no fichas primarias.', icon: SplitSquareHorizontal },
-  { id: 'story', title: '7. Story Bible', text: 'Wiki Markdown author-facing con backlinks y provenance.', icon: FileText },
-  { id: 'ask', title: '8. Ask Canon', text: 'Q&A grounded futuro sobre VaERL, evidencia e incertidumbre.', icon: MessageSquareText },
+  { id: 'ask', title: '7. AI Studio', text: 'Ask Canon, brainstorming y Character Lab futuros sobre VaERL, evidencia e incertidumbre.', icon: MessageSquareText },
 ];
 
 const kindLabels: Record<string, string> = { chapter: 'capítulo', character: 'personaje', concept: 'concepto', event: 'evento', object: 'objeto', place: 'lugar', review: 'revisión' };
 const graphPalette: Record<string, string> = { chapter: '#7f7a6a', character: '#111827', concept: '#6b7280', event: '#9a3412', object: '#0f766e', place: '#1d4ed8', review: '#b91c1c' };
 const FULL_LOGO_SRC = '/branding/textifai-logo-full.png';
+const editorToolbarClassName = 'textifai-editor-toolbar';
 
 function isChapterNote(note: { path?: string; kind?: string; role?: string } | undefined): boolean {
   if (!note) return false;
@@ -105,6 +115,53 @@ function isChapterNote(note: { path?: string; kind?: string; role?: string } | u
 
 function isMinimalFixture(project: ProjectSummary | null | undefined): boolean {
   return Boolean(project && (project.chapter_count || 0) > 0 && (project.chapter_count || 0) < 20);
+}
+
+function hashEditorContent(content: string): string {
+  let hash = 5381;
+  for (let index = 0; index < content.length; index += 1) hash = ((hash << 5) + hash) ^ content.charCodeAt(index);
+  return `${hash >>> 0}`;
+}
+
+function splitFrontmatter(markdown: string): { frontmatterRaw: string; bodyMarkdown: string; parseStatus: EditorParseStatus } {
+  if (!markdown.trim()) return { frontmatterRaw: '', bodyMarkdown: '', parseStatus: 'empty' };
+  if (!markdown.startsWith('---\n')) return { frontmatterRaw: '', bodyMarkdown: markdown, parseStatus: 'ready' };
+  const lines = markdown.split('\n');
+  const closing = markdown.indexOf('\n---\n', 4);
+  if (closing === -1) {
+    const candidateFrontmatterLines = lines.slice(1, Math.min(lines.length, 12));
+    const looksLikeYamlFrontmatter = candidateFrontmatterLines.some((line) => /^[A-Za-z0-9_-]+\s*:\s*.*$/.test(line.trim()));
+    if (!looksLikeYamlFrontmatter) return { frontmatterRaw: '', bodyMarkdown: markdown, parseStatus: 'ready' };
+    return { frontmatterRaw: markdown, bodyMarkdown: '', parseStatus: 'malformed_frontmatter' };
+  }
+  const frontmatterRaw = markdown.slice(0, closing + 5);
+  const bodyMarkdown = markdown.slice(closing + 5);
+  return { frontmatterRaw, bodyMarkdown, parseStatus: 'ready' };
+}
+
+function composeRawMarkdown(frontmatterRaw: string, bodyMarkdown: string): string {
+  if (!frontmatterRaw) return bodyMarkdown;
+  return `${frontmatterRaw}${bodyMarkdown.startsWith('\n') || bodyMarkdown.length === 0 ? '' : '\n'}${bodyMarkdown}`;
+}
+
+function replaceSelectionRange(source: string, start: number, end: number, replacement: string): { nextText: string; nextStart: number; nextEnd: number } {
+  const nextText = `${source.slice(0, start)}${replacement}${source.slice(end)}`;
+  const cursor = start + replacement.length;
+  return { nextText, nextStart: cursor, nextEnd: cursor };
+}
+
+function createEditorDraft(markdown: string, chapterId: string): EditorDraftState {
+  const rawMarkdown = String(markdown || '');
+  const { frontmatterRaw, bodyMarkdown, parseStatus } = splitFrontmatter(rawMarkdown);
+  return {
+    rawMarkdown,
+    frontmatterRaw,
+    bodyMarkdown,
+    parseStatus,
+    dirty: false,
+    loadedChapterId: chapterId,
+    loadedContentHash: hashEditorContent(rawMarkdown),
+  };
 }
 
 const legacyEditorChapterSelectionContract = 'const chapterNotes = useMemo(() => (projectDetail?.notes || []).filter(isChapterNote)';
@@ -353,11 +410,17 @@ export function App() {
   const [reviewDecisionChoices, setReviewDecisionChoices] = useState<Record<string, ReviewDecisionChoice>>({});
   const [evidenceModalDecisionId, setEvidenciaModalDecisionId] = useState<string>('');
   const [editorNotePath, setEditorNotePath] = useState<string>('');
-  const [editorMarkdown, setEditorMarkdown] = useState<string>('');
   const [editorFullscreen, setEditorFullscreen] = useState(false);
   const [editorChapterRailCollapsed, setEditorChapterRailCollapsed] = useState(false);
-  const [editorMode, setEditorMode] = useState<'rich' | 'source'>('rich');
-  const [editorDraftMarkdown, setEditorDraftMarkdown] = useState<string>('');
+  const [editorDraft, setEditorDraft] = useState<EditorDraftState>(() => createEditorDraft('', ''));
+  const [editorMode, setEditorMode] = useState<EditorMode>('visual');
+  const [editorModeWarning, setEditorModeWarning] = useState<string>('');
+  const [editorVisualSeedMarkdown, setEditorVisualSeedMarkdown] = useState<string>('');
+  const [editorSaveStatus, setEditorSaveStatus] = useState<SaveStatus>('idle');
+  const [editorSaveMessage, setEditorSaveMessage] = useState<string>('');
+
+  const editorTextareaRef = useRef<any>(null);
+
   const [graphPayload, setGraphPayload] = useState<GraphPayload | null>(null);
   const [selectedGraphNodeId, setSelectedGraphNodeId] = useState<string>('');
   const [selectedGraphEntityCardVm, setSelectedGraphEntityCardVm] = useState<EntityCard | null>(null);
@@ -381,15 +444,21 @@ export function App() {
     return chapters
       .filter((chapter: any) => String(chapter?.path || '').trim())
       .map((chapter: any) => ({
+        chapter_id: String(chapter.chapter_id || ''),
         path: String(chapter.path || ''),
         name: String(chapter.display_title || chapter.title || chapter.path || ''),
         display_title: String(chapter.display_title || chapter.title || chapter.path || ''),
         kind: 'chapter',
         role: 'chapter',
         status: 'ready',
+        content_hash: String(chapter.content_hash || ''),
         source_used: String(chapter.source_used || editorSource?.source_used || 'chapter_manifest'),
       }));
   }, [editorSource]);
+  const selectedEditorChapter = useMemo(() => chapterNotes.find((chapter) => chapter.path === editorNotePath) || null, [chapterNotes, editorNotePath]);
+  const saveSupported = String(editorSource?.source_used || '').toLowerCase() === 'project_store';
+  const saveBlockedByFrontmatter = editorMode === 'visual' && editorDraft.parseStatus === 'malformed_frontmatter';
+  const canSaveEditor = Boolean(selectedProjectId && selectedEditorChapter?.chapter_id && editorDraft.dirty && saveSupported && !saveBlockedByFrontmatter && editorSaveStatus !== 'saving');
   void legacyEditorChapterSelectionContract;
   const allDecisions = useMemo(() => ((projectDetail?.canon?.review_queue?.decision_items || projectDetail?.canon?.review_queue?.items || []) as ReviewItem[]).map(toDecisionItem), [projectDetail]);
   const visibleDecisions = useMemo(() => { const query = reviewQuery.trim().toLowerCase(); return allDecisions.filter((item) => { if (reviewSeverity !== 'all' && item.severity.toLowerCase() !== reviewSeverity) return false; if (!query) return true; return item.title.toLowerCase().includes(query) || item.action.toLowerCase().includes(query) || String(item.raw.review_type || '').toLowerCase().includes(query); }); }, [allDecisions, reviewQuery, reviewSeverity]);
@@ -400,11 +469,224 @@ export function App() {
   useEffect(() => { void loadInitial(); }, []);
   useEffect(() => { if (selectedProjectId) void loadProjectContext(selectedProjectId); }, [selectedProjectId]);
   useEffect(() => { if (selectedProjectId && editorNotePath) void loadEditorNote(selectedProjectId, editorNotePath); }, [selectedProjectId, editorNotePath]);
-  useEffect(() => { if (editorFullscreen) setEditorChapterRailCollapsed(true); else setEditorChapterRailCollapsed(false); }, [editorFullscreen]);
+  useEffect(() => {
+    if (!selectedProjectId || !chapterNotes.length) return;
+    const path = editorNotePath || chapterNotes[0]?.path || '';
+    if (!path) return;
+    if (!editorNotePath) setEditorNotePath(path);
+    if (active === 'editor') void loadEditorNote(selectedProjectId, path);
+  }, [active, selectedProjectId, chapterNotes, editorNotePath]);
+  useEffect(() => { if (!editorFullscreen) setEditorChapterRailCollapsed(false); }, [editorFullscreen]);
+  useEffect(() => {
+    if (editorMode !== 'visual' || editorDraft.parseStatus !== 'ready') return;
+    setEditorVisualSeedMarkdown(editorDraft.bodyMarkdown);
+  }, [editorMode, editorDraft.loadedChapterId, editorDraft.loadedContentHash, editorDraft.parseStatus, editorDraft.bodyMarkdown]);
 
   async function loadInitial() { try { const [projectList, config, jobs] = await Promise.all([fetchProjects(), fetchIngestionConfig(), fetchIngestionJobs()]); setProjects(projectList); setIngestionConfig(config); setIngestionJobs(jobs); const preferred = choosePreferredProject(projectList); if (preferred) setSelectedProjectId(preferred.project_id); } catch (err) { setError(String(err)); } }
-  async function loadProjectContext(projectId: string) { try { const [detail, graph, reviewQueue, artifacts] = await Promise.all([fetchProjectDetail(projectId), fetchGraph(projectId), fetchReviewQueue(projectId), fetchArtifacts(projectId)]); setProjectDetail({ ...detail, canon: { ...detail.canon, review_queue: reviewQueue } }); setGraphPayload(graph || null); setArtifactsCount((artifacts.artifacts || []).length); const firstEntity = detail.canon?.primaries?.[0]; if (firstEntity) setSelectedEntityKey(firstEntity.preferred_slug || firstEntity.canonical_name || ''); const firstNode = graph?.nodes?.[0]; if (firstNode?.id) setSelectedGraphNodeId(firstNode.id); const firstChapter = ((detail as any)?.editor_chapters?.chapters || [])[0]; if (firstChapter?.path) setEditorNotePath(String(firstChapter.path)); } catch (err) { setError(String(err)); } }
-  async function loadEditorNote(projectId: string, notePath: string) { try { const payload = await fetchNote(projectId, notePath); const clean = sanitizeEditorMarkdown(String(payload.markdown || '')) || 'Sin contenido de capítulo disponible.'; setEditorMarkdown(clean); setEditorDraftMarkdown(clean); setEditorMode('rich'); } catch (_err) { const fallback = 'Sin contenido de capítulo disponible.'; setEditorMarkdown(fallback); setEditorDraftMarkdown(fallback); setEditorMode('rich'); } }
+  async function loadProjectContext(projectId: string) { try { const [detail, graph, reviewQueue, artifacts] = await Promise.all([fetchProjectDetail(projectId), fetchGraph(projectId), fetchReviewQueue(projectId), fetchArtifacts(projectId)]); setProjectDetail({ ...detail, canon: { ...detail.canon, review_queue: reviewQueue } }); setGraphPayload(graph || null); setArtifactsCount((artifacts.artifacts || []).length); const firstEntity = detail.canon?.primaries?.[0]; if (firstEntity) setSelectedEntityKey(firstEntity.preferred_slug || firstEntity.canonical_name || ''); const firstNode = graph?.nodes?.[0]; if (firstNode?.id) setSelectedGraphNodeId(firstNode.id); const firstChapter = ((detail as any)?.editor_chapters?.chapters || [])[0]; if (firstChapter?.path) { const firstChapterPath = String(firstChapter.path); setEditorNotePath(firstChapterPath); void loadEditorNote(projectId, firstChapterPath); } } catch (err) { setError(String(err)); } }
+  async function loadEditorNote(projectId: string, notePath: string) {
+    try {
+      const payload = await fetchNote(projectId, notePath);
+      const clean = sanitizeEditorMarkdown(String(payload.markdown || '')) || 'Sin contenido de capítulo disponible.';
+      const nextDraft = createEditorDraft(clean, notePath);
+      setEditorDraft((current) => {
+        if (current.loadedChapterId === nextDraft.loadedChapterId && current.loadedContentHash === nextDraft.loadedContentHash) return current;
+        return nextDraft;
+      });
+      setEditorVisualSeedMarkdown(nextDraft.bodyMarkdown);
+      setEditorModeWarning('');
+      setEditorSaveStatus('idle');
+      setEditorSaveMessage('');
+    } catch (_err) {
+      const fallback = 'Sin contenido de capítulo disponible.';
+      setEditorDraft(createEditorDraft(fallback, notePath));
+      setEditorModeWarning('');
+      setEditorSaveStatus('idle');
+      setEditorSaveMessage('');
+    }
+  }
+  function updateMarkdownDraft(nextRawMarkdown: string) {
+    setEditorSaveStatus('idle');
+    setEditorSaveMessage('');
+    setEditorDraft((current) => {
+      const { frontmatterRaw, bodyMarkdown, parseStatus } = splitFrontmatter(nextRawMarkdown);
+      return {
+        ...current,
+        rawMarkdown: nextRawMarkdown,
+        frontmatterRaw,
+        bodyMarkdown,
+        parseStatus,
+        dirty: true,
+      };
+    });
+  }
+  function updateVisualDraft(nextBodyMarkdown: string) {
+    setEditorSaveStatus('idle');
+    setEditorSaveMessage('');
+    setEditorDraft((current) => {
+      const rawMarkdown = composeRawMarkdown(current.frontmatterRaw, nextBodyMarkdown);
+      return {
+        ...current,
+        bodyMarkdown: nextBodyMarkdown,
+        rawMarkdown,
+        parseStatus: current.frontmatterRaw ? 'ready' : current.parseStatus === 'empty' ? 'empty' : 'ready',
+        frontmatterRaw: current.frontmatterRaw,
+        dirty: true,
+      };
+    });
+  }
+  function switchEditorMode(nextMode: EditorMode) {
+    if (nextMode === editorMode) return;
+    if (nextMode === 'visual' && editorDraft.parseStatus === 'malformed_frontmatter') {
+      setEditorModeWarning('Frontmatter malformado: corrígelo en Modo Markdown antes de usar Modo visual.');
+      return;
+    }
+    if (nextMode === 'visual') {
+      setEditorVisualSeedMarkdown(editorDraft.bodyMarkdown);
+    }
+    setEditorModeWarning('');
+    setEditorMode(nextMode);
+  }
+
+  async function handleSaveEditorChapter() {
+    if (!selectedProjectId || !selectedEditorChapter?.chapter_id) return;
+    if (saveBlockedByFrontmatter) {
+      setEditorSaveStatus('error');
+      setEditorSaveMessage('Frontmatter malformado: guarda desde Modo Markdown o corrígelo antes de guardar visual.');
+      return;
+    }
+    setEditorSaveStatus('saving');
+    setEditorSaveMessage('Guardando capítulo...');
+    try {
+      const result: ChapterSaveResponse = await saveChapterMarkdown(selectedProjectId, selectedEditorChapter.chapter_id, editorDraft.rawMarkdown, editorDraft.loadedContentHash);
+      const nextHash = String(result.new_hash || hashEditorContent(editorDraft.rawMarkdown));
+      setEditorDraft((current) => ({ ...current, dirty: false, loadedContentHash: nextHash }));
+      setEditorVisualSeedMarkdown(editorDraft.bodyMarkdown);
+      setEditorSaveStatus('saved');
+      setEditorSaveMessage('Guardado. Canon/VaERL pendiente de reanálisis.');
+      void loadProjectContext(selectedProjectId);
+    } catch (err: any) {
+      const payload = err?.payload || {};
+      if (payload.error === 'hash_mismatch') {
+        setEditorSaveStatus('conflict');
+        setEditorSaveMessage(payload.message || 'El capítulo cambió en disco. Recarga antes de guardar.');
+        return;
+      }
+      setEditorSaveStatus('error');
+      setEditorSaveMessage(payload.message || String(err));
+    }
+  }
+
+  function getMarkdownSelectionRange() {
+    const view = editorTextareaRef.current?.view;
+    const selection = view?.state?.selection?.main;
+    if (selection) return { start: selection.from || 0, end: selection.to || 0 };
+    return { start: 0, end: 0 };
+  }
+
+  function focusMarkdownRange(start: number, end: number) {
+    const view = editorTextareaRef.current?.view;
+    if (!view) return;
+    requestAnimationFrame(() => {
+      view.focus();
+      view.dispatch({ selection: { anchor: start, head: end } });
+    });
+  }
+
+
+
+  function dispatchMarkdownChange(replacement: string, start: number, end: number, selectionStart: number, selectionEnd: number) {
+    const view = editorTextareaRef.current?.view;
+    if (!view) return;
+    view.dispatch({ changes: { from: start, to: end, insert: replacement }, selection: { anchor: selectionStart, head: selectionEnd } });
+  }
+
+  function applyMarkdownWrap(prefix: string, suffix: string = prefix) {
+    const { start, end } = getMarkdownSelectionRange();
+    const selected = editorDraft.rawMarkdown.slice(start, end) || 'texto';
+    const replacement = `${prefix}${selected}${suffix}`;
+    dispatchMarkdownChange(replacement, start, end, start + prefix.length, start + prefix.length + selected.length);
+    focusMarkdownRange(start + prefix.length, start + prefix.length + selected.length);
+  }
+
+  function applyMarkdownLinePrefix(prefix: string) {
+    const { start, end } = getMarkdownSelectionRange();
+    const source = editorDraft.rawMarkdown;
+    const lineStart = source.lastIndexOf('\n', Math.max(0, start - 1)) + 1;
+    const lineEndCandidate = source.indexOf('\n', end);
+    const lineEnd = lineEndCandidate === -1 ? source.length : lineEndCandidate;
+    const block = source.slice(lineStart, lineEnd);
+    const nextBlock = block.split('\n').map((line) => `${prefix}${line}`).join('\n');
+    dispatchMarkdownChange(nextBlock, lineStart, lineEnd, lineStart, lineStart + nextBlock.length);
+    focusMarkdownRange(lineStart, lineStart + nextBlock.length);
+  }
+
+  function applyMarkdownHeading(level: string) {
+    if (level === 'paragraph') return;
+    const { start, end } = getMarkdownSelectionRange();
+    const source = editorDraft.rawMarkdown;
+    const lineStart = source.lastIndexOf('\n', Math.max(0, start - 1)) + 1;
+    const lineEndCandidate = source.indexOf('\n', end);
+    const lineEnd = lineEndCandidate === -1 ? source.length : lineEndCandidate;
+    const line = source.slice(lineStart, lineEnd);
+    const stripped = line.replace(/^#{1,6}\s+/, '').replace(/^>\s+/, '');
+    if (level === 'quote') {
+      const nextLine = `> ${stripped}`;
+      dispatchMarkdownChange(nextLine, lineStart, lineEnd, lineStart, lineStart + nextLine.length);
+      focusMarkdownRange(lineStart, lineStart + nextLine.length);
+      return;
+    }
+    const hashes = level === 'h1' ? '#' : level === 'h2' ? '##' : '###';
+    const nextLine = `${hashes} ${stripped}`;
+    dispatchMarkdownChange(nextLine, lineStart, lineEnd, lineStart, lineStart + nextLine.length);
+    focusMarkdownRange(lineStart, lineStart + nextLine.length);
+  }
+
+  function applyMarkdownLink() {
+    const { start, end } = getMarkdownSelectionRange();
+    const selected = editorDraft.rawMarkdown.slice(start, end) || 'texto';
+    const replacement = `[${selected}](https://)`;
+    dispatchMarkdownChange(replacement, start, end, start + 1, start + 1 + selected.length);
+    const urlStart = start + replacement.indexOf('https://');
+    focusMarkdownRange(urlStart, urlStart + 'https://'.length);
+  }
+
+  function onMarkdownToolbarAction(kind: string) {
+    if (kind === 'undo') return undo(editorTextareaRef.current?.view?.state, editorTextareaRef.current?.view?.dispatch);
+    if (kind === 'redo') return redo(editorTextareaRef.current?.view?.state, editorTextareaRef.current?.view?.dispatch);
+    if (kind === 'bold') return applyMarkdownWrap('**');
+    if (kind === 'italic') return applyMarkdownWrap('*');
+    if (kind === 'underline') return applyMarkdownWrap('<u>', '</u>');
+    if (kind === 'bullet') return applyMarkdownLinePrefix('- ');
+    if (kind === 'number') return applyMarkdownLinePrefix('1. ');
+    if (kind === 'check') return applyMarkdownLinePrefix('- [ ] ');
+    if (kind === 'link') return applyMarkdownLink();
+  }
+
+  const markdownToolbarShell = (
+    <div className={editorToolbarClassName}>
+      <button type="button" onClick={() => onMarkdownToolbarAction('undo')} className="mdxeditor-toolbar-button" aria-label="Undo"><Undo2 size={16} strokeWidth={1.75} /></button>
+      <button type="button" onClick={() => onMarkdownToolbarAction('redo')} className="mdxeditor-toolbar-button" aria-label="Redo"><Redo2 size={16} strokeWidth={1.75} /></button>
+      <span className="mdxeditor-toolbar-separator" />
+      <button type="button" onClick={() => onMarkdownToolbarAction('bold')} className="mdxeditor-toolbar-button" aria-label="Bold"><strong>B</strong></button>
+      <button type="button" onClick={() => onMarkdownToolbarAction('italic')} className="mdxeditor-toolbar-button" aria-label="Italic"><em>I</em></button>
+      <button type="button" onClick={() => onMarkdownToolbarAction('underline')} className="mdxeditor-toolbar-button" aria-label="Underline"><u>U</u></button>
+      <span className="mdxeditor-toolbar-separator" />
+      <select onChange={(event) => applyMarkdownHeading(event.target.value)} defaultValue="paragraph" className="mdxeditor-select" aria-label="Block type">
+        <option value="paragraph">Paragraph</option>
+        <option value="h1">Heading 1</option>
+        <option value="h2">Heading 2</option>
+        <option value="h3">Heading 3</option>
+        <option value="quote">Quote</option>
+      </select>
+      <span className="mdxeditor-toolbar-separator" />
+      <button type="button" onClick={() => onMarkdownToolbarAction('bullet')} className="mdxeditor-toolbar-button" aria-label="Bulleted list"><List size={16} strokeWidth={1.75} /></button>
+      <button type="button" onClick={() => onMarkdownToolbarAction('number')} className="mdxeditor-toolbar-button" aria-label="Numbered list"><ListOrdered size={16} strokeWidth={1.75} /></button>
+      <button type="button" onClick={() => onMarkdownToolbarAction('check')} className="mdxeditor-toolbar-button" aria-label="Check list"><ListChecks size={16} strokeWidth={1.75} /></button>
+      <span className="mdxeditor-toolbar-separator" />
+      <button type="button" onClick={() => onMarkdownToolbarAction('link')} className="mdxeditor-toolbar-button" aria-label="Create link"><Link2 size={16} strokeWidth={1.75} /></button>
+    </div>
+  );
 
   const warningsVisible = visibleDecisions.length;
   const runStatus = projectDetail?.run_status;
@@ -464,7 +746,7 @@ export function App() {
   if (active === 'overview') content = <OverviewBoard setActive={setActive} />;
   if (active === 'hub') content = <section><TopBar title="Project Hub" subtitle="Abrir o reanudar proyecto TextifAI completo. El runtime real 20ch se prefiere si existe." actions={<><Button>New ingestion</Button><Button variant="secondary">Open .txtfai / manifest</Button></>} /><div className="p-5 grid grid-cols-12 gap-5"><div className="col-span-12 lg:col-span-8 space-y-4"><div className="rounded-3xl border border-neutral-200 p-5 bg-neutral-50"><div className="flex items-center justify-between"><div><h2 className="font-semibold text-lg">Workspaces disponibles</h2><p className="text-sm text-neutral-500">Datos reales desde /api/projects. Se evita seleccionar fixture 2ch si hay base 20ch.</p></div><Search size={18} className="text-neutral-500" /></div><div className="mt-4 space-y-3">{projects.map((project) => <ProjectRow key={project.project_id} project={project} selected={project.project_id === selectedProjectId} onSelect={() => setSelectedProjectId(project.project_id)} />)}</div>{isMinimalFixture(selectedProject) ? <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800"><AlertTriangle size={16} className="inline" /> Proyecto reducido detectado: no usar como base UX final si runtime 20ch existe.</div> : null}</div></div><aside className="col-span-12 lg:col-span-4 space-y-4"><Metric label="Contrato" value="manifest.json" note="Un archivo abre el bundle completo." /><Metric label="Futuro" value=".txtfai" note="Formato empaquetado de workspace." /><div className="rounded-3xl border border-neutral-200 p-5"><h3 className="font-semibold">Salud del proyecto</h3><div className="mt-4 space-y-3 text-sm"><div className="flex items-center gap-2"><CheckCircle2 size={16} /> {selectedProject?.workspace_status?.chapters_detected_label || `Capítulos indexados: ${projectDetail?.overview?.chapters_processed ?? 0}`}</div><div className="flex items-center gap-2"><CheckCircle2 size={16} /> {selectedProject?.workspace_status?.chapters_ready_label || `VaERL/artifacts: ${artifactsCount}`}</div><div className="flex items-center gap-2"><AlertTriangle size={16} /> {selectedProject?.workspace_status?.chapters_still_failed_label || `Warnings visibles: ${warningsVisible}`}</div></div></div></aside></div></section>;
   if (active === 'ingest') content = <section><TopBar title="Ingestion" subtitle="Crear proyecto TextifAI local-first sin provider calls en esta fase." actions={<Button variant="secondary" disabled>Ingesta deshabilitada</Button>} /><div className="p-5 grid grid-cols-12 gap-5"><div className="col-span-12 lg:col-span-7 rounded-3xl border border-neutral-200 p-5"><h2 className="font-semibold">Progreso de ingesta</h2><p className="mt-2 text-sm text-neutral-600">Después de generar proyecto, abrir `manifest.json`. `.txtfai` queda como dirección futura.</p><div className="mt-5 grid gap-3 text-sm md:grid-cols-2">{(runStatus?.steps || []).map((step) => <div key={step.id || step.label} className="rounded-2xl bg-neutral-50 border border-neutral-200 p-4"><div className="flex items-center justify-between"><div className="font-medium">{step.label || step.id || 'Paso'}</div><span className="text-xs text-neutral-600">{step.status || 'pendiente'}</span></div><div className="mt-2 h-2 rounded-full bg-neutral-200"><div className="h-2 rounded-full bg-emerald-500" style={{ width: `${Math.max(0, Math.min(100, Number(step.progress ?? 0)))}%` }} /></div><div className="mt-1 text-xs text-neutral-600">{step.progress ?? 0}%</div></div>)}{!(runStatus?.steps || []).length ? <div className="rounded-2xl bg-neutral-50 border border-neutral-200 p-4">Sin pasos disponibles</div> : null}</div></div><aside className="col-span-12 lg:col-span-5 space-y-4"><Metric label="Estado" value={runStatus?.status || 'completed_with_editorial_review'} note={runStatus?.final_state_detail || 'Ingesta completada con revisión editorial.'} /><div className="rounded-3xl border border-neutral-200 bg-neutral-50 p-5"><h2 className="font-semibold">Progreso</h2><div className="mt-3 space-y-2 text-sm"><div className="rounded-xl bg-white border border-neutral-200 px-3 py-2">Run: {runStatus?.run_id || 'sin run_id'}</div><div className="rounded-xl bg-white border border-neutral-200 px-3 py-2">Workspace seguro: {runStatus?.safe_to_open_workspace ? 'sí' : 'no'}</div>{ingestionJobs.length ? ingestionJobs.map((job) => <div key={job.job_id} className="rounded-xl bg-white border border-neutral-200 px-3 py-2">{job.run_name || job.job_id} · {job.status}</div>) : null}</div></div></aside></div></section>;
-  if (active === 'codex') content = <section><TopBar title="Codex / VaERL" subtitle="Tabla estructurada sobre source of truth semántico. Primaries se editan aquí, Graph o Story Bible." actions={<><Button variant="secondary">Export selection</Button><Button variant="secondary">Ver evidencia</Button></>} /><div className="p-5 grid grid-cols-12 gap-5"><div className="col-span-12 lg:col-span-8"><EntityRecordTable entities={projectDetail?.canon?.primaries || []} selectedKey={selectedEntityKey} onSelect={setSelectedEntityKey} /></div><aside className="col-span-12 lg:col-span-4"><InspectorCard entity={selectedEntity} /></aside></div></section>;
+  if (active === 'codex') content = <section><TopBar title="Canon / VaERL" subtitle="Wiki author-facing del canon: entidades, hechos, evidencia y Story Bible consolidada." actions={<><Button variant="secondary">Export selection</Button><Button variant="secondary">Ver evidencia</Button></>} /><div className="p-5 grid grid-cols-12 gap-5"><div className="col-span-12 lg:col-span-8 space-y-5"><EntityRecordTable entities={projectDetail?.canon?.primaries || []} selectedKey={selectedEntityKey} onSelect={setSelectedEntityKey} /><div className="rounded-3xl border border-neutral-200 bg-white p-4"><div className="mb-3 flex items-center gap-2 text-sm font-semibold"><FileText size={16} /> Story Bible</div>{selectedProjectId ? <LegacyEmbed title="Story Bible alias inside Canon / VaERL" src={legacyUrl('notes', selectedProjectId)} /> : <div className="rounded-2xl border border-neutral-200 p-4 text-sm text-neutral-500">Selecciona proyecto.</div>}</div></div><aside className="col-span-12 lg:col-span-4"><InspectorCard entity={selectedEntity} /></aside></div></section>;
   if (active === 'graph') content = (
     <section>
       <TopBar title="Graph" subtitle="Exploración visual author-facing con física viva e inspector editorial." actions={<Button variant="secondary" onClick={resetGraphFilters}>Restablecer filtros</Button>} />
@@ -538,9 +820,9 @@ export function App() {
       </aside>
     </div>
   </section>;
-  if (active === 'editor') content = <section className={editorFullscreen ? 'fixed inset-0 z-30 bg-white overflow-hidden' : ''}><TopBar title="Editor" subtitle="Solo capítulos/manuscrito desde chapter manifest canónico." actions={<Button onClick={() => setEditDraft({ title: 'Añadir capítulo', body: 'Draft local pendiente de SP-106. No hay persistencia ni write-back en SP-105D.' })}><Plus size={14} className="inline" /> Añadir capítulo</Button>} /><div className={editorFullscreen ? 'h-[calc(100vh-88px)] p-4' : 'p-5'}><div className="grid h-full grid-cols-12 gap-4"><aside className={`${editorFullscreen ? (editorChapterRailCollapsed ? 'hidden' : 'col-span-12 xl:col-span-2') : 'col-span-12 lg:col-span-3'} rounded-3xl border border-neutral-200 bg-neutral-50 p-4 min-w-0 max-w-full`} style={!editorFullscreen ? { width: 'fit-content', minWidth: '14rem', maxWidth: '22rem' } : undefined}><div className="flex items-center justify-between gap-2"><h2 className="font-semibold">{editorFullscreen && editorChapterRailCollapsed ? 'Cap.' : 'Capítulos'}</h2>{editorFullscreen ? <button type="button" onClick={() => setEditorChapterRailCollapsed(!editorChapterRailCollapsed)} className="rounded-xl border border-neutral-200 bg-white px-2 py-1 text-xs">{editorChapterRailCollapsed ? 'Mostrar rail' : 'Ocultar rail'}</button> : null}</div>{editorFullscreen && editorChapterRailCollapsed ? null : <div className="mt-4 space-y-2 text-sm max-w-full">{chapterNotes.map((note) => <button key={note.path} onClick={() => setEditorNotePath(note.path)} className={`w-full rounded-xl border px-3 py-2 text-left whitespace-normal break-words ${editorNotePath === note.path ? 'bg-neutral-900 text-white border-neutral-900' : 'bg-white border-neutral-200'}`}>{(note as EditorChapter & { name?: string }).display_title || note.name || note.path}</button>)}</div>}</aside><div className={`${editorFullscreen ? (editorChapterRailCollapsed ? 'col-span-12 xl:col-span-10' : 'col-span-12 xl:col-span-7') : 'col-span-12 lg:col-span-9'} min-w-0`}><div className={`rounded-3xl border border-neutral-200 bg-white p-5 min-h-[620px] ${editorFullscreen ? 'h-full' : ''}`}><div className="flex items-center justify-between gap-3"><div><div className="text-xs uppercase text-neutral-500">Editor experimental MDXEditor · capítulo real</div><h2 className="mt-2 font-semibold">{((chapterNotes.find((note) => note.path === editorNotePath) as (EditorChapter & { name?: string }) | undefined)?.display_title) || editorNotePath || 'Selecciona capítulo'}</h2><p className="mt-2 text-xs text-amber-700">Modo experimental. No write-back en esta fase.</p></div><div className="flex flex-wrap items-center justify-end gap-2"><Button variant="secondary" onClick={() => setEditorMode(editorMode === 'rich' ? 'source' : 'rich')}>{editorMode === 'rich' ? 'Modo Markdown' : 'Modo visual'}</Button><Button variant="secondary" disabled>Guardar llegará en SP-113B</Button><Button variant="secondary" onClick={() => setEditorFullscreen(!editorFullscreen)}><Maximize2 size={14} className="inline" /> {editorFullscreen ? 'Salir fullscreen' : 'Pantalla completa'}</Button></div></div><div className={`mt-4 rounded-2xl border border-neutral-200 bg-neutral-50 p-3 ${editorFullscreen ? 'h-[calc(100%-72px)]' : ''}`}>{editorMode === 'source' ? <pre className="whitespace-pre-wrap rounded-2xl bg-white p-4 text-sm leading-7 text-neutral-700 max-h-[620px] overflow-auto">{editorDraftMarkdown}</pre> : <MDXEditor markdown={editorDraftMarkdown || ''} onChange={(next) => setEditorDraftMarkdown(next)} readOnly={false} className="h-full min-h-[520px] overflow-auto rounded-2xl bg-white p-2" plugins={[headingsPlugin(), listsPlugin(), quotePlugin(), linkPlugin(), thematicBreakPlugin(), markdownShortcutPlugin(), toolbarPlugin({ toolbarContents: () => <><UndoRedo /><BoldItalicUnderlineToggles /><BlockTypeSelect /><ListsToggle /><CreateLink /></> })]} />}</div></div></div><aside className={`${editorFullscreen ? (editorChapterRailCollapsed ? 'hidden' : 'col-span-12 xl:col-span-3') : 'col-span-12 lg:col-span-3'} space-y-4 min-w-0`}><Metric label="Origen" value={String(editorSource?.source_used || 'chapter_manifest')} note={`Panel derecho retenido también en fullscreen · ${chapterNotes.length} capítulos canónicos cargados`} /><div className="rounded-3xl border border-neutral-200 bg-neutral-50 p-5 text-sm text-neutral-600"><div className="rounded-2xl bg-white border border-neutral-200 p-3"><b>Rewrite selection</b><br />Placeholder. Sin LLM.</div><div className="mt-3 rounded-2xl bg-white border border-neutral-200 p-3"><b>Canon risks</b><br />No write-back en esta fase. No write-back en SP-105D.</div></div></aside></div></div></section>;
-  if (active === 'story') content = <section><TopBar title="Story Bible" subtitle="Wiki Markdown author-facing. Legacy boundary transicional documentado." actions={<><Button variant="secondary">Sync Markdown</Button><Button variant="secondary">Open graph side-by-side</Button></>} /><div className="p-5 grid grid-cols-12 gap-5"><aside className="col-span-12 lg:col-span-3 rounded-3xl border border-neutral-200 bg-neutral-50 p-4"><h2 className="font-semibold">Vault tree</h2><div className="mt-4 space-y-2 text-sm">{(projectDetail?.notes || []).slice(0, 16).map((note) => <div key={note.path} className="rounded-xl bg-white border border-neutral-200 px-3 py-2">{note.name || note.path}</div>)}</div></aside><div className="col-span-12 lg:col-span-9">{selectedProjectId ? <LegacyEmbed title="Story Bible transitional legacy boundary" src={legacyUrl('notes', selectedProjectId)} /> : <div className="rounded-3xl border border-neutral-200 p-5 text-sm text-neutral-500">Selecciona proyecto.</div>}</div></div></section>;
-  if (active === 'ask') content = <section><TopBar title="Ask Canon" subtitle="Q&A shell grounded futuro en VaERL, evidencia y review state." actions={<><Button variant="secondary">Open answer history</Button><Button variant="secondary">Check source coverage</Button></>} /><div className="p-5 grid grid-cols-12 gap-5"><div className="col-span-12 lg:col-span-7 rounded-3xl border border-neutral-200 p-5 min-h-[560px] flex flex-col"><div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-500">Pregunta: “¿Qué sabe Sera antes del capítulo 6?”</div><div className="mt-5 rounded-3xl border border-neutral-200 p-5 bg-white shadow-sm"><div className="font-semibold">Respuesta grounded</div><p className="mt-3 text-sm leading-7">Placeholder. No se genera canon sin backend de evidencia.</p></div><div className="mt-auto pt-5 flex gap-2"><input className="flex-1 rounded-2xl border border-neutral-300 px-4 py-3 text-sm" placeholder="Pregunta sobre canon, continuidad o capítulos..." /><Button variant="secondary" disabled>Enviar</Button></div></div><aside className="col-span-12 lg:col-span-5 space-y-4"><Metric label="Grounding" value="Evidencia-first" note="Sin claims no soportados." /></aside></div></section>;
+  if (active === 'editor') content = <section className={editorFullscreen ? 'fixed inset-0 z-30 bg-white overflow-hidden' : 'h-[calc(100vh-88px)]'}><TopBar title="Editor" subtitle="Solo capítulos/manuscrito desde chapter manifest canónico." actions={<><Button disabled={!canSaveEditor} onClick={handleSaveEditorChapter}>{editorSaveStatus === 'saving' ? 'Guardando...' : 'Guardar'}</Button><Button variant="secondary" onClick={() => setEditDraft({ title: 'Añadir capítulo', body: 'Draft local pendiente. No hay write-back semántico en SP-116.' })}><Plus size={14} className="inline" /> Añadir capítulo</Button></>} /><div className={editorFullscreen ? 'h-[calc(100vh-88px)] p-4' : 'h-[calc(100vh-88px)] p-5'}><div className={`editor-workspace-grid h-full min-h-0 items-stretch gap-4 ${editorFullscreen ? 'editor-workspace-grid-fullscreen' : ''}` }><aside className={`${editorFullscreen && editorChapterRailCollapsed ? 'hidden' : ''} self-stretch rounded-3xl border border-neutral-200 bg-neutral-50 p-4 min-w-0 max-w-full editor-left-rail`}><div className="flex items-center justify-between gap-2"><h2 className="font-semibold">{editorFullscreen && editorChapterRailCollapsed ? 'Cap.' : 'Capítulos'}</h2>{editorFullscreen ? <button type="button" onClick={() => setEditorChapterRailCollapsed(!editorChapterRailCollapsed)} className="rounded-xl border border-neutral-200 bg-white px-2 py-1 text-xs">{editorChapterRailCollapsed ? 'Mostrar rail' : 'Ocultar rail'}</button> : null}</div>{editorFullscreen && editorChapterRailCollapsed ? null : <div className="mt-4 space-y-2 text-sm max-w-full">{chapterNotes.map((note) => <button key={note.path} onClick={() => setEditorNotePath(note.path)} className={`w-full rounded-xl border px-3 py-2 text-left whitespace-normal break-words ${editorNotePath === note.path ? 'bg-neutral-900 text-white border-neutral-900' : 'bg-white border-neutral-200'}`}>{(note as EditorChapter & { name?: string }).display_title || note.name || note.path}</button>)}</div>}</aside><div className="min-h-0 min-w-0 editor-main-pane"><div className={`rounded-3xl border border-neutral-200 bg-white p-5 h-full min-h-0 flex flex-col`}><div className="flex items-center justify-between gap-3"><div><div className="text-xs uppercase text-neutral-500">Editor dual · capítulo real</div><h2 className="mt-2 font-semibold">{((chapterNotes.find((note) => note.path === editorNotePath) as (EditorChapter & { name?: string }) | undefined)?.display_title) || editorNotePath || 'Selecciona capítulo'}</h2><p className="mt-2 text-xs text-neutral-500">Write-back Markdown con hash guard y backup. Canon/VaERL queda pendiente de reanálisis.</p></div><div className="flex flex-wrap items-center justify-end gap-2"><button type="button" onClick={() => switchEditorMode('markdown')} className={`rounded-2xl border px-3 py-2 text-xs ${editorMode === 'markdown' ? 'border-neutral-900 bg-neutral-900 text-white' : 'border-neutral-200 bg-neutral-100 text-neutral-700'}`}>Modo Markdown</button><button type="button" onClick={() => switchEditorMode('visual')} className={`rounded-2xl border px-3 py-2 text-xs ${editorMode === 'visual' ? 'border-neutral-900 bg-neutral-900 text-white' : 'border-neutral-200 bg-neutral-100 text-neutral-700'}`}>Modo visual</button><Button disabled={!canSaveEditor} onClick={handleSaveEditorChapter}>{editorSaveStatus === 'saving' ? 'Guardando...' : 'Guardar'}</Button><Button variant="secondary" onClick={() => setEditorFullscreen(!editorFullscreen)}><Maximize2 size={14} className="inline" /> {editorFullscreen ? 'Salir fullscreen' : 'Pantalla completa'}</Button></div></div>{editorModeWarning ? <div className="mt-3 rounded-2xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">{editorModeWarning}</div> : null}{editorDraft.parseStatus === 'malformed_frontmatter' ? <div className="mt-3 rounded-2xl border border-neutral-300 bg-neutral-50 px-3 py-2 text-xs text-neutral-700">Frontmatter malformado. Modo Markdown activo para preservar contenido.</div> : null}{editorSaveMessage ? <div className={`mt-3 rounded-2xl border px-3 py-2 text-xs ${editorSaveStatus === 'saved' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : editorSaveStatus === 'conflict' || editorSaveStatus === 'error' ? 'border-red-200 bg-red-50 text-red-700' : 'border-amber-200 bg-amber-50 text-amber-800'}`}>{editorSaveMessage}</div> : <div className="mt-3 rounded-2xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-700">Guardar escribe Markdown y marca Canon/VaERL pendiente de reanálisis; no reanaliza Graph ni Review.</div>}<div className="mt-4 flex-1 min-h-0 rounded-2xl border border-neutral-200 bg-neutral-50 p-3 overflow-hidden">{editorMode === 'markdown' ? <div className="h-full overflow-auto rounded-2xl border border-neutral-200 bg-white p-2">{markdownToolbarShell}<div className="mt-3 h-[calc(100%-68px)] min-h-0"><CodeMirror ref={editorTextareaRef} value={editorDraft.rawMarkdown} height="100%" extensions={[markdown(), EditorView.lineWrapping, history(), keymap.of([{ key: 'Mod-z', run: undo }, { key: 'Mod-y', run: redo }, { key: 'Mod-Shift-z', run: redo }]), placeholder('Escribe capítulo en Markdown')] } basicSetup={{ lineNumbers: true, highlightActiveLine: true, highlightActiveLineGutter: true, foldGutter: true }} onChange={(value) => updateMarkdownDraft(value)} className="h-full w-full overflow-hidden rounded-2xl border border-neutral-200 bg-white text-[15px] leading-7 text-neutral-800 shadow-sm" /></div></div> : <div className="h-full overflow-auto rounded-2xl border border-neutral-200 bg-white p-2"><MDXEditor key={`${editorDraft.loadedChapterId}:${editorDraft.loadedContentHash}:${editorMode}`} markdown={editorVisualSeedMarkdown} onChange={updateVisualDraft} plugins={[toolbarPlugin({ toolbarClassName: editorToolbarClassName, toolbarContents: () => <><UndoRedo /><Separator /><BoldItalicUnderlineToggles /><Separator /><BlockTypeSelect /><Separator /><ListsToggle /><Separator /><CreateLink /></> }), headingsPlugin(), listsPlugin(), quotePlugin(), linkPlugin(), linkDialogPlugin(), thematicBreakPlugin(), markdownShortcutPlugin()]} /></div>}</div></div></div><aside className={`${editorFullscreen && editorChapterRailCollapsed ? 'hidden' : ''} self-stretch min-h-0 space-y-4 min-w-0 editor-right-panel`}><div className="h-full rounded-3xl border border-neutral-200 bg-neutral-50 p-5 text-sm text-neutral-600"><Metric label="Origen" value={String(editorSource?.source_used || 'chapter_manifest')} note={`Panel derecho retenido también en fullscreen · ${chapterNotes.length} capítulos canónicos cargados`} /><div className="rounded-2xl bg-white border border-neutral-200 p-3"><b>Rewrite selection</b><br />Placeholder. Sin LLM.</div><div className="mt-3 rounded-2xl bg-white border border-neutral-200 p-3"><b>Canon risks</b><br />Save marca needs_reanalysis. VaERL/Graph/Review no se regeneran.</div></div></aside></div></div></section>;
+  if (active === 'story') content = <section><TopBar title="Canon / VaERL" subtitle="Story Bible deep link alias. Canon / VaERL es la vista principal." actions={<Button variant="secondary" onClick={() => setActive('codex')}>Open Canon / VaERL</Button>} /><div className="p-5 grid grid-cols-12 gap-5"><aside className="col-span-12 lg:col-span-3 rounded-3xl border border-neutral-200 bg-neutral-50 p-4"><h2 className="font-semibold">Vault tree</h2><div className="mt-4 space-y-2 text-sm">{(projectDetail?.notes || []).slice(0, 16).map((note) => <div key={note.path} className="rounded-xl bg-white border border-neutral-200 px-3 py-2">{note.name || note.path}</div>)}</div></aside><div className="col-span-12 lg:col-span-9">{selectedProjectId ? <LegacyEmbed title="Story Bible alias inside Canon / VaERL" src={legacyUrl('notes', selectedProjectId)} /> : <div className="rounded-3xl border border-neutral-200 p-5 text-sm text-neutral-500">Selecciona proyecto.</div>}</div></div></section>;
+  if (active === 'ask') content = <section><TopBar title="AI Studio" subtitle="Ask Canon, brainstorming y Character Lab/chat con personajes. Placeholders sin provider calls." actions={<><Button variant="secondary">Open answer history</Button><Button variant="secondary">Check source coverage</Button></>} /><div className="p-5 grid grid-cols-12 gap-5"><div className="col-span-12 lg:col-span-7 rounded-3xl border border-neutral-200 p-5 min-h-[560px] flex flex-col"><div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-500">Ask Canon: “¿Qué sabe Sera antes del capítulo 6?”</div><div className="mt-5 rounded-3xl border border-neutral-200 p-5 bg-white shadow-sm"><div className="font-semibold">Respuesta grounded</div><p className="mt-3 text-sm leading-7">Placeholder. No se genera canon sin backend de evidencia.</p></div><div className="mt-auto pt-5 flex gap-2"><input className="flex-1 rounded-2xl border border-neutral-300 px-4 py-3 text-sm" placeholder="Pregunta sobre canon, brainstorming o personajes..." /><Button variant="secondary" disabled>Enviar</Button></div></div><aside className="col-span-12 lg:col-span-5 space-y-4"><Metric label="Grounding" value="Evidencia-first" note="Sin claims no soportados." /><Metric label="Brainstorming" value="Futuro" note="Ideación asistida anclada al canon." /><Metric label="Character Lab" value="Futuro" note="Chat con personajes sin escribir back al manuscrito." /></aside></div></section>;
 
   return <Shell active={active} setActive={setActive}><motion.div key={active} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 }}>{content}</motion.div>{error ? <div className="mx-5 mb-5 rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div> : null}<EvidenciaModal item={evidenceModalItem} onClose={() => setEvidenciaModalDecisionId('')} />{graphInspectorFullscreen ? <div className="fixed inset-0 z-50 bg-black/30 p-4"><div className="h-full w-full rounded-3xl border border-neutral-200 bg-white shadow-2xl overflow-y-auto"><div className="sticky top-0 z-10 flex items-center justify-between border-b border-neutral-200 bg-white p-4"><h2 className="text-lg font-semibold">Ficha del nodo</h2><Button variant="secondary" onClick={() => setGraphInspectorFullscreen(false)}><X size={14} className="inline" /> Salir fullscreen</Button></div><div className="p-4"><GraphInspectorPanel node={selectedGraphNode} entityCard={selectedGraphEntity} entityCardVm={selectedGraphEntityCardVm} noteContent={selectedGraphNoteContent} noteDetail={selectedGraphNoteDetail} onEdit={(node: GraphCanvasNode) => setGraphEditNodeId(node.id)} /></div></div></div> : null}{editDraft ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"><div className="w-full max-w-2xl rounded-3xl border border-neutral-200 bg-white shadow-2xl"><div className="flex items-center justify-between border-b border-neutral-200 p-5"><div><h2 className="font-semibold">{editDraft.title}</h2><p className="text-sm text-neutral-500">{editDraft.notePath || 'nuevo draft local'}</p></div><button onClick={() => setEditDraft(null)} className="rounded-full p-2 hover:bg-neutral-100"><X size={18} /></button></div><div className="p-5"><textarea readOnly value={editDraft.body} className="h-48 w-full rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-sm" /><p className="mt-3 text-sm text-neutral-500">Guardar cambios llega con drafts/patch queue. No write-back en SP-105D.</p></div></div></div> : null}</Shell>;
 }

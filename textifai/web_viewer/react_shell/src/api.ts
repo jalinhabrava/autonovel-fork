@@ -179,12 +179,42 @@ export type IngestionJob = {
   created_at?: string;
 };
 
+export type ChapterSaveResponse = {
+  ok?: boolean;
+  error?: string;
+  chapter_id?: string;
+  current_hash?: string;
+  expected_hash?: string;
+  old_hash?: string;
+  new_hash?: string;
+  backup_path?: string;
+  semantic_state?: string;
+  dirty_state?: boolean;
+  saved_at?: string;
+  warning?: string;
+  message?: string;
+};
+
 async function api<T>(path: string): Promise<T> {
   const response = await fetch(path, { cache: 'no-store' });
   if (!response.ok) {
     throw new Error(`${response.status} ${response.statusText}`);
   }
   return response.json();
+}
+
+async function apiPost<T>(path: string, body: object): Promise<T> {
+  const response = await fetch(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    cache: 'no-store',
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw Object.assign(new Error(`${response.status} ${response.statusText}`), { payload, status: response.status });
+  }
+  return payload;
 }
 
 
@@ -283,4 +313,11 @@ export async function fetchIngestionConfig(): Promise<IngestionConfig> {
 export async function fetchIngestionJobs(): Promise<IngestionJob[]> {
   const payload = await api<{ jobs?: IngestionJob[] }>('/api/ingestion/jobs');
   return payload.jobs || [];
+}
+
+export async function saveChapterMarkdown(projectId: string, chapterId: string, markdown: string, expectedHash: string): Promise<ChapterSaveResponse> {
+  return apiPost<ChapterSaveResponse>(`/api/projects/${encodeURIComponent(projectId)}/chapters/${encodeURIComponent(chapterId)}/save`, {
+    markdown,
+    expected_hash: expectedHash,
+  });
 }
