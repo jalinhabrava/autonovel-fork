@@ -1,0 +1,57 @@
+from __future__ import annotations
+
+import json
+import unittest
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parents[1]
+INSPECTOR = REPO / 'textifai/web_viewer/react_shell/src/graph/GraphInspector.tsx'
+FICHE = REPO / 'textifai/web_viewer/react_shell/src/modules/canon/EntityFicheView.tsx'
+APP = REPO / 'textifai/web_viewer/react_shell/src/App.tsx'
+FIX = REPO / 'tests/fixtures/textifai/graph_fiche/expected'
+
+REPORTS = [
+    'graph_fiche_surface_after_sp120.json',
+    'entity_fiche_source_priority_after_sp120.json',
+    'entity_fiche_visual_editor_contract_after_sp120.json',
+    'entity_fiche_technical_details_policy_after_sp120.json',
+    'entity_fiche_i18n_after_sp120.json',
+]
+
+class TextifaiGraphFicheEditorSurfaceTests(unittest.TestCase):
+    def test_reports_exist(self):
+        for name in REPORTS:
+            payload = json.loads((FIX / name).read_text(encoding='utf-8'))
+            self.assertTrue(payload['visual_editor_surface'])
+            self.assertTrue(payload['raw_markdown_hidden'])
+            self.assertTrue(payload['technical_details_collapsed'])
+            self.assertTrue(payload['local_edit_only'])
+            self.assertFalse(payload['writeback_enabled'])
+            self.assertTrue(payload['i18n_keys_present'])
+            self.assertTrue(payload['no_source_prose'])
+
+    def test_graph_inspector_uses_reusable_fiche_surface(self):
+        text = INSPECTOR.read_text(encoding='utf-8')
+        fiche = FICHE.read_text(encoding='utf-8')
+        self.assertIn('EntityFicheView', text)
+        self.assertIn('stripFrontmatter', text)
+        self.assertIn('details', text)
+        self.assertIn("t('graph.technical_details')", text)
+        self.assertIn("t('graph.fiche_local_dirty')", text)
+        self.assertIn('textarea', fiche)
+
+    def test_source_priority_documented(self):
+        payload = json.loads((FIX / 'entity_fiche_source_priority_after_sp120.json').read_text(encoding='utf-8'))
+        self.assertEqual(payload['source_priority'][0], 'entity_card.author_markdown')
+        self.assertEqual(payload['source_priority'][1], 'entity_markdown_note_body')
+        self.assertEqual(payload['source_priority'][2], 'generated_author_markdown')
+        self.assertEqual(payload['source_priority'][3], 'empty_author_placeholder')
+
+    def test_graph_select_query_param_visual_test_hook(self):
+        text = APP.read_text(encoding='utf-8')
+        self.assertIn("get('graph_select')", text)
+        self.assertIn('selectedFromUrl', text)
+        self.assertIn('setSelectedGraphNodeId(firstNode.id)', text)
+
+if __name__ == '__main__':
+    unittest.main()
