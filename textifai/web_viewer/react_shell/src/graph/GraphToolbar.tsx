@@ -1,14 +1,15 @@
 import React from 'react';
+import { t, type UiI18nKey } from '../i18n/ui';
 
-const CHIP_LABELS = [
-  { id: 'all', label: 'Todo' },
-  { id: 'chapter', label: 'Capítulos' },
-  { id: 'character', label: 'Personajes' },
-  { id: 'place', label: 'Lugares' },
-  { id: 'object', label: 'Objetos' },
-  { id: 'event', label: 'Eventos' },
-  { id: 'concept', label: 'Conceptos' },
-  { id: 'review', label: 'Revisión' },
+const CHIP_LABELS: Array<{ id: string; label: UiI18nKey }> = [
+  { id: 'all', label: 'graph.filter_all' },
+  { id: 'chapter', label: 'graph.filter_chapters' },
+  { id: 'character', label: 'graph.filter_characters' },
+  { id: 'place', label: 'graph.filter_places' },
+  { id: 'object', label: 'graph.filter_objects' },
+  { id: 'event', label: 'graph.filter_events' },
+  { id: 'concept', label: 'graph.filter_concepts' },
+  { id: 'review', label: 'graph.filter_review' },
 ];
 
 export type GraphToolbarProps = {
@@ -40,7 +41,7 @@ export function GraphToolbar({
             onClick={() => toggleKind(chip.id)}
             className={`rounded-2xl px-3 py-1.5 text-sm ${selectedKinds.has(chip.id) || (chip.id === 'all' && selectedKinds.size === 0) ? 'bg-neutral-900 text-white' : 'border border-neutral-200 bg-white text-neutral-700'}`}
           >
-            {chip.label}
+            {t(chip.label)}
           </button>
         ))}
       </div>
@@ -48,7 +49,7 @@ export function GraphToolbar({
       <input
         value={query}
         onChange={(event) => onQueryChange(event.target.value)}
-        placeholder="Buscar nodo"
+        placeholder={t('graph.search_placeholder')}
         className="w-full rounded-2xl border border-neutral-300 bg-white px-3 py-2 text-sm"
       />
 
@@ -59,14 +60,14 @@ export function GraphToolbar({
             checked={relatedOnly}
             onChange={(event) => onRelatedOnlyChange(event.target.checked)}
           />
-          Solo relacionados
+          {t('graph.related_only')}
         </label>
         <button
           type="button"
           onClick={onResetViewport}
           className="rounded-2xl border border-neutral-200 bg-white px-3 py-1.5 text-sm text-neutral-700"
         >
-          Restablecer filtros
+          {t('graph.reset_filters')}
         </button>
       </div>
     </div>

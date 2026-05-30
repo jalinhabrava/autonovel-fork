@@ -1,6 +1,7 @@
 import React from 'react';
 import { GraphCanvasNode } from './types';
 import { CanonEntity, NoteDetail, EntityCard } from '../api';
+import { t } from '../i18n/ui';
 
 export type GraphInspectorProps = {
   node: GraphCanvasNode | null;
@@ -22,7 +23,7 @@ export function GraphInspector({ node, entityCard, entityCardVm, noteContent, no
   if (!node) {
     return (
       <aside className="rounded-3xl border border-neutral-200 bg-white p-5 text-sm text-neutral-500">
-        Ficha del nodo: selecciona un nodo.
+        {t('graph.ficha_hint')}
       </aside>
     );
   }
@@ -50,14 +51,14 @@ export function GraphInspector({ node, entityCard, entityCardVm, noteContent, no
 
   return (
     <aside className="rounded-3xl border border-neutral-200 bg-white p-5 shadow-sm max-h-[780px] overflow-y-auto">
-      <div className="text-xs uppercase tracking-wide text-neutral-500">Ficha del nodo</div>
+      <div className="text-xs uppercase tracking-wide text-neutral-500">{t('graph.node_sheet')}</div>
       <h2 className="mt-2 text-xl font-semibold">{label}</h2>
       <div className="mt-2 flex flex-wrap gap-2 text-sm text-neutral-600">
         <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs">{kind}</span>
         <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs">{status}</span>
-        <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs">{degree} relaciones</span>
-        <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs">{evidenceCount} evidencias</span>
-        {reviewCount ? <span className="rounded-full bg-amber-100 px-3 py-1 text-xs">{reviewCount} review</span> : null}
+        <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs">{degree} {t('graph.relations')}</span>
+        <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs">{evidenceCount} {t('editor.evidence')}</span>
+        {reviewCount ? <span className="rounded-full bg-amber-100 px-3 py-1 text-xs">{reviewCount} {t('graph.review_label')}</span> : null}
       </div>
 
       {summary ? (
@@ -66,7 +67,7 @@ export function GraphInspector({ node, entityCard, entityCardVm, noteContent, no
         </section>
       ) : (
         <section className="mt-4 rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-500">
-          Resumen no disponible todavía. Datos desde grafo, VaERL y Markdown disponibles abajo.
+          {t('graph.summary_missing')}
         </section>
       )}
 
@@ -74,19 +75,19 @@ export function GraphInspector({ node, entityCard, entityCardVm, noteContent, no
         <section className="mt-4 space-y-2">
           {aliases.canonical?.length ? (
             <div>
-              <div className="mb-1 text-xs uppercase tracking-wide text-neutral-400">Aliases</div>
+              <div className="mb-1 text-xs uppercase tracking-wide text-neutral-400">{t('graph.aliases')}</div>
               <div className="flex flex-wrap gap-1">{aliases.canonical.slice(0, 8).map((a) => <span key={a} className="rounded-full border border-neutral-200 bg-white px-2 py-0.5 text-xs">{a}</span>)}</div>
             </div>
           ) : null}
           {aliases.contextual?.length ? (
             <div>
-              <div className="mb-1 text-xs uppercase tracking-wide text-neutral-400">Referencias POV/contextuales</div>
+              <div className="mb-1 text-xs uppercase tracking-wide text-neutral-400">{t('graph.reference_points')}</div>
               <div className="flex flex-wrap gap-1">{aliases.contextual.slice(0, 8).map((a) => <span key={a} className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs">{a}</span>)}</div>
             </div>
           ) : null}
           {aliases.needs_review?.length ? (
             <div>
-              <div className="mb-1 text-xs uppercase tracking-wide text-neutral-400">Aliases por revisar</div>
+              <div className="mb-1 text-xs uppercase tracking-wide text-neutral-400">{t('review.possible_merges')}</div>
               <div className="flex flex-wrap gap-1">{aliases.needs_review.slice(0, 8).map((a) => <span key={a} className="rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-xs">{a}</span>)}</div>
             </div>
           ) : null}
@@ -95,7 +96,7 @@ export function GraphInspector({ node, entityCard, entityCardVm, noteContent, no
 
       {relationships.length ? (
         <section className="mt-4">
-          <div className="mb-2 text-xs uppercase tracking-wide text-neutral-400">Relaciones principales</div>
+          <div className="mb-2 text-xs uppercase tracking-wide text-neutral-400">{t('graph.main_relations')}</div>
           <div className="space-y-1">
             {relationships.slice(0, 12).map((r, i) => (
               <div key={i} className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm">
@@ -107,24 +108,24 @@ export function GraphInspector({ node, entityCard, entityCardVm, noteContent, no
       ) : null}
 
       <section className="mt-4 grid grid-cols-2 gap-2 text-sm">
-        <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3"><b>{backlinks.length}</b> Backlinks</div>
-        <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3"><b>{outgoing.length}</b> Salientes</div>
-        <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3"><b>{localNodeCount}</b> Grafo local nodos</div>
-        <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3"><b>{evidenceCount}</b> Evidencia</div>
+        <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3"><b>{backlinks.length}</b> {t('graph.backlinks')}</div>
+        <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3"><b>{outgoing.length}</b> {t('graph.outgoing_links')}</div>
+        <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3"><b>{localNodeCount}</b> {t('graph.local_graph_nodes')}</div>
+        <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3"><b>{evidenceCount}</b> {t('editor.evidence')}</div>
       </section>
 
-      {backlinks.length ? <section className="mt-4"><div className="mb-2 text-xs uppercase tracking-wide text-neutral-400">Backlinks</div><div className="space-y-1">{backlinks.slice(0, 10).map((b) => <div key={b} className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs">{b}</div>)}</div></section> : null}
-      {outgoing.length ? <section className="mt-4"><div className="mb-2 text-xs uppercase tracking-wide text-neutral-400">Enlaces salientes</div><div className="space-y-1">{outgoing.slice(0, 10).map((o) => <div key={o.label || Math.random()} className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs">{o.label || ''}</div>)}</div></section> : null}
+      {backlinks.length ? <section className="mt-4"><div className="mb-2 text-xs uppercase tracking-wide text-neutral-400">{t('graph.backlinks')}</div><div className="space-y-1">{backlinks.slice(0, 10).map((b) => <div key={b} className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs">{b}</div>)}</div></section> : null}
+      {outgoing.length ? <section className="mt-4"><div className="mb-2 text-xs uppercase tracking-wide text-neutral-400">{t('graph.outgoing_links')}</div><div className="space-y-1">{outgoing.slice(0, 10).map((o) => <div key={o.label || Math.random()} className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs">{o.label || ''}</div>)}</div></section> : null}
 
-      {preview ? <details className="mt-4" open><summary className="cursor-pointer rounded-2xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs font-semibold">Vista Markdown</summary><pre className="mt-2 max-h-56 overflow-auto whitespace-pre-wrap rounded-2xl bg-neutral-50 p-3 text-xs text-neutral-600">{preview}</pre></details> : null}
+      {preview ? <details className="mt-4" open><summary className="cursor-pointer rounded-2xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs font-semibold">{t('graph.markdown_view')}</summary><pre className="mt-2 max-h-56 overflow-auto whitespace-pre-wrap rounded-2xl bg-neutral-50 p-3 text-xs text-neutral-600">{preview}</pre></details> : null}
 
-      {technicalMarkdown && !preview ? <details className="mt-4"><summary className="cursor-pointer rounded-2xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs font-semibold">Detalles técnicos</summary><pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap rounded-2xl bg-neutral-50 p-3 text-xs text-neutral-600">{technicalMarkdown}</pre></details> : null}
+      {technicalMarkdown && !preview ? <details className="mt-4"><summary className="cursor-pointer rounded-2xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs font-semibold">{t('graph.technical_details')}</summary><pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap rounded-2xl bg-neutral-50 p-3 text-xs text-neutral-600">{technicalMarkdown}</pre></details> : null}
 
-      <div className="mt-4 rounded-2xl border border-neutral-200 bg-neutral-50 p-3 text-xs text-neutral-500">Nota: {notePath || 'sin nota'}</div>
+      <div className="mt-4 rounded-2xl border border-neutral-200 bg-neutral-50 p-3 text-xs text-neutral-500">{t('common.label')}: {notePath || t('graph.no_note')}</div>
       <div className="mt-4 flex flex-wrap gap-2">
-        <button type="button" onClick={() => onEdit(node)} className="rounded-2xl bg-neutral-900 px-4 py-2 text-sm text-white">Editar</button>
-        <button type="button" className="rounded-2xl border border-neutral-200 bg-white px-4 py-2 text-sm">Abrir ficha</button>
-        {onOpenReview ? <button type="button" onClick={() => onOpenReview(label)} className="rounded-2xl border border-neutral-200 bg-white px-4 py-2 text-sm">Ver en Review</button> : null}
+        <button type="button" onClick={() => onEdit(node)} className="rounded-2xl bg-neutral-900 px-4 py-2 text-sm text-white">{t('graph.edit')}</button>
+        <button type="button" className="rounded-2xl border border-neutral-200 bg-white px-4 py-2 text-sm">{t('graph.open_ficha')}</button>
+        {onOpenReview ? <button type="button" onClick={() => onOpenReview(label)} className="rounded-2xl border border-neutral-200 bg-white px-4 py-2 text-sm">{t('graph.view_review')}</button> : null}
       </div>
     </aside>
   );

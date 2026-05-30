@@ -52,9 +52,9 @@ class TextifaiEditorDirtyStateUXTests(unittest.TestCase):
     def test_no_duplicate_warning_zones_and_semantic_state_in_canon_risks(self) -> None:
         app = APP.read_text(encoding="utf-8")
         self.assertNotIn("Guardar escribe Markdown y marca Canon/VaERL pendiente de reanálisis; no reanaliza Graph ni Review.", app)
-        self.assertIn("Canon risks", app)
-        self.assertIn("Pendiente de reanálisis", app)
-        self.assertIn("Este capítulo fue editado. Canon/VaERL, Grafo y Revisión no se han regenerado.", app)
+        self.assertTrue("Canon risks" in app or "t('editor.canon_risks')" in app)
+        self.assertTrue("Pendiente de reanálisis" in app or "t('editor.reanalysis.pending')" in app)
+        self.assertTrue("Este capítulo fue editado. Canon/VaERL, Grafo y Revisión no se han regenerado." in app or "t('editor.reanalysis.notice')" in app)
 
     def test_reanalysis_entrypoint_is_placeholder_not_implemented(self) -> None:
         api = API.read_text(encoding="utf-8")
@@ -63,7 +63,7 @@ class TextifaiEditorDirtyStateUXTests(unittest.TestCase):
         self.assertIn("requestChapterReanalysis", api)
         self.assertIn("/reanalyze", api)
         self.assertIn("status': 'not_implemented'", server)
-        self.assertIn("Reanalizar capítulo", app)
+        self.assertTrue("Reanalizar capítulo" in app or "t('editor.reanalysis.action')" in app)
 
 if __name__ == "__main__":
     unittest.main()
