@@ -1,0 +1,6 @@
+{
+  "assessment": "projectstore_sqlite_architecture_ready",
+  "markdown_owns": ["chapter_body", "ficha_body", "portable_notes"],
+  "sqlite_owns": ["ids", "aliases", "relationships", "review_state", "evidence_refs", "source_chunks", "dirty_flags", "indexes", "job_run_status"],
+  "json_owns": ["snapshots", "reports", "debug", "import_export_payloads", "fixtures"]
+}

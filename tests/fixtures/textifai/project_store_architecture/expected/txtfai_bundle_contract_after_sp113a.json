@@ -1,0 +1,6 @@
+{
+  "assessment": "projectstore_sqlite_architecture_ready",
+  "bundle": ".txtfai",
+  "flow": "import_to_textifai_folder_then_live_edit_then_export",
+  "vector_cache_policy": "optional_include_excludable"
+}

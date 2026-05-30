@@ -1,0 +1,7 @@
+{
+  "assessment": "projectstore_sqlite_architecture_ready",
+  "decision": "hybrid_markdown_sqlite_json_snapshots",
+  "local_mode": "sqlite_per_project",
+  "txtfai_mode": "portable_bundle_not_live_store",
+  "saas_future": "postgres_managed_backend_same_contract"
+}

@@ -1,0 +1,6 @@
+{
+  "assessment": "projectstore_sqlite_architecture_ready",
+  "schema_doc": "docs/architecture/textifai_sqlite_schema_v0.md",
+  "schema_sql": "textifai/project_store/schema.sql",
+  "table_count": 16
+}
