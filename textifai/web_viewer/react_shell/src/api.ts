@@ -179,6 +179,15 @@ export type IngestionJob = {
   created_at?: string;
 };
 
+
+export type ChapterReanalysisResponse = {
+  ok?: boolean;
+  status?: 'queued' | 'not_implemented';
+  chapter_id?: string;
+  semantic_state?: string;
+  message?: string;
+};
+
 export type ChapterSaveResponse = {
   ok?: boolean;
   error?: string;
@@ -321,4 +330,8 @@ export async function saveChapterMarkdown(projectId: string, chapterId: string, 
     expected_hash: expectedHash,
     display_title: displayTitle,
   });
+}
+
+export async function requestChapterReanalysis(projectId: string, chapterId: string): Promise<ChapterReanalysisResponse> {
+  return apiPost<ChapterReanalysisResponse>(`/api/projects/${encodeURIComponent(projectId)}/chapters/${encodeURIComponent(chapterId)}/reanalyze`, {});
 }

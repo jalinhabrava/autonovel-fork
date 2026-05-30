@@ -1,0 +1,16 @@
+{
+  "assessment": "local_save_status_state_machine_applied",
+  "local_save_status_zone": true,
+  "semantic_status_zone": true,
+  "duplicate_warnings_removed": true,
+  "contextual_banner_fade": true,
+  "conflict_persistent": true,
+  "success_auto_fade": true,
+  "canon_risks_needs_reanalysis": true,
+  "reanalysis_button_placeholder": true,
+  "reanalysis_endpoint_not_implemented": true,
+  "no_vaerl_writeback": true,
+  "no_graph_regeneration": true,
+  "no_review_regeneration": true,
+  "no_source_prose": true
+}

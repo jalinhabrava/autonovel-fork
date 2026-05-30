@@ -209,6 +209,20 @@ def _make_handler(catalog: ProjectCatalog, registry: IngestionJobRegistry):
                         return
                     self._json(result)
                     return
+                if len(parts) == 7 and parts[4] == 'chapters' and parts[6] == 'reanalyze':
+                    project_id = unquote(parts[3])
+                    chapter_id = unquote(parts[5])
+                    project = catalog.get_project(project_id)
+                    if getattr(project, 'kind', '') != 'textifai_project':
+                        raise ValueError('reanalyze supported only for project roots')
+                    self._json({
+                        'ok': True,
+                        'status': 'not_implemented',
+                        'chapter_id': chapter_id,
+                        'semantic_state': 'needs_reanalysis',
+                        'message': 'Reanálisis de capítulo aún no implementado en viewer backend.',
+                    }, status=202)
+                    return
             if parsed.path != "/api/ingestion/jobs":
                 raise KeyError(parsed.path)
             payload = self._json_body()
