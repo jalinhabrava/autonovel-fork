@@ -25,6 +25,10 @@ class TextifaiChapterWritebackTests(unittest.TestCase):
             'editor_save_runtime_after_sp115a.json',
             'chapter_semantic_dirty_state_after_sp115a.json',
             'chapter_writeback_decision_after_sp115a.json',
+            'chapter_title_writeback_contract_after_sp116.json',
+            'chapter_heading_sync_after_sp116.json',
+            'chapter_manifest_snapshot_update_after_sp116.json',
+            'chapter_print_export_title_contract_after_sp116.json',
         ]
         for name in names:
             data = json.loads((EXPECTED / name).read_text(encoding='utf-8'))
@@ -47,9 +51,11 @@ class TextifaiChapterWritebackTests(unittest.TestCase):
             result = store.save_chapter_markdown('ch_001', new_markdown, expected_hash, actor='test')
 
             self.assertTrue(result['ok'])
-            self.assertEqual((project / 'markdown/Chapters/Ch_001.md').read_text(encoding='utf-8'), new_markdown)
+            saved = (project / 'markdown/Chapters/Ch_001.md').read_text(encoding='utf-8')
+            self.assertIn('# Uno', saved)
+            self.assertIn('Texto nuevo con acento ñ y emoji 🌙', saved)
             self.assertEqual(result['old_hash'], expected_hash)
-            self.assertEqual(result['new_hash'], _hash_text(new_markdown))
+            self.assertEqual(result['new_hash'], _hash_text(saved))
             self.assertEqual(result['semantic_state'], 'needs_reanalysis')
             self.assertTrue(result['dirty_state'])
             backup = project / result['backup_path']
@@ -57,7 +63,7 @@ class TextifaiChapterWritebackTests(unittest.TestCase):
             self.assertEqual(backup.read_text(encoding='utf-8'), before)
             with sqlite3.connect(project / '.textifai/db/textifai.sqlite') as conn:
                 chapter = conn.execute('select content_hash, char_count, status, dirty from chapters where chapter_id = ?', ('ch_001',)).fetchone()
-                self.assertEqual(chapter, (_hash_text(new_markdown), len(new_markdown), 'needs_reanalysis', 1))
+                self.assertEqual(chapter, (_hash_text(saved), len(saved), 'needs_reanalysis', 1))
                 dirty = conn.execute('select dirty_reason from dirty_states where resource_type = ? and resource_id = ?', ('chapter', 'ch_001')).fetchone()
                 self.assertEqual(dirty[0], 'chapter_markdown_edited')
 
@@ -145,13 +151,59 @@ class TextifaiChapterWritebackTests(unittest.TestCase):
             self.assertEqual(captured[0][0], 409)
             self.assertEqual(captured[0][1]['error'], 'hash_mismatch')
 
-    def _make_project(self, parent: Path) -> Path:
+    def test_title_edit_updates_h1_sqlite_and_manifest(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = self._make_project(Path(tmp))
+            store = open_project(project)
+            store.ensure_sqlite()
+            store.bootstrap_from_project_files()
+            before = (project / 'markdown/Chapters/Ch_001.md').read_text(encoding='utf-8')
+            result = store.save_chapter_markdown('ch_001', before, _hash_text(before), display_title='Nuevo Título')
+            self.assertTrue(result['ok'])
+            text = (project / 'markdown/Chapters/Ch_001.md').read_text(encoding='utf-8')
+            self.assertIn('# Nuevo Título', text)
+            self.assertTrue(result['manifest_updated'])
+            with sqlite3.connect(project / '.textifai/db/textifai.sqlite') as conn:
+                row = conn.execute('select title, display_title, status from chapters where chapter_id = ?', ('ch_001',)).fetchone()
+                self.assertEqual(row, ('Nuevo Título', 'Nuevo Título', 'needs_reanalysis'))
+            manifest = json.loads((project / 'chapters/chapter_manifest.json').read_text(encoding='utf-8'))
+            entry = manifest['chapters'][0]
+            self.assertEqual(entry['display_title'], 'Nuevo Título')
+            self.assertEqual(entry['status'], 'needs_reanalysis')
+
+    def test_insert_h1_after_frontmatter_when_missing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = self._make_project(Path(tmp), chapter='---\ntitle: Uno\n---\n\nSin heading inicial.\n')
+            store = open_project(project)
+            store.ensure_sqlite()
+            store.bootstrap_from_project_files()
+            before = (project / 'markdown/Chapters/Ch_001.md').read_text(encoding='utf-8')
+            store.save_chapter_markdown('ch_001', before, _hash_text(before), display_title='Título Insertado')
+            text = (project / 'markdown/Chapters/Ch_001.md').read_text(encoding='utf-8')
+            self.assertIn('---\ntitle: Uno\n---\n# Título Insertado\n', text)
+
+    def test_conflict_does_not_write_markdown_or_manifest(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = self._make_project(Path(tmp))
+            store = open_project(project)
+            store.ensure_sqlite()
+            store.bootstrap_from_project_files()
+            md_path = project / 'markdown/Chapters/Ch_001.md'
+            mf_path = project / 'chapters/chapter_manifest.json'
+            before_md = md_path.read_text(encoding='utf-8')
+            before_mf = mf_path.read_text(encoding='utf-8')
+            result = store.save_chapter_markdown('ch_001', before_md, 'stale_hash', display_title='No Debe Guardar')
+            self.assertFalse(result['ok'])
+            self.assertEqual(md_path.read_text(encoding='utf-8'), before_md)
+            self.assertEqual(mf_path.read_text(encoding='utf-8'), before_mf)
+
+    def _make_project(self, parent: Path, chapter: str | None = None) -> Path:
         project = parent / 'fixture.textifai'
         (project / 'chapters').mkdir(parents=True)
         (project / 'markdown/Chapters').mkdir(parents=True)
         (project / 'textifai.project.json').write_text(json.dumps({'project_id': 'fixture', 'title': 'Fixture', 'language': 'es', 'schema_version': 1}), encoding='utf-8')
-        chapter = '---\ntitle: Uno\n---\n\nTexto inicial.\n'
-        (project / 'markdown/Chapters/Ch_001.md').write_text(chapter, encoding='utf-8')
+        markdown = chapter if chapter is not None else '---\ntitle: Uno\n---\n\n# Uno\n\nTexto inicial.\n'
+        (project / 'markdown/Chapters/Ch_001.md').write_text(markdown, encoding='utf-8')
         manifest = {'chapters': [{'chapter_id': 'ch_001', 'order': 1, 'title': 'Uno', 'display_title': 'Uno', 'unit_type': 'chapter', 'markdown_path': 'markdown/Chapters/Ch_001.md'}]}
         (project / 'chapters/chapter_manifest.json').write_text(json.dumps(manifest), encoding='utf-8')
         return project

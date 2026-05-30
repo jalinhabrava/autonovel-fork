@@ -67,7 +67,7 @@ type DecisionItem = { id: string; title: string; severity: string; source: strin
 type ReviewDecisionChoice = 'accept' | 'reject' | 'manual' | 'create' | 'discard' | 'context' | 'defer';
 type EvidenciaModalItem = DecisionItem | null;
 type EditDraft = { title: string; notePath?: string; body: string } | null;
-type EditorChapter = { chapter_id?: string; path: string; title: string; display_title?: string; order?: number | null; source_used?: string };
+type EditorChapter = { chapter_id?: string; path: string; title: string; display_title?: string; order?: number | null; source_used?: string; content_hash?: string };
 type EditorMode = 'markdown' | 'visual';
 type EditorParseStatus = 'empty' | 'ready' | 'malformed_frontmatter';
 type EditorDraftState = {
@@ -144,13 +144,34 @@ function composeRawMarkdown(frontmatterRaw: string, bodyMarkdown: string): strin
   return `${frontmatterRaw}${bodyMarkdown.startsWith('\n') || bodyMarkdown.length === 0 ? '' : '\n'}${bodyMarkdown}`;
 }
 
+function extractFirstH1(markdown: string): string {
+  const line = String(markdown || '').split('\n').find((item) => item.startsWith('# '));
+  return line ? line.slice(2).trim() : '';
+}
+
+function replaceOrInsertFirstH1(markdown: string, title: string): string {
+  const cleanTitle = title.trim();
+  if (!cleanTitle) return markdown;
+  const source = String(markdown || '');
+  const frontmatterEnd = source.startsWith('---\n') ? source.indexOf('\n---\n', 4) : -1;
+  const frontmatter = frontmatterEnd >= 0 ? source.slice(0, frontmatterEnd + 5) : '';
+  const body = frontmatterEnd >= 0 ? source.slice(frontmatterEnd + 5) : source;
+  const lines = body.split('\n');
+  const index = lines.findIndex((line) => line.startsWith('# '));
+  if (index >= 0) {
+    lines[index] = `# ${cleanTitle}`;
+    return `${frontmatter}${lines.join('\n')}`;
+  }
+  return `${frontmatter}# ${cleanTitle}\n${body.startsWith('\n') ? body : `\n${body}`}`;
+}
+
 function replaceSelectionRange(source: string, start: number, end: number, replacement: string): { nextText: string; nextStart: number; nextEnd: number } {
   const nextText = `${source.slice(0, start)}${replacement}${source.slice(end)}`;
   const cursor = start + replacement.length;
   return { nextText, nextStart: cursor, nextEnd: cursor };
 }
 
-function createEditorDraft(markdown: string, chapterId: string): EditorDraftState {
+function createEditorDraft(markdown: string, chapterId: string, loadedContentHash?: string): EditorDraftState {
   const rawMarkdown = String(markdown || '');
   const { frontmatterRaw, bodyMarkdown, parseStatus } = splitFrontmatter(rawMarkdown);
   return {
@@ -160,7 +181,7 @@ function createEditorDraft(markdown: string, chapterId: string): EditorDraftStat
     parseStatus,
     dirty: false,
     loadedChapterId: chapterId,
-    loadedContentHash: hashEditorContent(rawMarkdown),
+    loadedContentHash: String(loadedContentHash || hashEditorContent(rawMarkdown)),
   };
 }
 
@@ -418,6 +439,9 @@ export function App() {
   const [editorVisualSeedMarkdown, setEditorVisualSeedMarkdown] = useState<string>('');
   const [editorSaveStatus, setEditorSaveStatus] = useState<SaveStatus>('idle');
   const [editorSaveMessage, setEditorSaveMessage] = useState<string>('');
+  const [editorTitleDrafts, setEditorTitleDrafts] = useState<Record<string, string>>({});
+  const [renamingChapterPath, setRenamingChapterPath] = useState<string>('');
+  const [renameChapterValue, setRenameChapterValue] = useState<string>('');
 
   const editorTextareaRef = useRef<any>(null);
 
@@ -447,15 +471,16 @@ export function App() {
         chapter_id: String(chapter.chapter_id || ''),
         path: String(chapter.path || ''),
         name: String(chapter.display_title || chapter.title || chapter.path || ''),
-        display_title: String(chapter.display_title || chapter.title || chapter.path || ''),
+        display_title: editorTitleDrafts[String(chapter.path || '')] || String(chapter.display_title || chapter.title || chapter.path || ''),
         kind: 'chapter',
         role: 'chapter',
         status: 'ready',
         content_hash: String(chapter.content_hash || ''),
         source_used: String(chapter.source_used || editorSource?.source_used || 'chapter_manifest'),
       }));
-  }, [editorSource]);
+  }, [editorSource, editorTitleDrafts]);
   const selectedEditorChapter = useMemo(() => chapterNotes.find((chapter) => chapter.path === editorNotePath) || null, [chapterNotes, editorNotePath]);
+  const selectedEditorTitle = selectedEditorChapter?.display_title || selectedEditorChapter?.name || editorNotePath || 'Selecciona capítulo';
   const saveSupported = String(editorSource?.source_used || '').toLowerCase() === 'project_store';
   const saveBlockedByFrontmatter = editorMode === 'visual' && editorDraft.parseStatus === 'malformed_frontmatter';
   const canSaveEditor = Boolean(selectedProjectId && selectedEditorChapter?.chapter_id && editorDraft.dirty && saveSupported && !saveBlockedByFrontmatter && editorSaveStatus !== 'saving');
@@ -487,8 +512,11 @@ export function App() {
   async function loadEditorNote(projectId: string, notePath: string) {
     try {
       const payload = await fetchNote(projectId, notePath);
-      const clean = sanitizeEditorMarkdown(String(payload.markdown || '')) || 'Sin contenido de capítulo disponible.';
-      const nextDraft = createEditorDraft(clean, notePath);
+      const rawMarkdown = String(payload.markdown || '');
+      const chapterMeta = chapterNotes.find((chapter) => chapter.path === notePath) as (EditorChapter | undefined);
+      const nextDraft = createEditorDraft(rawMarkdown, notePath, String(chapterMeta?.content_hash || ''));
+      const loadedTitle = extractFirstH1(rawMarkdown) || String(chapterMeta?.display_title || chapterMeta?.title || '');
+      if (loadedTitle) setEditorTitleDrafts((current) => ({ ...current, [notePath]: loadedTitle }));
       setEditorDraft((current) => {
         if (current.loadedChapterId === nextDraft.loadedChapterId && current.loadedContentHash === nextDraft.loadedContentHash) return current;
         return nextDraft;
@@ -508,6 +536,8 @@ export function App() {
   function updateMarkdownDraft(nextRawMarkdown: string) {
     setEditorSaveStatus('idle');
     setEditorSaveMessage('');
+    const nextTitle = extractFirstH1(nextRawMarkdown);
+    if (nextTitle && editorDraft.loadedChapterId) setEditorTitleDrafts((current) => ({ ...current, [editorDraft.loadedChapterId]: nextTitle }));
     setEditorDraft((current) => {
       const { frontmatterRaw, bodyMarkdown, parseStatus } = splitFrontmatter(nextRawMarkdown);
       return {
@@ -523,6 +553,8 @@ export function App() {
   function updateVisualDraft(nextBodyMarkdown: string) {
     setEditorSaveStatus('idle');
     setEditorSaveMessage('');
+    const nextTitle = extractFirstH1(nextBodyMarkdown);
+    if (nextTitle && editorDraft.loadedChapterId) setEditorTitleDrafts((current) => ({ ...current, [editorDraft.loadedChapterId]: nextTitle }));
     setEditorDraft((current) => {
       const rawMarkdown = composeRawMarkdown(current.frontmatterRaw, nextBodyMarkdown);
       return {
@@ -548,6 +580,36 @@ export function App() {
     setEditorMode(nextMode);
   }
 
+  function commitChapterTitleRename(path: string, title: string) {
+    const clean = title.trim();
+    if (!path || !clean) {
+      setRenamingChapterPath('');
+      return;
+    }
+    setEditorTitleDrafts((current) => ({ ...current, [path]: clean }));
+    if (path === editorDraft.loadedChapterId) {
+      const nextRawMarkdown = replaceOrInsertFirstH1(editorDraft.rawMarkdown, clean);
+      const { frontmatterRaw, bodyMarkdown, parseStatus } = splitFrontmatter(nextRawMarkdown);
+      setEditorDraft((current) => ({ ...current, rawMarkdown: nextRawMarkdown, frontmatterRaw, bodyMarkdown, parseStatus, dirty: true }));
+      setEditorVisualSeedMarkdown(bodyMarkdown);
+      setEditorSaveStatus('idle');
+      setEditorSaveMessage('');
+    }
+    setRenamingChapterPath('');
+  }
+
+  function updateCurrentChapterTitleDraft(title: string) {
+    if (!editorNotePath) return;
+    const clean = title;
+    setEditorTitleDrafts((current) => ({ ...current, [editorNotePath]: clean }));
+    const nextRawMarkdown = replaceOrInsertFirstH1(editorDraft.rawMarkdown, clean.trim() || selectedEditorTitle);
+    const { frontmatterRaw, bodyMarkdown, parseStatus } = splitFrontmatter(nextRawMarkdown);
+    setEditorDraft((current) => ({ ...current, rawMarkdown: nextRawMarkdown, frontmatterRaw, bodyMarkdown, parseStatus, dirty: true }));
+    setEditorVisualSeedMarkdown(bodyMarkdown);
+    setEditorSaveStatus('idle');
+    setEditorSaveMessage('');
+  }
+
   async function handleSaveEditorChapter() {
     if (!selectedProjectId || !selectedEditorChapter?.chapter_id) return;
     if (saveBlockedByFrontmatter) {
@@ -558,7 +620,7 @@ export function App() {
     setEditorSaveStatus('saving');
     setEditorSaveMessage('Guardando capítulo...');
     try {
-      const result: ChapterSaveResponse = await saveChapterMarkdown(selectedProjectId, selectedEditorChapter.chapter_id, editorDraft.rawMarkdown, editorDraft.loadedContentHash);
+      const result: ChapterSaveResponse = await saveChapterMarkdown(selectedProjectId, selectedEditorChapter.chapter_id, editorDraft.rawMarkdown, editorDraft.loadedContentHash, selectedEditorChapter.display_title);
       const nextHash = String(result.new_hash || hashEditorContent(editorDraft.rawMarkdown));
       setEditorDraft((current) => ({ ...current, dirty: false, loadedContentHash: nextHash }));
       setEditorVisualSeedMarkdown(editorDraft.bodyMarkdown);
@@ -820,7 +882,7 @@ export function App() {
       </aside>
     </div>
   </section>;
-  if (active === 'editor') content = <section className={editorFullscreen ? 'fixed inset-0 z-30 bg-white overflow-hidden' : 'h-[calc(100vh-88px)]'}><TopBar title="Editor" subtitle="Solo capítulos/manuscrito desde chapter manifest canónico." actions={<><Button disabled={!canSaveEditor} onClick={handleSaveEditorChapter}>{editorSaveStatus === 'saving' ? 'Guardando...' : 'Guardar'}</Button><Button variant="secondary" onClick={() => setEditDraft({ title: 'Añadir capítulo', body: 'Draft local pendiente. No hay write-back semántico en SP-116.' })}><Plus size={14} className="inline" /> Añadir capítulo</Button></>} /><div className={editorFullscreen ? 'h-[calc(100vh-88px)] p-4' : 'h-[calc(100vh-88px)] p-5'}><div className={`editor-workspace-grid h-full min-h-0 items-stretch gap-4 ${editorFullscreen ? 'editor-workspace-grid-fullscreen' : ''}` }><aside className={`${editorFullscreen && editorChapterRailCollapsed ? 'hidden' : ''} self-stretch rounded-3xl border border-neutral-200 bg-neutral-50 p-4 min-w-0 max-w-full editor-left-rail`}><div className="flex items-center justify-between gap-2"><h2 className="font-semibold">{editorFullscreen && editorChapterRailCollapsed ? 'Cap.' : 'Capítulos'}</h2>{editorFullscreen ? <button type="button" onClick={() => setEditorChapterRailCollapsed(!editorChapterRailCollapsed)} className="rounded-xl border border-neutral-200 bg-white px-2 py-1 text-xs">{editorChapterRailCollapsed ? 'Mostrar rail' : 'Ocultar rail'}</button> : null}</div>{editorFullscreen && editorChapterRailCollapsed ? null : <div className="mt-4 space-y-2 text-sm max-w-full">{chapterNotes.map((note) => <button key={note.path} onClick={() => setEditorNotePath(note.path)} className={`w-full rounded-xl border px-3 py-2 text-left whitespace-normal break-words ${editorNotePath === note.path ? 'bg-neutral-900 text-white border-neutral-900' : 'bg-white border-neutral-200'}`}>{(note as EditorChapter & { name?: string }).display_title || note.name || note.path}</button>)}</div>}</aside><div className="min-h-0 min-w-0 editor-main-pane"><div className={`rounded-3xl border border-neutral-200 bg-white p-5 h-full min-h-0 flex flex-col`}><div className="flex items-center justify-between gap-3"><div><div className="text-xs uppercase text-neutral-500">Editor dual · capítulo real</div><h2 className="mt-2 font-semibold">{((chapterNotes.find((note) => note.path === editorNotePath) as (EditorChapter & { name?: string }) | undefined)?.display_title) || editorNotePath || 'Selecciona capítulo'}</h2><p className="mt-2 text-xs text-neutral-500">Write-back Markdown con hash guard y backup. Canon/VaERL queda pendiente de reanálisis.</p></div><div className="flex flex-wrap items-center justify-end gap-2"><button type="button" onClick={() => switchEditorMode('markdown')} className={`rounded-2xl border px-3 py-2 text-xs ${editorMode === 'markdown' ? 'border-neutral-900 bg-neutral-900 text-white' : 'border-neutral-200 bg-neutral-100 text-neutral-700'}`}>Modo Markdown</button><button type="button" onClick={() => switchEditorMode('visual')} className={`rounded-2xl border px-3 py-2 text-xs ${editorMode === 'visual' ? 'border-neutral-900 bg-neutral-900 text-white' : 'border-neutral-200 bg-neutral-100 text-neutral-700'}`}>Modo visual</button><Button disabled={!canSaveEditor} onClick={handleSaveEditorChapter}>{editorSaveStatus === 'saving' ? 'Guardando...' : 'Guardar'}</Button><Button variant="secondary" onClick={() => setEditorFullscreen(!editorFullscreen)}><Maximize2 size={14} className="inline" /> {editorFullscreen ? 'Salir fullscreen' : 'Pantalla completa'}</Button></div></div>{editorModeWarning ? <div className="mt-3 rounded-2xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">{editorModeWarning}</div> : null}{editorDraft.parseStatus === 'malformed_frontmatter' ? <div className="mt-3 rounded-2xl border border-neutral-300 bg-neutral-50 px-3 py-2 text-xs text-neutral-700">Frontmatter malformado. Modo Markdown activo para preservar contenido.</div> : null}{editorSaveMessage ? <div className={`mt-3 rounded-2xl border px-3 py-2 text-xs ${editorSaveStatus === 'saved' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : editorSaveStatus === 'conflict' || editorSaveStatus === 'error' ? 'border-red-200 bg-red-50 text-red-700' : 'border-amber-200 bg-amber-50 text-amber-800'}`}>{editorSaveMessage}</div> : <div className="mt-3 rounded-2xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-700">Guardar escribe Markdown y marca Canon/VaERL pendiente de reanálisis; no reanaliza Graph ni Review.</div>}<div className="mt-4 flex-1 min-h-0 rounded-2xl border border-neutral-200 bg-neutral-50 p-3 overflow-hidden">{editorMode === 'markdown' ? <div className="h-full overflow-auto rounded-2xl border border-neutral-200 bg-white p-2">{markdownToolbarShell}<div className="mt-3 h-[calc(100%-68px)] min-h-0"><CodeMirror ref={editorTextareaRef} value={editorDraft.rawMarkdown} height="100%" extensions={[markdown(), EditorView.lineWrapping, history(), keymap.of([{ key: 'Mod-z', run: undo }, { key: 'Mod-y', run: redo }, { key: 'Mod-Shift-z', run: redo }]), placeholder('Escribe capítulo en Markdown')] } basicSetup={{ lineNumbers: true, highlightActiveLine: true, highlightActiveLineGutter: true, foldGutter: true }} onChange={(value) => updateMarkdownDraft(value)} className="h-full w-full overflow-hidden rounded-2xl border border-neutral-200 bg-white text-[15px] leading-7 text-neutral-800 shadow-sm" /></div></div> : <div className="h-full overflow-auto rounded-2xl border border-neutral-200 bg-white p-2"><MDXEditor key={`${editorDraft.loadedChapterId}:${editorDraft.loadedContentHash}:${editorMode}`} markdown={editorVisualSeedMarkdown} onChange={updateVisualDraft} plugins={[toolbarPlugin({ toolbarClassName: editorToolbarClassName, toolbarContents: () => <><UndoRedo /><Separator /><BoldItalicUnderlineToggles /><Separator /><BlockTypeSelect /><Separator /><ListsToggle /><Separator /><CreateLink /></> }), headingsPlugin(), listsPlugin(), quotePlugin(), linkPlugin(), linkDialogPlugin(), thematicBreakPlugin(), markdownShortcutPlugin()]} /></div>}</div></div></div><aside className={`${editorFullscreen && editorChapterRailCollapsed ? 'hidden' : ''} self-stretch min-h-0 space-y-4 min-w-0 editor-right-panel`}><div className="h-full rounded-3xl border border-neutral-200 bg-neutral-50 p-5 text-sm text-neutral-600"><Metric label="Origen" value={String(editorSource?.source_used || 'chapter_manifest')} note={`Panel derecho retenido también en fullscreen · ${chapterNotes.length} capítulos canónicos cargados`} /><div className="rounded-2xl bg-white border border-neutral-200 p-3"><b>Rewrite selection</b><br />Placeholder. Sin LLM.</div><div className="mt-3 rounded-2xl bg-white border border-neutral-200 p-3"><b>Canon risks</b><br />Save marca needs_reanalysis. VaERL/Graph/Review no se regeneran.</div></div></aside></div></div></section>;
+  if (active === 'editor') content = <section className={editorFullscreen ? 'fixed inset-0 z-30 bg-white overflow-hidden' : 'h-[calc(100vh-88px)]'}><TopBar title="Editor" subtitle="Solo capítulos/manuscrito desde chapter manifest canónico." actions={<><Button disabled={!canSaveEditor} onClick={handleSaveEditorChapter}>{editorSaveStatus === 'saving' ? 'Guardando...' : 'Guardar'}</Button><Button variant="secondary" onClick={() => setEditDraft({ title: 'Añadir capítulo', body: 'Draft local pendiente. No hay write-back semántico en SP-116.' })}><Plus size={14} className="inline" /> Añadir capítulo</Button></>} /><div className={editorFullscreen ? 'h-[calc(100vh-88px)] p-4' : 'h-[calc(100vh-88px)] p-5'}><div className={`editor-workspace-grid h-full min-h-0 items-stretch gap-4 ${editorFullscreen ? 'editor-workspace-grid-fullscreen' : ''}` }><aside className={`${editorFullscreen && editorChapterRailCollapsed ? 'hidden' : ''} self-stretch rounded-3xl border border-neutral-200 bg-neutral-50 p-4 min-w-0 max-w-full editor-left-rail`}><div className="flex items-center justify-between gap-2"><h2 className="font-semibold">{editorFullscreen && editorChapterRailCollapsed ? 'Cap.' : 'Capítulos'}</h2>{editorFullscreen ? <button type="button" onClick={() => setEditorChapterRailCollapsed(!editorChapterRailCollapsed)} className="rounded-xl border border-neutral-200 bg-white px-2 py-1 text-xs">{editorChapterRailCollapsed ? 'Mostrar rail' : 'Ocultar rail'}</button> : null}</div>{editorFullscreen && editorChapterRailCollapsed ? null : <div className="mt-4 space-y-2 text-sm max-w-full">{chapterNotes.map((note) => renamingChapterPath === note.path ? <input key={note.path} autoFocus value={renameChapterValue} onChange={(event) => setRenameChapterValue(event.target.value)} onBlur={() => commitChapterTitleRename(note.path, renameChapterValue)} onKeyDown={(event) => { if (event.key === 'Enter') commitChapterTitleRename(note.path, renameChapterValue); if (event.key === 'Escape') { setRenamingChapterPath(''); setRenameChapterValue(''); } }} className="w-full rounded-xl border border-neutral-900 bg-white px-3 py-2 text-left" /> : <button key={note.path} onClick={() => setEditorNotePath(note.path)} onDoubleClick={() => { setRenamingChapterPath(note.path); setRenameChapterValue(String((note as EditorChapter & { name?: string }).display_title || note.name || note.path)); }} className={`w-full rounded-xl border px-3 py-2 text-left whitespace-normal break-words ${editorNotePath === note.path ? 'bg-neutral-900 text-white border-neutral-900' : 'bg-white border-neutral-200'}`}>{(note as EditorChapter & { name?: string }).display_title || note.name || note.path}</button>)}</div>}</aside><div className="min-h-0 min-w-0 editor-main-pane"><div className={`rounded-3xl border border-neutral-200 bg-white p-5 h-full min-h-0 flex flex-col`}><div className="flex items-center justify-between gap-3"><div><div className="text-xs uppercase text-neutral-500">Editor dual · capítulo real</div><input value={selectedEditorTitle} onChange={(event) => updateCurrentChapterTitleDraft(event.target.value)} className="mt-2 w-full rounded-xl border border-neutral-200 px-3 py-2 font-semibold" /><p className="mt-2 text-xs text-neutral-500">Write-back Markdown con hash guard y backup. Canon/VaERL queda pendiente de reanálisis.</p></div><div className="flex flex-wrap items-center justify-end gap-2"><button type="button" onClick={() => switchEditorMode('markdown')} className={`rounded-2xl border px-3 py-2 text-xs ${editorMode === 'markdown' ? 'border-neutral-900 bg-neutral-900 text-white' : 'border-neutral-200 bg-neutral-100 text-neutral-700'}`}>Modo Markdown</button><button type="button" onClick={() => switchEditorMode('visual')} className={`rounded-2xl border px-3 py-2 text-xs ${editorMode === 'visual' ? 'border-neutral-900 bg-neutral-900 text-white' : 'border-neutral-200 bg-neutral-100 text-neutral-700'}`}>Modo visual</button><Button disabled={!canSaveEditor} onClick={handleSaveEditorChapter}>{editorSaveStatus === 'saving' ? 'Guardando...' : 'Guardar'}</Button><Button variant="secondary" onClick={() => setEditorFullscreen(!editorFullscreen)}><Maximize2 size={14} className="inline" /> {editorFullscreen ? 'Salir fullscreen' : 'Pantalla completa'}</Button></div></div>{editorModeWarning ? <div className="mt-3 rounded-2xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">{editorModeWarning}</div> : null}{editorDraft.parseStatus === 'malformed_frontmatter' ? <div className="mt-3 rounded-2xl border border-neutral-300 bg-neutral-50 px-3 py-2 text-xs text-neutral-700">Frontmatter malformado. Modo Markdown activo para preservar contenido.</div> : null}{editorSaveMessage ? <div className={`mt-3 rounded-2xl border px-3 py-2 text-xs ${editorSaveStatus === 'saved' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : editorSaveStatus === 'conflict' || editorSaveStatus === 'error' ? 'border-red-200 bg-red-50 text-red-700' : 'border-amber-200 bg-amber-50 text-amber-800'}`}>{editorSaveMessage}</div> : <div className="mt-3 rounded-2xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-700">Guardar escribe Markdown y marca Canon/VaERL pendiente de reanálisis; no reanaliza Graph ni Review.</div>}<div className="mt-4 flex-1 min-h-0 rounded-2xl border border-neutral-200 bg-neutral-50 p-3 overflow-hidden">{editorMode === 'markdown' ? <div className="h-full overflow-auto rounded-2xl border border-neutral-200 bg-white p-2">{markdownToolbarShell}<div className="mt-3 h-[calc(100%-68px)] min-h-0"><CodeMirror ref={editorTextareaRef} value={editorDraft.rawMarkdown} height="100%" extensions={[markdown(), EditorView.lineWrapping, history(), keymap.of([{ key: 'Mod-z', run: undo }, { key: 'Mod-y', run: redo }, { key: 'Mod-Shift-z', run: redo }]), placeholder('Escribe capítulo en Markdown')] } basicSetup={{ lineNumbers: true, highlightActiveLine: true, highlightActiveLineGutter: true, foldGutter: true }} onChange={(value) => updateMarkdownDraft(value)} className="h-full w-full overflow-hidden rounded-2xl border border-neutral-200 bg-white text-[15px] leading-7 text-neutral-800 shadow-sm" /></div></div> : <div className="h-full overflow-auto rounded-2xl border border-neutral-200 bg-white p-2"><MDXEditor key={`${editorDraft.loadedChapterId}:${editorDraft.loadedContentHash}:${editorMode}`} markdown={editorVisualSeedMarkdown} onChange={updateVisualDraft} plugins={[toolbarPlugin({ toolbarClassName: editorToolbarClassName, toolbarContents: () => <><UndoRedo /><Separator /><BoldItalicUnderlineToggles /><Separator /><BlockTypeSelect /><Separator /><ListsToggle /><Separator /><CreateLink /></> }), headingsPlugin(), listsPlugin(), quotePlugin(), linkPlugin(), linkDialogPlugin(), thematicBreakPlugin(), markdownShortcutPlugin()]} /></div>}</div></div></div><aside className={`${editorFullscreen && editorChapterRailCollapsed ? 'hidden' : ''} self-stretch min-h-0 space-y-4 min-w-0 editor-right-panel`}><div className="h-full rounded-3xl border border-neutral-200 bg-neutral-50 p-5 text-sm text-neutral-600"><Metric label="Origen" value={String(editorSource?.source_used || 'chapter_manifest')} note={`Panel derecho retenido también en fullscreen · ${chapterNotes.length} capítulos canónicos cargados`} /><div className="rounded-2xl bg-white border border-neutral-200 p-3"><b>Rewrite selection</b><br />Placeholder. Sin LLM.</div><div className="mt-3 rounded-2xl bg-white border border-neutral-200 p-3"><b>Canon risks</b><br />Save marca needs_reanalysis. VaERL/Graph/Review no se regeneran.</div></div></aside></div></div></section>;
   if (active === 'story') content = <section><TopBar title="Canon / VaERL" subtitle="Story Bible deep link alias. Canon / VaERL es la vista principal." actions={<Button variant="secondary" onClick={() => setActive('codex')}>Open Canon / VaERL</Button>} /><div className="p-5 grid grid-cols-12 gap-5"><aside className="col-span-12 lg:col-span-3 rounded-3xl border border-neutral-200 bg-neutral-50 p-4"><h2 className="font-semibold">Vault tree</h2><div className="mt-4 space-y-2 text-sm">{(projectDetail?.notes || []).slice(0, 16).map((note) => <div key={note.path} className="rounded-xl bg-white border border-neutral-200 px-3 py-2">{note.name || note.path}</div>)}</div></aside><div className="col-span-12 lg:col-span-9">{selectedProjectId ? <LegacyEmbed title="Story Bible alias inside Canon / VaERL" src={legacyUrl('notes', selectedProjectId)} /> : <div className="rounded-3xl border border-neutral-200 p-5 text-sm text-neutral-500">Selecciona proyecto.</div>}</div></div></section>;
   if (active === 'ask') content = <section><TopBar title="AI Studio" subtitle="Ask Canon, brainstorming y Character Lab/chat con personajes. Placeholders sin provider calls." actions={<><Button variant="secondary">Open answer history</Button><Button variant="secondary">Check source coverage</Button></>} /><div className="p-5 grid grid-cols-12 gap-5"><div className="col-span-12 lg:col-span-7 rounded-3xl border border-neutral-200 p-5 min-h-[560px] flex flex-col"><div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-500">Ask Canon: “¿Qué sabe Sera antes del capítulo 6?”</div><div className="mt-5 rounded-3xl border border-neutral-200 p-5 bg-white shadow-sm"><div className="font-semibold">Respuesta grounded</div><p className="mt-3 text-sm leading-7">Placeholder. No se genera canon sin backend de evidencia.</p></div><div className="mt-auto pt-5 flex gap-2"><input className="flex-1 rounded-2xl border border-neutral-300 px-4 py-3 text-sm" placeholder="Pregunta sobre canon, brainstorming o personajes..." /><Button variant="secondary" disabled>Enviar</Button></div></div><aside className="col-span-12 lg:col-span-5 space-y-4"><Metric label="Grounding" value="Evidencia-first" note="Sin claims no soportados." /><Metric label="Brainstorming" value="Futuro" note="Ideación asistida anclada al canon." /><Metric label="Character Lab" value="Futuro" note="Chat con personajes sin escribir back al manuscrito." /></aside></div></section>;
 

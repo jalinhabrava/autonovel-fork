@@ -6,6 +6,7 @@ import shutil
 import sqlite3
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from io import StringIO
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +19,39 @@ def _now() -> str:
 
 def _hash_text(text: str) -> str:
     return hashlib.sha256(text.encode('utf-8')).hexdigest()
+
+
+def extract_first_h1(markdown: str) -> str | None:
+    for line in StringIO(markdown).read().splitlines():
+        if line.startswith('# '):
+            return line[2:].strip() or None
+    return None
+
+
+def _split_frontmatter(markdown: str) -> tuple[str, str]:
+    if markdown.startswith('---\n'):
+        closing = markdown.find('\n---\n', 4)
+        if closing != -1:
+            return markdown[:closing + 5], markdown[closing + 5:]
+    return '', markdown
+
+
+def replace_or_insert_first_h1(markdown: str, new_title: str) -> str:
+    frontmatter, body = _split_frontmatter(markdown)
+    lines = body.splitlines(keepends=True)
+    title_line = f'# {new_title.strip()}\n'
+    for index, line in enumerate(lines):
+        if line.startswith('# '):
+            lines[index] = title_line
+            return frontmatter + ''.join(lines)
+    if lines and lines[0].startswith('\n'):
+        return frontmatter + title_line + ''.join(lines)
+    prefix = '\n' if body and not body.startswith('\n') else ''
+    return frontmatter + title_line + prefix + body.lstrip('\n')
+
+
+def normalize_chapter_title_for_manifest(title: str) -> str:
+    return ' '.join(str(title or '').strip().split())
 
 
 def _read_json(path: Path) -> dict[str, Any] | None:
@@ -228,7 +262,29 @@ class ProjectStore:
                 )
             conn.commit()
 
-    def save_chapter_markdown(self, chapter_id: str, new_markdown: str, expected_hash: str, actor: str = 'local_user') -> dict[str, Any]:
+    def update_chapter_manifest_snapshot(self, chapter_id: str, metadata: dict[str, Any]) -> bool:
+        manifest_path = self.project_root / 'chapters' / 'chapter_manifest.json'
+        payload = _read_json(manifest_path) or {}
+        chapters = payload.get('chapters') if isinstance(payload.get('chapters'), list) else []
+        updated = False
+        for chapter in chapters:
+            if not isinstance(chapter, dict) or str(chapter.get('chapter_id') or '') != chapter_id:
+                continue
+            chapter['title'] = metadata['title']
+            chapter['display_title'] = metadata['display_title']
+            chapter['clean_title'] = normalize_chapter_title_for_manifest(metadata['display_title'])
+            chapter['content_hash'] = metadata['content_hash']
+            chapter['char_count'] = metadata['char_count']
+            chapter['updated_at'] = metadata['updated_at']
+            chapter['semantic_state'] = metadata['semantic_state']
+            chapter['status'] = metadata['semantic_state']
+            updated = True
+            break
+        if updated:
+            manifest_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+        return updated
+
+    def save_chapter_markdown(self, chapter_id: str, new_markdown: str, expected_hash: str, actor: str = 'local_user', display_title: str | None = None) -> dict[str, Any]:
         del actor
         now = _now()
         with self._connect() as conn:
@@ -257,6 +313,9 @@ class ProjectStore:
                     'message': 'El capítulo cambió en disco. Recarga antes de guardar.',
                 }
 
+            resolved_title = normalize_chapter_title_for_manifest(display_title or extract_first_h1(new_markdown) or str(row['display_title'] or row['title'] or chapter_id))
+            new_markdown = replace_or_insert_first_h1(new_markdown, resolved_title)
+
             stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
             backup_rel = Path('.textifai') / 'history' / 'chapters' / chapter_id / f'{stamp}_{old_hash[:12]}.md'
             backup_abs = self.project_root / backup_rel
@@ -271,22 +330,35 @@ class ProjectStore:
                 (new_hash, char_count, now, rel_path),
             )
             conn.execute(
-                'update chapters set content_hash = ?, char_count = ?, status = ?, dirty = 1 where chapter_id = ?',
-                (new_hash, char_count, 'needs_reanalysis', chapter_id),
+                'update chapters set title = ?, display_title = ?, content_hash = ?, char_count = ?, status = ?, dirty = 1 where chapter_id = ?',
+                (resolved_title, resolved_title, new_hash, char_count, 'needs_reanalysis', chapter_id),
             )
             conn.execute(
                 'insert or replace into dirty_states(resource_type, resource_id, dirty_reason, updated_at) values (?, ?, ?, ?)',
-                ('chapter', chapter_id, 'chapter_markdown_edited', now),
+                ('chapter', chapter_id, 'chapter_title_edited' if display_title else 'chapter_markdown_edited', now),
             )
             conn.commit()
+        manifest_updated = self.update_chapter_manifest_snapshot(
+            chapter_id,
+            {
+                'title': resolved_title,
+                'display_title': resolved_title,
+                'content_hash': new_hash,
+                'char_count': char_count,
+                'updated_at': now,
+                'semantic_state': 'needs_reanalysis',
+            },
+        )
         return {
             'ok': True,
             'chapter_id': chapter_id,
             'old_hash': old_hash,
             'new_hash': new_hash,
+            'display_title': resolved_title,
             'backup_path': str(backup_rel),
             'semantic_state': 'needs_reanalysis',
             'dirty_state': True,
+            'manifest_updated': manifest_updated,
             'saved_at': now,
             'warning': 'VaERL, Graph y Review no han sido reanalizados todavía.',
             'message': 'Capítulo guardado. VaERL/Graph/Review pendientes de reanálisis.',

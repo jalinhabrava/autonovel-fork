@@ -18,6 +18,16 @@ This file contains essential instructions for working effectively with the Texti
 
 ## Main Commands
 
+### Local viewer server
+
+- When starting the TextifAI viewer for the user, bind to `0.0.0.0`, not `127.0.0.1`, because the user accesses it from Windows while Codex runs inside WSL.
+- Leave the viewer running persistently after checks. If tests require restarting it, restart it and leave it running again on `0.0.0.0`.
+- Preferred command:
+  ```
+  setsid uv run python -m textifai.web_viewer.server --root /home/david/TextifAIProjects --host 0.0.0.0 --port 8872 >/tmp/textifai_viewer_8872.log 2>&1 < /dev/null &
+  ```
+- Windows access usually needs the WSL IP from `hostname -I`, for example `http://<wsl-ip>:8872`.
+
 ### Active TextifAI bootstrap / ingestion
 
   ```

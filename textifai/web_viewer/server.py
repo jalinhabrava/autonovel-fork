@@ -196,13 +196,14 @@ def _make_handler(catalog: ProjectCatalog, registry: IngestionJobRegistry):
                     payload = self._json_body()
                     markdown = str(payload.get('markdown') or '')
                     expected_hash = str(payload.get('expected_hash') or '')
+                    display_title = payload.get('display_title')
                     if not expected_hash:
                         raise ValueError('expected_hash is required')
                     project = catalog.get_project(project_id)
                     if getattr(project, 'kind', '') != 'textifai_project':
                         raise ValueError('save supported only for project roots')
                     store = open_project(project.root)
-                    result = store.save_chapter_markdown(chapter_id, markdown, expected_hash)
+                    result = store.save_chapter_markdown(chapter_id, markdown, expected_hash, display_title=str(display_title) if display_title is not None else None)
                     if not bool(result.get('ok')):
                         self._json(result, status=409)
                         return

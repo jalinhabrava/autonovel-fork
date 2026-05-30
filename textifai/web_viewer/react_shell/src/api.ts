@@ -315,9 +315,10 @@ export async function fetchIngestionJobs(): Promise<IngestionJob[]> {
   return payload.jobs || [];
 }
 
-export async function saveChapterMarkdown(projectId: string, chapterId: string, markdown: string, expectedHash: string): Promise<ChapterSaveResponse> {
+export async function saveChapterMarkdown(projectId: string, chapterId: string, markdown: string, expectedHash: string, displayTitle?: string): Promise<ChapterSaveResponse> {
   return apiPost<ChapterSaveResponse>(`/api/projects/${encodeURIComponent(projectId)}/chapters/${encodeURIComponent(chapterId)}/save`, {
     markdown,
     expected_hash: expectedHash,
+    display_title: displayTitle,
   });
 }
