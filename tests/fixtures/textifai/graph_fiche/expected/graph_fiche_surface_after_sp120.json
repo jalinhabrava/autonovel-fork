@@ -1,1 +1,24 @@
-{"assessment":"graph_fiche_surface_ready_canon_reuse_pending","source_priority":["entity_card.author_markdown","entity_markdown_note_body","generated_author_markdown","empty_author_placeholder"],"body_source":"entity_card.author_markdown","frontmatter_hidden":true,"raw_markdown_hidden":true,"technical_details_collapsed":true,"compact_stats":true,"visual_editor_surface":true,"local_edit_only":true,"writeback_enabled":false,"i18n_keys_present":true,"no_source_prose":true}
+{
+  "assessment": "graph_fiche_visual_editor_surface_ready",
+  "source_priority": [
+    "entity_card.author_markdown",
+    "entity_markdown_note_body",
+    "generated_author_markdown",
+    "empty_author_placeholder"
+  ],
+  "body_source": "entity_card.author_markdown_or_generated_fiche",
+  "frontmatter_hidden": true,
+  "raw_markdown_hidden": true,
+  "technical_details_collapsed": true,
+  "compact_stats": true,
+  "visual_editor_surface": true,
+  "visual_mdx_editor": true,
+  "textarea_raw_editor": false,
+  "visual_only": true,
+  "markdown_pill_removed": true,
+  "wikilink_relationships": true,
+  "local_edit_only": true,
+  "writeback_enabled": false,
+  "i18n_keys_present": true,
+  "no_source_prose": true
+}

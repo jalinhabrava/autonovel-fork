@@ -17,8 +17,6 @@ export type GraphToolbarProps = {
   toggleKind: (kind: string) => void;
   query: string;
   onQueryChange: (value: string) => void;
-  relatedOnly: boolean;
-  onRelatedOnlyChange: (value: boolean) => void;
   onResetViewport: () => void;
 };
 
@@ -27,8 +25,6 @@ export function GraphToolbar({
   toggleKind,
   query,
   onQueryChange,
-  relatedOnly,
-  onRelatedOnlyChange,
   onResetViewport,
 }: GraphToolbarProps) {
   return (
@@ -53,15 +49,7 @@ export function GraphToolbar({
         className="w-full rounded-2xl border border-neutral-300 bg-white px-3 py-2 text-sm"
       />
 
-      <div className="flex items-center justify-between gap-3">
-        <label className="flex items-center gap-2 text-sm text-neutral-700">
-          <input
-            type="checkbox"
-            checked={relatedOnly}
-            onChange={(event) => onRelatedOnlyChange(event.target.checked)}
-          />
-          {t('graph.related_only')}
-        </label>
+      <div className="flex justify-end gap-3">
         <button
           type="button"
           onClick={onResetViewport}

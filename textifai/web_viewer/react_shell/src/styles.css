@@ -11,3 +11,32 @@ body,
 body {
   margin: 0;
 }
+
+.editor-workspace-shell {
+  container-type: inline-size;
+}
+
+.editor-workspace-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  overflow-y: auto;
+}
+
+.editor-left-rail,
+.editor-main-pane,
+.editor-right-panel {
+  min-width: 0;
+}
+
+@container (min-width: 1200px) {
+  .editor-workspace-grid {
+    grid-template-columns: minmax(260px, 320px) minmax(0, 1fr) minmax(280px, 360px);
+    overflow: hidden;
+  }
+}
+
+@media (min-width: 1400px) {
+  .editor-workspace-grid:not(.editor-workspace-grid-fullscreen) {
+    grid-template-columns: minmax(260px, 320px) minmax(0, 1fr) minmax(280px, 360px);
+  }
+}

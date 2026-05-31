@@ -1,82 +1,65 @@
-# Safepoint 121 — Graph/Canon node fiche editor surface
+# SP-121C handoff — graph/canon node fiche editor surface
+
+## Final status
+- SP-121C closed: visual fiche editor surface active in Graph/Canon inspector.
+- Wikilink-friendly fiche behavior present in generated relationship lines (`[[Label]]`).
+- Fiche remains local-only and no writeback path is enabled.
 
 ## Scope
-- Reworked Graph inspector into author-facing fiche surface.
-- Added reusable fiche body component for future Canon/VaERL reuse.
-- Kept edits local-memory only. No persistence/write-back.
+- Replace raw node fiche textarea with embedded MDX visual editor surface.
+- Add pretty fiche markdown shaping with wikilink relationship lines.
+- Keep local-only edits (no writeback).
+- Keep technical markdown hidden by default in collapsed technical details.
 
-## Data source priority
-1. `entity-card.markdown.author_markdown`
-2. Note markdown body (frontmatter hidden)
-3. Generated author-facing markdown (documented for next SP)
-4. Empty placeholder
+## Delivered
+- Embedded MDX editor in node fiche section (`EntityFicheView`).
+- Removed visible markdown mode pill from node fiche section.
+- Local edit notice reduced to subtle i18n note.
+- Generated fiche markdown builder now normalizes weak source body:
+  - title + summary
+  - aliases
+  - relationships
+  - evidence/references
+  - notes
+- Relationship lines emitted with wikilink syntax (`[[Label]]`) for navigation-ready semantics.
+- Added i18n keys for generated fiche sections and fallback labels.
 
-## UI/layout changes
-- Compact header with title, entity name, and compact badges.
-- Compact metadata grid for aliases, refs, backlinks/outgoing, local graph counts.
-- Main fiche body promoted as largest editable area.
-- Technical details moved to collapsed accordion.
+## No-writeback guarantees
+- writeback_enabled=false
+- no ProjectStore mutation
+- no VaERL mutation
+- no graph/review regeneration
+- no provider calls
 
-## Moved/removed behavior
-- Old always-open `Vista Markdown` removed from normal surface.
-- Raw markdown/json not shown by default.
-- Note path moved to compact metadata + technical details.
+## Validation
+- `uv run python scripts/dev/textifai_doctor.py` ✅
+- `uv run python -m unittest -v tests.test_textifai_graph_fiche_editor_surface` ✅
+- `uv run python -m unittest -v tests.test_textifai_i18n_ui_strings` ✅
+- `uv run python -m unittest -v tests.test_textifai_mdxeditor_spike` ✅
+- `cd textifai/web_viewer/react_shell && npm run build` ✅
+- viewer runtime `8872` HTTP 200 ✅
 
-## Frontmatter handling
-- Frontmatter parsed and hidden via shared helper (`stripFrontmatter`).
-- Editor body uses markdown body only.
+## Visual verification
+- Ren: `/tmp/sp121c-ren-fiche.png` ✅
+- Magia: `/tmp/sp121c-magia-fiche.png` ✅
+- Sera: `/tmp/sp121c-sera-fiche.png` (node not found by url preselect in current graph payload)
 
-## Technical details policy
-- Collapsed by default.
-- Includes path and sanitized markdown preview.
-- Optional technical markdown shown only inside accordion.
+Observed on verified nodes:
+- fiche switches with selected node
+- fiche section uses visual MDX surface (not textarea)
+- no visible markdown mode pill in node fiche
+- raw markdown/debug not visible by default
+- local edit copy subtle and honest
+- wikilink-friendly generated markdown present in editor body
 
-## Local-edit-only limitation
-- Fiche body editor is local-only (`textarea`).
-- Dirty state copy shown: `Edición local sin guardar.`
-- Save-not-available copy shown: `El guardado de fichas llegará en una fase posterior.`
+## Remaining blockers before writeback
+- node-select by URL for all labels still data-dependent (e.g., Sera missing in current runtime snapshot)
+- full click-through wikilink navigation not yet implemented (text preserved only)
+- writeback pipeline intentionally out-of-scope
 
-## Runtime verification
-- Viewer reachable on `http://127.0.0.1:8872/` (HTTP 200).
-- `/api/projects` and `/api/projects/<id>` return 200.
-- Real project enumerated and graph payload loaded.
-- Codex visual builder skill used: `true`.
-- Browser automation opened real project and Graph view.
-- Screenshots captured:
-  - `/tmp/sp121-visual-real/desktop_graph_default.png`
-  - `/tmp/sp121-visual-real/mobile_graph_default.png`
-  - `/tmp/sp121-visual-real/desktop_Ren.png`
-  - `/tmp/sp121-visual-real/desktop_Magia.png`
-  - `/tmp/sp121-visual-real/desktop_Sera.png`
-  - `/tmp/sp121-visual-real/mobile_Ren.png`
-  - `/tmp/sp121-visual-real/mobile_Magia.png`
-  - `/tmp/sp121-visual-real/mobile_Sera.png`
-  - `/tmp/sp121-visual-real/proof_Ren.png`
-  - `/tmp/sp121-visual-real/proof_Magia.png`
-  - `/tmp/sp121-visual-real/proof_Sera.png`
-- `browser_visual_pass=true` for closeout gate.
-- Reason: deterministic selection proven via visual-test hook query `graph_select` + Graph tab open; inspector `<h2>` resolved exactly to `Ren`, `Magia`, `Sera` and matching screenshots captured.
-- `selected_nodes_checked=[Ren, Magia, Sera]` attempted via real browser automation.
+- Canon wiki reuse pending
+- entity fiche ProjectStore write-back pending
+- SP-119B visual tooling / Playwright baseline cleanup pending if verification tooling is retained long-term
 
-## Testability hook
-- Added minimal non-UI hook in `textifai/web_viewer/react_shell/src/App.tsx`.
-- Query `graph_select=<value>` preselects initial graph node by exact match on `label` / `display_label` / `canonical_id` / `id` during project context load.
-- Used only to make visual verification deterministic; no write-back, no provider calls, no ingestion, no new user-facing controls.
-
-## Tests/build
-- `uv run python -m unittest -v tests.test_textifai_graph_fiche_editor_surface`
-- `uv run python -m unittest -v tests.test_textifai_i18n_ui_strings`
-- `uv run python -m unittest -v tests.test_textifai_mdxeditor_spike`
-- `cd textifai/web_viewer/react_shell && npm run build`
-
-## Remaining blockers before write-back
-- Canon/VaERL shared navigation not yet wired to same component.
-- Entity fiche persistence contract through ProjectStore missing.
-- Strong canonical-id write path still pending.
-- Canon wiki reuse pending.
-- ProjectStore entity fiche write-back pending.
-
-## Recommendation for SP-122
-- Add ProjectStore entity fiche write-back endpoint + optimistic hash guard.
-- Keep same `EntityFicheView` contract; attach save action + conflict banner.
-- Reuse source-priority and frontmatter-hide rules unchanged.
+## Assessment
+- `graph_fiche_visual_editor_surface_ready`

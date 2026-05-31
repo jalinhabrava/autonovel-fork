@@ -49,7 +49,7 @@ class TextifaiGraphFicheEditorSurfaceTests(unittest.TestCase):
         self.assertIn('stripFrontmatter', text)
         self.assertIn('details', text)
         self.assertIn("t('graph.technical_details')", text)
-        self.assertIn("t('graph.fiche_local_dirty')", text)
+        self.assertIn("t('graph.fiche_local_dirty')", fiche)
         self.assertIn('MDXEditor', fiche)
         self.assertIn('EditorBoundary', fiche)
         self.assertIn('fallback={<textarea', fiche)

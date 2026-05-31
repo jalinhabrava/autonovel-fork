@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowUpRight, BookOpenText, FileText, Link2, Network, Pencil, ShieldCheck, Star, Users } from 'lucide-react';
+import { ArrowUpRight, BookOpenText, Link2, Network, ShieldCheck, Star, Users } from 'lucide-react';
 import { GraphCanvasNode } from './types';
 import { CanonEntity, NoteDetail, EntityCard } from '../api';
 import { t } from '../i18n/ui';
@@ -9,9 +9,11 @@ export type GraphInspectorProps = {
   node: GraphCanvasNode | null;
   entityCard: CanonEntity | null;
   entityCardVm: EntityCard | null;
+  reviewCountOverride?: number;
   noteContent: string;
   noteDetail: NoteDetail | null;
   onEdit: (node: GraphCanvasNode) => void;
+  onViewLocalGraph?: (node: GraphCanvasNode) => void;
   onOpenReview?: (entityLabel: string) => void;
 };
 
@@ -59,7 +61,7 @@ function buildFicheMarkdown(params: {
   return sections.join('\n').trim();
 }
 
-export function GraphInspector({ node, entityCard, entityCardVm, noteContent, noteDetail, onEdit, onOpenReview }: GraphInspectorProps) {
+export function GraphInspector({ node, entityCard, entityCardVm, reviewCountOverride, noteContent, noteDetail, onEdit, onViewLocalGraph, onOpenReview }: GraphInspectorProps) {
   const [technicalOpen, setTechnicalOpen] = useState(false);
   const [localBody, setLocalBody] = useState('');
 
@@ -70,7 +72,7 @@ export function GraphInspector({ node, entityCard, entityCardVm, noteContent, no
   const summary = vm?.summary || entityCard?.summary || node?.summaryExcerpt || noteDetail?.summary_excerpt || '';
   const relationCount = vm?.relation_count ?? entityCard?.relationships?.length ?? node?.relationshipCount ?? node?.degree ?? 0;
   const evidenceCount = vm?.evidence_count ?? entityCard?.evidence_refs?.length ?? node?.evidenceCount ?? noteDetail?.evidence_count ?? 0;
-  const reviewCount = vm?.review?.count ?? node?.reviewCount ?? 0;
+  const reviewCount = reviewCountOverride ?? vm?.review?.count ?? node?.reviewCount ?? 0;
   const notePath = vm?.markdown?.note_path || node?.notePath || node?.note_path || node?.canonical_note_path || '';
   const aliases = useMemo(() => Array.from(new Set([...(vm?.aliases?.canonical || []), ...(vm?.aliases?.contextual || []), ...(entityCard?.aliases || []), ...toList(node?.aliases)])).filter(Boolean), [entityCard?.aliases, node?.aliases, vm?.aliases?.canonical, vm?.aliases?.contextual]);
   const backlinks = vm?.backlinks || noteDetail?.backlinks || node?.backlinks || [];
@@ -109,33 +111,36 @@ export function GraphInspector({ node, entityCard, entityCardVm, noteContent, no
         <span className="rounded-full border border-neutral-200 bg-white px-3 py-1">{kind || t('common.label')}</span>
         <span className="rounded-full bg-emerald-100 px-3 py-1 text-emerald-800">{status}</span>
         {reviewCount ? <span className="rounded-full bg-amber-100 px-3 py-1 text-amber-800">{reviewCount} {t('graph.review_label')}</span> : null}
-        <span className="rounded-full bg-neutral-100 px-3 py-1">{relationCount} {t('graph.relations')}</span>
-        <span className="rounded-full bg-neutral-100 px-3 py-1">{evidenceCount} {t('editor.evidence')}</span>
       </div>
 
-      <section className="mt-5 rounded-2xl border border-neutral-200 bg-white p-5">
-        <div className="mb-3 flex items-center gap-2 text-2xl font-semibold text-neutral-900"><FileText size={20} />{t('graph.summary_title')}</div>
-        <p className="text-base leading-7 text-neutral-700">{summary || t('graph.summary_missing')}</p>
+      <section className="mt-3 grid grid-cols-2 gap-2 text-xs">
+        <div className="rounded-xl border border-neutral-200 bg-white p-2"><div className="mb-1 flex items-center gap-1.5 text-sm font-semibold text-neutral-900"><Users size={14} />{t('graph.aliases')}</div><div className="flex flex-wrap gap-1">{aliases.length ? aliases.slice(0, 4).map((alias) => <span key={alias} className="rounded-md bg-neutral-100 px-2 py-0.5 text-[11px] text-neutral-700">{alias}</span>) : <span className="text-neutral-500">{t('common.no_data')}</span>}</div></div>
+        <div className="rounded-xl border border-neutral-200 bg-white p-2"><div className="mb-1 flex items-center gap-1.5 text-sm font-semibold text-neutral-900"><BookOpenText size={14} />{t('graph.reference_points')}</div><div className="text-xs text-neutral-700"><ul className="list-disc pl-4"><li className="line-clamp-2 break-all">{notePath || t('graph.no_note')}</li></ul></div></div>
+        <div className="rounded-xl border border-neutral-200 bg-white p-2"><div className="mb-1 flex items-center gap-1.5 text-sm font-semibold text-neutral-900"><ShieldCheck size={14} />{t('editor.evidence')}</div><div className="text-2xl font-semibold text-neutral-900">{evidenceCount}</div></div>
+        <div className="rounded-xl border border-neutral-200 bg-white p-2"><div className="mb-1 flex items-center gap-1.5 text-sm font-semibold text-neutral-900"><Users size={14} />{t('graph.relationships_title')}</div><div className="text-xs text-neutral-700">{relationCount ? `${t('graph.relations')}: ${relationCount}` : t('common.no_data')}</div></div>
+        <div className="rounded-xl border border-neutral-200 bg-white p-2"><div className="mb-1 flex items-center gap-1.5 text-sm font-semibold text-neutral-900"><Link2 size={14} />{t('graph.backlinks')}</div><div className="text-2xl font-semibold text-neutral-900">{backlinks.length}</div></div>
+        <div className="rounded-xl border border-neutral-200 bg-white p-2"><div className="mb-1 flex items-center gap-1.5 text-sm font-semibold text-neutral-900"><ArrowUpRight size={14} />{t('graph.outgoing_links')}</div><div className="text-2xl font-semibold text-neutral-900">{outgoing.length}</div></div>
       </section>
 
-      <section className="mt-4 grid grid-cols-1 gap-3 text-sm 2xl:grid-cols-2">
-        <div className="rounded-2xl border border-neutral-200 bg-white p-4"><div className="mb-2 flex items-center gap-2 text-xl font-semibold text-neutral-900"><Users size={18} />{t('graph.aliases')}</div><div className="mt-2 flex flex-wrap gap-2">{aliases.length ? aliases.slice(0, 8).map((alias) => <span key={alias} className="rounded-lg bg-neutral-100 px-3 py-1 text-sm text-neutral-700">{alias}</span>) : <span className="text-neutral-500">{t('common.no_data')}</span>}</div></div>
-        <div className="rounded-2xl border border-neutral-200 bg-white p-4"><div className="mb-2 flex items-center gap-2 text-xl font-semibold text-neutral-900"><BookOpenText size={18} />{t('graph.reference_points')}</div><div className="mt-2 text-sm text-neutral-700"><ul className="list-disc space-y-1 pl-5"><li className="break-all">{notePath || t('graph.no_note')}</li></ul></div></div>
-        <div className="rounded-2xl border border-neutral-200 bg-white p-4"><div className="mb-2 flex items-center gap-2 text-xl font-semibold text-neutral-900"><ShieldCheck size={18} />{t('editor.evidence')}</div><div className="text-4xl font-semibold text-neutral-900">{evidenceCount}</div><div className="mt-1 text-sm text-neutral-600">{evidenceCount ? t('graph.evidence_available') : t('graph.evidence_empty')}</div></div>
-        <div className="rounded-2xl border border-neutral-200 bg-white p-4"><div className="mb-2 flex items-center gap-2 text-xl font-semibold text-neutral-900"><Users size={18} />{t('graph.relationships_title')}</div><div className="mt-2 flex flex-wrap gap-2">{relationCount ? [t('graph.relations')].map((chip) => <span key={chip} className="break-words rounded-lg bg-neutral-100 px-3 py-1 text-sm text-neutral-700">{chip}: {relationCount}</span>) : <span className="text-neutral-500">{t('common.no_data')}</span>}</div></div>
-        <div className="rounded-2xl border border-neutral-200 bg-white p-4"><div className="mb-2 flex items-center gap-2 text-xl font-semibold text-neutral-900"><Link2 size={18} />{t('graph.backlinks')}</div><div className="text-4xl font-semibold text-neutral-900">{backlinks.length}</div><div className="mt-1 break-words text-sm text-neutral-600">{backlinks.length ? backlinks.slice(0, 2).join(' · ') : t('graph.backlinks_empty')}</div></div>
-        <div className="rounded-2xl border border-neutral-200 bg-white p-4"><div className="mb-2 flex items-center gap-2 text-xl font-semibold text-neutral-900"><ArrowUpRight size={18} />{t('graph.outgoing_links')}</div><div className="text-4xl font-semibold text-neutral-900">{outgoing.length}</div><div className="mt-1 text-sm text-neutral-600">{outgoing.length ? t('graph.outgoing_available') : t('graph.outgoing_empty')}</div></div>
-      </section>
-
-      <section className="mt-4 rounded-2xl border border-neutral-200 bg-white p-4">
+      <section className="mt-2 rounded-xl border border-neutral-200 bg-white p-2.5">
         <div className="flex items-center justify-between gap-2">
           <div>
-            <div className="flex items-center gap-2 text-xl font-semibold text-neutral-900"><Network size={18} />{t('graph.local_graph')}</div>
-            <p className="mt-1 text-sm text-neutral-600">{t('graph.local_graph_note')}</p>
+            <div className="flex items-center gap-1.5 text-sm font-semibold text-neutral-900"><Network size={14} />{t('graph.local_graph')}</div>
+            <p className="mt-0.5 text-xs text-neutral-600 line-clamp-2">{t('graph.local_graph_note')}</p>
           </div>
-          <button type="button" className="rounded-xl border border-orange-300 bg-white px-4 py-2 text-sm font-medium text-orange-700 hover:bg-orange-50">{t('graph.view_local_graph')}</button>
+          <button type="button" onClick={() => node && onViewLocalGraph?.(node)} className="rounded-lg border border-orange-300 bg-white px-2.5 py-1.5 text-xs font-medium text-orange-700 hover:bg-orange-50">{t('graph.view_local_graph')}</button>
         </div>
-        <div className="mt-2 text-sm text-neutral-500">{localNodeCount} {t('graph.local_graph_nodes')} · {localEdgeCount} {t('graph.local_graph_edges')}</div>
+        <div className="mt-1 text-[11px] text-neutral-500">{localNodeCount} {t('graph.local_graph_nodes')} · {localEdgeCount} {t('graph.local_graph_edges')}</div>
+      </section>
+
+      <section className="mt-2 rounded-xl border border-neutral-200 bg-white p-2.5">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <div className={`flex items-center gap-1.5 text-sm font-semibold ${reviewCount ? 'text-neutral-900' : 'text-neutral-400'}`}><Star size={14} />{t('graph.view_review')}</div>
+            <p className={`mt-0.5 text-xs line-clamp-2 ${reviewCount ? 'text-neutral-600' : 'text-neutral-400'}`}>{t('graph.review_filter_hint')}</p>
+          </div>
+          <button type="button" disabled={!reviewCount} onClick={() => onOpenReview?.(label)} className={`rounded-lg px-2.5 py-1.5 text-xs font-medium ${reviewCount ? 'border border-orange-300 bg-white text-orange-700 hover:bg-orange-50' : 'border border-neutral-200 bg-neutral-100 text-neutral-400 cursor-not-allowed'}`}>{t('graph.view_review')}</button>
+        </div>
       </section>
 
       <EntityFicheView editorKey={editorKey} bodyMarkdown={editorBody} onChangeBody={setLocalBody} localDirty={editorBody !== normalizedBody} />
@@ -148,11 +153,6 @@ export function GraphInspector({ node, entityCard, entityCardVm, noteContent, no
           {vm?.markdown?.technical_markdown ? <div><div className="uppercase tracking-wide text-neutral-400">technical_markdown</div><pre className="mt-1 max-h-52 overflow-y-auto whitespace-pre-wrap rounded-xl border border-neutral-200 bg-white p-3">{vm.markdown.technical_markdown}</pre></div> : null}
         </div>
       </details>
-
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-xs text-neutral-500">
-        <span>{t('graph.fiche_local_dirty')}</span>
-        <button type="button" onClick={() => onOpenReview?.(label)} className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-neutral-50 px-3 py-2 text-neutral-700 hover:bg-neutral-100"><Star size={14} />{t('graph.view_review')}</button>
-      </div>
     </aside>
   );
 }

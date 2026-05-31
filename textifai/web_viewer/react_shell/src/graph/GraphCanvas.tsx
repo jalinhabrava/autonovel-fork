@@ -131,8 +131,9 @@ export function GraphCanvas({ nodes, edges, selectedNodeId, onSelectNode }: Grap
     node.fy = node.y;
   }, []);
 
-  const handleNodeRightClick = useCallback((node: ForceNode, event: MouseEvent) => {
+  const handleNodeRightClick = useCallback((node: ForceNode | null, event: MouseEvent) => {
     event.preventDefault();
+    if (!node || node.id == null) return;
     onSelectNode(String(node.id));
     graphRef.current?.centerAt(node.x ?? 0, node.y ?? 0, ANIMATION_MS);
     graphRef.current?.zoom(CENTER_ZOOM_LEVEL, ANIMATION_MS);
@@ -166,7 +167,10 @@ export function GraphCanvas({ nodes, edges, selectedNodeId, onSelectNode }: Grap
         nodeCanvasObjectMode={() => 'replace'}
         nodeCanvasObject={paintNode}
         nodePointerAreaPaint={paintPointerArea}
-        onNodeClick={(node) => onSelectNode(String(node.id))}
+        onNodeClick={(node) => {
+          if (!node || node.id == null) return;
+          onSelectNode(String(node.id));
+        }}
         onBackgroundClick={() => onSelectNode(null)}
         onNodeDragEnd={handleNodeDragEnd}
         onNodeRightClick={handleNodeRightClick}
