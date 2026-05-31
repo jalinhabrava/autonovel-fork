@@ -1,0 +1,32 @@
+{
+  "assessment": "generated_entity_fiche_body_editorial_only",
+  "allowed_default_body_parts": [
+    "title",
+    "kind",
+    "summary",
+    "notes_placeholder"
+  ],
+  "disallowed_default_body_parts": [
+    "aliases",
+    "relationships",
+    "backlinks",
+    "outgoing_links",
+    "evidence_refs",
+    "technical_paths"
+  ],
+  "structured_data_location": "cards_outside_mdx_editor",
+  "wikilink_policy": "preserve_authored_wikilinks_exactly",
+  "writeback_enabled": false,
+  "semantic_reanalysis_contract_only": true,
+  "visual_editor_surface": true,
+  "raw_markdown_hidden": true,
+  "technical_details_collapsed": true,
+  "local_edit_only": true,
+  "i18n_keys_present": true,
+  "no_source_prose": true,
+  "visual_mdx_editor": true,
+  "textarea_raw_editor": false,
+  "visual_only": true,
+  "markdown_pill_removed": true,
+  "wikilink_relationships": true
+}

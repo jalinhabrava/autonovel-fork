@@ -8,6 +8,7 @@ REPO = Path(__file__).resolve().parents[1]
 INSPECTOR = REPO / 'textifai/web_viewer/react_shell/src/graph/GraphInspector.tsx'
 FICHE = REPO / 'textifai/web_viewer/react_shell/src/modules/canon/EntityFicheView.tsx'
 APP = REPO / 'textifai/web_viewer/react_shell/src/App.tsx'
+ENTITY_CARD = REPO / 'textifai/web_viewer/entity_card.py'
 FIX = REPO / 'tests/fixtures/textifai/graph_fiche/expected'
 
 REPORTS = [
@@ -16,6 +17,12 @@ REPORTS = [
     'entity_fiche_visual_editor_contract_after_sp120.json',
     'entity_fiche_technical_details_policy_after_sp120.json',
     'entity_fiche_i18n_after_sp120.json',
+    'entity_fiche_wikilinks_after_sp121c.json',
+    'entity_fiche_semantic_contract_after_sp122a.json',
+    'entity_fiche_generated_body_policy_after_sp122a.json',
+    'entity_fiche_visual_editor_contract_after_sp120.json',
+    'entity_fiche_i18n_after_sp120.json',
+    'graph_fiche_surface_after_sp120.json',
 ]
 
 class TextifaiGraphFicheEditorSurfaceTests(unittest.TestCase):
@@ -29,6 +36,11 @@ class TextifaiGraphFicheEditorSurfaceTests(unittest.TestCase):
             self.assertFalse(payload['writeback_enabled'])
             self.assertTrue(payload['i18n_keys_present'])
             self.assertTrue(payload['no_source_prose'])
+            self.assertTrue(payload.get('visual_mdx_editor', True))
+            self.assertFalse(payload.get('textarea_raw_editor', False))
+            self.assertTrue(payload.get('visual_only', True))
+            self.assertTrue(payload.get('markdown_pill_removed', True))
+            self.assertTrue(payload.get('wikilink_relationships', True))
 
     def test_graph_inspector_uses_reusable_fiche_surface(self):
         text = INSPECTOR.read_text(encoding='utf-8')
@@ -38,7 +50,25 @@ class TextifaiGraphFicheEditorSurfaceTests(unittest.TestCase):
         self.assertIn('details', text)
         self.assertIn("t('graph.technical_details')", text)
         self.assertIn("t('graph.fiche_local_dirty')", text)
-        self.assertIn('textarea', fiche)
+        self.assertIn('MDXEditor', fiche)
+        self.assertIn('EditorBoundary', fiche)
+        self.assertIn('fallback={<textarea', fiche)
+        self.assertNotIn('>Markdown<', fiche)
+        self.assertIn('buildFicheMarkdown', text)
+        self.assertIn('[[' , text)
+
+    def test_fiche_body_preserves_authored_text_without_forced_structure(self):
+        text = INSPECTOR.read_text(encoding='utf-8')
+        self.assertIn('if (cleanBody) return cleanBody;', text)
+        self.assertIn("`## ${t('graph.fiche_notes')}`", text)
+        self.assertNotIn('const hasStructure = /(^|\\n)##\\s+/.test(cleanBody);', text)
+
+    def test_generated_entity_body_does_not_duplicate_structured_cards(self):
+        text = ENTITY_CARD.read_text(encoding='utf-8')
+        self.assertNotIn('## Aliases', text)
+        self.assertNotIn('## Relaciones', text)
+        self.assertNotIn('## Backlinks', text)
+        self.assertNotIn('## Enlaces salientes', text)
 
     def test_source_priority_documented(self):
         payload = json.loads((FIX / 'entity_fiche_source_priority_after_sp120.json').read_text(encoding='utf-8'))

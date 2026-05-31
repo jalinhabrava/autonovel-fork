@@ -424,41 +424,9 @@ def _build_author_markdown(
     if summary:
         lines.append(summary)
         lines.append("")
-    if canonical_aliases:
-        lines.append("## Aliases")
-        for a in canonical_aliases:
-            lines.append(f"- {a}")
-        lines.append("")
-    if contextual_refs:
-        lines.append("### Referencias contextuales / POV")
-        for a in contextual_refs:
-            lines.append(f"- {a}")
-        lines.append("")
-    if needs_review:
-        lines.append("### Aliases por revisar")
-        for a in needs_review:
-            lines.append(f"- {a}")
-        lines.append("")
-    if relationships:
-        lines.append("## Relaciones")
-        for r in relationships:
-            lines.append(f"- {r.get('source', '?')} → {r.get('predicate', 'relacionado')} → {r.get('target', '?')}")
-        lines.append("")
-    if evidence_count:
-        lines.append(f"**Evidencias:** {evidence_count}")
-        lines.append("")
-    if backlinks:
-        lines.append("## Backlinks")
-        for b in backlinks:
-            lines.append(f"- {b}")
-        lines.append("")
-    if outgoing:
-        lines.append("## Enlaces salientes")
-        for o in outgoing:
-            lines.append(f"- {o.get('label', o)}")
-        lines.append("")
+    del canonical_aliases, contextual_refs, needs_review, relationships, backlinks, outgoing, evidence_count
     lines.append("---")
-    lines.append("_Ficha generada desde VaERL, graph y Markdown. Sin write-back automático._")
+    lines.append("_Cuerpo editorial inicial. Los alias, relaciones, evidencias y enlaces calculados viven en tarjetas fuera del editor. Sin write-back automático._")
     return "\n".join(lines)
 
 

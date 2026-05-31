@@ -1,0 +1,43 @@
+{
+  "assessment": "entity_fiche_semantic_contract_ready_before_writeback",
+  "layers": [
+    "structured_calculated",
+    "editorial_mdx_body",
+    "technical_debug"
+  ],
+  "source_priority": [
+    "entity_card.author_markdown",
+    "entity_markdown_note_body",
+    "generated_author_markdown",
+    "empty_author_placeholder"
+  ],
+  "editorial_body_preserves_wikilinks_exactly": true,
+  "generated_body_duplicates_structured_cards": false,
+  "structured_cards_outside_mdx": [
+    "aliases",
+    "relationships",
+    "backlinks",
+    "outgoing_links",
+    "evidence_count",
+    "graph_stats"
+  ],
+  "future_semantic_state_on_save": "needs_reanalysis",
+  "semantic_mutation_requires_review": true,
+  "no_projectstore_entity_writeback": true,
+  "no_vaerl_writeback": true,
+  "no_graph_regeneration": true,
+  "no_review_regeneration": true,
+  "no_provider_calls": true,
+  "no_source_prose": true,
+  "visual_editor_surface": true,
+  "raw_markdown_hidden": true,
+  "technical_details_collapsed": true,
+  "local_edit_only": true,
+  "writeback_enabled": false,
+  "i18n_keys_present": true,
+  "visual_mdx_editor": true,
+  "textarea_raw_editor": false,
+  "visual_only": true,
+  "markdown_pill_removed": true,
+  "wikilink_relationships": true
+}
