@@ -17,6 +17,8 @@
 
 - React source lives in `textifai/web_viewer/react_shell/`.
 - Build output lives in `textifai/web_viewer/static/react-shell/`.
+- React build policy is Node `>=22 <23`.
+- Non-interactive Codex shells may miss `nvm`; use `scripts/dev/textifai_react_build.sh` for Vite builds.
 - End users should not need Node if static bundle ships with runtime.
 
 ## Python Runtime

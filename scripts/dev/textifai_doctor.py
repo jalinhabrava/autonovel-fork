@@ -13,6 +13,26 @@ REACT_PACKAGE_JSON = REACT_SHELL / "package.json"
 NODE_MODULES = REACT_SHELL / "node_modules"
 VITE_CONFIG = REACT_SHELL / "vite.config.ts"
 GENERATED_BUNDLE = REPO_ROOT / "textifai/web_viewer/static/react-shell/app.js"
+REACT_NVMRC = REACT_SHELL / ".nvmrc"
+REACT_BUILD_WRAPPER = REPO_ROOT / "scripts/dev/textifai_react_build.sh"
+REQUIRED_NODE_MIN = 22
+REQUIRED_NODE_MAX_EXCLUSIVE = 23
+
+
+def _parse_major(version_text: str) -> int | None:
+    text = version_text.strip()
+    if text.startswith("v"):
+        text = text[1:]
+    major = text.split(".", 1)[0]
+    return int(major) if major.isdigit() else None
+
+
+def _read_react_package_metadata() -> tuple[str | None, str | None]:
+    if not REACT_PACKAGE_JSON.exists():
+        return None, None
+    payload = json.loads(REACT_PACKAGE_JSON.read_text(encoding="utf-8"))
+    engines = payload.get("engines") or {}
+    return engines.get("node"), payload.get("packageManager")
 
 
 def _run(command: list[str], *, cwd: Path | None = None) -> tuple[bool, str]:
@@ -31,6 +51,7 @@ def _check_import(module_name: str) -> tuple[bool, str]:
 
 def run_doctor() -> int:
     checks: list[tuple[str, str, str]] = []
+    react_build_ready = True
 
     uv_bin = shutil.which("uv")
     checks.append(("uv_available", "ok" if uv_bin else "error", uv_bin or "uv missing"))
@@ -59,9 +80,48 @@ def run_doctor() -> int:
     if node_bin:
         ok, detail = _run(["node", "--version"])
         checks.append(("node_version", "ok" if ok else "error", detail))
+        node_version = detail if ok else None
+    else:
+        node_version = None
     if npm_bin:
         ok, detail = _run(["npm", "--version"])
         checks.append(("npm_version", "ok" if ok else "error", detail))
+
+    react_node_engine, react_package_manager = _read_react_package_metadata()
+    checks.append((
+        "react_nvmrc",
+        "ok" if REACT_NVMRC.exists() else "error",
+        REACT_NVMRC.read_text(encoding="utf-8").strip() if REACT_NVMRC.exists() else f"missing: {REACT_NVMRC}",
+    ))
+    checks.append((
+        "react_node_engine",
+        "ok" if react_node_engine else "error",
+        react_node_engine or f"missing in {REACT_PACKAGE_JSON}",
+    ))
+    checks.append((
+        "react_package_manager",
+        "ok" if react_package_manager else "warning",
+        react_package_manager or f"missing in {REACT_PACKAGE_JSON}",
+    ))
+
+    current_major = _parse_major(node_version) if node_version else None
+    node_compatible = current_major is not None and REQUIRED_NODE_MIN <= current_major < REQUIRED_NODE_MAX_EXCLUSIVE
+    if not node_compatible:
+        react_build_ready = False
+    checks.append((
+        "react_node_compatibility",
+        "ok" if node_compatible else "error",
+        (
+            f"Node {react_node_engine or '>=22 <23'} required; current={node_version}. Use {REACT_BUILD_WRAPPER}"
+            if node_version
+            else f"Node {react_node_engine or '>=22 <23'} required; current=missing. Use {REACT_BUILD_WRAPPER}"
+        ),
+    ))
+    checks.append((
+        "react_build_wrapper",
+        "ok" if REACT_BUILD_WRAPPER.exists() else "error",
+        str(REACT_BUILD_WRAPPER),
+    ))
 
     checks.append(("react_package_json", "ok" if REACT_PACKAGE_JSON.exists() else "error", str(REACT_PACKAGE_JSON)))
     checks.append(("vite_config", "ok" if VITE_CONFIG.exists() else "error", str(VITE_CONFIG)))
@@ -73,7 +133,7 @@ def run_doctor() -> int:
     checks.append((
         "generated_bundle",
         "ok" if GENERATED_BUNDLE.exists() else "warning",
-        str(GENERATED_BUNDLE) if GENERATED_BUNDLE.exists() else "missing; run `cd textifai/web_viewer/react_shell && npm run build`",
+        str(GENERATED_BUNDLE) if GENERATED_BUNDLE.exists() else f"missing; run `{REACT_BUILD_WRAPPER}`",
     ))
 
     common_paths = [REPO_ROOT / "scripts/textifai.py", REPO_ROOT / "textifai/web_viewer/server.py", REPO_ROOT / "docs"]
@@ -83,11 +143,17 @@ def run_doctor() -> int:
     required_failed = any(status == "error" for _, status, _ in checks)
     overall = "ready" if not required_failed else "not_ready"
     print(f"TextifAI Environment Doctor: {overall}")
+    print(f"react_build_ready={str(react_build_ready).lower()}")
     for name, status, detail in checks:
         print(f"[{status.upper():7}] {name}: {detail}")
 
     report = {
         "overall": overall,
+        "react_build_ready": react_build_ready,
+        "react_build_command": str(REACT_BUILD_WRAPPER),
+        "react_node_engine": react_node_engine,
+        "react_nvmrc": REACT_NVMRC.read_text(encoding="utf-8").strip() if REACT_NVMRC.exists() else None,
+        "detected_node_version": node_version,
         "python_invocation": "uv run python",
         "bare_python_allowed": False,
         "checks": [{"name": name, "status": status, "detail": detail} for name, status, detail in checks],
