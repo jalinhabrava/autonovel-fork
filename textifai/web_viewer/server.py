@@ -209,6 +209,25 @@ def _make_handler(catalog: ProjectCatalog, registry: IngestionJobRegistry):
                         return
                     self._json(result)
                     return
+                if len(parts) == 7 and parts[4] == 'entities' and parts[6] == 'save':
+                    project_id = unquote(parts[3])
+                    entity_id = unquote(parts[5])
+                    payload = self._json_body()
+                    markdown = str(payload.get('markdown') or '')
+                    expected_hash = str(payload.get('expected_hash') or '')
+                    canonical_label = payload.get('canonical_label')
+                    if not expected_hash:
+                        raise ValueError('expected_hash is required')
+                    project = catalog.get_project(project_id)
+                    if getattr(project, 'kind', '') != 'textifai_project':
+                        raise ValueError('save supported only for project roots')
+                    store = open_project(project.root)
+                    result = store.save_entity_fiche_markdown(entity_id, markdown, expected_hash, canonical_label=str(canonical_label) if canonical_label is not None else None)
+                    if not bool(result.get('ok')):
+                        self._json(result, status=409)
+                        return
+                    self._json(result)
+                    return
                 if len(parts) == 7 and parts[4] == 'chapters' and parts[6] == 'reanalyze':
                     project_id = unquote(parts[3])
                     chapter_id = unquote(parts[5])

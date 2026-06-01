@@ -54,6 +54,10 @@ def normalize_chapter_title_for_manifest(title: str) -> str:
     return ' '.join(str(title or '').strip().split())
 
 
+def normalize_entity_canonical_label(label: str) -> str:
+    return ' '.join(str(label or '').strip().split())
+
+
 def _read_json(path: Path) -> dict[str, Any] | None:
     if not path.exists():
         return None
@@ -362,6 +366,83 @@ class ProjectStore:
             'saved_at': now,
             'warning': 'VaERL, Graph y Review no han sido reanalizados todavía.',
             'message': 'Capítulo guardado. VaERL/Graph/Review pendientes de reanálisis.',
+        }
+
+    def save_entity_fiche_markdown(self, entity_id: str, new_markdown: str, expected_hash: str, actor: str = 'local_user', canonical_label: str | None = None) -> dict[str, Any]:
+        del actor
+        now = _now()
+        with self._connect() as conn:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute('select * from entities where entity_id = ?', (entity_id,)).fetchone()
+            if row is None:
+                raise KeyError(entity_id)
+            rel_path = str(row['ficha_markdown_path'] or '').strip()
+            if not rel_path:
+                raise ValueError('entity ficha_markdown_path is empty')
+            fiche_path = (self.project_root / rel_path).resolve()
+            root = self.project_root.resolve()
+            if root not in fiche_path.parents:
+                raise ValueError('entity ficha_markdown_path escapes project root')
+            if not fiche_path.exists():
+                raise FileNotFoundError(rel_path)
+
+            current_markdown = fiche_path.read_text(encoding='utf-8')
+            current_frontmatter, _ = _split_frontmatter(current_markdown)
+            old_hash = _hash_text(current_markdown)
+            if old_hash != expected_hash:
+                return {
+                    'ok': False,
+                    'error': 'hash_mismatch',
+                    'entity_id': entity_id,
+                    'current_hash': old_hash,
+                    'expected_hash': expected_hash,
+                    'message': 'La ficha cambió en disco. Recarga antes de guardar.',
+                }
+
+            if new_markdown.startswith('---\n'):
+                next_markdown = new_markdown
+            elif current_frontmatter:
+                sep = '' if current_frontmatter.endswith('\n') else '\n'
+                next_markdown = f"{current_frontmatter}{sep}{new_markdown}"
+            else:
+                next_markdown = new_markdown
+
+            resolved_label = normalize_entity_canonical_label(canonical_label or str(row['canonical_name'] or entity_id))
+            stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
+            backup_rel = Path('.textifai') / 'history' / 'entities' / entity_id / f'{stamp}_{old_hash[:12]}.md'
+            backup_abs = self.project_root / backup_rel
+            backup_abs.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(fiche_path, backup_abs)
+
+            fiche_path.write_text(next_markdown, encoding='utf-8')
+            new_hash = _hash_text(next_markdown)
+            char_count = len(next_markdown)
+            conn.execute(
+                'update files set checksum = ?, char_count = ?, last_seen_at = ? where path = ?',
+                (new_hash, char_count, now, rel_path),
+            )
+            conn.execute(
+                'update entities set canonical_name = ?, summary = ?, ficha_markdown_path = ? where entity_id = ?',
+                (resolved_label, str(row['summary'] or ''), rel_path, entity_id),
+            )
+            conn.execute(
+                'insert or replace into dirty_states(resource_type, resource_id, dirty_reason, updated_at) values (?, ?, ?, ?)',
+                ('entity', entity_id, 'entity_fiche_markdown_edited', now),
+            )
+            conn.commit()
+
+        return {
+            'ok': True,
+            'entity_id': entity_id,
+            'canonical_label': resolved_label,
+            'old_hash': old_hash,
+            'new_hash': new_hash,
+            'backup_path': str(backup_rel),
+            'semantic_state': 'needs_reanalysis',
+            'dirty_state': True,
+            'saved_at': now,
+            'warning': 'VaERL, Graph y Review no han sido reanalizados todavía.',
+            'message': 'Ficha guardada. VaERL/Graph/Review pendientes de reanálisis.',
         }
 
     def export_chapter_snapshot(self) -> dict[str, Any]:

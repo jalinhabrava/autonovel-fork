@@ -33,7 +33,7 @@ class TextifaiGraphFicheEditorSurfaceTests(unittest.TestCase):
             self.assertTrue(payload['raw_markdown_hidden'])
             self.assertTrue(payload['technical_details_collapsed'])
             self.assertTrue(payload['local_edit_only'])
-            self.assertFalse(payload['writeback_enabled'])
+            self.assertTrue(payload['writeback_enabled'])
             self.assertTrue(payload['i18n_keys_present'])
             self.assertTrue(payload['no_source_prose'])
             self.assertTrue(payload.get('visual_mdx_editor', True))

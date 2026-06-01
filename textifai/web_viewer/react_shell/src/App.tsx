@@ -57,6 +57,7 @@ import {
   fetchProjects,
   fetchReviewQueue,
   saveChapterMarkdown,
+  saveEntityFicheMarkdown,
   EntityCard,
   fetchEntityCard,
   requestChapterReanalysis } from './api';
@@ -892,6 +893,11 @@ export function App() {
     } catch { setSelectedGraphEntityCardVm(null); }
   }
 
+  async function handleSaveGraphEntityFiche(params: { entityId: string; markdown: string; expectedHash: string; canonicalLabel: string }) {
+    if (!selectedProjectId) throw new Error('project_required');
+    return saveEntityFicheMarkdown(selectedProjectId, params.entityId, params.markdown, params.expectedHash, params.canonicalLabel);
+  }
+
   function handleGraphLocalView(node: GraphCanvasNode) {
     if (!node?.id) return;
     setSelectedGraphNodeId(node.id);
@@ -1001,7 +1007,7 @@ export function App() {
   if (active === 'story') content = <StoryAliasView selectedProjectId={selectedProjectId} notesPreview={(projectDetail?.notes || []).slice(0, 16).map((note) => <div key={note.path} className="rounded-xl bg-white border border-neutral-200 px-3 py-2">{note.name || note.path}</div>)} legacyNotes={<LegacyEmbed title="Story Bible alias inside Canon / VaERL" src={legacyUrl('notes', selectedProjectId)} />} onOpenCanon={() => setActive('codex')} />;
   if (active === 'ask') content = <AIStudioView />;
 
-  return <AppShell active={active} setActive={setActive}><motion.div key={active} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 }}>{content}</motion.div>{error ? <div className="mx-5 mb-5 rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div> : null}<EvidenciaModal item={evidenceModalItem} onClose={() => setEvidenciaModalDecisionId('')} />{graphInspectorFullscreen ? <div className="fixed inset-0 z-50 bg-black/30 p-4"><div className="h-full w-full rounded-3xl border border-neutral-200 bg-white shadow-2xl overflow-y-auto"><div className="sticky top-0 z-10 flex items-center justify-between border-b border-neutral-200 bg-white p-4"><h2 className="text-lg font-semibold">{t('graph.node_sheet')}</h2><Button variant="secondary" onClick={() => setGraphInspectorFullscreen(false)}><X size={14} className="inline" /> {t('common.exit_fullscreen')}</Button></div><div className="p-4"><GraphInspectorPanel node={selectedGraphNode} entityCard={selectedGraphEntity} entityCardVm={selectedGraphEntityCardVm} noteContent={selectedGraphNoteContent} noteDetail={selectedGraphNoteDetail} onEdit={(node: GraphCanvasNode) => setGraphEditNodeId(node.id)} /></div></div></div> : null}{editDraft ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"><div className="w-full max-w-2xl rounded-3xl border border-neutral-200 bg-white shadow-2xl"><div className="flex items-center justify-between border-b border-neutral-200 p-5"><div><h2 className="font-semibold">{editDraft.title}</h2><p className="text-sm text-neutral-500">{editDraft.notePath || t('common.local_draft')}</p></div><button onClick={() => setEditDraft(null)} className="rounded-full p-2 hover:bg-neutral-100"><X size={18} /></button></div><div className="p-5"><textarea readOnly value={editDraft.body} className="h-48 w-full rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-sm" /><p className="mt-3 text-sm text-neutral-500">{t('common.drafts_note')}</p></div></div></div> : null}</AppShell>;
+  return <AppShell active={active} setActive={setActive}><motion.div key={active} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 }}>{content}</motion.div>{error ? <div className="mx-5 mb-5 rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div> : null}<EvidenciaModal item={evidenceModalItem} onClose={() => setEvidenciaModalDecisionId('')} />{graphInspectorFullscreen ? <div className="fixed inset-0 z-50 bg-black/30 p-4"><div className="h-full w-full rounded-3xl border border-neutral-200 bg-white shadow-2xl overflow-y-auto"><div className="sticky top-0 z-10 flex items-center justify-between border-b border-neutral-200 bg-white p-4"><h2 className="text-lg font-semibold">{t('graph.node_sheet')}</h2><Button variant="secondary" onClick={() => setGraphInspectorFullscreen(false)}><X size={14} className="inline" /> {t('common.exit_fullscreen')}</Button></div><div className="p-4"><GraphInspectorPanel node={selectedGraphNode} entityCard={selectedGraphEntity} entityCardVm={selectedGraphEntityCardVm} noteContent={selectedGraphNoteContent} noteDetail={selectedGraphNoteDetail} onEdit={(node: GraphCanvasNode) => setGraphEditNodeId(node.id)} onSaveFiche={handleSaveGraphEntityFiche} /></div></div></div> : null}{editDraft ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"><div className="w-full max-w-2xl rounded-3xl border border-neutral-200 bg-white shadow-2xl"><div className="flex items-center justify-between border-b border-neutral-200 p-5"><div><h2 className="font-semibold">{editDraft.title}</h2><p className="text-sm text-neutral-500">{editDraft.notePath || t('common.local_draft')}</p></div><button onClick={() => setEditDraft(null)} className="rounded-full p-2 hover:bg-neutral-100"><X size={18} /></button></div><div className="p-5"><textarea readOnly value={editDraft.body} className="h-48 w-full rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-sm" /><p className="mt-3 text-sm text-neutral-500">{t('common.drafts_note')}</p></div></div></div> : null}</AppShell>;
 }
 
 export default App;

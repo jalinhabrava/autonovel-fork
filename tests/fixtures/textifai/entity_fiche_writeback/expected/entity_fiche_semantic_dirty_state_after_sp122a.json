@@ -1,0 +1,18 @@
+{
+  "assessment": "entity_fiche_semantic_dirty_state_after_sp122a",
+  "dirty_state": true,
+  "dirty_scope": "entity",
+  "dirty_reason": "entity_fiche_markdown_edited",
+  "semantic_state_after_save": "needs_reanalysis",
+  "save_api_exists": true,
+  "endpoint_exists": true,
+  "hash_conflict_supported": true,
+  "wikilinks_preserved": true,
+  "frontmatter_preserved": true,
+  "structured_data_outside_mdx": true,
+  "no_silent_semantic_mutation": true,
+  "no_vaerl_writeback": true,
+  "no_graph_regeneration": true,
+  "no_review_regeneration": true,
+  "no_source_prose": true
+}

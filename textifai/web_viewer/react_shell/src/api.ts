@@ -204,6 +204,23 @@ export type ChapterSaveResponse = {
   message?: string;
 };
 
+export type EntityFicheSaveResponse = {
+  ok?: boolean;
+  error?: string;
+  entity_id?: string;
+  canonical_label?: string;
+  current_hash?: string;
+  expected_hash?: string;
+  old_hash?: string;
+  new_hash?: string;
+  backup_path?: string;
+  semantic_state?: string;
+  dirty_state?: boolean;
+  saved_at?: string;
+  warning?: string;
+  message?: string;
+};
+
 async function api<T>(path: string): Promise<T> {
   const response = await fetch(path, { cache: 'no-store' });
   if (!response.ok) {
@@ -329,6 +346,14 @@ export async function saveChapterMarkdown(projectId: string, chapterId: string, 
     markdown,
     expected_hash: expectedHash,
     display_title: displayTitle,
+  });
+}
+
+export async function saveEntityFicheMarkdown(projectId: string, entityId: string, markdown: string, expectedHash: string, canonicalLabel?: string): Promise<EntityFicheSaveResponse> {
+  return apiPost<EntityFicheSaveResponse>(`/api/projects/${encodeURIComponent(projectId)}/entities/${encodeURIComponent(entityId)}/save`, {
+    markdown,
+    expected_hash: expectedHash,
+    canonical_label: canonicalLabel,
   });
 }
 

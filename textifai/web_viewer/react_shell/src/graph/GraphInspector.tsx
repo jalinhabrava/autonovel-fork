@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowUpRight, BookOpenText, Link2, Network, ShieldCheck, Star, Users } from 'lucide-react';
 import { GraphCanvasNode } from './types';
-import { CanonEntity, NoteDetail, EntityCard } from '../api';
+import { CanonEntity, NoteDetail, EntityCard, EntityFicheSaveResponse } from '../api';
 import { t } from '../i18n/ui';
 import { EntityFicheView, stripFrontmatter } from '../modules/canon/EntityFicheView';
 
@@ -15,6 +15,7 @@ export type GraphInspectorProps = {
   onEdit: (node: GraphCanvasNode) => void;
   onViewLocalGraph?: (node: GraphCanvasNode) => void;
   onOpenReview?: (entityLabel: string) => void;
+  onSaveFiche?: (params: { entityId: string; markdown: string; expectedHash: string; canonicalLabel: string }) => Promise<EntityFicheSaveResponse>;
 };
 
 function toList(value: unknown): string[] {
@@ -61,9 +62,13 @@ function buildFicheMarkdown(params: {
   return sections.join('\n').trim();
 }
 
-export function GraphInspector({ node, entityCard, entityCardVm, reviewCountOverride, noteContent, noteDetail, onEdit, onViewLocalGraph, onOpenReview }: GraphInspectorProps) {
+export function GraphInspector({ node, entityCard, entityCardVm, reviewCountOverride, noteContent, noteDetail, onEdit, onViewLocalGraph, onOpenReview, onSaveFiche }: GraphInspectorProps) {
   const [technicalOpen, setTechnicalOpen] = useState(false);
   const [localBody, setLocalBody] = useState('');
+  const [loadedBody, setLoadedBody] = useState('');
+  const [loadedHash, setLoadedHash] = useState('');
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'conflict' | 'error'>('idle');
+  const [saveMessage, setSaveMessage] = useState('');
 
   const vm = entityCardVm;
   const label = vm?.canonical_label || entityCard?.canonical_name || node?.label || '';
@@ -85,10 +90,42 @@ export function GraphInspector({ node, entityCard, entityCardVm, reviewCountOver
   const normalizedBody = useMemo(() => buildFicheMarkdown({ label, summary, sourceBody: bodyMarkdown, aliases, relationships, backlinks, outgoing, notePath, evidenceCount }), [aliases, backlinks, bodyMarkdown, evidenceCount, label, notePath, outgoing, relationships, summary]);
   const editorBody = localBody || normalizedBody;
   const editorKey = `${node?.id || 'none'}:${label}`;
+  const entityId = vm?.id || (entityCard as any)?.entity_id || (entityCard as any)?.preferred_slug || node?.id || '';
+  const canSave = Boolean(onSaveFiche && entityId && loadedHash && editorBody !== loadedBody && saveState !== 'saving');
 
   useEffect(() => {
     setLocalBody(normalizedBody);
-  }, [editorKey, normalizedBody]);
+    setLoadedBody(normalizedBody);
+    setLoadedHash(String((vm as any)?.markdown?.content_hash || (vm as any)?.content_hash || ''));
+    setSaveState('idle');
+    setSaveMessage('');
+  }, [editorKey, normalizedBody, vm]);
+
+  async function handleSaveFiche() {
+    if (!onSaveFiche || !entityId || !loadedHash) {
+      setSaveState('error');
+      setSaveMessage(t('graph.fiche_save_unavailable'));
+      return;
+    }
+    setSaveState('saving');
+    setSaveMessage(t('graph.fiche_saving'));
+    try {
+      const result = await onSaveFiche({ entityId, markdown: editorBody, expectedHash: loadedHash, canonicalLabel: label });
+      setLoadedHash(String(result.new_hash || loadedHash));
+      setLoadedBody(editorBody);
+      setSaveState('saved');
+      setSaveMessage(t('graph.fiche_saved_pending_reanalysis'));
+    } catch (error: any) {
+      const payload = error?.payload || {};
+      if (payload.error === 'hash_mismatch') {
+        setSaveState('conflict');
+        setSaveMessage(t('graph.fiche_conflict'));
+        return;
+      }
+      setSaveState('error');
+      setSaveMessage(t('graph.fiche_save_error'));
+    }
+  }
   const rawPreview = compactPreview(sourceMarkdown);
 
   if (!node) {
@@ -143,7 +180,7 @@ export function GraphInspector({ node, entityCard, entityCardVm, reviewCountOver
         </div>
       </section>
 
-      <EntityFicheView editorKey={editorKey} bodyMarkdown={editorBody} onChangeBody={setLocalBody} localDirty={editorBody !== normalizedBody} />
+      <EntityFicheView editorKey={editorKey} bodyMarkdown={editorBody} onChangeBody={(next) => { setLocalBody(next); if (saveState === 'saved') setSaveState('idle'); }} localDirty={editorBody !== loadedBody} saveState={saveState} saveMessage={saveMessage} canSave={canSave} onSave={handleSaveFiche} saveDisabledReason={!loadedHash ? t('graph.fiche_save_unavailable') : ''} />
 
       <details className="mt-4 rounded-2xl border border-neutral-200 bg-neutral-50 p-4" open={technicalOpen} onToggle={(event) => setTechnicalOpen((event.currentTarget as HTMLDetailsElement).open)}>
         <summary className="cursor-pointer list-none text-sm font-semibold text-neutral-800">{t('graph.technical_details')}</summary>

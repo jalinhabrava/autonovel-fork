@@ -16,7 +16,7 @@
   ],
   "structured_data_location": "cards_outside_mdx_editor",
   "wikilink_policy": "preserve_authored_wikilinks_exactly",
-  "writeback_enabled": false,
+  "writeback_enabled": true,
   "semantic_reanalysis_contract_only": true,
   "visual_editor_surface": true,
   "raw_markdown_hidden": true,

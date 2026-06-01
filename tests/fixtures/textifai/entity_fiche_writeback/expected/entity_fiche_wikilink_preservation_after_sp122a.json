@@ -1,0 +1,16 @@
+{
+  "assessment": "entity_fiche_wikilink_preservation_after_sp122a",
+  "wikilinks_preserved": true,
+  "frontmatter_preserved": true,
+  "unicode_preserved": true,
+  "structured_data_outside_mdx": true,
+  "save_api_exists": true,
+  "endpoint_exists": true,
+  "hash_conflict_supported": true,
+  "semantic_state_after_save": "needs_reanalysis",
+  "no_silent_semantic_mutation": true,
+  "no_vaerl_writeback": true,
+  "no_graph_regeneration": true,
+  "no_review_regeneration": true,
+  "no_source_prose": true
+}

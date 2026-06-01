@@ -18,7 +18,7 @@
   "markdown_pill_removed": true,
   "wikilink_relationships": true,
   "local_edit_only": true,
-  "writeback_enabled": false,
+  "writeback_enabled": true,
   "i18n_keys_present": true,
   "no_source_prose": true
 }
