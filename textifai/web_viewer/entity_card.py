@@ -40,6 +40,29 @@ def _hash_text(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
+def _strip_frontmatter(raw_md: str) -> tuple[dict[str, Any], str]:
+    parsed = parse_obsidian_frontmatter(raw_md)
+    if isinstance(parsed, tuple):
+        fm, body = parsed
+        return (fm if isinstance(fm, dict) else {}), str(body)
+    if isinstance(parsed, dict):
+        frontmatter = parsed.get("frontmatter") or {}
+        body = parsed.get("body")
+        if body is None:
+            content = str(parsed.get("content", raw_md))
+            if content.startswith("---\n"):
+                closing = content.find("\n---\n", 4)
+                if closing != -1:
+                    return (frontmatter if isinstance(frontmatter, dict) else {}), content[closing + 5 :]
+            body = content
+        return (frontmatter if isinstance(frontmatter, dict) else {}), str(body)
+    if raw_md.startswith("---\n"):
+        closing = raw_md.find("\n---\n", 4)
+        if closing != -1:
+            return {}, raw_md[closing + 5 :]
+    return {}, raw_md
+
+
 def depluralize_aliases(aliases: list[str]) -> list[str]:
     """Normalize common plural/singular variants."""
     seen: set[str] = set()
@@ -287,15 +310,7 @@ def build_entity_card(
     if note_full_path and note_full_path.exists():
         raw_md = note_full_path.read_text(encoding="utf-8")
         markdown_content_hash = _hash_text(raw_md)
-        parsed = parse_obsidian_frontmatter(raw_md)
-        if isinstance(parsed, tuple):
-            fm, body = parsed
-        elif isinstance(parsed, dict):
-            fm = parsed.get("frontmatter", {}) or {}
-            body = parsed.get("body", parsed.get("content", raw_md)) or raw_md
-        else:
-            fm = {}
-            body = raw_md
+        fm, body = _strip_frontmatter(raw_md)
         frontmatter = fm if fm else {}
         # Build sections from body
         sections = _parse_markdown_sections(str(body))
@@ -344,7 +359,7 @@ def build_entity_card(
     return {
         "schema": "textifai.entity_card",
         "schema_version": 1,
-        "id": target_node.get("id", label),
+        "id": vaerl_entity.get("entity_id") or vaerl_entity.get("preferred_slug") or target_node.get("canonical_id") or target_node.get("id", label),
         "canonical_label": label,
         "display_label": label,
         "kind": kind,

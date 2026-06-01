@@ -90,7 +90,15 @@ export function GraphInspector({ node, entityCard, entityCardVm, reviewCountOver
   const normalizedBody = useMemo(() => buildFicheMarkdown({ label, summary, sourceBody: bodyMarkdown, aliases, relationships, backlinks, outgoing, notePath, evidenceCount }), [aliases, backlinks, bodyMarkdown, evidenceCount, label, notePath, outgoing, relationships, summary]);
   const editorBody = localBody || normalizedBody;
   const editorKey = `${node?.id || 'none'}:${label}`;
-  const entityId = vm?.id || (entityCard as any)?.entity_id || (entityCard as any)?.preferred_slug || node?.id || '';
+  const entityIdCandidates = [
+    (vm?.technical as any)?.canonical_id,
+    vm?.id,
+    (entityCard as any)?.entity_id,
+    (entityCard as any)?.preferred_slug,
+    (node as any)?.canonical_id,
+    node?.id,
+  ].map((value) => String(value || '').trim()).filter(Boolean);
+  const entityId = entityIdCandidates.find((value) => !value.includes('/')) || entityIdCandidates[0] || '';
   const canSave = Boolean(onSaveFiche && entityId && loadedHash && editorBody !== loadedBody && saveState !== 'saving');
 
   useEffect(() => {
@@ -133,11 +141,11 @@ export function GraphInspector({ node, entityCard, entityCardVm, reviewCountOver
   }
 
   return (
-    <aside className="min-w-0 rounded-3xl border border-neutral-200 bg-white p-4 shadow-sm sm:p-5 xl:p-6">
+    <aside className="min-w-0 rounded-3xl border border-neutral-200 bg-white p-4 shadow-sm sm:p-5 xl:p-6" data-testid="entity-fiche-panel">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="text-sm text-neutral-600">{t('graph.node_sheet')}</div>
-          <h2 className="mt-3 break-words text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">{label}</h2>
+          <h2 className="mt-3 break-words text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl" data-testid="entity-fiche-title">{label}</h2>
         </div>
         <button type="button" onClick={() => onEdit(node)} className="w-full rounded-xl border border-orange-300 bg-white px-4 py-2 text-sm font-medium text-orange-700 hover:bg-orange-50 sm:w-auto">
           <span className="inline-flex items-center gap-2"><ArrowUpRight size={14} />{t('graph.open_ficha')}</span>

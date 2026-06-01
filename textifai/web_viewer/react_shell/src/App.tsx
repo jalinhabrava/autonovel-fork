@@ -940,7 +940,7 @@ export function App() {
   if (active === 'ingest') content = <IngestionView runStatus={runStatus} ingestionJobs={ingestionJobs} />;
   if (active === 'codex') content = <section><TopBar title="Canon / VaERL" subtitle="Wiki author-facing del canon: entidades, hechos, evidencia y Story Bible consolidada." actions={<><Button variant="secondary">Export selection</Button><Button variant="secondary">Ver evidencia</Button></>} /><div className="p-5 grid grid-cols-12 gap-5"><div className="col-span-12 lg:col-span-8 space-y-5"><EntityRecordTable entities={projectDetail?.canon?.primaries || []} selectedKey={selectedEntityKey} onSelect={setSelectedEntityKey} /><div className="rounded-3xl border border-neutral-200 bg-white p-4"><div className="mb-3 flex items-center gap-2 text-sm font-semibold"><FileText size={16} /> Story Bible</div>{selectedProjectId ? <LegacyEmbed title="Story Bible alias inside Canon / VaERL" src={legacyUrl('notes', selectedProjectId)} /> : <div className="rounded-2xl border border-neutral-200 p-4 text-sm text-neutral-500">Selecciona proyecto.</div>}</div></div><aside className="col-span-12 lg:col-span-4"><InspectorCard entity={selectedEntity} /></aside></div></section>;
   if (active === 'graph') content = (
-    <section>
+    <section data-testid="graph-view">
       <TopBar title="Graph" subtitle="Exploración visual author-facing con física viva e inspector editorial." actions={<Button variant="secondary" onClick={resetGraphFilters}>Restablecer filtros</Button>} />
       <div className="p-5 grid grid-cols-12 gap-5">
         <aside className="col-span-12">
