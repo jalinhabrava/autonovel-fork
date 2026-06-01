@@ -65,6 +65,10 @@ class TextifaiEntityFicheWritebackTests(unittest.TestCase):
                 dirty = conn.execute('select dirty_reason from dirty_states where resource_type = ? and resource_id = ?', ('entity', 'sera')).fetchone()
                 self.assertEqual(dirty[0], 'entity_fiche_markdown_edited')
 
+    def test_entity_card_contract_includes_content_hash_field(self):
+        text = (Path(__file__).resolve().parents[1] / 'textifai/web_viewer/entity_card.py').read_text(encoding='utf-8')
+        self.assertIn('"content_hash": markdown_content_hash', text)
+
     def test_stale_hash_returns_conflict_no_write(self):
         with tempfile.TemporaryDirectory() as tmp:
             project = self._make_project(Path(tmp))

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import re
 from pathlib import Path
 from typing import Any
@@ -33,6 +34,10 @@ def load_json(path: Path) -> dict[str, Any] | list[Any]:
     if path.exists():
         return json.loads(path.read_text(encoding="utf-8"))
     return {}
+
+
+def _hash_text(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 def depluralize_aliases(aliases: list[str]) -> list[str]:
@@ -278,8 +283,10 @@ def build_entity_card(
     note_path_final = note_p or ""
 
     note_full_path = project_root / note_path_final if note_path_final else None
+    markdown_content_hash = ""
     if note_full_path and note_full_path.exists():
         raw_md = note_full_path.read_text(encoding="utf-8")
+        markdown_content_hash = _hash_text(raw_md)
         parsed = parse_obsidian_frontmatter(raw_md)
         if isinstance(parsed, tuple):
             fm, body = parsed
@@ -293,10 +300,8 @@ def build_entity_card(
         # Build sections from body
         sections = _parse_markdown_sections(str(body))
         markdown_sections = [{"title": s[0], "body": s[1]} for s in sections]
-        # Author-facing: hide frontmatter, show sections
-        author_markdown = _build_author_markdown(label, kind, canonical_aliases, contextual_refs,
-                                                  needs_review, summary, relationships,
-                                                  backlinks, outgoing, evidence_count)
+        # Author-facing: hide frontmatter and keep only the editable note body.
+        author_markdown = str(body)
         # Technical: frontmatter + raw IDs
         technical_markdown = f"Ruta: {note_path_final}\nFrontmatter:\n" + json.dumps(frontmatter, indent=2)
     else:
@@ -367,6 +372,7 @@ def build_entity_card(
         },
         "markdown": {
             "note_path": note_path_final,
+            "content_hash": markdown_content_hash,
             "sections": markdown_sections,
             "author_markdown": author_markdown,
             "technical_markdown": technical_markdown,

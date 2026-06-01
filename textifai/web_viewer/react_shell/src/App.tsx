@@ -893,6 +893,11 @@ export function App() {
     } catch { setSelectedGraphEntityCardVm(null); }
   }
 
+  useEffect(() => {
+    if (!selectedProjectId || !selectedGraphNodeId) return;
+    void handleGraphNodeSelect(selectedGraphNodeId);
+  }, [selectedProjectId, selectedGraphNodeId]);
+
   async function handleSaveGraphEntityFiche(params: { entityId: string; markdown: string; expectedHash: string; canonicalLabel: string }) {
     if (!selectedProjectId) throw new Error('project_required');
     return saveEntityFicheMarkdown(selectedProjectId, params.entityId, params.markdown, params.expectedHash, params.canonicalLabel);
@@ -962,6 +967,7 @@ export function App() {
               onEdit={(node: GraphCanvasNode) => setGraphEditNodeId(node.id)}
               onViewLocalGraph={handleGraphLocalView}
               onOpenReview={handleOpenGraphReview}
+              onSaveFiche={handleSaveGraphEntityFiche}
             />
           </aside>
         </div>

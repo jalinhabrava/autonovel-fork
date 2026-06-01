@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { MDXEditor, MDXEditorMethods, headingsPlugin, listsPlugin, quotePlugin, thematicBreakPlugin, markdownShortcutPlugin } from '@mdxeditor/editor';
+import { MDXEditor, MDXEditorMethods, UndoRedo, BoldItalicUnderlineToggles, ListsToggle, CreateLink, BlockTypeSelect, Separator, toolbarPlugin, headingsPlugin, listsPlugin, quotePlugin, linkPlugin, linkDialogPlugin, thematicBreakPlugin, markdownShortcutPlugin } from '@mdxeditor/editor';
 import { t } from '../../i18n/ui';
 
 export type EntityFicheViewProps = {
@@ -85,7 +85,30 @@ export function EntityFicheView({ editorKey, bodyMarkdown, onChangeBody, localDi
             ref={editorRef}
             markdown={bodyMarkdown || t('graph.fiche_empty_placeholder')}
             onChange={onChangeBody}
-            plugins={[headingsPlugin(), listsPlugin(), quotePlugin(), thematicBreakPlugin(), markdownShortcutPlugin()]}
+            plugins={[
+              toolbarPlugin({
+                toolbarContents: () => (
+                  <>
+                    <UndoRedo />
+                    <Separator />
+                    <BoldItalicUnderlineToggles />
+                    <Separator />
+                    <BlockTypeSelect />
+                    <Separator />
+                    <ListsToggle />
+                    <Separator />
+                    <CreateLink />
+                  </>
+                ),
+              }),
+              headingsPlugin(),
+              listsPlugin(),
+              quotePlugin(),
+              linkPlugin(),
+              linkDialogPlugin(),
+              thematicBreakPlugin(),
+              markdownShortcutPlugin(),
+            ]}
           />
         </EditorBoundary>
       </div>

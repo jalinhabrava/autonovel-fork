@@ -1,0 +1,13 @@
+{
+  "assessment": "entity_fiche_writeback_ui_ready",
+  "save_button_enables_on_dirty": true,
+  "mdx_toolbar_visible": true,
+  "visual_only": true,
+  "markdown_mode_pill": false,
+  "structured_data_outside_mdx": true,
+  "wikilinks_preserved": true,
+  "no_semantic_mutation": true,
+  "no_graph_regeneration": true,
+  "no_review_regeneration": true,
+  "no_source_prose": true
+}
