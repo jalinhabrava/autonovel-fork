@@ -316,14 +316,20 @@ def build_entity_card(
         sections = _parse_markdown_sections(str(body))
         markdown_sections = [{"title": s[0], "body": s[1]} for s in sections]
         # Author-facing: hide frontmatter and keep only the editable note body.
-        author_markdown = str(body)
+        # Hydrate only missing or legacy generated bodies; preserve authored prose.
+        if _looks_legacy_generated_body(str(body)):
+            author_markdown = _build_author_markdown(label, kind, canonical_aliases, contextual_refs,
+                                                      needs_review, summary, relationships,
+                                                      backlinks, outgoing, evidence_count, evidence_refs)
+        else:
+            author_markdown = str(body)
         # Technical: frontmatter + raw IDs
         technical_markdown = f"Ruta: {note_path_final}\nFrontmatter:\n" + json.dumps(frontmatter, indent=2)
     else:
         # Build synthesised markdown from entity data
         author_markdown = _build_author_markdown(label, kind, canonical_aliases, contextual_refs,
                                                   needs_review, summary, relationships,
-                                                  backlinks, outgoing, evidence_count)
+                                                  backlinks, outgoing, evidence_count, evidence_refs)
         technical_markdown = f"Nota no encontrada: {note_path_final}"
 
     # Review items for this entity
@@ -440,15 +446,97 @@ def _build_author_markdown(
     backlinks: list[str],
     outgoing: list[dict[str, str]],
     evidence_count: int,
+    evidence_refs: list[dict[str, Any]] | None = None,
 ) -> str:
-    lines = [f"# {label}", f"_{kind}_", ""]
-    if summary:
-        lines.append(summary)
-        lines.append("")
-    del canonical_aliases, contextual_refs, needs_review, relationships, backlinks, outgoing, evidence_count
-    lines.append("---")
-    lines.append("_Cuerpo editorial inicial. Los alias, relaciones, evidencias y enlaces calculados viven en tarjetas fuera del editor. Sin write-back automático._")
+    key_facts: list[str] = []
+    if canonical_aliases:
+        key_facts.append(f"**Aliases:** {', '.join(canonical_aliases[:6])}")
+    if contextual_refs:
+        key_facts.append(f"**Contextual refs:** {', '.join(contextual_refs[:6])}")
+    if kind:
+        key_facts.append(f"**Kind:** {kind}")
+
+    related_lines: list[str] = []
+    rel_seen: set[str] = set()
+    for row in relationships[:12]:
+        source = str(row.get("source", "")).strip()
+        target = str(row.get("target", "")).strip()
+        predicate = str(row.get("predicate", "")).strip()
+        if source.lower() == label.lower() and target:
+            rel_label = f"[[{target}]]"
+            text = f"- {predicate}: {rel_label}" if predicate else f"- {rel_label}"
+        elif target.lower() == label.lower() and source:
+            rel_label = f"[[{source}]]"
+            text = f"- {predicate}: {rel_label}" if predicate else f"- {rel_label}"
+        else:
+            other = target or source
+            if not other:
+                continue
+            rel_label = f"[[{other}]]"
+            text = f"- {predicate}: {rel_label}" if predicate else f"- {rel_label}"
+        if text not in rel_seen:
+            rel_seen.add(text)
+            related_lines.append(text)
+    for row in backlinks[:8]:
+        if not str(row).strip():
+            continue
+        item = f"- [[{str(row).strip()}]]"
+        if item not in rel_seen:
+            rel_seen.add(item)
+            related_lines.append(item)
+    for row in outgoing[:8]:
+        target = str(row.get("label") or row.get("target") or "").strip()
+        if not target:
+            continue
+        item = f"- [[{target}]]"
+        if item not in rel_seen:
+            rel_seen.add(item)
+            related_lines.append(item)
+
+    facts: list[str] = []
+    if needs_review:
+        facts.append(f"- **Needs review aliases:** {', '.join(needs_review[:8])}")
+    if not facts:
+        facts.append("- Add concrete continuity facts here.")
+
+    lines = [f"# {label}", f"_{kind}_", "", "## Summary", summary or "No summary yet.", "", "## Key facts"]
+    lines.extend(key_facts or ["- **Status:** Draft fiche hydrated."])
+    lines.extend(["", "## Facts"])
+    lines.extend(facts)
+    lines.extend(["", "## Related entities"])
+    lines.extend(related_lines or ["- None linked yet."])
+    lines.extend(["", "## Evidence"])
+    refs = evidence_refs or []
+    if refs:
+        for ref in refs[:12]:
+            chapter = str(ref.get("chapter_id") or ref.get("chapter") or "source").strip()
+            chunk = str(ref.get("chunk_id") or ref.get("pointer") or ref.get("source_id") or "reference").strip()
+            detail = str(ref.get("label") or ref.get("excerpt") or "").strip()
+            suffix = f" — {detail[:140]}" if detail else ""
+            lines.append(f"- **{chapter}:** `{chunk}`{suffix}")
+    elif evidence_count:
+        lines.append(f"- **Evidence count:** {evidence_count}")
+    else:
+        lines.append("- No evidence logged yet.")
     return "\n".join(lines)
+
+
+def _looks_legacy_generated_body(body: str) -> bool:
+    clean = str(body or "").strip()
+    if not clean:
+        return True
+    lower = clean.lower()
+    if "_cuerpo editorial inicial" in lower:
+        return True
+    has_summary = re.search(r"(^|\n)##\s+summary\b", lower) is not None
+    has_facts = re.search(r"(^|\n)##\s+facts\b", lower) is not None
+    has_evidence = re.search(r"(^|\n)##\s+evidence\b", lower) is not None
+    has_key = re.search(r"(^|\n)##\s+key facts\b", lower) is not None
+    has_related = re.search(r"(^|\n)##\s+related entities\b", lower) is not None
+    if has_summary and has_facts and has_evidence and not has_key and not has_related:
+        legacy_markers = ["source:", "chunk_", "## review notes", "- ch_"]
+        return sum(1 for marker in legacy_markers if marker in lower) >= 2
+    return False
 
 
 def entity_card_endpoint(project_reader: Any, project_id: str, node_id: str = "",
