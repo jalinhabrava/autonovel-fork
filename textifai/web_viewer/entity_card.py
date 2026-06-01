@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import hashlib
 import re
+from urllib.parse import quote
 from pathlib import Path
 from typing import Any
 
@@ -458,37 +459,67 @@ def _build_author_markdown(
 
     related_lines: list[str] = []
     rel_seen: set[str] = set()
+    related_href_cache: dict[str, str] = {}
+
+    def _related_href(name: str) -> str:
+        cleaned = name.strip().lower()
+        return f"#graph_select={quote(cleaned)}" if cleaned else "#"
+
+    def _related_link(name: str) -> str:
+        label_text = name.strip()
+        if not label_text:
+            return ""
+        href = related_href_cache.get(label_text)
+        if href is None:
+            href = _related_href(label_text)
+            related_href_cache[label_text] = href
+        return f"[{label_text}]({href})"
+
+    def _is_noisy_related(name: str) -> bool:
+        lowered = name.lower().strip()
+        noisy = {
+            "ella", "él", "ello", "ellos", "ellas", "yo", "tú", "usted", "nosotros", "vosotros",
+            "una chica", "un chico", "la chica", "el chico", "una mujer", "un hombre", "hombre mayor",
+        }
+        return not lowered or lowered in noisy or lowered.startswith("reviewlocal_")
+
     for row in relationships[:12]:
         source = str(row.get("source", "")).strip()
         target = str(row.get("target", "")).strip()
         predicate = str(row.get("predicate", "")).strip()
+        if _is_noisy_related(source) and _is_noisy_related(target):
+            continue
         if source.lower() == label.lower() and target:
-            rel_label = f"[[{target}]]"
+            if _is_noisy_related(target):
+                continue
+            rel_label = _related_link(target)
             text = f"- {predicate}: {rel_label}" if predicate else f"- {rel_label}"
         elif target.lower() == label.lower() and source:
-            rel_label = f"[[{source}]]"
+            if _is_noisy_related(source):
+                continue
+            rel_label = _related_link(source)
             text = f"- {predicate}: {rel_label}" if predicate else f"- {rel_label}"
         else:
             other = target or source
-            if not other:
+            if not other or _is_noisy_related(other):
                 continue
-            rel_label = f"[[{other}]]"
+            rel_label = _related_link(other)
             text = f"- {predicate}: {rel_label}" if predicate else f"- {rel_label}"
         if text not in rel_seen:
             rel_seen.add(text)
             related_lines.append(text)
     for row in backlinks[:8]:
-        if not str(row).strip():
+        if not str(row).strip() or _is_noisy_related(str(row)):
             continue
-        item = f"- [[{str(row).strip()}]]"
+        item = f"- {_related_link(str(row).strip())}"
         if item not in rel_seen:
             rel_seen.add(item)
             related_lines.append(item)
     for row in outgoing[:8]:
         target = str(row.get("label") or row.get("target") or "").strip()
-        if not target:
+        if not target or _is_noisy_related(target):
             continue
-        item = f"- [[{target}]]"
+        item = f"- {_related_link(target)}"
         if item not in rel_seen:
             rel_seen.add(item)
             related_lines.append(item)
@@ -533,6 +564,10 @@ def _looks_legacy_generated_body(body: str) -> bool:
     has_evidence = re.search(r"(^|\n)##\s+evidence\b", lower) is not None
     has_key = re.search(r"(^|\n)##\s+key facts\b", lower) is not None
     has_related = re.search(r"(^|\n)##\s+related entities\b", lower) is not None
+    has_literal_wikilink = "[[" in clean and "]]" in clean
+    if has_summary and has_key and has_related and has_literal_wikilink:
+        # SP-123 legacy generated structure (pre SP-123B rich markdown links).
+        return True
     if has_summary and has_facts and has_evidence and not has_key and not has_related:
         legacy_markers = ["source:", "chunk_", "## review notes", "- ch_"]
         return sum(1 for marker in legacy_markers if marker in lower) >= 2

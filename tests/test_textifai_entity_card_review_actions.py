@@ -61,7 +61,7 @@ class EntityCardReviewActionTests(unittest.TestCase):
         self.assertIn('## Facts', author_md)
         self.assertIn('## Related entities', author_md)
         self.assertIn('## Evidence', author_md)
-        self.assertIn('[[', author_md)
+        self.assertIn('](#graph_select=', author_md)
         self.assertNotIn('## Review Notes', author_md)
         # Should have sections
         sections = markdown.get('sections', [])
@@ -145,7 +145,7 @@ class EntityCardReviewActionTests(unittest.TestCase):
             body = card['markdown']['author_markdown']
             self.assertIn('## Key facts', body)
             self.assertIn('## Related entities', body)
-            self.assertIn('[[Sera]]', body)
+            self.assertIn('[Sera](#graph_select=sera)', body)
             self.assertIn('**ch_001:** `chunk_001`', body)
             self.assertNotIn('## Review Notes', body)
 

@@ -83,5 +83,30 @@ class TextifaiGraphFicheEditorSurfaceTests(unittest.TestCase):
         self.assertIn('selectedFromUrl', text)
         self.assertIn('setSelectedGraphNodeId(firstNode.id)', text)
 
+    def test_fiche_internal_links_are_intercepted_without_root_navigation(self):
+        fiche = FICHE.read_text(encoding='utf-8')
+        app = APP.read_text(encoding='utf-8')
+        entity_card = ENTITY_CARD.read_text(encoding='utf-8')
+        self.assertIn("closest?.('a')", fiche)
+        self.assertIn('preventDefault()', fiche)
+        self.assertIn('onInternalLinkClick?.(href)', fiche)
+        self.assertIn('handleGraphInternalEntityLinkClick', app)
+        self.assertIn("window.history.replaceState", app)
+        self.assertIn("searchParams.set('graph_select'", app)
+        self.assertIn('selectGraphEntityBySelectToken', app)
+        self.assertIn('return f"#graph_select=', entity_card)
+        self.assertNotIn('return f"/?graph_select=', entity_card)
+
+    def test_fiche_editor_has_rich_content_classes(self):
+        fiche = FICHE.read_text(encoding='utf-8')
+        styles = (REPO / 'textifai/web_viewer/react_shell/src/styles.css').read_text(encoding='utf-8')
+        self.assertIn('entity-fiche-editor-content', fiche)
+        self.assertIn('.entity-fiche-editor-content h1', styles)
+        self.assertIn('.entity-fiche-editor-content h2', styles)
+        self.assertIn('.entity-fiche-editor-content ul', styles)
+        self.assertIn('.entity-fiche-editor-content a', styles)
+        self.assertIn('cursor: pointer', styles)
+        self.assertIn('.entity-fiche-editor-content a:hover', styles)
+
 if __name__ == '__main__':
     unittest.main()

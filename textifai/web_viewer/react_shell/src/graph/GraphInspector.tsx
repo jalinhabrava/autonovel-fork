@@ -15,7 +15,8 @@ export type GraphInspectorProps = {
   onEdit: (node: GraphCanvasNode) => void;
   onViewLocalGraph?: (node: GraphCanvasNode) => void;
   onOpenReview?: (entityLabel: string) => void;
-  onSaveFiche?: (params: { entityId: string; markdown: string; expectedHash: string; canonicalLabel: string }) => Promise<EntityFicheSaveResponse>;
+  onInternalEntityLinkClick?: (href: string) => void;
+  onSaveFiche?: (params: { entityId: string; notePath: string; markdown: string; expectedHash: string; canonicalLabel: string }) => Promise<EntityFicheSaveResponse>;
 };
 
 function toList(value: unknown): string[] {
@@ -62,7 +63,7 @@ function buildFicheMarkdown(params: {
   return sections.join('\n').trim();
 }
 
-export function GraphInspector({ node, entityCard, entityCardVm, reviewCountOverride, noteContent, noteDetail, onEdit, onViewLocalGraph, onOpenReview, onSaveFiche }: GraphInspectorProps) {
+export function GraphInspector({ node, entityCard, entityCardVm, reviewCountOverride, noteContent, noteDetail, onEdit, onViewLocalGraph, onOpenReview, onInternalEntityLinkClick, onSaveFiche }: GraphInspectorProps) {
   const [technicalOpen, setTechnicalOpen] = useState(false);
   const [localBody, setLocalBody] = useState('');
   const [loadedBody, setLoadedBody] = useState('');
@@ -118,7 +119,7 @@ export function GraphInspector({ node, entityCard, entityCardVm, reviewCountOver
     setSaveState('saving');
     setSaveMessage(t('graph.fiche_saving'));
     try {
-      const result = await onSaveFiche({ entityId, markdown: editorBody, expectedHash: loadedHash, canonicalLabel: label });
+      const result = await onSaveFiche({ entityId, notePath, markdown: editorBody, expectedHash: loadedHash, canonicalLabel: label });
       setLoadedHash(String(result.new_hash || loadedHash));
       setLoadedBody(editorBody);
       setSaveState('saved');
@@ -188,7 +189,7 @@ export function GraphInspector({ node, entityCard, entityCardVm, reviewCountOver
         </div>
       </section>
 
-      <EntityFicheView editorKey={editorKey} bodyMarkdown={editorBody} onChangeBody={(next) => { setLocalBody(next); if (saveState === 'saved') setSaveState('idle'); }} localDirty={editorBody !== loadedBody} saveState={saveState} saveMessage={saveMessage} canSave={canSave} onSave={handleSaveFiche} saveDisabledReason={!loadedHash ? t('graph.fiche_save_unavailable') : ''} />
+      <EntityFicheView editorKey={editorKey} bodyMarkdown={editorBody} onChangeBody={(next) => { setLocalBody(next); if (saveState === 'saved') setSaveState('idle'); }} onInternalLinkClick={onInternalEntityLinkClick} localDirty={editorBody !== loadedBody} saveState={saveState} saveMessage={saveMessage} canSave={canSave} onSave={handleSaveFiche} saveDisabledReason={!loadedHash ? t('graph.fiche_save_unavailable') : ''} />
 
       <details className="mt-4 rounded-2xl border border-neutral-200 bg-neutral-50 p-4" open={technicalOpen} onToggle={(event) => setTechnicalOpen((event.currentTarget as HTMLDetailsElement).open)}>
         <summary className="cursor-pointer list-none text-sm font-semibold text-neutral-800">{t('graph.technical_details')}</summary>

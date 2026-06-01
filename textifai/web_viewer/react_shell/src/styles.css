@@ -40,3 +40,60 @@ body {
     grid-template-columns: minmax(260px, 320px) minmax(0, 1fr) minmax(280px, 360px);
   }
 }
+
+.entity-fiche-editor-content {
+  font-size: 15px;
+  line-height: 1.75;
+  color: rgb(23 23 23);
+  padding: 0.75rem;
+}
+
+.entity-fiche-editor-content h1 {
+  font-size: 2rem;
+  line-height: 1.2;
+  font-weight: 700;
+  margin: 0 0 0.75rem;
+  letter-spacing: -0.02em;
+}
+
+.entity-fiche-editor-content h2 {
+  font-size: 1.1rem;
+  line-height: 1.4;
+  font-weight: 700;
+  margin-top: 1.4rem;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid rgb(229 229 229);
+}
+
+.entity-fiche-editor-content p {
+  margin: 0.55rem 0;
+}
+
+.entity-fiche-editor-content ul {
+  list-style: disc;
+  margin: 0.5rem 0 0.8rem;
+  padding-left: 1.2rem;
+}
+
+.entity-fiche-editor-content li {
+  margin: 0.2rem 0;
+}
+
+.entity-fiche-editor-content a {
+  color: rgb(30 64 175);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 120ms ease, text-decoration-color 120ms ease;
+}
+
+.entity-fiche-editor-content a:hover {
+  color: rgb(29 78 216);
+  text-decoration-color: rgb(29 78 216);
+}
+
+.entity-fiche-editor-content em {
+  color: rgb(82 82 82);
+}

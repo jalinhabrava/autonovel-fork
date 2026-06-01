@@ -6,6 +6,7 @@ export type EntityFicheViewProps = {
   editorKey: string;
   bodyMarkdown: string;
   onChangeBody: (next: string) => void;
+  onInternalLinkClick?: (href: string) => void;
   localDirty: boolean;
   saveState?: 'idle' | 'saving' | 'saved' | 'conflict' | 'error';
   saveMessage?: string;
@@ -22,6 +23,12 @@ type EditorBoundaryProps = {
 type EditorBoundaryState = {
   hasError: boolean;
 };
+
+declare global {
+  interface Window {
+    __sp123bDebug?: Record<string, unknown>;
+  }
+}
 
 class EditorBoundary extends React.Component<EditorBoundaryProps, EditorBoundaryState> {
   constructor(props: EditorBoundaryProps) {
@@ -57,7 +64,33 @@ export function stripFrontmatter(markdown: string): { body: string; frontmatterH
   return { body: source.slice(closing + 5), frontmatterHidden: true };
 }
 
-export function EntityFicheView({ editorKey, bodyMarkdown, onChangeBody, localDirty, saveState = 'idle', saveMessage = '', canSave = false, onSave, saveDisabledReason = '' }: EntityFicheViewProps) {
+function isInternalGraphSelectHref(href: string): boolean {
+  return /(?:^|[?#&])graph_select=/.test(href);
+}
+
+function extractHrefFromEventTarget(target: EventTarget | null, path: EventTarget[] = []): string {
+  const element = target as Node | null;
+  if (!element) return '';
+  const candidates = [element, ...path];
+  for (const candidate of candidates) {
+    if (!(candidate instanceof Element)) continue;
+    const anchor = candidate.closest?.('a') as HTMLAnchorElement | null;
+    const href = String(anchor?.getAttribute('href') || '').trim();
+    if (href) return href;
+  }
+  let current: Node | null = element;
+  while (current) {
+    if (current instanceof Element) {
+      const anchor = current.closest?.('a') as HTMLAnchorElement | null;
+      const href = String(anchor?.getAttribute('href') || '').trim();
+      if (href) return href;
+    }
+    current = current.parentNode;
+  }
+  return '';
+}
+
+export function EntityFicheView({ editorKey, bodyMarkdown, onChangeBody, onInternalLinkClick, localDirty, saveState = 'idle', saveMessage = '', canSave = false, onSave, saveDisabledReason = '' }: EntityFicheViewProps) {
   const editorRef = useRef<MDXEditorMethods | null>(null);
 
   useEffect(() => {
@@ -65,6 +98,30 @@ export function EntityFicheView({ editorKey, bodyMarkdown, onChangeBody, localDi
     const current = editorRef.current?.getMarkdown?.() || '';
     if (current !== markdown) editorRef.current?.setMarkdown(markdown);
   }, [bodyMarkdown]);
+
+  useEffect(() => {
+    if (!onInternalLinkClick) return undefined;
+    const intercept = (event: MouseEvent) => {
+      const path = typeof event.composedPath === 'function' ? event.composedPath() : [];
+      const href = extractHrefFromEventTarget(event.target, path);
+      if (!href || !isInternalGraphSelectHref(href)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      window.__sp123bDebug = {
+        ...(window.__sp123bDebug || {}),
+        docIntercepted: true,
+        interceptedHref: href,
+        interceptedEventType: event.type,
+      };
+      onInternalLinkClick(href);
+    };
+    document.addEventListener('click', intercept, true);
+    document.addEventListener('mousedown', intercept, true);
+    return () => {
+      document.removeEventListener('click', intercept, true);
+      document.removeEventListener('mousedown', intercept, true);
+    };
+  }, [onInternalLinkClick]);
 
   return (
     <section className="mt-5 rounded-2xl border border-neutral-200 bg-white p-5" data-testid="entity-fiche-panel-body">
@@ -76,13 +133,32 @@ export function EntityFicheView({ editorKey, bodyMarkdown, onChangeBody, localDi
       {localDirty ? <div className="mb-3 text-xs text-amber-700">{t('graph.fiche_local_dirty')}</div> : null}
       {!canSave && saveDisabledReason ? <div className="mb-3 text-xs text-neutral-500">{saveDisabledReason}</div> : null}
       {saveMessage ? <div data-testid="entity-fiche-save-status" className={`mb-3 rounded-xl border px-3 py-2 text-xs ${saveState === 'saved' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : saveState === 'conflict' || saveState === 'error' ? 'border-red-200 bg-red-50 text-red-700' : 'border-amber-200 bg-amber-50 text-amber-800'}`}>{saveMessage}</div> : null}
-      <div className="min-h-[560px] overflow-auto rounded-2xl border border-neutral-200 bg-white p-2" data-testid="entity-fiche-editor">
+      <div
+        className="entity-fiche-editor-shell min-h-[560px] overflow-auto rounded-2xl border border-neutral-200 bg-white p-2"
+        data-testid="entity-fiche-editor"
+        onClickCapture={(event) => {
+          const href = extractHrefFromEventTarget(event.target);
+          if (!href || !isInternalGraphSelectHref(href)) return;
+          event.preventDefault();
+          event.stopPropagation();
+          onInternalLinkClick?.(href);
+        }}
+        onMouseDownCapture={(event) => {
+          const href = extractHrefFromEventTarget(event.target);
+          if (!href || !isInternalGraphSelectHref(href)) return;
+          event.preventDefault();
+          event.stopPropagation();
+          onInternalLinkClick?.(href);
+        }}
+      >
         <EditorBoundary
           fallback={<textarea value={bodyMarkdown || t('graph.fiche_empty_placeholder')} onChange={(event) => onChangeBody(event.target.value)} className="min-h-[380px] w-full rounded-xl border border-neutral-200 bg-neutral-50 p-3 text-sm leading-6 text-neutral-800" />}
         >
           <MDXEditor
             key={editorKey}
             ref={editorRef}
+            className="entity-fiche-editor-root"
+            contentEditableClassName="entity-fiche-editor-content"
             markdown={bodyMarkdown || t('graph.fiche_empty_placeholder')}
             onChange={onChangeBody}
             plugins={[

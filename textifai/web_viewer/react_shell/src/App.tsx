@@ -271,6 +271,12 @@ function normalizeEntityToken(value: unknown): string {
   return String(value || '').trim().toLowerCase();
 }
 
+declare global {
+  interface Window {
+    __sp123bDebug?: Record<string, unknown>;
+  }
+}
+
 function reviewItemMatchesEntity(item: DecisionItem, entityTokens: Set<string>): boolean {
   if (!entityTokens.size) return true;
   const rawTarget = item.raw.target_label || (typeof item.raw.target_entity === 'object' ? item.raw.target_entity?.label : item.raw.target_entity) || '';
@@ -876,6 +882,62 @@ export function App() {
     return selectedGraphEntityCardVm;
   }, [selectedGraphNodeId, selectedProjectId, filteredGraph, selectedGraphEntityCardVm]);
 
+  function selectGraphEntityBySelectToken(selectToken: string) {
+    const normalizedToken = normalizeEntityToken(selectToken);
+    window.__sp123bDebug = {
+      ...(window.__sp123bDebug || {}),
+      selectToken,
+      normalizedToken,
+      graphNodeCount: graphVm.nodes.length,
+      selectedGraphNodeBefore: selectedGraphNodeId,
+    };
+    if (!normalizedToken) return false;
+    const node = graphVm.nodes.find((candidate) => {
+      const values = [candidate.id, candidate.canonical_id, candidate.label, candidate.display_label, candidate.notePath].map(normalizeEntityToken);
+      return values.includes(normalizedToken);
+    }) || null;
+    window.__sp123bDebug = {
+      ...(window.__sp123bDebug || {}),
+      resolvedNodeId: node?.id || '',
+      resolvedNodeLabel: node?.label || '',
+      resolvedNodeNotePath: node?.notePath || '',
+    };
+    if (!node?.id) return false;
+    if (active !== 'graph') setActive('graph');
+    setGraphKindFilter(new Set());
+    setGraphQuery('');
+    setGraphRelatedOnly(false);
+    setSelectedGraphNodeId(node.id);
+    void handleGraphNodeSelect(node.id);
+    setGraphInspectorFullscreen(false);
+    return true;
+  }
+
+  function handleGraphInternalEntityLinkClick(href: string) {
+    const url = new URL(href, window.location.href);
+    const hashSelect = href.trim().startsWith('#') ? url.hash.replace(/^#.*graph_select=/, '') : '';
+    const selectToken = hashSelect || url.searchParams.get('graph_select') || url.hash.replace(/^#.*graph_select=/, '') || '';
+    window.__sp123bDebug = {
+      ...(window.__sp123bDebug || {}),
+      callbackCalled: true,
+      callbackHref: href,
+      callbackToken: selectToken,
+      urlBefore: window.location.href,
+      activeBefore: active,
+    };
+    if (!selectToken) return;
+    if (selectGraphEntityBySelectToken(selectToken)) {
+      const nextUrl = new URL(window.location.href);
+      nextUrl.searchParams.set('graph_select', selectToken);
+      window.history.replaceState(window.history.state, '', `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`);
+      window.__sp123bDebug = {
+        ...(window.__sp123bDebug || {}),
+        callbackResolved: true,
+        urlAfter: window.location.href,
+      };
+    }
+  }
+
   async function handleGraphNodeSelect(nodeId: string | null) {
     setSelectedGraphNodeId(nodeId);
     if (!nodeId || !selectedProjectId) { setSelectedGraphNoteContent(''); setSelectedGraphNoteDetail(null); setSelectedGraphEntityCardVm(null); return; }
@@ -898,9 +960,17 @@ export function App() {
     void handleGraphNodeSelect(selectedGraphNodeId);
   }, [selectedProjectId, selectedGraphNodeId]);
 
-  async function handleSaveGraphEntityFiche(params: { entityId: string; markdown: string; expectedHash: string; canonicalLabel: string }) {
+  useEffect(() => {
+    window.__sp123bDebug = {
+      ...(window.__sp123bDebug || {}),
+      selectedGraphNodeCurrent: selectedGraphNodeId,
+      activeCurrent: active,
+    };
+  }, [active, selectedGraphNodeId]);
+
+  async function handleSaveGraphEntityFiche(params: { entityId: string; notePath: string; markdown: string; expectedHash: string; canonicalLabel: string }) {
     if (!selectedProjectId) throw new Error('project_required');
-    return saveEntityFicheMarkdown(selectedProjectId, params.entityId, params.markdown, params.expectedHash, params.canonicalLabel);
+    return saveEntityFicheMarkdown(selectedProjectId, params.entityId, params.markdown, params.expectedHash, params.canonicalLabel, params.notePath);
   }
 
   function handleGraphLocalView(node: GraphCanvasNode) {
@@ -967,6 +1037,7 @@ export function App() {
               onEdit={(node: GraphCanvasNode) => setGraphEditNodeId(node.id)}
               onViewLocalGraph={handleGraphLocalView}
               onOpenReview={handleOpenGraphReview}
+              onInternalEntityLinkClick={handleGraphInternalEntityLinkClick}
               onSaveFiche={handleSaveGraphEntityFiche}
             />
           </aside>
@@ -1013,7 +1084,7 @@ export function App() {
   if (active === 'story') content = <StoryAliasView selectedProjectId={selectedProjectId} notesPreview={(projectDetail?.notes || []).slice(0, 16).map((note) => <div key={note.path} className="rounded-xl bg-white border border-neutral-200 px-3 py-2">{note.name || note.path}</div>)} legacyNotes={<LegacyEmbed title="Story Bible alias inside Canon / VaERL" src={legacyUrl('notes', selectedProjectId)} />} onOpenCanon={() => setActive('codex')} />;
   if (active === 'ask') content = <AIStudioView />;
 
-  return <AppShell active={active} setActive={setActive}><motion.div key={active} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 }}>{content}</motion.div>{error ? <div className="mx-5 mb-5 rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div> : null}<EvidenciaModal item={evidenceModalItem} onClose={() => setEvidenciaModalDecisionId('')} />{graphInspectorFullscreen ? <div className="fixed inset-0 z-50 bg-black/30 p-4"><div className="h-full w-full rounded-3xl border border-neutral-200 bg-white shadow-2xl overflow-y-auto"><div className="sticky top-0 z-10 flex items-center justify-between border-b border-neutral-200 bg-white p-4"><h2 className="text-lg font-semibold">{t('graph.node_sheet')}</h2><Button variant="secondary" onClick={() => setGraphInspectorFullscreen(false)}><X size={14} className="inline" /> {t('common.exit_fullscreen')}</Button></div><div className="p-4"><GraphInspectorPanel node={selectedGraphNode} entityCard={selectedGraphEntity} entityCardVm={selectedGraphEntityCardVm} noteContent={selectedGraphNoteContent} noteDetail={selectedGraphNoteDetail} onEdit={(node: GraphCanvasNode) => setGraphEditNodeId(node.id)} onSaveFiche={handleSaveGraphEntityFiche} /></div></div></div> : null}{editDraft ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"><div className="w-full max-w-2xl rounded-3xl border border-neutral-200 bg-white shadow-2xl"><div className="flex items-center justify-between border-b border-neutral-200 p-5"><div><h2 className="font-semibold">{editDraft.title}</h2><p className="text-sm text-neutral-500">{editDraft.notePath || t('common.local_draft')}</p></div><button onClick={() => setEditDraft(null)} className="rounded-full p-2 hover:bg-neutral-100"><X size={18} /></button></div><div className="p-5"><textarea readOnly value={editDraft.body} className="h-48 w-full rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-sm" /><p className="mt-3 text-sm text-neutral-500">{t('common.drafts_note')}</p></div></div></div> : null}</AppShell>;
+  return <AppShell active={active} setActive={setActive}><motion.div key={active} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 }}>{content}</motion.div>{error ? <div className="mx-5 mb-5 rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div> : null}<EvidenciaModal item={evidenceModalItem} onClose={() => setEvidenciaModalDecisionId('')} />{graphInspectorFullscreen ? <div className="fixed inset-0 z-50 bg-black/30 p-4"><div className="h-full w-full rounded-3xl border border-neutral-200 bg-white shadow-2xl overflow-y-auto"><div className="sticky top-0 z-10 flex items-center justify-between border-b border-neutral-200 bg-white p-4"><h2 className="text-lg font-semibold">{t('graph.node_sheet')}</h2><Button variant="secondary" onClick={() => setGraphInspectorFullscreen(false)}><X size={14} className="inline" /> {t('common.exit_fullscreen')}</Button></div><div className="p-4"><GraphInspectorPanel node={selectedGraphNode} entityCard={selectedGraphEntity} entityCardVm={selectedGraphEntityCardVm} noteContent={selectedGraphNoteContent} noteDetail={selectedGraphNoteDetail} onEdit={(node: GraphCanvasNode) => setGraphEditNodeId(node.id)} onInternalEntityLinkClick={handleGraphInternalEntityLinkClick} onSaveFiche={handleSaveGraphEntityFiche} /></div></div></div> : null}{editDraft ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"><div className="w-full max-w-2xl rounded-3xl border border-neutral-200 bg-white shadow-2xl"><div className="flex items-center justify-between border-b border-neutral-200 p-5"><div><h2 className="font-semibold">{editDraft.title}</h2><p className="text-sm text-neutral-500">{editDraft.notePath || t('common.local_draft')}</p></div><button onClick={() => setEditDraft(null)} className="rounded-full p-2 hover:bg-neutral-100"><X size={18} /></button></div><div className="p-5"><textarea readOnly value={editDraft.body} className="h-48 w-full rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-sm" /><p className="mt-3 text-sm text-neutral-500">{t('common.drafts_note')}</p></div></div></div> : null}</AppShell>;
 }
 
 export default App;

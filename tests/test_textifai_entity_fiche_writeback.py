@@ -10,7 +10,6 @@ from pathlib import Path
 from textifai.project_store import open_project
 from textifai.project_store.store import _hash_text
 from textifai.web_viewer.server import _make_handler
-
 EXPECTED = Path(__file__).resolve().parent / 'fixtures/textifai/entity_fiche_writeback/expected'
 
 
@@ -64,6 +63,32 @@ class TextifaiEntityFicheWritebackTests(unittest.TestCase):
             with sqlite3.connect(project / '.textifai/db/textifai.sqlite') as conn:
                 dirty = conn.execute('select dirty_reason from dirty_states where resource_type = ? and resource_id = ?', ('entity', 'sera')).fetchone()
                 self.assertEqual(dirty[0], 'entity_fiche_markdown_edited')
+
+    def test_save_works_even_when_entity_row_is_missing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = self._make_project(Path(tmp))
+            store = open_project(project)
+            store.ensure_sqlite()
+            store.bootstrap_from_project_files()
+            path = project / 'markdown/Entities/Sera.md'
+            before = path.read_text(encoding='utf-8')
+
+            result = store.save_entity_fiche_markdown(
+                'sera',
+                'Sera conoce a Ren.\n\nCambio local.',
+                _hash_text(before),
+                canonical_label='Sera',
+            )
+
+            self.assertTrue(result['ok'])
+            after = path.read_text(encoding='utf-8')
+            self.assertIn('Cambio local.', after)
+            self.assertEqual(result['semantic_state'], 'needs_reanalysis')
+            with sqlite3.connect(store.sqlite_path) as conn:
+                row = conn.execute('select entity_id, canonical_name, ficha_markdown_path from entities where entity_id = ?', ('sera',)).fetchone()
+                self.assertEqual(row[0], 'sera')
+                self.assertEqual(row[1], 'Sera')
+                self.assertEqual(row[2], 'markdown/Entities/Sera.md')
 
     def test_entity_card_contract_includes_content_hash_field(self):
         text = (Path(__file__).resolve().parents[1] / 'textifai/web_viewer/entity_card.py').read_text(encoding='utf-8')
@@ -178,7 +203,6 @@ class TextifaiEntityFicheWritebackTests(unittest.TestCase):
                 ('sera', 'Sera', 'character', rel, ''),
             )
             conn.commit()
-
 
 if __name__ == '__main__':
     unittest.main()

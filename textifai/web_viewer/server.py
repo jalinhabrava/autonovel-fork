@@ -216,13 +216,14 @@ def _make_handler(catalog: ProjectCatalog, registry: IngestionJobRegistry):
                     markdown = str(payload.get('markdown') or '')
                     expected_hash = str(payload.get('expected_hash') or '')
                     canonical_label = payload.get('canonical_label')
+                    note_path = payload.get('note_path')
                     if not expected_hash:
                         raise ValueError('expected_hash is required')
                     project = catalog.get_project(project_id)
                     if getattr(project, 'kind', '') != 'textifai_project':
                         raise ValueError('save supported only for project roots')
                     store = open_project(project.root)
-                    result = store.save_entity_fiche_markdown(entity_id, markdown, expected_hash, canonical_label=str(canonical_label) if canonical_label is not None else None)
+                    result = store.save_entity_fiche_markdown(entity_id, markdown, expected_hash, canonical_label=str(canonical_label) if canonical_label is not None else None, note_path=str(note_path) if note_path is not None else None)
                     if not bool(result.get('ok')):
                         self._json(result, status=409)
                         return

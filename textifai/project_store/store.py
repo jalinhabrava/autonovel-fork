@@ -64,6 +64,46 @@ def _read_json(path: Path) -> dict[str, Any] | None:
     payload = json.loads(path.read_text(encoding='utf-8'))
     return payload if isinstance(payload, dict) else None
 
+def _resolve_entity_fiche_record(project_root: Path, conn: sqlite3.Connection, entity_id: str, canonical_label: str | None = None, note_path: str | None = None) -> dict[str, str] | None:
+    row = conn.execute('select entity_id, canonical_name, ficha_markdown_path, summary from entities where entity_id = ?', (entity_id,)).fetchone()
+    if row is not None:
+        return {
+            'entity_id': str(row['entity_id'] or entity_id),
+            'canonical_name': str(row['canonical_name'] or canonical_label or entity_id),
+            'ficha_markdown_path': str(row['ficha_markdown_path'] or '').strip(),
+            'summary': str(row['summary'] or ''),
+        }
+
+    targets = [str(canonical_label or '').strip(), str(entity_id or '').strip(), str(note_path or '').strip()]
+    markdown_root = project_root / 'markdown'
+    for path in markdown_root.rglob('*.md'):
+        rel_path = path.relative_to(project_root).as_posix()
+        if '/Chapters/' in rel_path or rel_path.startswith('markdown/Chapters/'):
+            continue
+        if note_path and rel_path != note_path:
+            continue
+        text = path.read_text(encoding='utf-8')
+        frontmatter, body = _split_frontmatter(text)
+        canonical_name = normalize_entity_canonical_label(canonical_label or extract_first_h1(body) or path.stem or entity_id)
+        frontmatter_entity_id = ''
+        frontmatter_kind = ''
+        if frontmatter:
+            for line in frontmatter.splitlines():
+                if line.startswith('entity_id:'):
+                    frontmatter_entity_id = str(line.split(':', 1)[1]).strip()
+                elif line.startswith('kind:'):
+                    frontmatter_kind = str(line.split(':', 1)[1]).strip()
+        normalized_candidates = {value.casefold() for value in [frontmatter_entity_id, canonical_name, path.stem] if value}
+        if any(target and target.casefold() in normalized_candidates for target in targets):
+            return {
+                'entity_id': frontmatter_entity_id or entity_id,
+                'canonical_name': canonical_name,
+                'ficha_markdown_path': rel_path,
+                'summary': '',
+                'kind': frontmatter_kind,
+            }
+    return None
+
 
 def open_project(project_path: Path) -> 'ProjectStore':
     return ProjectStore(project_path)
@@ -368,15 +408,15 @@ class ProjectStore:
             'message': 'Capítulo guardado. VaERL/Graph/Review pendientes de reanálisis.',
         }
 
-    def save_entity_fiche_markdown(self, entity_id: str, new_markdown: str, expected_hash: str, actor: str = 'local_user', canonical_label: str | None = None) -> dict[str, Any]:
+    def save_entity_fiche_markdown(self, entity_id: str, new_markdown: str, expected_hash: str, actor: str = 'local_user', canonical_label: str | None = None, note_path: str | None = None) -> dict[str, Any]:
         del actor
         now = _now()
         with self._connect() as conn:
             conn.row_factory = sqlite3.Row
-            row = conn.execute('select * from entities where entity_id = ?', (entity_id,)).fetchone()
-            if row is None:
+            record = _resolve_entity_fiche_record(self.project_root, conn, entity_id, canonical_label, note_path)
+            if record is None:
                 raise KeyError(entity_id)
-            rel_path = str(row['ficha_markdown_path'] or '').strip()
+            rel_path = str(record['ficha_markdown_path'] or '').strip()
             if not rel_path:
                 raise ValueError('entity ficha_markdown_path is empty')
             fiche_path = (self.project_root / rel_path).resolve()
@@ -407,7 +447,6 @@ class ProjectStore:
             else:
                 next_markdown = new_markdown
 
-            resolved_label = normalize_entity_canonical_label(canonical_label or str(row['canonical_name'] or entity_id))
             stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
             backup_rel = Path('.textifai') / 'history' / 'entities' / entity_id / f'{stamp}_{old_hash[:12]}.md'
             backup_abs = self.project_root / backup_rel
@@ -418,12 +457,12 @@ class ProjectStore:
             new_hash = _hash_text(next_markdown)
             char_count = len(next_markdown)
             conn.execute(
-                'update files set checksum = ?, char_count = ?, last_seen_at = ? where path = ?',
-                (new_hash, char_count, now, rel_path),
+                'insert or replace into files(path, kind, checksum, char_count, last_seen_at) values (?, ?, ?, ?, ?)',
+                (rel_path, 'entity_fiche_markdown', new_hash, char_count, now),
             )
             conn.execute(
-                'update entities set canonical_name = ?, summary = ?, ficha_markdown_path = ? where entity_id = ?',
-                (resolved_label, str(row['summary'] or ''), rel_path, entity_id),
+                'insert or replace into entities(entity_id, canonical_name, kind, ficha_markdown_path, summary) values (?, ?, ?, ?, ?)',
+                (entity_id, str(record['canonical_name'] or canonical_label or entity_id), str(record.get('kind') or ''), rel_path, str(record['summary'] or '')),
             )
             conn.execute(
                 'insert or replace into dirty_states(resource_type, resource_id, dirty_reason, updated_at) values (?, ?, ?, ?)',
@@ -434,7 +473,7 @@ class ProjectStore:
         return {
             'ok': True,
             'entity_id': entity_id,
-            'canonical_label': resolved_label,
+            'canonical_label': str(record['canonical_name'] or canonical_label or entity_id),
             'old_hash': old_hash,
             'new_hash': new_hash,
             'backup_path': str(backup_rel),

@@ -349,11 +349,12 @@ export async function saveChapterMarkdown(projectId: string, chapterId: string, 
   });
 }
 
-export async function saveEntityFicheMarkdown(projectId: string, entityId: string, markdown: string, expectedHash: string, canonicalLabel?: string): Promise<EntityFicheSaveResponse> {
+export async function saveEntityFicheMarkdown(projectId: string, entityId: string, markdown: string, expectedHash: string, canonicalLabel?: string, notePath?: string): Promise<EntityFicheSaveResponse> {
   return apiPost<EntityFicheSaveResponse>(`/api/projects/${encodeURIComponent(projectId)}/entities/${encodeURIComponent(entityId)}/save`, {
     markdown,
     expected_hash: expectedHash,
     canonical_label: canonicalLabel,
+    note_path: notePath,
   });
 }
 
