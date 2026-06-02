@@ -2,6 +2,55 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /*
+   * TextifAI Arc theme scaffold.
+   * SP-125B: product-web palette mapped into semantic app tokens.
+   * Component migration stays out of scope here.
+   */
+
+  /* App surfaces */
+  --txf-color-bg: #f7f1e7;
+  --txf-color-bg-elevated: #efe4d6;
+  --txf-color-surface: rgba(255, 251, 245, 0.88);
+  --txf-color-surface-muted: #fffaf3;
+
+  /* Borders */
+  --txf-color-border: rgba(124, 97, 72, 0.18);
+  --txf-color-border-strong: rgba(124, 97, 72, 0.28);
+
+  /* Text */
+  --txf-color-text: #211913;
+  --txf-color-text-muted: #6f6256;
+  --txf-color-text-subtle: rgba(111, 98, 86, 0.72);
+
+  /* Accent */
+  --txf-color-accent: #b77a4b;
+  --txf-color-accent-hover: #9f673d;
+  --txf-color-accent-soft: rgba(183, 122, 75, 0.14);
+
+  /* Status */
+  --txf-color-danger: #b4544f;
+  --txf-color-danger-soft: rgba(180, 84, 79, 0.14);
+  --txf-color-success: #4f7a5c;
+  --txf-color-success-soft: rgba(79, 122, 92, 0.14);
+  --txf-color-warning: #a16d3b;
+  --txf-color-warning-soft: rgba(161, 109, 59, 0.14);
+
+  /* App extensions */
+  --txf-color-action: #8f5a2a;
+  --txf-color-action-hover: #6f4321;
+  --txf-color-action-soft: rgba(183, 122, 75, 0.14);
+  --txf-color-nav-active: #8f5a2a;
+  --txf-color-nav-active-text: #fdf7f0;
+  --txf-color-focus-ring: rgba(183, 122, 75, 0.38);
+
+  /* Effects */
+  --txf-shadow-card: 0 18px 60px rgba(49, 33, 19, 0.08);
+  --txf-radius-card: 24px;
+  --txf-radius-button: 999px;
+}
+
 html,
 body,
 #react-root {
