@@ -1,5 +1,9 @@
 export type UiLocale = 'en' | 'es';
 
+export const SUPPORTED_UI_LOCALES = ['en', 'es'] as const;
+export const ARC_LOCALE_STORAGE_KEY = 'textifai.arc.locale';
+export const LEGACY_LOCALE_STORAGE_KEY = 'textifai.locale';
+
 export const uiI18n = {
   fallbackLocale: 'en' as const,
   catalogs: {
@@ -8,13 +12,19 @@ export const uiI18n = {
       'shell.settings_note': 'Author-facing preferences. No persistence in SP-105D.',
       'shell.local_first': 'Local-first',
       'shell.local_first_note': 'Open full TextifAI project. No arbitrary filesystem navigation.',
+      'shell.localFirst.title': 'Local-first',
+      'shell.localFirst.body': 'Open full TextifAI project. No arbitrary filesystem navigation.',
       'shell.tagline': 'Narrative semantic engine · author-facing VaERL workspace',
       'shell.status.local_project': 'Local project',
       'shell.status.vaerl_ready': 'VaERL ready',
+      'shell.localProject': 'Local project',
+      'shell.vaerlReady': 'VaERL ready',
       'shell.menu.project_workspace': 'Project / Workspace',
       'shell.menu.dev_tools_pending': 'Dev tools · pending',
       'shell.author_local': 'Local author',
       'shell.workspace_private': 'Private workspace',
+      'shell.user.localAuthor': 'Local author',
+      'shell.user.privateWorkspace': 'Private workspace',
       'ai.subtitle': 'Ask Canon, brainstorming, and Character Lab/character chat. Placeholders without provider calls.',
       'ai.open_history': 'Open answer history',
       'ai.check_coverage': 'Check source coverage',
@@ -223,13 +233,19 @@ export const uiI18n = {
       'shell.settings_note': 'Preferencias author-facing. Sin persistencia en SP-105D.',
       'shell.local_first': 'Local-first',
       'shell.local_first_note': 'Abre un proyecto TextifAI completo. Nada de navegación arbitraria por filesystem.',
+      'shell.localFirst.title': 'Local-first',
+      'shell.localFirst.body': 'Abre un proyecto TextifAI completo. Nada de navegación arbitraria por filesystem.',
       'shell.tagline': 'Narrative semantic engine · author-facing VaERL workspace',
       'shell.status.local_project': 'Proyecto local',
       'shell.status.vaerl_ready': 'VaERL listo',
+      'shell.localProject': 'Proyecto local',
+      'shell.vaerlReady': 'VaERL listo',
       'shell.menu.project_workspace': 'Proyecto / Workspace',
       'shell.menu.dev_tools_pending': 'Dev tools · pendiente',
       'shell.author_local': 'Autor local',
       'shell.workspace_private': 'Workspace privado',
+      'shell.user.localAuthor': 'Autor local',
+      'shell.user.privateWorkspace': 'Workspace privado',
       'ai.subtitle': 'Ask Canon, brainstorming y Character Lab/chat con personajes. Placeholders sin provider calls.',
       'ai.open_history': 'Abrir historial de respuestas',
       'ai.check_coverage': 'Revisar cobertura de fuentes',
@@ -438,11 +454,43 @@ export const uiI18n = {
 
 export type UiI18nKey = keyof typeof uiI18n.catalogs.en;
 
+export function normalizeUiLocale(value: string | null | undefined, fallback: UiLocale = 'es'): UiLocale {
+  const primary = String(value || '').trim().toLowerCase().split(/[-_]/, 1)[0];
+  return primary === 'en' || primary === 'es' ? primary : fallback;
+}
+
+type ResolveInitialLocaleInput = {
+  search?: string | URLSearchParams | null;
+  storedLocale?: string | null;
+  legacyStoredLocale?: string | null;
+  htmlLang?: string | null;
+  navigatorLanguage?: string | null;
+};
+
+export function resolveInitialLocale(input: ResolveInitialLocaleInput = {}): UiLocale {
+  const searchParams = typeof input.search === 'string' ? new URLSearchParams(input.search) : input.search;
+  const candidates = [
+    searchParams?.get('lang'), // e.g. ?lang=es
+    searchParams?.get('locale'), // e.g. ?locale=en
+    input.storedLocale,
+    input.legacyStoredLocale,
+    input.htmlLang, // e.g. es-ES
+    input.navigatorLanguage, // e.g. en-US
+  ];
+  for (const candidate of candidates) {
+    const locale = normalizeUiLocale(candidate, '' as UiLocale);
+    if (locale === 'en' || locale === 'es') return locale;
+  }
+  return 'es';
+}
+
 export function resolveUiLocale(): UiLocale {
-  const explicit = typeof window !== 'undefined' ? window.localStorage.getItem('textifai.locale') : null;
-  const browser = typeof navigator !== 'undefined' ? navigator.language : null;
-  const primary = String(explicit || browser || 'es').trim().toLowerCase().split(/[-_]/, 1)[0];
-  return primary === 'en' || primary === 'es' ? primary : 'es';
+  const search = typeof window !== 'undefined' ? window.location.search : null;
+  const storedLocale = typeof window !== 'undefined' ? window.localStorage.getItem(ARC_LOCALE_STORAGE_KEY) : null;
+  const legacyStoredLocale = typeof window !== 'undefined' ? window.localStorage.getItem(LEGACY_LOCALE_STORAGE_KEY) : null;
+  const htmlLang = typeof document !== 'undefined' ? document.documentElement.lang : null;
+  const navigatorLanguage = typeof navigator !== 'undefined' ? navigator.language : null;
+  return resolveInitialLocale({ search, storedLocale, legacyStoredLocale, htmlLang, navigatorLanguage });
 }
 
 export function t(key: UiI18nKey, params?: Record<string, string | number>): string {

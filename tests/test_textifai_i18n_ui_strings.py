@@ -47,6 +47,25 @@ class TestTextifAII18nUiStrings(unittest.TestCase):
         for key in REQUIRED_KEYS:
             self.assertGreaterEqual(text.count(f"'{key}'"), 2, key)
 
+    def test_catalog_keys_match_between_es_and_en(self):
+        text = UI.read_text(encoding='utf-8')
+        en_block = re.search(r"\n    en: \{(?P<body>.*?)\n    \},\n    es:", text, re.S).group('body')
+        es_block = re.search(r"\n    es: \{(?P<body>.*?)\n    \},\n  \},", text, re.S).group('body')
+        en_keys = set(re.findall(r"'([^']+)':", en_block))
+        es_keys = set(re.findall(r"'([^']+)':", es_block))
+        self.assertEqual(sorted(en_keys - es_keys), [])
+        self.assertEqual(sorted(es_keys - en_keys), [])
+
+    def test_arc_locale_resolution_foundation_exists(self):
+        text = UI.read_text(encoding='utf-8')
+        self.assertIn('export const ARC_LOCALE_STORAGE_KEY', text)
+        self.assertIn('textifai.arc.locale', text)
+        self.assertIn('export function normalizeUiLocale(', text)
+        self.assertIn('export function resolveInitialLocale(', text)
+        self.assertIn('URLSearchParams', text)
+        for sample in ['lang=es', 'locale=en', 'es-ES', 'en-US']:
+            self.assertIn(sample, text)
+
     def test_navigation_uses_i18n(self):
         text = NAV.read_text(encoding='utf-8')
         for key in ['nav.hub','nav.ingest','nav.review','nav.graph','nav.codex','nav.editor','nav.ask']:
