@@ -5,60 +5,107 @@
 :root {
   /*
    * TextifAI Arc theme scaffold.
-   * SP-125B: product-web palette mapped into semantic app tokens.
-   * Component migration stays out of scope here.
+   * SP-125D: approved brand-board palette mapped into semantic app tokens.
+   * Component migration stays limited to shell and shared surfaces.
    */
 
   /* App surfaces */
-  --txf-color-bg: #f7f1e7;
-  --txf-color-bg-elevated: #efe4d6;
-  --txf-color-surface: rgba(255, 251, 245, 0.88);
-  --txf-color-surface-muted: #fffaf3;
+  --txf-color-bg: #f3e9d2;
+  --txf-color-frame: #fbf5e8;
+  --txf-color-sidebar: #f1e6d1;
+  --txf-color-canvas: #f7eedc;
+  --txf-color-surface: #fff9ee;
+  --txf-color-surface-muted: #f0e2c9;
+  --txf-color-surface-soft: #e8d9b8;
 
   /* Borders */
-  --txf-color-border: rgba(124, 97, 72, 0.18);
-  --txf-color-border-strong: rgba(124, 97, 72, 0.28);
+  --txf-color-border: rgba(110, 95, 64, 0.18);
+  --txf-color-border-strong: rgba(110, 95, 64, 0.28);
 
   /* Text */
-  --txf-color-text: #211913;
-  --txf-color-text-muted: #6f6256;
-  --txf-color-text-subtle: rgba(111, 98, 86, 0.72);
+  --txf-color-text: #3a2a21;
+  --txf-color-text-muted: #6e5f40;
+  --txf-color-text-subtle: rgba(110, 95, 64, 0.76);
 
   /* Accent */
-  --txf-color-accent: #b77a4b;
-  --txf-color-accent-hover: #9f673d;
-  --txf-color-accent-soft: rgba(183, 122, 75, 0.14);
+  --txf-color-accent: #9c3f2e;
+  --txf-color-accent-hover: #7f3226;
+  --txf-color-accent-soft: rgba(156, 63, 46, 0.14);
 
   /* Status */
-  --txf-color-danger: #b4544f;
-  --txf-color-danger-soft: rgba(180, 84, 79, 0.14);
+  --txf-color-danger: #9c3f2e;
+  --txf-color-danger-soft: rgba(156, 63, 46, 0.14);
   --txf-color-success: #4f7a5c;
   --txf-color-success-soft: rgba(79, 122, 92, 0.14);
-  --txf-color-warning: #a16d3b;
-  --txf-color-warning-soft: rgba(161, 109, 59, 0.14);
+  --txf-color-warning: #b5674a;
+  --txf-color-warning-soft: rgba(181, 103, 74, 0.14);
 
   /* App extensions */
-  --txf-color-action: #8f5a2a;
-  --txf-color-action-hover: #6f4321;
-  --txf-color-action-soft: rgba(183, 122, 75, 0.14);
-  --txf-color-nav-active: #8f5a2a;
+  --txf-color-action: #9c3f2e;
+  --txf-color-action-hover: #7f3226;
+  --txf-color-action-soft: rgba(156, 63, 46, 0.14);
+  --txf-color-nav-active: #3a2a21;
   --txf-color-nav-active-text: #fdf7f0;
-  --txf-color-focus-ring: rgba(183, 122, 75, 0.38);
+  --txf-color-focus-ring: rgba(181, 103, 74, 0.42);
 
   /* Effects */
-  --txf-shadow-card: 0 18px 60px rgba(49, 33, 19, 0.08);
+  --txf-shadow-card: none;
+  --txf-shadow-panel: 0 1px 2px rgba(58, 42, 33, 0.04);
+  --txf-shadow-floating: 0 16px 40px rgba(58, 42, 33, 0.14);
   --txf-radius-card: 24px;
   --txf-radius-button: 999px;
+}
+
+.txf-surface-shell {
+  background: var(--txf-color-bg);
+}
+
+.txf-surface-frame {
+  background: var(--txf-color-frame);
+}
+
+.txf-surface-sidebar {
+  background: var(--txf-color-sidebar);
+}
+
+.txf-surface-canvas {
+  background: var(--txf-color-canvas);
+}
+
+.txf-surface-card {
+  background: var(--txf-color-surface);
+}
+
+.txf-surface-muted {
+  background: var(--txf-color-surface-muted);
+}
+
+.txf-surface-soft {
+  background: var(--txf-color-surface-soft);
 }
 
 html,
 body,
 #react-root {
   min-height: 100%;
+  background: var(--txf-color-bg);
 }
 
 body {
   margin: 0;
+  color: var(--txf-color-text);
+}
+
+input,
+select,
+textarea {
+  background: var(--txf-color-surface);
+  color: var(--txf-color-text);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--txf-color-text-subtle);
 }
 
 .editor-workspace-shell {
@@ -77,10 +124,43 @@ body {
   min-width: 0;
 }
 
+.editor-chapter-toggle {
+  display: inline-flex;
+}
+
+.editor-chapter-list {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 180ms ease;
+}
+
+.editor-chapter-list-open {
+  max-height: min(18rem, 42vh);
+  overflow-y: auto;
+}
+
+.editor-main-pane {
+  min-height: min(760px, 78vh);
+}
+
 @container (min-width: 1200px) {
   .editor-workspace-grid {
     grid-template-columns: minmax(260px, 320px) minmax(0, 1fr) minmax(280px, 360px);
     overflow: hidden;
+  }
+
+  .editor-chapter-toggle {
+    display: none;
+  }
+
+  .editor-chapter-list,
+  .editor-chapter-list-open {
+    max-height: none;
+    overflow-y: auto;
+  }
+
+  .editor-main-pane {
+    min-height: 0;
   }
 }
 
@@ -145,4 +225,88 @@ body {
 
 .entity-fiche-editor-content em {
   color: rgb(82 82 82);
+}
+
+.textifai-editor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  border: 1px solid var(--txf-color-border);
+  background: #eef0f5;
+  border-radius: 1rem;
+  padding: 0.5rem;
+}
+
+.textifai-editor-toolbar .mdxeditor-toolbar-button,
+.textifai-editor-toolbar .mdxeditor-select {
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--txf-color-text);
+  border-radius: 0.75rem;
+  min-height: 2rem;
+}
+
+.textifai-editor-toolbar .mdxeditor-toolbar-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  padding: 0;
+}
+
+.textifai-editor-toolbar .mdxeditor-toolbar-button:hover,
+.textifai-editor-toolbar .mdxeditor-select:hover {
+  background: var(--txf-color-surface);
+  border-color: var(--txf-color-border);
+}
+
+.textifai-editor-toolbar .mdxeditor-select {
+  padding: 0 2rem 0 0.75rem;
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--txf-color-text) 50%), linear-gradient(135deg, var(--txf-color-text) 50%, transparent 50%);
+  background-position: calc(100% - 1rem) 50%, calc(100% - 0.7rem) 50%;
+  background-size: 0.35rem 0.35rem, 0.35rem 0.35rem;
+  background-repeat: no-repeat;
+}
+
+.textifai-editor-toolbar .mdxeditor-toolbar-separator {
+  width: 1px;
+  height: 1.25rem;
+  background: var(--txf-color-border);
+  margin: 0 0.125rem;
+}
+
+.editor-surface .cm-editor,
+.editor-surface .cm-scroller,
+.editor-surface .cm-gutters,
+.editor-surface .cm-activeLine,
+.editor-surface .cm-activeLineGutter {
+  background: var(--txf-color-surface) !important;
+}
+
+.editor-surface .cm-editor {
+  color: var(--txf-color-text);
+}
+
+.editor-surface .cm-content,
+.editor-surface .cm-line {
+  background: transparent !important;
+  color: var(--txf-color-text) !important;
+}
+
+.editor-surface .cm-gutters {
+  color: var(--txf-color-text-subtle);
+  border-right: 1px solid var(--txf-color-border);
+}
+
+.editor-surface .cm-cursor,
+.editor-surface .cm-dropCursor {
+  border-left-color: var(--txf-color-text) !important;
+}
+
+.editor-surface .ͼ1 .cm-selectionBackground,
+.editor-surface .cm-selectionBackground,
+.editor-surface ::selection {
+  background: rgba(156, 63, 46, 0.12) !important;
 }

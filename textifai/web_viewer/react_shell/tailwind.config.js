@@ -6,9 +6,12 @@ module.exports = {
       colors: {
         txf: {
           bg: 'var(--txf-color-bg)',
-          'bg-elevated': 'var(--txf-color-bg-elevated)',
+          frame: 'var(--txf-color-frame)',
+          sidebar: 'var(--txf-color-sidebar)',
+          canvas: 'var(--txf-color-canvas)',
           surface: 'var(--txf-color-surface)',
           'surface-muted': 'var(--txf-color-surface-muted)',
+          'surface-soft': 'var(--txf-color-surface-soft)',
           border: 'var(--txf-color-border)',
           'border-strong': 'var(--txf-color-border-strong)',
           text: 'var(--txf-color-text)',
@@ -33,6 +36,8 @@ module.exports = {
       },
       boxShadow: {
         'txf-card': 'var(--txf-shadow-card)',
+        'txf-panel': 'var(--txf-shadow-panel)',
+        'txf-floating': 'var(--txf-shadow-floating)',
       },
       borderRadius: {
         'txf-card': 'var(--txf-radius-card)',

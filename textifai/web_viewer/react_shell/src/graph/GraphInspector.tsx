@@ -43,6 +43,12 @@ function wiki(label: string): string {
   return cleaned ? `[[${cleaned}]]` : '';
 }
 
+const inspectorBlockClass = 'rounded-xl border border-txf-border bg-txf-surface p-2 text-txf-text';
+const inspectorBlockTitleClass = 'mb-1 flex items-center gap-1.5 text-sm font-semibold text-txf-text';
+const inspectorBlockMutedClass = 'text-xs text-txf-subtle';
+const inspectorButtonClass = 'rounded-lg border border-txf-border bg-txf-surface-soft px-2.5 py-1.5 text-xs font-medium text-txf-action hover:bg-txf-surface-muted';
+const inspectorDisabledButtonClass = 'rounded-lg border border-txf-border bg-txf-surface-soft px-2.5 py-1.5 text-xs font-medium text-txf-action/55 cursor-not-allowed';
+
 function buildFicheMarkdown(params: {
   label: string;
   summary: string;
@@ -145,65 +151,65 @@ export function GraphInspector({ node, entityCard, entityCardVm, reviewCountOver
   const rawPreview = compactPreview(sourceMarkdown);
 
   if (!node) {
-    return <aside className="rounded-3xl border border-neutral-200 bg-white p-5 text-sm text-neutral-500">{t('graph.ficha_hint')}</aside>;
+    return <aside className="rounded-3xl border border-txf-border bg-txf-surface-muted p-5 text-sm text-txf-subtle">{t('graph.ficha_hint')}</aside>;
   }
 
   return (
-    <aside className="min-w-0 rounded-3xl border border-neutral-200 bg-white p-4 shadow-sm sm:p-5 xl:p-6" data-testid="entity-fiche-panel">
+    <aside className="min-w-0 rounded-3xl border border-txf-border bg-txf-surface-muted p-4 sm:p-5 xl:p-6" data-testid="entity-fiche-panel">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="text-sm text-neutral-600">{t('graph.node_sheet')}</div>
-          <h2 className="mt-3 break-words text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl" data-testid="entity-fiche-title">{label}</h2>
+          <div className="text-sm text-txf-subtle">{t('graph.node_sheet')}</div>
+          <h2 className="mt-3 break-words text-3xl font-semibold tracking-tight text-txf-text sm:text-4xl" data-testid="entity-fiche-title">{label}</h2>
         </div>
-        <button type="button" onClick={() => onEdit(node)} className="w-full rounded-xl border border-orange-300 bg-white px-4 py-2 text-sm font-medium text-orange-700 hover:bg-orange-50 sm:w-auto">
+        <button type="button" onClick={() => onEdit(node)} className="w-full rounded-xl border border-txf-border-strong bg-txf-surface px-4 py-2 text-sm font-medium text-txf-action hover:bg-txf-surface-soft sm:w-auto">
           <span className="inline-flex items-center gap-2"><ArrowUpRight size={14} />{t('graph.open_ficha')}</span>
         </button>
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-2 text-xs text-neutral-700">
-        <span className="rounded-full border border-neutral-200 bg-white px-3 py-1">{kind || t('common.label')}</span>
-        <span className="rounded-full bg-emerald-100 px-3 py-1 text-emerald-800">{status}</span>
-        {reviewCount ? <span className="rounded-full bg-amber-100 px-3 py-1 text-amber-800">{reviewCount} {t('graph.review_label')}</span> : null}
+      <div className="mt-4 flex flex-wrap gap-2 text-xs text-txf-muted">
+        <span className="rounded-full border border-txf-border bg-txf-surface-muted px-3 py-1">{kind || t('common.label')}</span>
+        <span className="rounded-full bg-txf-surface-soft px-3 py-1 text-txf-text">{status}</span>
+        {reviewCount ? <span className="rounded-full bg-txf-surface-soft px-3 py-1 text-txf-text">{reviewCount} {t('graph.review_label')}</span> : null}
       </div>
 
       <section className="mt-3 grid grid-cols-2 gap-2 text-xs">
-        <div className="rounded-xl border border-neutral-200 bg-white p-2"><div className="mb-1 flex items-center gap-1.5 text-sm font-semibold text-neutral-900"><Users size={14} />{t('graph.aliases')}</div><div className="flex flex-wrap gap-1">{aliases.length ? aliases.slice(0, 4).map((alias) => <span key={alias} className="rounded-md bg-neutral-100 px-2 py-0.5 text-[11px] text-neutral-700">{alias}</span>) : <span className="text-neutral-500">{t('common.no_data')}</span>}</div></div>
-        <div className="rounded-xl border border-neutral-200 bg-white p-2"><div className="mb-1 flex items-center gap-1.5 text-sm font-semibold text-neutral-900"><BookOpenText size={14} />{t('graph.reference_points')}</div><div className="text-xs text-neutral-700"><ul className="list-disc pl-4"><li className="line-clamp-2 break-all">{notePath || t('graph.no_note')}</li></ul></div></div>
-        <div className="rounded-xl border border-neutral-200 bg-white p-2"><div className="mb-1 flex items-center gap-1.5 text-sm font-semibold text-neutral-900"><ShieldCheck size={14} />{t('editor.evidence')}</div><div className="text-2xl font-semibold text-neutral-900">{evidenceCount}</div></div>
-        <div className="rounded-xl border border-neutral-200 bg-white p-2"><div className="mb-1 flex items-center gap-1.5 text-sm font-semibold text-neutral-900"><Users size={14} />{t('graph.relationships_title')}</div><div className="text-xs text-neutral-700">{relationCount ? `${t('graph.relations')}: ${relationCount}` : t('common.no_data')}</div></div>
-        <div className="rounded-xl border border-neutral-200 bg-white p-2"><div className="mb-1 flex items-center gap-1.5 text-sm font-semibold text-neutral-900"><Link2 size={14} />{t('graph.backlinks')}</div><div className="text-2xl font-semibold text-neutral-900">{backlinks.length}</div></div>
-        <div className="rounded-xl border border-neutral-200 bg-white p-2"><div className="mb-1 flex items-center gap-1.5 text-sm font-semibold text-neutral-900"><ArrowUpRight size={14} />{t('graph.outgoing_links')}</div><div className="text-2xl font-semibold text-neutral-900">{outgoing.length}</div></div>
+        <div className={inspectorBlockClass}><div className={inspectorBlockTitleClass}><Users size={14} />{t('graph.aliases')}</div><div className="flex flex-wrap gap-1">{aliases.length ? aliases.slice(0, 4).map((alias) => <span key={alias} className="rounded-md bg-txf-surface-soft px-2 py-0.5 text-[11px] text-txf-text">{alias}</span>) : <span className="text-txf-subtle">{t('common.no_data')}</span>}</div></div>
+        <div className={inspectorBlockClass}><div className={inspectorBlockTitleClass}><BookOpenText size={14} />{t('graph.reference_points')}</div><div className={inspectorBlockMutedClass}><ul className="list-disc pl-4"><li className="line-clamp-2 break-all">{notePath || t('graph.no_note')}</li></ul></div></div>
+        <div className={inspectorBlockClass}><div className={inspectorBlockTitleClass}><ShieldCheck size={14} />{t('editor.evidence')}</div><div className="text-2xl font-semibold text-txf-text">{evidenceCount}</div></div>
+        <div className={inspectorBlockClass}><div className={inspectorBlockTitleClass}><Users size={14} />{t('graph.relationships_title')}</div><div className={inspectorBlockMutedClass}>{relationCount ? `${t('graph.relations')}: ${relationCount}` : t('common.no_data')}</div></div>
+        <div className={inspectorBlockClass}><div className={inspectorBlockTitleClass}><Link2 size={14} />{t('graph.backlinks')}</div><div className="text-2xl font-semibold text-txf-text">{backlinks.length}</div></div>
+        <div className={inspectorBlockClass}><div className={inspectorBlockTitleClass}><ArrowUpRight size={14} />{t('graph.outgoing_links')}</div><div className="text-2xl font-semibold text-txf-text">{outgoing.length}</div></div>
       </section>
 
-      <section className="mt-2 rounded-xl border border-neutral-200 bg-white p-2.5">
+      <section className="mt-2 rounded-xl border border-txf-border bg-txf-surface p-2.5 text-txf-text">
         <div className="flex items-center justify-between gap-2">
           <div>
-            <div className="flex items-center gap-1.5 text-sm font-semibold text-neutral-900"><Network size={14} />{t('graph.local_graph')}</div>
-            <p className="mt-0.5 text-xs text-neutral-600 line-clamp-2">{t('graph.local_graph_note')}</p>
+            <div className="flex items-center gap-1.5 text-sm font-semibold text-txf-text"><Network size={14} />{t('graph.local_graph')}</div>
+            <p className="mt-0.5 line-clamp-2 text-xs text-txf-subtle">{t('graph.local_graph_note')}</p>
           </div>
-          <button type="button" onClick={() => node && onViewLocalGraph?.(node)} className="rounded-lg border border-orange-300 bg-white px-2.5 py-1.5 text-xs font-medium text-orange-700 hover:bg-orange-50">{t('graph.view_local_graph')}</button>
+          <button type="button" onClick={() => node && onViewLocalGraph?.(node)} className={inspectorButtonClass}>{t('graph.view_local_graph')}</button>
         </div>
-        <div className="mt-1 text-[11px] text-neutral-500">{localNodeCount} {t('graph.local_graph_nodes')} · {localEdgeCount} {t('graph.local_graph_edges')}</div>
+        <div className="mt-1 text-[11px] text-txf-subtle">{localNodeCount} {t('graph.local_graph_nodes')} · {localEdgeCount} {t('graph.local_graph_edges')}</div>
       </section>
 
-      <section className="mt-2 rounded-xl border border-neutral-200 bg-white p-2.5">
+      <section className="mt-2 rounded-xl border border-txf-border bg-txf-surface p-2.5 text-txf-text">
         <div className="flex items-center justify-between gap-2">
           <div>
-            <div className={`flex items-center gap-1.5 text-sm font-semibold ${reviewCount ? 'text-neutral-900' : 'text-neutral-400'}`}><Star size={14} />{t('graph.view_review')}</div>
-            <p className={`mt-0.5 text-xs line-clamp-2 ${reviewCount ? 'text-neutral-600' : 'text-neutral-400'}`}>{t('graph.review_filter_hint')}</p>
+            <div className="flex items-center gap-1.5 text-sm font-semibold text-txf-text"><Star size={14} />{t('graph.view_review')}</div>
+            <p className="mt-0.5 text-xs line-clamp-2 text-txf-subtle">{t('graph.review_filter_hint')}</p>
           </div>
-          <button type="button" disabled={!reviewCount} onClick={() => onOpenReview?.(label)} className={`rounded-lg px-2.5 py-1.5 text-xs font-medium ${reviewCount ? 'border border-orange-300 bg-white text-orange-700 hover:bg-orange-50' : 'border border-neutral-200 bg-neutral-100 text-neutral-400 cursor-not-allowed'}`}>{t('graph.view_review')}</button>
+          <button type="button" disabled={!reviewCount} onClick={() => onOpenReview?.(label)} className={reviewCount ? inspectorButtonClass : inspectorDisabledButtonClass}>{t('graph.view_review')}</button>
         </div>
       </section>
 
       <EntityFicheView editorKey={editorKey} bodyMarkdown={editorBody} onChangeBody={(next) => { setLocalBody(next); if (saveState === 'saved') setSaveState('idle'); }} onInternalLinkClick={onInternalEntityLinkClick} localDirty={editorBody !== loadedBody} saveState={saveState} saveMessage={saveMessage} canSave={canSave} onSave={handleSaveFiche} saveDisabledReason={!loadedHash ? t('graph.fiche_save_unavailable') : ''} />
 
-      <details className="mt-4 rounded-2xl border border-neutral-200 bg-neutral-50 p-4" open={technicalOpen} onToggle={(event) => setTechnicalOpen((event.currentTarget as HTMLDetailsElement).open)}>
-        <summary className="cursor-pointer list-none text-sm font-semibold text-neutral-800">{t('graph.technical_details')}</summary>
-        <div className="mt-3 space-y-3 text-xs text-neutral-600">
-          <div><div className="uppercase tracking-wide text-neutral-400">{t('graph.note_path')}</div><div className="mt-1 break-all">{notePath || t('graph.no_note')}</div></div>
-          <div><div className="uppercase tracking-wide text-neutral-400">{t('graph.markdown_view')}</div><pre className="mt-1 max-h-52 overflow-y-auto whitespace-pre-wrap rounded-xl border border-neutral-200 bg-white p-3">{rawPreview || t('graph.fiche_empty_placeholder')}</pre></div>
-          {vm?.markdown?.technical_markdown ? <div><div className="uppercase tracking-wide text-neutral-400">technical_markdown</div><pre className="mt-1 max-h-52 overflow-y-auto whitespace-pre-wrap rounded-xl border border-neutral-200 bg-white p-3">{vm.markdown.technical_markdown}</pre></div> : null}
+      <details className="mt-4 rounded-2xl border border-txf-border bg-txf-surface-muted p-4" open={technicalOpen} onToggle={(event) => setTechnicalOpen((event.currentTarget as HTMLDetailsElement).open)}>
+        <summary className="cursor-pointer list-none text-sm font-semibold text-txf-text">{t('graph.technical_details')}</summary>
+        <div className="mt-3 space-y-3 text-xs text-txf-subtle">
+          <div><div className="uppercase tracking-wide text-txf-subtle">{t('graph.note_path')}</div><div className="mt-1 break-all">{notePath || t('graph.no_note')}</div></div>
+          <div><div className="uppercase tracking-wide text-txf-subtle">{t('graph.markdown_view')}</div><pre className="mt-1 max-h-52 overflow-y-auto whitespace-pre-wrap rounded-xl border border-txf-border bg-txf-surface-muted p-3">{rawPreview || t('graph.fiche_empty_placeholder')}</pre></div>
+          {vm?.markdown?.technical_markdown ? <div><div className="uppercase tracking-wide text-txf-subtle">technical_markdown</div><pre className="mt-1 max-h-52 overflow-y-auto whitespace-pre-wrap rounded-xl border border-txf-border bg-txf-surface-muted p-3">{vm.markdown.technical_markdown}</pre></div> : null}
         </div>
       </details>
     </aside>
