@@ -113,14 +113,14 @@ import { EditorView as EditorModuleView } from './modules/editor/EditorView';
 import { AIStudioView } from './modules/ai/AIStudioView';
 import { StoryAliasView } from './modules/canon/StoryAliasView';
 
-const overviewCards: Array<{ id: SectionId; title: string; text: string; icon: ScreenConfig['icon'] }> = [
-  { id: 'hub', title: '1. Project Hub', text: 'Abrir proyecto TextifAI completo vía manifest.json; .txtfai queda como dirección futura.', icon: Database },
-  { id: 'ingest', title: '2. Ingestion', text: 'Preparar estructura estable de source, artifacts, vault y reportes.', icon: Upload },
-  { id: 'review', title: '3. Review Queue', text: 'Resolver avisos mediante decisiones explícitas del autor.', icon: Inbox },
-  { id: 'graph', title: '4. Graph', text: 'Exploración visual nativa de entidades, capítulos, vínculos y warnings.', icon: GitBranch },
-  { id: 'codex', title: '5. Canon / VaERL', text: 'Wiki author-facing de canon: entidades, aliases, hechos, evidencia, Story Bible y estado de revisión.', icon: Network },
-  { id: 'editor', title: '6. Editor', text: 'Escritura y revisión de capítulos, no fichas primarias.', icon: SplitSquareHorizontal },
-  { id: 'ask', title: '7. AI Studio', text: 'Ask Canon, brainstorming y Character Lab futuros sobre VaERL, evidencia e incertidumbre.', icon: MessageSquareText },
+const overviewCards: Array<{ id: SectionId; titleKey: UiI18nKey; textKey: UiI18nKey; icon: ScreenConfig['icon'] }> = [
+  { id: 'hub', titleKey: 'overview.project_hub.title', textKey: 'overview.project_hub.text', icon: Database },
+  { id: 'ingest', titleKey: 'overview.ingestion.title', textKey: 'overview.ingestion.text', icon: Upload },
+  { id: 'review', titleKey: 'overview.review.title', textKey: 'overview.review.text', icon: Inbox },
+  { id: 'graph', titleKey: 'overview.graph.title', textKey: 'overview.graph.text', icon: GitBranch },
+  { id: 'codex', titleKey: 'overview.codex.title', textKey: 'overview.codex.text', icon: Network },
+  { id: 'editor', titleKey: 'overview.editor.title', textKey: 'overview.editor.text', icon: SplitSquareHorizontal },
+  { id: 'ask', titleKey: 'overview.ai.title', textKey: 'overview.ai.text', icon: MessageSquareText },
 ];
 
 const kindLabels: Record<string, string> = { chapter: 'capítulo', character: 'personaje', concept: 'concepto', event: 'evento', object: 'objeto', place: 'lugar', review: 'revisión' };
@@ -376,7 +376,7 @@ function EntityRecordTable({ entities, selectedKey, onSelect }: { entities: Cano
 function InspectorCard({ entity }: { entity: CanonEntity | undefined }) { if (!entity) return <div className="rounded-3xl border border-txf-border p-5 text-sm text-txf-subtle">Selecciona un record para abrir inspector.</div>; return <div className="rounded-3xl border border-txf-border bg-txf-surface-muted p-5"><div className="text-xs uppercase tracking-wide text-txf-subtle">Inspector</div><h2 className="mt-2 text-xl font-semibold">{entity.canonical_name}</h2><p className="mt-3 text-sm leading-6 text-txf-subtle">{entity.summary || 'Sin resumen author-facing disponible todavía.'}</p><div className="mt-4 flex flex-wrap gap-2">{(entity.aliases || []).slice(0, 6).map((alias) => <span key={alias} className="rounded-full bg-txf-surface border border-txf-border px-3 py-1 text-xs">{alias}</span>)}</div><Button variant="secondary">Editar ficha · draft</Button></div>; }
 function LegacyEmbed({ title, src }: { title: string; src: string }) { return <div className="rounded-3xl border border-txf-border bg-txf-surface p-3 shadow-txf-card"><div className="mb-3 text-xs uppercase tracking-wide text-txf-subtle">{title}</div><iframe title={title} src={src} className="h-[620px] w-full rounded-2xl border border-txf-border bg-txf-surface" /></div>; }
 
-function OverviewBoard({ setActive }: { setActive: (id: SectionId) => void }) { return <section><TopBar title="TextifAI Workspace" subtitle="Local-first ahora; SaaS-ready después. VaERL manda, Markdown se edita." actions={<Button onClick={() => setActive('hub')}>Abrir proyecto</Button>} /><div className="grid grid-cols-12 gap-5 p-5">{overviewCards.map((card) => { const Icon = card.icon; return <button key={card.id} onClick={() => setActive(card.id)} className="col-span-12 rounded-3xl border border-txf-border bg-txf-surface p-5 text-left hover:bg-txf-surface-soft md:col-span-6 xl:col-span-3"><div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-txf-nav-active text-txf-nav-active-text"><Icon size={18} /></div><h3 className="mt-4 font-semibold">{card.title}</h3><p className="mt-2 text-sm leading-6 text-txf-subtle">{card.text}</p></button>; })}</div></section>; }
+function OverviewBoard({ setActive }: { setActive: (id: SectionId) => void }) { return <section><TopBar title={t('overview.title')} subtitle={t('overview.subtitle')} actions={<Button onClick={() => setActive('hub')}>{t('overview.open_project')}</Button>} /><div className="grid grid-cols-12 gap-5 p-5">{overviewCards.map((card) => { const Icon = card.icon; return <button key={card.id} onClick={() => setActive(card.id)} className="col-span-12 rounded-3xl border border-txf-border bg-txf-surface p-5 text-left hover:bg-txf-surface-soft md:col-span-6 xl:col-span-3"><div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-txf-nav-active text-txf-nav-active-text"><Icon size={18} /></div><h3 className="mt-4 font-semibold">{t(card.titleKey)}</h3><p className="mt-2 text-sm leading-6 text-txf-subtle">{t(card.textKey)}</p></button>; })}</div></section>; }
 
 function NativeGraphSurface({ graph, selectedNodeId, setSelectedNodeId, setEditDraft }: { graph: GraphPayload | null; selectedNodeId: string; setSelectedNodeId: (id: string) => void; setEditDraft: (draft: EditDraft) => void }) {
   const [kindFilter, setKindFilter] = useState('all');

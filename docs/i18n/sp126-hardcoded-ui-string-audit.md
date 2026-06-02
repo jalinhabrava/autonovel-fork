@@ -62,3 +62,8 @@ Scanned `textifai/web_viewer/react_shell/src` for user-visible string literals a
 ## Notes
 - Existing i18n catalog already spans `en` and `es`.
 - SP-126A added locale-resolution foundation and shell-key aliases; deeper feature migration remains for later safepoints.
+
+## SP-126B Progress Note
+- App overview/workspace copy in `textifai/web_viewer/react_shell/src/App.tsx` migrated to i18n.
+- `textifai/web_viewer/react_shell/src/modules/project/ProjectHubView.tsx` deferred because file had pre-existing dirty style/token changes before SP-126B started.
+- Remaining hotspots: `ProjectHubView.tsx`, `GraphInspector.tsx`, `GraphToolbar.tsx`, `CanonVaerlView.tsx`, `EditorView.tsx`, `ReviewQueueView.tsx`, `IngestionView.tsx`, `AIStudioView.tsx`.

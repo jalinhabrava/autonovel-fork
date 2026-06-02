@@ -28,6 +28,10 @@ KEY_MODULES = [
 
 REQUIRED_KEYS = [
     'nav.hub','nav.ingest','nav.review','nav.graph','nav.codex','nav.editor','nav.ask',
+    'overview.title','overview.subtitle','overview.open_project',
+    'overview.project_hub.title','overview.project_hub.text','overview.ingestion.title','overview.ingestion.text',
+    'overview.review.title','overview.review.text','overview.graph.title','overview.graph.text',
+    'overview.codex.title','overview.codex.text','overview.editor.title','overview.editor.text','overview.ai.title','overview.ai.text',
     'editor.save.chapter','editor.save.dirty','editor.save.saving','editor.save.saved','editor.save.conflict_message','editor.save.error',
     'editor.reanalysis.pending','editor.reanalysis.notice','editor.reanalysis.action',
     'graph.node_sheet','graph.reset_filters','graph.search_placeholder','graph.related_only',
@@ -75,6 +79,26 @@ class TestTextifAII18nUiStrings(unittest.TestCase):
         text = APP.read_text(encoding='utf-8')
         for key in ['editor.save.saving','editor.save.chapter_saved','editor.save.conflict_message','editor.reanalysis.notice']:
             self.assertIn(f"t('{key}')", text)
+
+    def test_app_overview_uses_i18n(self):
+        text = APP.read_text(encoding='utf-8')
+        for key in [
+            'overview.title','overview.subtitle','overview.open_project',
+            'overview.project_hub.title','overview.project_hub.text',
+            'overview.ingestion.title','overview.ingestion.text',
+            'overview.review.title','overview.review.text',
+            'overview.graph.title','overview.graph.text',
+            'overview.codex.title','overview.codex.text',
+            'overview.editor.title','overview.editor.text',
+            'overview.ai.title','overview.ai.text',
+        ]:
+            self.assertIn(key, text)
+        for migrated in [
+            'Local-first ahora; SaaS-ready después. VaERL manda, Markdown se edita.',
+            'Abrir proyecto TextifAI completo vía manifest.json; .txtfai queda como dirección futura.',
+            'Resolver avisos mediante decisiones explícitas del autor.',
+        ]:
+            self.assertNotIn(migrated, text)
 
     def test_no_obvious_hardcoded_ui_literals_in_key_modules(self):
         allow = json.loads(ALLOW.read_text(encoding='utf-8'))
