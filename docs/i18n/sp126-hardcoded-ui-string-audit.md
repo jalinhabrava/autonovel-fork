@@ -67,3 +67,30 @@ Scanned `textifai/web_viewer/react_shell/src` for user-visible string literals a
 - App overview/workspace copy in `textifai/web_viewer/react_shell/src/App.tsx` migrated to i18n.
 - `textifai/web_viewer/react_shell/src/modules/project/ProjectHubView.tsx` deferred because file had pre-existing dirty style/token changes before SP-126B started.
 - Remaining hotspots: `ProjectHubView.tsx`, `GraphInspector.tsx`, `GraphToolbar.tsx`, `CanonVaerlView.tsx`, `EditorView.tsx`, `ReviewQueueView.tsx`, `IngestionView.tsx`, `AIStudioView.tsx`.
+
+## SP-126C Dirty-File Triage
+
+SP-126B commit `33da88df462e5fa407bd0edd9f87bd0c334e3281` is present on `origin/phase-1.4-authoring-workbench-projectstore`; no SP-126B push was required before triage.
+
+No additional i18n slice was migrated in SP-126C. All preferred target files were dirty before SP-126C or tied to graph palette/style diffs, so migrating any one of them would mix i18n with unrelated visual or semantic-color work.
+
+| File | Dirty before SP-126C | Diff nature | Recommendation |
+| --- | --- | --- | --- |
+| `textifai/web_viewer/react_shell/src/graph/GraphCanvas.tsx` | yes | graph palette/style extraction | do not touch in SP-126C |
+| `textifai/web_viewer/react_shell/src/graph/GraphTheme.ts` | yes | graph semantic color indirection | do not touch in SP-126C |
+| `textifai/web_viewer/react_shell/src/graph/GraphToolbar.tsx` | yes | graph chip palette/style changes; copy already uses `t(...)` | defer; only migrate later after graph style diffs land or are reverted |
+| `textifai/web_viewer/react_shell/src/graph/GraphPalette.ts` | yes, untracked | new graph palette constants | do not touch in SP-126C |
+| `textifai/web_viewer/react_shell/src/modules/ai/AIStudioView.tsx` | yes | style/token class changes; visible copy already uses `t(...)` | defer |
+| `textifai/web_viewer/react_shell/src/modules/ingestion/IngestionView.tsx` | yes | style/token class changes; visible copy already uses `t(...)`; machine status remains raw | defer |
+| `textifai/web_viewer/react_shell/src/modules/project/ProjectHubView.tsx` | yes | style/token class changes plus one existing Spanish note | defer |
+| `textifai/web_viewer/react_shell/src/modules/canon/CanonVaerlView.tsx` | yes | style/token class changes in canon-sensitive module | defer |
+| `textifai/web_viewer/react_shell/src/modules/canon/StoryAliasView.tsx` | yes | style/token class changes in canon-sensitive module | defer |
+
+Deferred hotspots for later clean safepoints:
+
+- `ProjectHubView.tsx` — migrate remaining user-facing note after style/token diff is resolved; keep `manifest.json` and `.txtfai` raw.
+- `GraphInspector.tsx` — schedule as dedicated graph/canon i18n slice because inspector labels are larger and entity-sensitive.
+- `CanonVaerlView.tsx` and `StoryAliasView.tsx` — schedule after canon module style diffs are clean.
+- `AIStudioView.tsx` and `IngestionView.tsx` — revisit after style diffs are resolved; current visible copy already routes through i18n keys except machine/runtime values.
+
+Assessment: `arc_i18n_dirty_worktree_triage_ready`.
