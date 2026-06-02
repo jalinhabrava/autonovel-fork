@@ -65,5 +65,17 @@ class TextifAIReactShellMigrationTests(unittest.TestCase):
             for token in forbidden:
                 self.assertNotIn(token, text, f'{path.name} still contains {token}')
 
+    def test_graph_chrome_avoids_neutral_warm_regressions(self):
+        targets = [
+            REPO / 'textifai/web_viewer/react_shell/src/graph/GraphToolbar.tsx',
+            REPO / 'textifai/web_viewer/react_shell/src/graph/GraphInspector.tsx',
+            REPO / 'textifai/web_viewer/react_shell/src/graph/GraphCanvas.tsx',
+        ]
+        forbidden = ('bg-white', 'bg-neutral-', 'border-neutral-', 'text-neutral-')
+        for path in targets:
+            text = path.read_text(encoding='utf-8')
+            for token in forbidden:
+                self.assertNotIn(token, text, f'{path.name} graph chrome still contains {token}')
+
 if __name__ == '__main__':
     unittest.main()

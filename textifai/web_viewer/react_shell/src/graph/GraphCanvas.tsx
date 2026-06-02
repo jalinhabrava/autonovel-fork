@@ -150,14 +150,14 @@ export function GraphCanvas({ nodes, edges, selectedNodeId, onSelectNode }: Grap
   }, [graphSignature, hasData, nodes.length]);
 
   return (
-    <div className="h-full min-h-[560px] w-full overflow-hidden rounded-3xl border border-neutral-200 bg-white">
+    <div className="h-full min-h-[560px] w-full overflow-hidden rounded-3xl border border-txf-border bg-txf-surface">
       <ForceGraph2D<GraphCanvasNode, GraphCanvasEdge>
         ref={graphRef}
         graphData={graphData}
         nodeId="id"
         linkSource="source"
         linkTarget="target"
-        backgroundColor="#ffffff"
+        backgroundColor="#fff9ee"
         nodeRelSize={6}
         minZoom={0.4}
         maxZoom={6}
