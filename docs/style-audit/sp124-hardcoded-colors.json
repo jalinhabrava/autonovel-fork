@@ -1,0 +1,4370 @@
+{
+  "colors": [
+    {
+      "value": "#ffffff",
+      "files": [
+        {
+          "path": "textifai/web_viewer/react_shell/src/App.tsx",
+          "line": 392,
+          "context": "  return <div className=\"grid grid-cols-12 gap-5 p-5\"><aside className=\"col-span-12 xl:col-span-2 rounded-3xl border border-neutral-200 bg-neutral-50 p-4\"><h2 className=\"font-semibold\">Filtros</h2><di"
+        },
+        {
+          "path": "textifai/web_viewer/react_shell/src/graph/GraphCanvas.tsx",
+          "line": 84,
+          "context": "      ctx.strokeStyle = isSelected ? '#111827' : '#ffffff';"
+        },
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 2057,
+          "context": "  --paper: #ffffff;"
+        }
+      ],
+      "count": 22
+    },
+    {
+      "value": "#0000",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 19
+    },
+    {
+      "value": "#111111",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 2055,
+          "context": "  --ink: #111111;"
+        }
+      ],
+      "count": 17
+    },
+    {
+      "value": "rgba(29, 111, 104, 0.12)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 578,
+          "context": "  background: rgba(29, 111, 104, 0.12);"
+        }
+      ],
+      "count": 10
+    },
+    {
+      "value": "#171717",
+      "files": [
+        {
+          "path": "textifai/web_viewer/react_shell/src/App.tsx",
+          "line": 392,
+          "context": "  return <div className=\"grid grid-cols-12 gap-5 p-5\"><aside className=\"col-span-12 xl:col-span-2 rounded-3xl border border-neutral-200 bg-neutral-50 p-4\"><h2 className=\"font-semibold\">Filtros</h2><di"
+        },
+        {
+          "path": "textifai/web_viewer/react_shell/src/graph/GraphCanvas.tsx",
+          "line": 112,
+          "context": "        ctx.fillStyle = '#171717';"
+        },
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        },
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 2175,
+          "context": "  background: #171717;"
+        }
+      ],
+      "count": 9
+    },
+    {
+      "value": "#daa548",
+      "files": [
+        {
+          "path": "landing/index.html",
+          "line": 76,
+          "context": "            color: #daa548;"
+        }
+      ],
+      "count": 8
+    },
+    {
+      "value": "#1f1f1f",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 2104,
+          "context": "  border-right: 1px solid #1f1f1f;"
+        }
+      ],
+      "count": 7
+    },
+    {
+      "value": "#2b2b2b",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 2217,
+          "context": "  border: 1px solid #2b2b2b;"
+        }
+      ],
+      "count": 6
+    },
+    {
+      "value": "#8c2240",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 624,
+          "context": "  color: #8c2240;"
+        }
+      ],
+      "count": 6
+    },
+    {
+      "value": "rgb(0 0 0 / .2)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 5
+    },
+    {
+      "value": "rgba(162, 59, 85, 0.14)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 623,
+          "context": "  background: rgba(162, 59, 85, 0.14);"
+        }
+      ],
+      "count": 5
+    },
+    {
+      "value": "rgba(180, 91, 53, 0.14)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 617,
+          "context": "  background: rgba(180, 91, 53, 0.14);"
+        }
+      ],
+      "count": 5
+    },
+    {
+      "value": "rgba(255,255,255,0.36)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 847,
+          "context": "  background: rgba(255,255,255,0.36);"
+        }
+      ],
+      "count": 5
+    },
+    {
+      "value": "#0090ff",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 4
+    },
+    {
+      "value": "#111827",
+      "files": [
+        {
+          "path": "textifai/web_viewer/react_shell/src/App.tsx",
+          "line": 127,
+          "context": "const graphPalette: Record<string, string> = { chapter: '#7f7a6a', character: '#111827', concept: '#6b7280', event: '#9a3412', object: '#0f766e', place: '#1d4ed8', review: '#b91c1c' };"
+        },
+        {
+          "path": "textifai/web_viewer/react_shell/src/graph/GraphCanvas.tsx",
+          "line": 84,
+          "context": "      ctx.strokeStyle = isSelected ? '#111827' : '#ffffff';"
+        },
+        {
+          "path": "textifai/web_viewer/react_shell/src/graph/GraphTheme.ts",
+          "line": 5,
+          "context": "  character: '#111827',"
+        }
+      ],
+      "count": 4
+    },
+    {
+      "value": "#1d4ed8",
+      "files": [
+        {
+          "path": "textifai/web_viewer/react_shell/src/App.tsx",
+          "line": 127,
+          "context": "const graphPalette: Record<string, string> = { chapter: '#7f7a6a', character: '#111827', concept: '#6b7280', event: '#9a3412', object: '#0f766e', place: '#1d4ed8', review: '#b91c1c' };"
+        },
+        {
+          "path": "textifai/web_viewer/react_shell/src/graph/GraphTheme.ts",
+          "line": 9,
+          "context": "  place: '#1d4ed8',"
+        },
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 4
+    },
+    {
+      "value": "#f5f1e8",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 4,
+          "context": "  --paper: #f5f1e8;"
+        }
+      ],
+      "count": 4
+    },
+    {
+      "value": "#fffaf0",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 5,
+          "context": "  --panel: #fffaf0;"
+        }
+      ],
+      "count": 4
+    },
+    {
+      "value": "rgba(255, 255, 255, 0.08)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 288,
+          "context": "  border: 1px solid rgba(255, 255, 255, 0.08);"
+        }
+      ],
+      "count": 4
+    },
+    {
+      "value": "#0a0a08",
+      "files": [
+        {
+          "path": "landing/index.html",
+          "line": 13,
+          "context": "            background: #0a0a08;"
+        }
+      ],
+      "count": 3
+    },
+    {
+      "value": "#525252",
+      "files": [
+        {
+          "path": "textifai/web_viewer/react_shell/src/App.tsx",
+          "line": 392,
+          "context": "  return <div className=\"grid grid-cols-12 gap-5 p-5\"><aside className=\"col-span-12 xl:col-span-2 rounded-3xl border border-neutral-200 bg-neutral-50 p-4\"><h2 className=\"font-semibold\">Filtros</h2><di"
+        },
+        {
+          "path": "textifai/web_viewer/react_shell/src/graph/GraphTheme.ts",
+          "line": 12,
+          "context": "  note: '#525252',"
+        },
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 3
+    },
+    {
+      "value": "#e5e5e5",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 2059,
+          "context": "  --line: #e5e5e5;"
+        }
+      ],
+      "count": 3
+    },
+    {
+      "value": "#fff",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        },
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 1109,
+          "context": "  background: #fff;"
+        }
+      ],
+      "count": 3
+    },
+    {
+      "value": "rgba(108, 106, 95, 0.14)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 629,
+          "context": "  background: rgba(108, 106, 95, 0.14);"
+        }
+      ],
+      "count": 3
+    },
+    {
+      "value": "rgba(180, 91, 53, 0.18)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 20,
+          "context": "    radial-gradient(circle at 10% 5%, rgba(180, 91, 53, 0.18), transparent 28rem),"
+        }
+      ],
+      "count": 3
+    },
+    {
+      "value": "rgba(255, 250, 240, 0.72)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 734,
+          "context": "  background: rgba(255, 250, 240, 0.72);"
+        }
+      ],
+      "count": 3
+    },
+    {
+      "value": "rgba(255, 250, 240, 0.86)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 455,
+          "context": "  background: rgba(255, 250, 240, 0.86);"
+        }
+      ],
+      "count": 3
+    },
+    {
+      "value": "rgba(29, 111, 104, 0.16)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 21,
+          "context": "    radial-gradient(circle at 88% 18%, rgba(29, 111, 104, 0.16), transparent 26rem),"
+        }
+      ],
+      "count": 3
+    },
+    {
+      "value": "#003362",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#004074",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#00a2c7",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#0588f0",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#0797b9",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#0a0a0a",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 2102,
+          "context": "  background: #0a0a0a;"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#0d1520",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#0d2847",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#0d3c48",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#0d74ce",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#0f766e",
+      "files": [
+        {
+          "path": "textifai/web_viewer/react_shell/src/App.tsx",
+          "line": 127,
+          "context": "const graphPalette: Record<string, string> = { chapter: '#7f7a6a', character: '#111827', concept: '#6b7280', event: '#9a3412', object: '#0f766e', place: '#1d4ed8', review: '#b91c1c' };"
+        },
+        {
+          "path": "textifai/web_viewer/react_shell/src/graph/GraphTheme.ts",
+          "line": 8,
+          "context": "  object: '#0f766e',"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#104d87",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#107d98",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#111113",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#111927",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#113264",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#18191b",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#1c2024",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#203c25",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#205d9e",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#211f1a",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 556,
+          "context": "  background: #211f1a;"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#212225",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#272a2d",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#2870bd",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#2a2820",
+      "files": [
+        {
+          "path": "landing/index.html",
+          "line": 172,
+          "context": "            border-left: 1px solid #2a2820;"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#2a7e3b",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#2e3135",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#363a3f",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#3b9eff",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#3db9cf",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#3e9b4f",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#43484e",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#444444",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 2315,
+          "context": "  color: #444444;"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#46a758",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#4f3422",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#5a6169",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#5eb1ef",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#60646c",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#641723",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#65ba74",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#696e77",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#6b7280",
+      "files": [
+        {
+          "path": "textifai/web_viewer/react_shell/src/App.tsx",
+          "line": 127,
+          "context": "const graphPalette: Record<string, string> = { chapter: '#7f7a6a', character: '#111827', concept: '#6b7280', event: '#9a3412', object: '#0f766e', place: '#1d4ed8', review: '#b91c1c' };"
+        },
+        {
+          "path": "textifai/web_viewer/react_shell/src/graph/GraphTheme.ts",
+          "line": 6,
+          "context": "  concept: '#6b7280',"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#70b8ff",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#777b84",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#7dcedc",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#7f7a6a",
+      "files": [
+        {
+          "path": "textifai/web_viewer/react_shell/src/App.tsx",
+          "line": 127,
+          "context": "const graphPalette: Record<string, string> = { chapter: '#7f7a6a', character: '#111827', concept: '#6b7280', event: '#9a3412', object: '#0f766e', place: '#1d4ed8', review: '#b91c1c' };"
+        },
+        {
+          "path": "textifai/web_viewer/react_shell/src/graph/GraphTheme.ts",
+          "line": 4,
+          "context": "  chapter: '#7f7a6a',"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#80838d",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#8b8d98",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#8ec8f6",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#94ce9a",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#9a3412",
+      "files": [
+        {
+          "path": "textifai/web_viewer/react_shell/src/App.tsx",
+          "line": 127,
+          "context": "const graphPalette: Record<string, string> = { chapter: '#7f7a6a', character: '#111827', concept: '#6b7280', event: '#9a3412', object: '#0f766e', place: '#1d4ed8', review: '#b91c1c' };"
+        },
+        {
+          "path": "textifai/web_viewer/react_shell/src/graph/GraphTheme.ts",
+          "line": 7,
+          "context": "  event: '#9a3412',"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#9ca3af",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#9ddde7",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#ab6400",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#acd8fc",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#b0b4ba",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#b2ddb5",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#b45b35",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 8,
+          "context": "  --accent-2: #b45b35;"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#b5e9f0",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#b8943e",
+      "files": [
+        {
+          "path": "landing/index.html",
+          "line": 67,
+          "context": "            color: #b8943e;"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#b91c1c",
+      "files": [
+        {
+          "path": "textifai/web_viewer/react_shell/src/App.tsx",
+          "line": 127,
+          "context": "const graphPalette: Record<string, string> = { chapter: '#7f7a6a', character: '#111827', concept: '#6b7280', event: '#9a3412', object: '#0f766e', place: '#1d4ed8', review: '#b91c1c' };"
+        },
+        {
+          "path": "textifai/web_viewer/react_shell/src/graph/GraphTheme.ts",
+          "line": 10,
+          "context": "  review: '#b91c1c',"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#b9bbc6",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#c2e5ff",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#c2e6ff",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#c8941e",
+      "files": [
+        {
+          "path": "landing/index.html",
+          "line": 160,
+          "context": "            background: #c8941e;"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#c8c0b0",
+      "files": [
+        {
+          "path": "landing/index.html",
+          "line": 113,
+          "context": "            color: #c8c0b0;"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#c9e8ca",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#caf1f6",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#cdced6",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#ce2c31",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#d5efff",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#d9d9e0",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#daf1db",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#dc3e42",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#dcdcdc",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 2244,
+          "context": "  border: 1px solid #dcdcdc;"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#def7f9",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#e0e1e6",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#e2a336",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#e5484d",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#e6f4fe",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#e8e4db",
+      "files": [
+        {
+          "path": "landing/index.html",
+          "line": 14,
+          "context": "            color: #e8e4db;"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#e8e8ec",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#e9c162",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#e9f6e9",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#eb8e90",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#edeef0",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#f0f0f3",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#f2fafb",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#f3d673",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#f4a9aa",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#f4faff",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#f5fbf5",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#f9f9fb",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#fafdfe",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#fbe577",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#fbfdff",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#fbfefb",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#fcfcfd",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#fdbdbe",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#feebec",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#fefbe9",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#fefdfb",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#ffba18",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#ffc53d",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#ffcdce",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#ffdbdc",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#ffee9c",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#fff7c2",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#fff7f7",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#fff8e8",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 77,
+          "context": "  color: #fff8e8;"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#fffcfc",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "rgb(0 0 0 / .1)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "rgb(229 229 229 / var(--tw-bg-opacity, 1)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "rgb(229 229 229)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/react_shell/src/styles.css",
+          "line": 66,
+          "context": "  border-bottom: 1px solid rgb(229 229 229);"
+        },
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "rgb(23 23 23 / var(--tw-text-opacity, 1)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "rgb(245 245 245 / var(--tw-bg-opacity, 1)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "rgb(250 250 250 / var(--tw-bg-opacity, 1)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "rgb(29 78 216)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/react_shell/src/styles.css",
+          "line": 93,
+          "context": "  color: rgb(29 78 216);"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "rgb(59 130 246 / .5)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "rgba(108, 106, 95, 0.35)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 1955,
+          "context": "  border-top: 1px dashed rgba(108, 106, 95, 0.35);"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "rgba(162, 59, 85, 0.35)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 739,
+          "context": "  border-color: rgba(162, 59, 85, 0.35);"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "rgba(180, 91, 53, 0.35)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 743,
+          "context": "  border-color: rgba(180, 91, 53, 0.35);"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "rgba(222, 212, 189, 0.75)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 1951,
+          "context": "  border-top: 1px solid rgba(222, 212, 189, 0.75);"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "rgba(222, 212, 189, 0.88)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 141,
+          "context": "  border: 1px solid rgba(222, 212, 189, 0.88);"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "rgba(255, 250, 240, 0.62)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 1289,
+          "context": "  background: rgba(255, 250, 240, 0.62);"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "rgba(255, 250, 240, 0.78)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 406,
+          "context": "  background: rgba(255, 250, 240, 0.78);"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "rgba(255, 255, 255, 0.1)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 315,
+          "context": "  background: rgba(255, 255, 255, 0.1);"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "rgba(255, 255, 255, 0.12)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 167,
+          "context": "  background: rgba(255, 255, 255, 0.12);"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "rgba(255, 255, 255, 0.35)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 689,
+          "context": "  background: rgba(255, 255, 255, 0.35);"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "rgba(255, 255, 255, 0.55)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 1155,
+          "context": "  background: rgba(255, 255, 255, 0.55);"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "rgba(255,255,255,0.45)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 812,
+          "context": "  background: rgba(255,255,255,0.45);"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "rgba(29, 111, 104, 0.18)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 1681,
+          "context": "  border: 1px solid rgba(29, 111, 104, 0.18);"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "value": "#0000004d",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "#1d6f68",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 7,
+          "context": "  --accent: #1d6f68;"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "#1e40af",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "#20211c",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 2,
+          "context": "  --ink: #20211c;"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "#242424",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 2148,
+          "context": "  border: 1px solid #242424;"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "#247c7a",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 1553,
+          "context": ".legend-dot.kind-character { background: #247c7a; }"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "#2563eb",
+      "files": [
+        {
+          "path": "textifai/web_viewer/react_shell/src/graph/GraphCanvas.tsx",
+          "line": 91,
+          "context": "        ctx.strokeStyle = '#2563eb';"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "#26231f",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 284,
+          "context": "  background: #26231f;"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "#2a2a2a",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 2181,
+          "context": "  background: #2a2a2a;"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "#2a6a0f",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 1781,
+          "context": "  color: #2a6a0f;"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "#4f8f4f",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 1554,
+          "context": ".legend-dot.kind-place { background: #4f8f4f; }"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "#555",
+      "files": [
+        {
+          "path": "typeset/epub_style.css",
+          "line": 27,
+          "context": "    color: #555;"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "#666666",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 2056,
+          "context": "  --muted: #666666;"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "#6c6a5f",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 3,
+          "context": "  --muted: #6c6a5f;"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "#6c6f93",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 1557,
+          "context": ".legend-dot.kind-concept { background: #6c6f93; }"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "#7a6d58",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 1608,
+          "context": "  fill: #7a6d58;"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "#8b7b52",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 80,
+          "context": "    conic-gradient(from 20deg, var(--accent-2), var(--accent), #8b7b52, var(--accent-2));"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "#8fb3af",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 1552,
+          "context": ".legend-dot.low { background: #8fb3af; }"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "#9333ea",
+      "files": [
+        {
+          "path": "textifai/web_viewer/react_shell/src/graph/GraphTheme.ts",
+          "line": 11,
+          "context": "  unresolved: '#9333ea',"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "#999080",
+      "files": [
+        {
+          "path": "landing/index.html",
+          "line": 120,
+          "context": "            color: #999080;"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "#a9782b",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 1556,
+          "context": ".legend-dot.kind-object { background: #a9782b; }"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "#b0a898",
+      "files": [
+        {
+          "path": "landing/index.html",
+          "line": 207,
+          "context": "            color: #b0a898;"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "#d4d4d4",
+      "files": [
+        {
+          "path": "textifai/web_viewer/react_shell/src/App.tsx",
+          "line": 392,
+          "context": "  return <div className=\"grid grid-cols-12 gap-5 p-5\"><aside className=\"col-span-12 xl:col-span-2 rounded-3xl border border-neutral-200 bg-neutral-50 p-4\"><h2 className=\"font-semibold\">Filtros</h2><di"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "#d5793a",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 1555,
+          "context": ".legend-dot.kind-event { background: #d5793a; }"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "#ded4bd",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 6,
+          "context": "  --line: #ded4bd;"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "#e5e7eb",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "#e7dcc7",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 1526,
+          "context": "  background: #e7dcc7;"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "#ead9bd",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 22,
+          "context": "    linear-gradient(135deg, #efe3ce, #f7f2e9 45%, #ead9bd);"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "#efe3ce",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 22,
+          "context": "    linear-gradient(135deg, #efe3ce, #f7f2e9 45%, #ead9bd);"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "#f0e6d2",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 534,
+          "context": "  background: #f0e6d2;"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "#f3f3f3",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 2320,
+          "context": "  background: #f3f3f3;"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "#f59e0b",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 2212,
+          "context": "  background: #f59e0b;"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "#f7f2e9",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 22,
+          "context": "    linear-gradient(135deg, #efe3ce, #f7f2e9 45%, #ead9bd);"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "#f7f7f7",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 2298,
+          "context": "  background: #f7f7f7;"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "#f9f1df",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 557,
+          "context": "  color: #f9f1df;"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgb(0 0 0 / .05)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgb(0 0 0 / .25)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgb(115 115 115 / var(--tw-text-opacity, 1)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgb(146 64 14 / var(--tw-text-opacity, 1)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgb(16 185 129 / var(--tw-bg-opacity, 1)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgb(16 185 129 / var(--tw-text-opacity, 1)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgb(163 163 163 / var(--tw-text-opacity, 1)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgb(167 243 208 / var(--tw-border-opacity, 1)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgb(180 83 9 / var(--tw-text-opacity, 1)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgb(185 28 28 / var(--tw-text-opacity, 1)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgb(190 18 60 / var(--tw-text-opacity, 1)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgb(194 65 12 / var(--tw-text-opacity, 1)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgb(209 250 229 / var(--tw-bg-opacity, 1)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgb(212 212 212 / var(--tw-border-opacity, 1)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgb(212 212 212 / var(--tw-text-opacity, 1)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgb(229 229 229 / var(--tw-border-opacity, 1)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgb(229 229 229 / var(--tw-text-opacity, 1)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgb(23 23 23 / var(--tw-bg-opacity, 1)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgb(23 23 23 / var(--tw-border-opacity, 1)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgb(23 23 23)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/react_shell/src/styles.css",
+          "line": 47,
+          "context": "  color: rgb(23 23 23);"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgb(236 253 245 / var(--tw-bg-opacity, 1)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgb(244 63 94 / var(--tw-text-opacity, 1)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgb(245 158 11 / var(--tw-text-opacity, 1)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgb(245 245 245 / var(--tw-text-opacity, 1)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgb(252 211 77 / var(--tw-border-opacity, 1)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgb(253 186 116 / var(--tw-border-opacity, 1)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgb(253 230 138 / var(--tw-border-opacity, 1)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgb(254 202 202 / var(--tw-border-opacity, 1)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgb(254 205 211 / var(--tw-border-opacity, 1)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgb(254 242 242 / var(--tw-bg-opacity, 1)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgb(254 243 199 / var(--tw-bg-opacity, 1)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgb(255 241 242 / var(--tw-bg-opacity, 1)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgb(255 247 237 / var(--tw-bg-opacity, 1)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgb(255 251 235 / var(--tw-bg-opacity, 1)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgb(255 255 255 / var(--tw-bg-opacity, 1)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgb(255 255 255 / var(--tw-text-opacity, 1)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgb(30 64 175)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/react_shell/src/styles.css",
+          "line": 84,
+          "context": "  color: rgb(30 64 175);"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgb(38 38 38 / var(--tw-bg-opacity, 1)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgb(38 38 38 / var(--tw-text-opacity, 1)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgb(4 120 87 / var(--tw-text-opacity, 1)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgb(6 95 70 / var(--tw-text-opacity, 1)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgb(64 64 64 / var(--tw-border-opacity, 1)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgb(64 64 64 / var(--tw-text-opacity, 1)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgb(82 82 82 / var(--tw-text-opacity, 1)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/react-shell/app.css",
+          "line": 1,
+          "context": "*,:before,:after{--tw-border-spacing-x: 0;--tw-border-spacing-y: 0;--tw-translate-x: 0;--tw-translate-y: 0;--tw-rotate: 0;--tw-skew-x: 0;--tw-skew-y: 0;--tw-scale-x: 1;--tw-scale-y: 1;--tw-pan-x: ;--t"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgb(82 82 82)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/react_shell/src/styles.css",
+          "line": 98,
+          "context": "  color: rgb(82 82 82);"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(0, 0, 0, 0.52)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 2329,
+          "context": "  background: rgba(0, 0, 0, 0.52);"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(108, 106, 95, 0.12)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 1653,
+          "context": "  background: rgba(108, 106, 95, 0.12);"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(108, 106, 95, 0.15)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 1770,
+          "context": "  background: rgba(108, 106, 95, 0.15);"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(108, 106, 95, 0.2)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 1790,
+          "context": "  background: rgba(108, 106, 95, 0.2);"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(108, 106, 95, 0.22)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 668,
+          "context": "  border-bottom: 1px dashed rgba(108, 106, 95, 0.22);"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(108, 106, 95, 0.36)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 1860,
+          "context": "  border: 1px dashed rgba(108, 106, 95, 0.36);"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(108, 111, 147, 0.15)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 1630,
+          "context": ".kind-badge.kind-concept { background: rgba(108, 111, 147, 0.15); }"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(12, 12, 12, 0.36)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 144,
+          "context": "  box-shadow: 0 24px 54px rgba(12, 12, 12, 0.36);"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(127, 122, 106, 0.15)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 1631,
+          "context": ".kind-badge.kind-chapter { background: rgba(127, 122, 106, 0.15); }"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(163, 163, 163, 0.45)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/react_shell/src/graph/GraphCanvas.tsx",
+          "line": 15,
+          "context": "const LINK_COLOR = 'rgba(163, 163, 163, 0.45)';"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(169, 120, 43, 0.15)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 1629,
+          "context": ".kind-badge.kind-object { background: rgba(169, 120, 43, 0.15); }"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(180, 91, 53, 0.08)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 1428,
+          "context": "  background: rgba(180, 91, 53, 0.08);"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(180, 91, 53, 0.12)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 1113,
+          "context": "  background: rgba(180, 91, 53, 0.12);"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(180, 91, 53, 0.22)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 1785,
+          "context": "  background: rgba(180, 91, 53, 0.22);"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(180, 91, 53, 0.24)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 1426,
+          "context": "  border: 1px solid rgba(180, 91, 53, 0.24);"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(20, 20, 20, 0.25)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 283,
+          "context": "  box-shadow: 0 24px 54px rgba(20, 20, 20, 0.25);"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(213, 121, 58, 0.15)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 1628,
+          "context": ".kind-badge.kind-event { background: rgba(213, 121, 58, 0.15); }"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(22, 24, 26, 0.42)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 272,
+          "context": "  background: rgba(22, 24, 26, 0.42);"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(222, 212, 189, 0.6)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 1902,
+          "context": "  border-bottom: 1px solid rgba(222, 212, 189, 0.6);"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(222, 212, 189, 0.7)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 1842,
+          "context": "  border: 1px solid rgba(222, 212, 189, 0.7);"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(23, 23, 23, 0.7)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/react_shell/src/graph/GraphCanvas.tsx",
+          "line": 16,
+          "context": "const ACTIVE_LINK_COLOR = 'rgba(23, 23, 23, 0.7)';"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(240, 230, 210, 0.42)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 650,
+          "context": "  background: rgba(240, 230, 210, 0.42);"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(245, 241, 232, 0.7)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 376,
+          "context": "  color: rgba(245, 241, 232, 0.7);"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(245, 241, 232, 0.72)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 191,
+          "context": "  color: rgba(245, 241, 232, 0.72);"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(245, 241, 232, 0.82)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 1840,
+          "context": "  background: rgba(245, 241, 232, 0.82);"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(245,241,232,0.9)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 1832,
+          "context": "  background: linear-gradient(180deg, rgba(255,250,240,0.94), rgba(245,241,232,0.9));"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(255, 250, 240, 0.64)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 911,
+          "context": "  background: rgba(255, 250, 240, 0.64);"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(255, 250, 240, 0.74)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 207,
+          "context": "  background: rgba(255, 250, 240, 0.74);"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(255, 250, 240, 0.82)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 54,
+          "context": "  background: rgba(255, 250, 240, 0.82);"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(255, 250, 240, 0.96)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 496,
+          "context": "  background: rgba(255, 250, 240, 0.96);"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(255, 255, 255, 0.02)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 299,
+          "context": "  background: rgba(255, 255, 255, 0.02);"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(255, 255, 255, 0.04)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 364,
+          "context": "  background: rgba(255, 255, 255, 0.04);"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(255, 255, 255, 0.28)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 1861,
+          "context": "  background: rgba(255, 255, 255, 0.28);"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(255, 255, 255, 0.32)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 1995,
+          "context": "  background: rgba(255, 255, 255, 0.32);"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(255, 255, 255, 0.42)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 1363,
+          "context": "  background: rgba(255, 255, 255, 0.42);"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(255, 255, 255, 0.72)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 2363,
+          "context": "  color: rgba(255, 255, 255, 0.72);"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(255, 255, 255, 0.88)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/react_shell/src/graph/GraphCanvas.tsx",
+          "line": 110,
+          "context": "        ctx.fillStyle = 'rgba(255, 255, 255, 0.88)';"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(255,250,240,0.94)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 1832,
+          "context": "  background: linear-gradient(180deg, rgba(255,250,240,0.94), rgba(245,241,232,0.9));"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(255,255,255,0.4)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 1037,
+          "context": "  background: rgba(255,255,255,0.4);"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(29, 111, 104, 0.08)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 1680,
+          "context": "  background: rgba(29, 111, 104, 0.08);"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(29, 111, 104, 0.13)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 1686,
+          "context": "  background: rgba(29, 111, 104, 0.13);"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(29, 111, 104, 0.2)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 1762,
+          "context": "  box-shadow: inset 0 0 0 1px rgba(29, 111, 104, 0.2);"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(29, 111, 104, 0.25)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 989,
+          "context": "  border-color: rgba(29, 111, 104, 0.25);"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(29, 111, 104, 0.26)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 1303,
+          "context": "  border: 1px solid rgba(29, 111, 104, 0.26);"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(29, 111, 104, 0.35)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 747,
+          "context": "  border-color: rgba(29, 111, 104, 0.35);"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(29, 111, 104, 0.42)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 1623,
+          "context": "  filter: drop-shadow(0 0 8px rgba(29, 111, 104, 0.42));"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(29, 111, 104, 0.45)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 1216,
+          "context": "  border-color: rgba(29, 111, 104, 0.45);"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(29, 111, 104, 0.6)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 1294,
+          "context": "  border-color: rgba(29, 111, 104, 0.6);"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(29,111,104,0.08)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 1927,
+          "context": "    radial-gradient(circle at 50% 45%, rgba(29,111,104,0.08), transparent 24rem),"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(32, 33, 28, 0.028)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 34,
+          "context": "    linear-gradient(90deg, rgba(32, 33, 28, 0.028) 1px, transparent 1px);"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(32, 33, 28, 0.035)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 33,
+          "context": "    linear-gradient(rgba(32, 33, 28, 0.035) 1px, transparent 1px),"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(32, 33, 28, 0.22)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 1606,
+          "context": ".edge { stroke: rgba(32, 33, 28, 0.22); stroke-width: 1.2; }"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(36, 124, 122, 0.15)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 1626,
+          "context": ".kind-badge.kind-character { background: rgba(36, 124, 122, 0.15); }"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(37, 99, 235, 0.16)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/react_shell/src/graph/GraphCanvas.tsx",
+          "line": 74,
+          "context": "        ctx.fillStyle = 'rgba(37, 99, 235, 0.16)';"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(42, 39, 35, 0.96)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 143,
+          "context": "  background: rgba(42, 39, 35, 0.96);"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(57, 113, 23, 0.18)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 1780,
+          "context": "  background: rgba(57, 113, 23, 0.18);"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(57, 45, 22, 0.12)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 9,
+          "context": "  --shadow: 0 18px 45px rgba(57, 45, 22, 0.12);"
+        }
+      ],
+      "count": 1
+    },
+    {
+      "value": "rgba(79, 143, 79, 0.15)",
+      "files": [
+        {
+          "path": "textifai/web_viewer/static/styles.css",
+          "line": 1627,
+          "context": ".kind-badge.kind-place { background: rgba(79, 143, 79, 0.15); }"
+        }
+      ],
+      "count": 1
+    }
+  ],
+  "tailwindUtilities": [
+    {
+      "class": "border-neutral-200",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/react_shell/src/common/ui.tsx",
+        "textifai/web_viewer/react_shell/src/graph/GraphCanvas.tsx",
+        "textifai/web_viewer/react_shell/src/graph/GraphInspector.tsx",
+        "textifai/web_viewer/react_shell/src/graph/GraphNodeEditDraftModal.tsx",
+        "textifai/web_viewer/react_shell/src/graph/GraphToolbar.tsx",
+        "textifai/web_viewer/react_shell/src/modules/ai/AIStudioView.tsx",
+        "textifai/web_viewer/react_shell/src/modules/canon/CanonVaerlView.tsx",
+        "textifai/web_viewer/react_shell/src/modules/canon/EntityFicheView.tsx",
+        "textifai/web_viewer/react_shell/src/modules/canon/StoryAliasView.tsx",
+        "textifai/web_viewer/react_shell/src/modules/ingestion/IngestionView.tsx",
+        "textifai/web_viewer/react_shell/src/modules/project/ProjectHubView.tsx",
+        "textifai/web_viewer/react_shell/src/shell/AppShell.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 127
+    },
+    {
+      "class": "text-sm",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/react_shell/src/common/ui.tsx",
+        "textifai/web_viewer/react_shell/src/graph/GraphInspector.tsx",
+        "textifai/web_viewer/react_shell/src/graph/GraphNodeEditDraftModal.tsx",
+        "textifai/web_viewer/react_shell/src/graph/GraphToolbar.tsx",
+        "textifai/web_viewer/react_shell/src/modules/ai/AIStudioView.tsx",
+        "textifai/web_viewer/react_shell/src/modules/canon/CanonVaerlView.tsx",
+        "textifai/web_viewer/react_shell/src/modules/canon/EntityFicheView.tsx",
+        "textifai/web_viewer/react_shell/src/modules/canon/StoryAliasView.tsx",
+        "textifai/web_viewer/react_shell/src/modules/ingestion/IngestionView.tsx",
+        "textifai/web_viewer/react_shell/src/modules/project/ProjectHubView.tsx",
+        "textifai/web_viewer/react_shell/src/shell/AppShell.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 107
+    },
+    {
+      "class": "border-radius",
+      "files": [
+        "textifai/web_viewer/static/react-shell/app.css",
+        "textifai/web_viewer/static/styles.css"
+      ],
+      "count": 89
+    },
+    {
+      "class": "text-xs",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/react_shell/src/common/ui.tsx",
+        "textifai/web_viewer/react_shell/src/graph/GraphInspector.tsx",
+        "textifai/web_viewer/react_shell/src/modules/canon/EntityFicheView.tsx",
+        "textifai/web_viewer/react_shell/src/modules/ingestion/IngestionView.tsx",
+        "textifai/web_viewer/react_shell/src/shell/AppShell.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 82
+    },
+    {
+      "class": "bg-white",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/react_shell/src/common/ui.tsx",
+        "textifai/web_viewer/react_shell/src/graph/GraphCanvas.tsx",
+        "textifai/web_viewer/react_shell/src/graph/GraphInspector.tsx",
+        "textifai/web_viewer/react_shell/src/graph/GraphNodeEditDraftModal.tsx",
+        "textifai/web_viewer/react_shell/src/graph/GraphToolbar.tsx",
+        "textifai/web_viewer/react_shell/src/modules/ai/AIStudioView.tsx",
+        "textifai/web_viewer/react_shell/src/modules/canon/CanonVaerlView.tsx",
+        "textifai/web_viewer/react_shell/src/modules/canon/EntityFicheView.tsx",
+        "textifai/web_viewer/react_shell/src/modules/ingestion/IngestionView.tsx",
+        "textifai/web_viewer/react_shell/src/shell/AppShell.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 76
+    },
+    {
+      "class": "border-b",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/react_shell/src/common/ui.tsx",
+        "textifai/web_viewer/react_shell/src/graph/GraphNodeEditDraftModal.tsx",
+        "textifai/web_viewer/react_shell/src/shell/AppShell.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 57
+    },
+    {
+      "class": "text-neutral-500",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/react_shell/src/common/ui.tsx",
+        "textifai/web_viewer/react_shell/src/graph/GraphInspector.tsx",
+        "textifai/web_viewer/react_shell/src/graph/GraphNodeEditDraftModal.tsx",
+        "textifai/web_viewer/react_shell/src/modules/ai/AIStudioView.tsx",
+        "textifai/web_viewer/react_shell/src/modules/canon/CanonVaerlView.tsx",
+        "textifai/web_viewer/react_shell/src/modules/canon/EntityFicheView.tsx",
+        "textifai/web_viewer/react_shell/src/modules/canon/StoryAliasView.tsx",
+        "textifai/web_viewer/react_shell/src/modules/project/ProjectHubView.tsx",
+        "textifai/web_viewer/react_shell/src/shell/AppShell.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 57
+    },
+    {
+      "class": "bg-neutral-50",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/react_shell/src/common/ui.tsx",
+        "textifai/web_viewer/react_shell/src/graph/GraphInspector.tsx",
+        "textifai/web_viewer/react_shell/src/graph/GraphNodeEditDraftModal.tsx",
+        "textifai/web_viewer/react_shell/src/graph/GraphToolbar.tsx",
+        "textifai/web_viewer/react_shell/src/modules/ai/AIStudioView.tsx",
+        "textifai/web_viewer/react_shell/src/modules/canon/EntityFicheView.tsx",
+        "textifai/web_viewer/react_shell/src/modules/canon/StoryAliasView.tsx",
+        "textifai/web_viewer/react_shell/src/modules/ingestion/IngestionView.tsx",
+        "textifai/web_viewer/react_shell/src/modules/project/ProjectHubView.tsx",
+        "textifai/web_viewer/react_shell/src/shell/AppShell.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 52
+    },
+    {
+      "class": "border-bottom",
+      "files": [
+        "textifai/web_viewer/react_shell/src/styles.css",
+        "textifai/web_viewer/static/react-shell/app.css",
+        "textifai/web_viewer/static/styles.css"
+      ],
+      "count": 43
+    },
+    {
+      "class": "text-opacity",
+      "files": [
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 42
+    },
+    {
+      "class": "border-r",
+      "files": [
+        "textifai/web_viewer/react_shell/src/shell/AppShell.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 39
+    },
+    {
+      "class": "border-color",
+      "files": [
+        "landing/index.html",
+        "textifai/web_viewer/static/react-shell/app.css",
+        "textifai/web_viewer/static/styles.css"
+      ],
+      "count": 35
+    },
+    {
+      "class": "bg-opacity",
+      "files": [
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 34
+    },
+    {
+      "class": "bg-neutral-100",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/react_shell/src/common/ui.tsx",
+        "textifai/web_viewer/react_shell/src/graph/GraphInspector.tsx",
+        "textifai/web_viewer/react_shell/src/graph/GraphNodeEditDraftModal.tsx",
+        "textifai/web_viewer/react_shell/src/modules/canon/EntityFicheView.tsx",
+        "textifai/web_viewer/react_shell/src/shell/AppShell.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 25
+    },
+    {
+      "class": "border-box",
+      "files": [
+        "landing/index.html",
+        "textifai/web_viewer/static/react-shell/app.css",
+        "textifai/web_viewer/static/styles.css"
+      ],
+      "count": 24
+    },
+    {
+      "class": "text-neutral-600",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/react_shell/src/common/ui.tsx",
+        "textifai/web_viewer/react_shell/src/graph/GraphInspector.tsx",
+        "textifai/web_viewer/react_shell/src/modules/ingestion/IngestionView.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 22
+    },
+    {
+      "class": "text-neutral-900",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/react_shell/src/graph/GraphInspector.tsx",
+        "textifai/web_viewer/react_shell/src/modules/canon/EntityFicheView.tsx",
+        "textifai/web_viewer/react_shell/src/shell/AppShell.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 22
+    },
+    {
+      "class": "border-opacity",
+      "files": [
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 20
+    },
+    {
+      "class": "text-left",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/react_shell/src/shell/AppShell.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 19
+    },
+    {
+      "class": "text-decoration",
+      "files": [
+        "landing/index.html",
+        "textifai/web_viewer/react_shell/src/styles.css",
+        "textifai/web_viewer/static/react-shell/app.css",
+        "textifai/web_viewer/static/styles.css"
+      ],
+      "count": 18
+    },
+    {
+      "class": "text-neutral-700",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/react_shell/src/graph/GraphInspector.tsx",
+        "textifai/web_viewer/react_shell/src/graph/GraphToolbar.tsx",
+        "textifai/web_viewer/react_shell/src/shell/AppShell.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 18
+    },
+    {
+      "class": "text-align",
+      "files": [
+        "landing/index.html",
+        "textifai/web_viewer/static/react-shell/app.css",
+        "textifai/web_viewer/static/styles.css",
+        "typeset/epub_style.css"
+      ],
+      "count": 16
+    },
+    {
+      "class": "text-neutral-800",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/react_shell/src/common/ui.tsx",
+        "textifai/web_viewer/react_shell/src/graph/GraphInspector.tsx",
+        "textifai/web_viewer/react_shell/src/modules/canon/EntityFicheView.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 14
+    },
+    {
+      "class": "border-bottom-left-radius",
+      "files": [
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 13
+    },
+    {
+      "class": "border-t",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 13
+    },
+    {
+      "class": "text-neutral-400",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/react_shell/src/graph/GraphInspector.tsx",
+        "textifai/web_viewer/react_shell/src/modules/canon/EntityFicheView.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 13
+    },
+    {
+      "class": "border-bottom-right-radius",
+      "files": [
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 12
+    },
+    {
+      "class": "text-transform",
+      "files": [
+        "landing/index.html",
+        "textifai/web_viewer/static/react-shell/app.css",
+        "textifai/web_viewer/static/styles.css"
+      ],
+      "count": 12
+    },
+    {
+      "class": "bg-neutral-900",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/react_shell/src/common/ui.tsx",
+        "textifai/web_viewer/react_shell/src/graph/GraphToolbar.tsx",
+        "textifai/web_viewer/react_shell/src/shell/AppShell.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 11
+    },
+    {
+      "class": "shadow-sm",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/react_shell/src/common/ui.tsx",
+        "textifai/web_viewer/react_shell/src/graph/GraphInspector.tsx",
+        "textifai/web_viewer/react_shell/src/modules/ai/AIStudioView.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 11
+    },
+    {
+      "class": "text-white",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/react_shell/src/common/ui.tsx",
+        "textifai/web_viewer/react_shell/src/graph/GraphToolbar.tsx",
+        "textifai/web_viewer/react_shell/src/shell/AppShell.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 11
+    },
+    {
+      "class": "shadow-color",
+      "files": [
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 10
+    },
+    {
+      "class": "border-right",
+      "files": [
+        "textifai/web_viewer/static/react-shell/app.css",
+        "textifai/web_viewer/static/styles.css"
+      ],
+      "count": 9
+    },
+    {
+      "class": "bg-amber-50",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/react_shell/src/modules/canon/EntityFicheView.tsx",
+        "textifai/web_viewer/react_shell/src/modules/project/ProjectHubView.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 8
+    },
+    {
+      "class": "ring-offset-shadow",
+      "files": [
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 8
+    },
+    {
+      "class": "ring-shadow",
+      "files": [
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 8
+    },
+    {
+      "class": "text-2xl",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/react_shell/src/common/ui.tsx",
+        "textifai/web_viewer/react_shell/src/graph/GraphInspector.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 8
+    },
+    {
+      "class": "text-amber-800",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/react_shell/src/graph/GraphInspector.tsx",
+        "textifai/web_viewer/react_shell/src/modules/canon/EntityFicheView.tsx",
+        "textifai/web_viewer/react_shell/src/modules/project/ProjectHubView.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 8
+    },
+    {
+      "class": "border-amber-200",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/react_shell/src/modules/canon/EntityFicheView.tsx",
+        "textifai/web_viewer/react_shell/src/modules/project/ProjectHubView.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 7
+    },
+    {
+      "class": "border-neutral-300",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/react_shell/src/graph/GraphToolbar.tsx",
+        "textifai/web_viewer/react_shell/src/modules/ai/AIStudioView.tsx",
+        "textifai/web_viewer/react_shell/src/modules/canon/EntityFicheView.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 7
+    },
+    {
+      "class": "border-top",
+      "files": [
+        "landing/index.html",
+        "textifai/web_viewer/static/styles.css"
+      ],
+      "count": 7
+    },
+    {
+      "class": "shadow-2xl",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/react_shell/src/graph/GraphNodeEditDraftModal.tsx",
+        "textifai/web_viewer/react_shell/src/shell/AppShell.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 7
+    },
+    {
+      "class": "text-overflow",
+      "files": [
+        "textifai/web_viewer/static/react-shell/app.css",
+        "textifai/web_viewer/static/styles.css"
+      ],
+      "count": 7
+    },
+    {
+      "class": "text-xl",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/react_shell/src/shell/AppShell.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 7
+    },
+    {
+      "class": "bg-black/30",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/react_shell/src/graph/GraphNodeEditDraftModal.tsx",
+        "textifai/web_viewer/react_shell/src/shell/AppShell.tsx"
+      ],
+      "count": 6
+    },
+    {
+      "class": "border-spacing",
+      "files": [
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 6
+    },
+    {
+      "class": "shadow-colored",
+      "files": [
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 6
+    },
+    {
+      "class": "bg-emerald-50",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/react_shell/src/modules/canon/EntityFicheView.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 5
+    },
+    {
+      "class": "bg-neutral-200",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/react_shell/src/modules/ingestion/IngestionView.tsx",
+        "textifai/web_viewer/react_shell/src/shell/AppShell.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 5
+    },
+    {
+      "class": "border-neutral-900",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 5
+    },
+    {
+      "class": "text-base",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/react_shell/src/modules/canon/EntityFicheView.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 5
+    },
+    {
+      "class": "text-decoration-color",
+      "files": [
+        "textifai/web_viewer/react_shell/src/styles.css",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 5
+    },
+    {
+      "class": "text-red-700",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/react_shell/src/modules/canon/EntityFicheView.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 5
+    },
+    {
+      "class": "bg-orange-50",
+      "files": [
+        "textifai/web_viewer/react_shell/src/graph/GraphInspector.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 4
+    },
+    {
+      "class": "bg-red-50",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/react_shell/src/modules/canon/EntityFicheView.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 4
+    },
+    {
+      "class": "border-bottom-color",
+      "files": [
+        "textifai/web_viewer/static/styles.css"
+      ],
+      "count": 4
+    },
+    {
+      "class": "border-emerald-200",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/react_shell/src/modules/canon/EntityFicheView.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 4
+    },
+    {
+      "class": "border-left",
+      "files": [
+        "landing/index.html",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 4
+    },
+    {
+      "class": "border-orange-300",
+      "files": [
+        "textifai/web_viewer/react_shell/src/graph/GraphInspector.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 4
+    },
+    {
+      "class": "border-red-200",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/react_shell/src/modules/canon/EntityFicheView.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 4
+    },
+    {
+      "class": "border-style",
+      "files": [
+        "textifai/web_viewer/static/react-shell/app.css",
+        "textifai/web_viewer/static/styles.css"
+      ],
+      "count": 4
+    },
+    {
+      "class": "border-top-right-radius",
+      "files": [
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 4
+    },
+    {
+      "class": "border-width",
+      "files": [
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 4
+    },
+    {
+      "class": "ring-inset",
+      "files": [
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 4
+    },
+    {
+      "class": "ring-offset-width",
+      "files": [
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 4
+    },
+    {
+      "class": "text-amber-700",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/react_shell/src/modules/canon/EntityFicheView.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 4
+    },
+    {
+      "class": "text-emerald-800",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/react_shell/src/graph/GraphInspector.tsx",
+        "textifai/web_viewer/react_shell/src/modules/canon/EntityFicheView.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 4
+    },
+    {
+      "class": "text-lg",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/react_shell/src/modules/project/ProjectHubView.tsx",
+        "textifai/web_viewer/react_shell/src/shell/AppShell.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 4
+    },
+    {
+      "class": "text-orange-700",
+      "files": [
+        "textifai/web_viewer/react_shell/src/graph/GraphInspector.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 4
+    },
+    {
+      "class": "border-bottom-width",
+      "files": [
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 3
+    },
+    {
+      "class": "border-collapse",
+      "files": [
+        "textifai/web_viewer/static/react-shell/app.css",
+        "textifai/web_viewer/static/styles.css"
+      ],
+      "count": 3
+    },
+    {
+      "class": "border-top-width",
+      "files": [
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 3
+    },
+    {
+      "class": "ring-color",
+      "files": [
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 3
+    },
+    {
+      "class": "ring-offset-color",
+      "files": [
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 3
+    },
+    {
+      "class": "shadow-xl",
+      "files": [
+        "textifai/web_viewer/react_shell/src/shell/AppShell.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 3
+    },
+    {
+      "class": "text-3xl",
+      "files": [
+        "textifai/web_viewer/react_shell/src/common/ui.tsx",
+        "textifai/web_viewer/react_shell/src/graph/GraphInspector.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 3
+    },
+    {
+      "class": "text-indent",
+      "files": [
+        "textifai/web_viewer/static/react-shell/app.css",
+        "typeset/epub_style.css"
+      ],
+      "count": 3
+    },
+    {
+      "class": "bg-amber-100",
+      "files": [
+        "textifai/web_viewer/react_shell/src/graph/GraphInspector.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 2
+    },
+    {
+      "class": "bg-art",
+      "files": [
+        "landing/index.html"
+      ],
+      "count": 2
+    },
+    {
+      "class": "bg-emerald-100",
+      "files": [
+        "textifai/web_viewer/react_shell/src/graph/GraphInspector.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 2
+    },
+    {
+      "class": "bg-emerald-500",
+      "files": [
+        "textifai/web_viewer/react_shell/src/modules/ingestion/IngestionView.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 2
+    },
+    {
+      "class": "bg-neutral-800",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 2
+    },
+    {
+      "class": "bg-rose-50",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 2
+    },
+    {
+      "class": "border-0",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 2
+    },
+    {
+      "class": "border-amber-300",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 2
+    },
+    {
+      "class": "border-neutral-700",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 2
+    },
+    {
+      "class": "border-rose-200",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 2
+    },
+    {
+      "class": "border-spacing-x",
+      "files": [
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 2
+    },
+    {
+      "class": "border-spacing-y",
+      "files": [
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 2
+    },
+    {
+      "class": "border-top-left-radius",
+      "files": [
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 2
+    },
+    {
+      "class": "from-position",
+      "files": [
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 2
+    },
+    {
+      "class": "shadow-none",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 2
+    },
+    {
+      "class": "text-4xl",
+      "files": [
+        "textifai/web_viewer/react_shell/src/graph/GraphInspector.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 2
+    },
+    {
+      "class": "text-[11px]",
+      "files": [
+        "textifai/web_viewer/react_shell/src/graph/GraphInspector.tsx"
+      ],
+      "count": 2
+    },
+    {
+      "class": "text-amber-500",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 2
+    },
+    {
+      "class": "text-emerald-500",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 2
+    },
+    {
+      "class": "text-emerald-700",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 2
+    },
+    {
+      "class": "text-neutral-100",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 2
+    },
+    {
+      "class": "text-neutral-200",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 2
+    },
+    {
+      "class": "text-neutral-300",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 2
+    },
+    {
+      "class": "text-rose-500",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 2
+    },
+    {
+      "class": "text-rose-700",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 2
+    },
+    {
+      "class": "text-underline-offset",
+      "files": [
+        "textifai/web_viewer/react_shell/src/styles.css",
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 2
+    },
+    {
+      "class": "text-xxs",
+      "files": [
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 2
+    },
+    {
+      "class": "to-position",
+      "files": [
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 2
+    },
+    {
+      "class": "via-position",
+      "files": [
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 2
+    },
+    {
+      "class": "bg-black",
+      "files": [
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 1
+    },
+    {
+      "class": "border-right-color",
+      "files": [
+        "textifai/web_viewer/static/styles.css"
+      ],
+      "count": 1
+    },
+    {
+      "class": "border-right-width",
+      "files": [
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 1
+    },
+    {
+      "class": "text-[15px]",
+      "files": [
+        "textifai/web_viewer/react_shell/src/App.tsx"
+      ],
+      "count": 1
+    },
+    {
+      "class": "text-decoration-line",
+      "files": [
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 1
+    },
+    {
+      "class": "text-size-adjust",
+      "files": [
+        "textifai/web_viewer/static/react-shell/app.css"
+      ],
+      "count": 1
+    }
+  ],
+  "inlineStyles": [
+    {
+      "path": "textifai/web_viewer/react_shell/src/modules/ingestion/IngestionView.tsx",
+      "line": 6,
+      "snippet": "  return <section><TopBar title={t('nav.ingest')} subtitle={t('ingestion.subtitle')} actions={<Button variant=\"secondary\" disabled>{t('ingestion.disabled')}</Button>} /><div className=\"p-5 grid grid-cols-12 gap-5\"><div className=\"col-span-1"
+    }
+  ]
+}
