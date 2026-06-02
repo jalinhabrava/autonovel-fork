@@ -20,6 +20,7 @@ GRAPH_REVIEW_REPORT = FIX / 'ui_i18n_graph_review_after_sp119.json'
 KEY_MODULES = [
     SRC / 'App.tsx',
     SRC / 'shell/AppShell.tsx',
+    SRC / 'modules/project/ProjectHubView.tsx',
     SRC / 'modules/review/ReviewQueueView.tsx',
     SRC / 'modules/graph/GraphView.tsx',
     SRC / 'graph/GraphInspector.tsx',
@@ -97,6 +98,19 @@ class TestTextifAII18nUiStrings(unittest.TestCase):
             'Local-first ahora; SaaS-ready después. VaERL manda, Markdown se edita.',
             'Abrir proyecto TextifAI completo vía manifest.json; .txtfai queda como dirección futura.',
             'Resolver avisos mediante decisiones explícitas del autor.',
+        ]:
+            self.assertNotIn(migrated, text)
+
+    def test_project_hub_view_uses_i18n(self):
+        text = (SRC / 'modules/project/ProjectHubView.tsx').read_text(encoding='utf-8')
+        for key in [
+            'project.manifest_name',
+            'project.contract_note',
+        ]:
+            self.assertIn(f"t('{key}')", text)
+        for migrated in [
+            'manifest.json',
+            'Un archivo abre el bundle completo.',
         ]:
             self.assertNotIn(migrated, text)
 

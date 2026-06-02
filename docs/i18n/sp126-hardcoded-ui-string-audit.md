@@ -94,3 +94,28 @@ Deferred hotspots for later clean safepoints:
 - `AIStudioView.tsx` and `IngestionView.tsx` — revisit after style diffs are resolved; current visible copy already routes through i18n keys except machine/runtime values.
 
 Assessment: `arc_i18n_dirty_worktree_triage_ready`.
+
+## SP-128 ProjectHubView Micro-Slice
+
+SP-128 migrated one safe ProjectHubView i18n micro-slice without expanding into broader UI-string cleanup.
+
+Migrated keys:
+
+- `project.manifest_name`
+- `project.contract_note`
+
+Migrated strings:
+
+- `manifest.json` now renders through `project.manifest_name` in the contract metric.
+- `Un archivo abre el bundle completo.` now renders through `project.contract_note` in the contract metric.
+
+Remaining `ProjectHubView.tsx` hardcoded strings:
+
+- `.txtfai` remains inline as an intentional machine/package-format token, matching the existing risky-strings guidance in this audit.
+- No remaining Spanish or English prose literals were found in `ProjectHubView.tsx` after this micro-slice.
+
+Deferred scope:
+
+- No additional ProjectHubView strings were migrated in SP-128. Broader cleanup remains deferred to a later dedicated i18n slice to avoid mixing unrelated UI-copy changes with this closeout.
+
+Assessment: `arc_i18n_project_hub_slice_ready`.
