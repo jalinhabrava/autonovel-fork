@@ -8,12 +8,51 @@ from io import BytesIO
 from pathlib import Path
 
 from textifai.project_store import open_project
+from textifai.obsidian.wikilinks import (
+    canonicalize_sera_wikilink,
+    render_known_sera_wikilink,
+    restore_known_display_links,
+    restore_known_sera_display_link,
+    render_known_wikilinks,
+)
 from textifai.project_store.store import _hash_text
 from textifai.web_viewer.server import _make_handler
 EXPECTED = Path(__file__).resolve().parent / 'fixtures/textifai/entity_fiche_writeback/expected'
 
 
 class TextifaiEntityFicheWritebackTests(unittest.TestCase):
+    def test_minimal_sera_wikilink_helpers(self):
+        self.assertEqual(canonicalize_sera_wikilink(r'\[\[Sera]]'), '[[Sera]]')
+        self.assertEqual(canonicalize_sera_wikilink(r'\[\[Sera\]\]'), '[[Sera]]')
+        self.assertEqual(render_known_sera_wikilink('Known [[Sera]].'), 'Known [Sera](#graph_select=sera).')
+        self.assertEqual(restore_known_sera_display_link('Known [Sera](#graph_select=sera).'), 'Known [[Sera]].')
+        self.assertEqual(restore_known_sera_display_link('Normal [link](https://example.com)'), 'Normal [link](https://example.com)')
+
+    def test_generic_known_entity_wikilink_helpers(self):
+        resolver = {
+            'nodes': [
+                {'label': 'Sera', 'canonical_id': 'sera'},
+                {'label': 'Magia', 'canonical_id': 'magia'},
+                {'label': 'Nael', 'canonical_id': 'nael'},
+                {'label': 'Abuelo de Ren', 'canonical_id': 'abuelo de ren'},
+                {'label': 'cráter', 'canonical_id': 'cráter'},
+                {'label': 'Claro en el bosque', 'canonical_id': 'claro en el bosque'},
+            ]
+        }
+        text = '[[Sera]] [[Magia]] [[Nael]] [[Abuelo de Ren]] [[cráter]] [[Claro en el bosque]] [[Desconocido]]'
+        rendered = render_known_wikilinks(text, resolver)
+        self.assertIn('[Sera](#graph_select=sera)', rendered)
+        self.assertIn('[Magia](#graph_select=magia)', rendered)
+        self.assertIn('[Nael](#graph_select=nael)', rendered)
+        self.assertIn('[Abuelo de Ren](#graph_select=abuelo%20de%20ren)', rendered)
+        self.assertIn('[cráter](#graph_select=cr%C3%A1ter)', rendered)
+        self.assertIn('[Claro en el bosque](#graph_select=claro%20en%20el%20bosque)', rendered)
+        self.assertIn('[[Desconocido]]', rendered)
+        restored = restore_known_display_links(rendered, resolver)
+        self.assertIn('[[Magia]]', restored)
+        self.assertIn('[[Abuelo de Ren]]', restored)
+        self.assertIn('[[cráter]]', restored)
+
     def test_save_method_and_reports_exist(self):
         self.assertTrue(hasattr(open_project(Path('/tmp/example.textifai')), 'save_entity_fiche_markdown'))
         names = [
@@ -81,8 +120,21 @@ class TextifaiEntityFicheWritebackTests(unittest.TestCase):
             )
 
             self.assertTrue(result['ok'])
+
+    def test_save_canonicalizes_minimal_escaped_sera_wikilink(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = self._make_project(Path(tmp))
+            store = open_project(project)
+            store.ensure_sqlite()
+            store.bootstrap_from_project_files()
+            self._seed_entity_row(store, project)
+            path = project / 'markdown/Entities/Sera.md'
+            before = path.read_text(encoding='utf-8')
+            result = store.save_entity_fiche_markdown('sera', r'Known wikilink minimal: \[\[Sera]].', _hash_text(before), canonical_label='Sera')
+            self.assertTrue(result['ok'])
             after = path.read_text(encoding='utf-8')
-            self.assertIn('Cambio local.', after)
+            self.assertIn('[[Sera]]', after)
+            self.assertNotIn(r'\[\[Sera]]', after)
             self.assertEqual(result['semantic_state'], 'needs_reanalysis')
             with sqlite3.connect(store.sqlite_path) as conn:
                 row = conn.execute('select entity_id, canonical_name, ficha_markdown_path from entities where entity_id = ?', ('sera',)).fetchone()
@@ -175,6 +227,66 @@ class TextifaiEntityFicheWritebackTests(unittest.TestCase):
             handler._handle_post()
             self.assertEqual(captured[0][0], 409)
             self.assertEqual(captured[0][1]['error'], 'hash_mismatch')
+
+    def test_entity_save_changes_hash_and_persists_raw_wikilink(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = self._make_project(Path(tmp))
+            store = open_project(project)
+            store.ensure_sqlite()
+            store.bootstrap_from_project_files()
+            self._seed_entity_row(store, project)
+
+            path = project / 'markdown/Entities/Sera.md'
+            before = path.read_text(encoding='utf-8')
+            expected_hash = _hash_text(before)
+            incoming = 'Ren ama a [[Sera]].\n\n* [[Sera]]\n'
+
+            result = store.save_entity_fiche_markdown('sera', incoming, expected_hash, canonical_label='Sera')
+
+            self.assertTrue(result['ok'])
+            self.assertNotEqual(result['old_hash'], result['new_hash'])
+            after = path.read_text(encoding='utf-8')
+            self.assertIn('[[Sera]]', after)
+            self.assertNotEqual(_hash_text(after), expected_hash)
+            self.assertEqual(result['new_hash'], _hash_text(after))
+
+    def test_route_entity_save_changes_hash_and_readback_contains_wikilink(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = self._make_project(Path(tmp))
+            store = open_project(project)
+            store.ensure_sqlite()
+            store.bootstrap_from_project_files()
+            self._seed_entity_row(store, project)
+            captured: list[tuple[int, dict]] = []
+
+            class Catalog:
+                def get_project(self, _project_id: str):
+                    return type('Project', (), {'kind': 'textifai_project', 'root': project})()
+
+            handler_cls = _make_handler(Catalog(), type('Registry', (), {})())
+            handler = handler_cls.__new__(handler_cls)
+            handler.path = '/api/projects/fixture/entities/sera/save'
+            handler.headers = {'Content-Length': '0'}
+            handler.rfile = BytesIO()
+            path = project / 'markdown/Entities/Sera.md'
+            before = path.read_text(encoding='utf-8')
+            incoming = 'Ren ama a [[Sera]].\n\n* [[Sera]]\n'
+            handler._json_body = lambda: {
+                'markdown': incoming,
+                'expected_hash': _hash_text(before),
+                'canonical_label': 'Sera',
+                'note_path': 'markdown/Entities/Sera.md',
+            }
+            handler._json = lambda payload, status=200: captured.append((status, payload))
+
+            handler._handle_post()
+
+            self.assertEqual(captured[0][0], 200)
+            self.assertTrue(captured[0][1]['ok'])
+            self.assertNotEqual(captured[0][1]['old_hash'], captured[0][1]['new_hash'])
+            after = path.read_text(encoding='utf-8')
+            self.assertIn('[[Sera]]', after)
+            self.assertEqual(captured[0][1]['new_hash'], _hash_text(after))
 
     def _make_project(self, parent: Path) -> Path:
         project = parent / 'fixture.textifai'

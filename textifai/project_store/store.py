@@ -10,6 +10,8 @@ from io import StringIO
 from pathlib import Path
 from typing import Any
 
+from textifai.obsidian.wikilinks import canonicalize_wikilinks, restore_known_display_links
+
 SCHEMA_PATH = Path(__file__).with_name('schema.sql')
 
 
@@ -438,6 +440,8 @@ class ProjectStore:
                     'expected_hash': expected_hash,
                     'message': 'La ficha cambió en disco. Recarga antes de guardar.',
                 }
+
+            new_markdown = restore_known_display_links(canonicalize_wikilinks(new_markdown))
 
             if new_markdown.startswith('---\n'):
                 next_markdown = new_markdown

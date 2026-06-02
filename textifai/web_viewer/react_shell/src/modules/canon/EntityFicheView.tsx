@@ -27,6 +27,7 @@ type EditorBoundaryState = {
 declare global {
   interface Window {
     __sp123bDebug?: Record<string, unknown>;
+    __TEXTIFAI_FICHE_DEBUG__?: Record<string, unknown>;
   }
 }
 
@@ -92,12 +93,19 @@ function extractHrefFromEventTarget(target: EventTarget | null, path: EventTarge
 
 export function EntityFicheView({ editorKey, bodyMarkdown, onChangeBody, onInternalLinkClick, localDirty, saveState = 'idle', saveMessage = '', canSave = false, onSave, saveDisabledReason = '' }: EntityFicheViewProps) {
   const editorRef = useRef<MDXEditorMethods | null>(null);
+  const debugEnabled = !import.meta.env.PROD;
 
   useEffect(() => {
     const markdown = bodyMarkdown || t('graph.fiche_empty_placeholder');
     const current = editorRef.current?.getMarkdown?.() || '';
     if (current !== markdown) editorRef.current?.setMarkdown(markdown);
-  }, [bodyMarkdown]);
+    if (debugEnabled) {
+      window.__TEXTIFAI_FICHE_DEBUG__ = {
+        ...(window.__TEXTIFAI_FICHE_DEBUG__ || {}),
+        anchors_rendered_in_editor: Boolean(bodyMarkdown),
+      };
+    }
+  }, [bodyMarkdown, debugEnabled]);
 
   useEffect(() => {
     if (!onInternalLinkClick) return undefined;
@@ -113,6 +121,12 @@ export function EntityFicheView({ editorKey, bodyMarkdown, onChangeBody, onInter
         interceptedHref: href,
         interceptedEventType: event.type,
       };
+      if (debugEnabled) {
+        window.__TEXTIFAI_FICHE_DEBUG__ = {
+          ...(window.__TEXTIFAI_FICHE_DEBUG__ || {}),
+          link_click_events: [...((window.__TEXTIFAI_FICHE_DEBUG__?.link_click_events as string[]) || []), href],
+        };
+      }
       onInternalLinkClick(href);
     };
     document.addEventListener('click', intercept, true);
@@ -121,7 +135,7 @@ export function EntityFicheView({ editorKey, bodyMarkdown, onChangeBody, onInter
       document.removeEventListener('click', intercept, true);
       document.removeEventListener('mousedown', intercept, true);
     };
-  }, [onInternalLinkClick]);
+  }, [onInternalLinkClick, debugEnabled]);
 
   return (
     <section className="mt-5 rounded-2xl border border-neutral-200 bg-white p-5" data-testid="entity-fiche-panel-body">

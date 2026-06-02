@@ -274,6 +274,7 @@ function normalizeEntityToken(value: unknown): string {
 declare global {
   interface Window {
     __sp123bDebug?: Record<string, unknown>;
+    __TEXTIFAI_FICHE_DEBUG__?: Record<string, unknown>;
   }
 }
 
@@ -884,6 +885,9 @@ export function App() {
 
   function selectGraphEntityBySelectToken(selectToken: string) {
     const normalizedToken = normalizeEntityToken(selectToken);
+    if (!import.meta.env.PROD) {
+      window.__TEXTIFAI_FICHE_DEBUG__ = { ...(window.__TEXTIFAI_FICHE_DEBUG__ || {}), last_graph_select_token: selectToken };
+    }
     window.__sp123bDebug = {
       ...(window.__sp123bDebug || {}),
       selectToken,
@@ -913,6 +917,14 @@ export function App() {
     return true;
   }
 
+  function clearGraphSelectFromUrl() {
+    const current = new URL(window.location.href);
+    if (!current.searchParams.has('graph_select') && !current.hash.includes('graph_select=')) return;
+    current.searchParams.delete('graph_select');
+    if (current.hash.includes('graph_select=')) current.hash = current.hash.replace(/([?#&])graph_select=[^&#]*/g, '').replace(/[#&?]$/, '');
+    window.history.replaceState(window.history.state, '', `${current.pathname}${current.search}${current.hash}`);
+  }
+
   function handleGraphInternalEntityLinkClick(href: string) {
     const url = new URL(href, window.location.href);
     const hashSelect = href.trim().startsWith('#') ? url.hash.replace(/^#.*graph_select=/, '') : '';
@@ -927,9 +939,7 @@ export function App() {
     };
     if (!selectToken) return;
     if (selectGraphEntityBySelectToken(selectToken)) {
-      const nextUrl = new URL(window.location.href);
-      nextUrl.searchParams.set('graph_select', selectToken);
-      window.history.replaceState(window.history.state, '', `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`);
+      clearGraphSelectFromUrl();
       window.__sp123bDebug = {
         ...(window.__sp123bDebug || {}),
         callbackResolved: true,

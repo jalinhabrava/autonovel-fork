@@ -32,10 +32,13 @@ class TextifAIEntityFicheSemanticContractTests(unittest.TestCase):
     def test_wikilink_policy_and_future_semantics_documented(self):
         text = CONTRACT_DOC.read_text(encoding='utf-8')
         self.assertIn('Wikilinks', text)
+        self.assertIn('Markdown payload contract', text)
+        self.assertIn('unresolved_wikilinks', text)
         self.assertIn('needs reanalysis', text)
         payload = json.loads((FIX / 'entity_fiche_semantic_contract_after_sp122a.json').read_text(encoding='utf-8'))
         self.assertTrue(payload['editorial_body_preserves_wikilinks_exactly'])
         self.assertEqual(payload['future_semantic_state_on_save'], 'needs_reanalysis')
+        self.assertEqual(payload['markdown_contract']['unresolved_wikilinks'], [])
 
     def test_no_silent_semantic_mutation(self):
         payload = json.loads((FIX / 'entity_fiche_semantic_contract_after_sp122a.json').read_text(encoding='utf-8'))

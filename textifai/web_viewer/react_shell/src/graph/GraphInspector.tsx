@@ -19,6 +19,12 @@ export type GraphInspectorProps = {
   onSaveFiche?: (params: { entityId: string; notePath: string; markdown: string; expectedHash: string; canonicalLabel: string }) => Promise<EntityFicheSaveResponse>;
 };
 
+function restoreKnownDisplayLinks(markdown: string): string {
+  return String(markdown || '')
+    .replace(/\[([^\]]+?)\]\(#graph_select=[^)]+\)/g, '[[$1]]')
+    .replace(/\\\[\\\[([^\n]+?)(?:\\\]\\\]|\]\])/g, '[[$1]]');
+}
+
 function toList(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0) : [];
 }
@@ -86,8 +92,9 @@ export function GraphInspector({ node, entityCard, entityCardVm, reviewCountOver
   const relationships = (entityCard?.relationships || []) as Array<{ target?: string; type?: string; relation_type?: string }>;
   const localNodeCount = vm?.local_graph?.node_count ?? noteDetail?.local_graph?.nodes?.length ?? 0;
   const localEdgeCount = vm?.local_graph?.edge_count ?? noteDetail?.local_graph?.edges?.length ?? 0;
-  const sourceMarkdown = vm?.markdown?.author_markdown || noteContent || noteDetail?.markdown || '';
-  const { body: bodyMarkdown } = stripFrontmatter(sourceMarkdown);
+  const sourceMarkdown = vm?.markdown?.source_markdown || vm?.markdown?.author_markdown || noteContent || noteDetail?.markdown || '';
+  const renderMarkdown = vm?.markdown?.author_markdown || sourceMarkdown;
+  const { body: bodyMarkdown } = stripFrontmatter(renderMarkdown);
   const normalizedBody = useMemo(() => buildFicheMarkdown({ label, summary, sourceBody: bodyMarkdown, aliases, relationships, backlinks, outgoing, notePath, evidenceCount }), [aliases, backlinks, bodyMarkdown, evidenceCount, label, notePath, outgoing, relationships, summary]);
   const editorBody = localBody || normalizedBody;
   const editorKey = `${node?.id || 'none'}:${label}`;
@@ -119,7 +126,7 @@ export function GraphInspector({ node, entityCard, entityCardVm, reviewCountOver
     setSaveState('saving');
     setSaveMessage(t('graph.fiche_saving'));
     try {
-      const result = await onSaveFiche({ entityId, notePath, markdown: editorBody, expectedHash: loadedHash, canonicalLabel: label });
+      const result = await onSaveFiche({ entityId, notePath, markdown: restoreKnownDisplayLinks(editorBody), expectedHash: loadedHash, canonicalLabel: label });
       setLoadedHash(String(result.new_hash || loadedHash));
       setLoadedBody(editorBody);
       setSaveState('saved');

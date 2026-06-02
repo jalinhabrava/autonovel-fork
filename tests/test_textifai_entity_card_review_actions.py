@@ -102,17 +102,24 @@ class EntityCardReviewActionTests(unittest.TestCase):
             (project / 'vaerl').mkdir()
             (project / 'markdown/Characters').mkdir(parents=True)
             (project / 'graph/author_graph.json').write_text(json.dumps({
-                'nodes': [{'id': 'ren', 'label': 'Ren', 'kind': 'character', 'note_path': 'markdown/Characters/Ren.md'}],
+                'nodes': [
+                    {'id': 'ren', 'canonical_id': 'ren', 'label': 'Ren', 'kind': 'character', 'note_path': 'markdown/Characters/Ren.md'},
+                    {'id': 'sera', 'canonical_id': 'sera', 'label': 'Sera', 'kind': 'character', 'note_path': 'markdown/Characters/Sera.md'},
+                ],
                 'edges': [],
             }), encoding='utf-8')
-            (project / 'vaerl/entities.json').write_text(json.dumps({'entities': [{'canonical_label': 'Ren', 'kind': 'character', 'summary': 'Narrador.'}]}), encoding='utf-8')
+            (project / 'vaerl/entities.json').write_text(json.dumps({'entities': [
+                {'canonical_label': 'Ren', 'kind': 'character', 'summary': 'Narrador.'},
+                {'canonical_label': 'Sera', 'kind': 'character'},
+            ]}), encoding='utf-8')
             for rel in ['vaerl/relationships.json', 'vaerl/review_queue.json', 'graph/backlinks.json', 'graph/markdown_graph_index.json']:
                 (project / rel).write_text('{}', encoding='utf-8')
             authored = '---\nkind: character\n---\n\n# Ren\n\n## My Notes\n\nAuthor keeps this exact line with [[Sera]].\n'
             (project / 'markdown/Characters/Ren.md').write_text(authored, encoding='utf-8')
 
             card = build_entity_card(project_root=project, note_path='markdown/Characters/Ren.md')
-            self.assertEqual(card['markdown']['author_markdown'].strip(), '# Ren\n\n## My Notes\n\nAuthor keeps this exact line with [[Sera]].')
+            self.assertEqual(card['markdown']['source_markdown'].strip(), '# Ren\n\n## My Notes\n\nAuthor keeps this exact line with [[Sera]].')
+            self.assertEqual(card['markdown']['author_markdown'].strip(), '# Ren\n\n## My Notes\n\nAuthor keeps this exact line with [Sera](#graph_select=sera).')
 
     def test_hydrates_legacy_plain_body_to_rich_structure(self):
         import tempfile
@@ -148,6 +155,76 @@ class EntityCardReviewActionTests(unittest.TestCase):
             self.assertIn('[Sera](#graph_select=sera)', body)
             self.assertIn('**ch_001:** `chunk_001`', body)
             self.assertNotIn('## Review Notes', body)
+
+    def test_entity_card_minimal_source_has_sera_and_render_has_graph_link(self):
+        import json
+        import tempfile
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            (project / 'graph').mkdir()
+            (project / 'vaerl').mkdir()
+            (project / 'markdown/Characters').mkdir(parents=True)
+            (project / 'graph/author_graph.json').write_text(json.dumps({
+                'nodes': [
+                    {'id': 'ren', 'canonical_id': 'ren', 'label': 'Ren', 'kind': 'character', 'note_path': 'markdown/Characters/Ren.md'},
+                    {'id': 'sera', 'canonical_id': 'sera', 'label': 'Sera', 'kind': 'character', 'note_path': 'markdown/Characters/Sera.md'},
+                ],
+                'edges': [],
+            }), encoding='utf-8')
+            (project / 'vaerl/entities.json').write_text(json.dumps({'entities': [
+                {'entity_id': 'ren', 'canonical_name': 'Ren', 'kind': 'character'},
+                {'entity_id': 'sera', 'canonical_name': 'Sera', 'kind': 'character'},
+            ]}), encoding='utf-8')
+            for rel, payload in {
+                'vaerl/relationships.json': {'relationships': []},
+                'vaerl/review_queue.json': {},
+                'graph/backlinks.json': {'backlinks_by_note': {}},
+                'graph/markdown_graph_index.json': {'notes': []},
+            }.items():
+                (project / rel).write_text(json.dumps(payload), encoding='utf-8')
+            (project / 'markdown/Characters/Ren.md').write_text('---\nentity_id: ren\nkind: character\n---\n\nKnown wikilink minimal: [[Sera]].\n', encoding='utf-8')
+
+            card = build_entity_card(project_root=project, note_path='markdown/Characters/Ren.md')
+            self.assertEqual(card['markdown']['source_markdown'].strip(), 'Known wikilink minimal: [[Sera]].')
+            self.assertIn('[Sera](#graph_select=sera)', card['markdown']['author_markdown'])
+
+    def test_entity_card_preserves_rich_authored_body_with_wikilink(self):
+        import tempfile
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            (project / 'graph').mkdir()
+            (project / 'vaerl').mkdir()
+            (project / 'markdown/Characters').mkdir(parents=True)
+            (project / 'graph/author_graph.json').write_text(json.dumps({
+                'nodes': [
+                    {'id': 'ren', 'canonical_id': 'ren', 'label': 'Ren', 'kind': 'character', 'note_path': 'markdown/Characters/Ren.md'},
+                    {'id': 'sera', 'canonical_id': 'sera', 'label': 'Sera', 'kind': 'character', 'note_path': 'markdown/Characters/Sera.md'},
+                ],
+                'edges': [],
+            }), encoding='utf-8')
+            (project / 'vaerl/entities.json').write_text(json.dumps({'entities': [
+                {'entity_id': 'ren', 'canonical_name': 'Ren', 'kind': 'character'},
+                {'entity_id': 'sera', 'canonical_name': 'Sera', 'kind': 'character'},
+            ]}), encoding='utf-8')
+            for rel, payload in {
+                'vaerl/relationships.json': {'relationships': []},
+                'vaerl/review_queue.json': {},
+                'graph/backlinks.json': {'backlinks_by_note': {}},
+                'graph/markdown_graph_index.json': {'notes': []},
+            }.items():
+                (project / rel).write_text(json.dumps(payload), encoding='utf-8')
+            authored = '---\nkind: character\n---\n\n# Ren\n\n## Summary\n\nNarrador en primera persona.\n\n## Key facts\n\n- **Kind:** character\n\n## Facts\n\n- speaks of [[Sera]]\n\n## Related entities\n\n* [[Sera]]\n\n## Evidence\n\n- none\n'
+            (project / 'markdown/Characters/Ren.md').write_text(authored, encoding='utf-8')
+
+            card = build_entity_card(project_root=project, note_path='markdown/Characters/Ren.md')
+            self.assertIn('* [[Sera]]', card['markdown']['source_markdown'])
+            self.assertIn('[Sera](#graph_select=sera)', card['markdown']['author_markdown'])
+            self.assertEqual(card['markdown']['unresolved_wikilinks'], [])
+            self.assertIn('* [[Sera]]', '\n'.join(section.get('body', '') for section in card['markdown'].get('sections', [])))
 
     def test_entity_card_endpoint_via_project_reader(self):
         # Test the function that the endpoint uses

@@ -62,6 +62,26 @@ Priority meaning:
 - Fall back to a generated editorial scaffold if no body exists.
 - Final fallback is an empty placeholder.
 
+## Markdown payload contract
+Entity-card payloads must expose both source and display/editor markdown:
+
+```json
+{
+  "markdown": {
+    "source_markdown": "<actual persisted authored Markdown>",
+    "author_markdown": "<display/editor Markdown>",
+    "unresolved_wikilinks": []
+  }
+}
+```
+
+Rules:
+- `source_markdown` is the persisted authored body after frontmatter removal.
+- `author_markdown` is the editor/display form used by MDXEditor.
+- `source_markdown` must not be regenerated from the structured composer when authored body exists.
+- If the body is empty, useless, or legacy-generated, the scaffold may be synthesized.
+- `unresolved_wikilinks` records links that cannot yet be resolved to a graph target.
+
 ## Generated default body
 Generated/default fiche body must be editorial-only.
 It may include a title, kind, summary, and note space.

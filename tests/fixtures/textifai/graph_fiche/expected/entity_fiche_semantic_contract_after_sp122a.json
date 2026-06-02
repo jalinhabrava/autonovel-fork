@@ -39,5 +39,10 @@
   "textarea_raw_editor": false,
   "visual_only": true,
   "markdown_pill_removed": true,
-  "wikilink_relationships": true
+  "wikilink_relationships": true,
+  "markdown_contract": {
+    "source_markdown": "actual persisted authored markdown",
+    "author_markdown": "editor/display markdown",
+    "unresolved_wikilinks": []
+  }
 }

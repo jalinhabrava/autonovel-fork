@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from textifai.obsidian.parser import parse_obsidian_frontmatter
+from textifai.obsidian.wikilinks import WikilinkResolver, render_known_wikilinks
 
 
 CANONICAL_KIND_PRIORITY = {
@@ -112,12 +113,18 @@ def build_entity_card(
     backlinks_path = project_root / "graph" / "backlinks.json"
     markdown_index_path = project_root / "graph" / "markdown_graph_index.json"
 
-    graph = load_json(graph_path) if isinstance(load_json(graph_path), dict) else {}
-    entities_data = load_json(entities_path) if isinstance(load_json(entities_path), dict) else {}
-    relationships_data = load_json(relationships_path) if isinstance(load_json(relationships_path), dict) else {}
-    review_data = load_json(review_path) if isinstance(load_json(review_path), dict) else {}
-    backlinks_data = load_json(backlinks_path) if isinstance(load_json(backlinks_path), dict) else {}
-    markdown_index = load_json(markdown_index_path) if isinstance(load_json(markdown_index_path), dict) else {}
+    graph_payload = load_json(graph_path)
+    entities_payload = load_json(entities_path)
+    relationships_payload = load_json(relationships_path)
+    review_payload = load_json(review_path)
+    backlinks_payload = load_json(backlinks_path)
+    markdown_index_payload = load_json(markdown_index_path)
+    graph = graph_payload if isinstance(graph_payload, dict) else {}
+    entities_data = entities_payload if isinstance(entities_payload, dict) else {}
+    relationships_data = relationships_payload if isinstance(relationships_payload, dict) else {}
+    review_data = review_payload if isinstance(review_payload, dict) else {}
+    backlinks_data = backlinks_payload if isinstance(backlinks_payload, dict) else {}
+    markdown_index = markdown_index_payload if isinstance(markdown_index_payload, dict) else {}
 
     # Collect all entities from vaerl
     entities: list[dict[str, Any]] = []
@@ -140,6 +147,7 @@ def build_entity_card(
     # Find the node in author_graph
     all_nodes = graph.get("nodes", [])
     all_edges = graph.get("edges", [])
+    wikilink_resolver = WikilinkResolver.from_payload({"nodes": all_nodes, "entities": entities})
 
     def match_node(n: dict[str, Any]) -> bool:
         if node_id and (n.get("id") == node_id or n.get("canonical_id") == node_id):
@@ -302,6 +310,7 @@ def build_entity_card(
     # Markdown note content
     markdown_sections: list[dict[str, Any]] = []
     author_markdown = ""
+    source_markdown = ""
     technical_markdown = ""
     frontmatter: dict[str, Any] = {}
     note_path_final = note_p or ""
@@ -321,16 +330,19 @@ def build_entity_card(
         if _looks_legacy_generated_body(str(body)):
             author_markdown = _build_author_markdown(label, kind, canonical_aliases, contextual_refs,
                                                       needs_review, summary, relationships,
-                                                      backlinks, outgoing, evidence_count, evidence_refs)
+                                                      backlinks, outgoing, evidence_count, evidence_refs, wikilink_resolver)
+            source_markdown = author_markdown
         else:
-            author_markdown = str(body)
+            source_markdown = str(body)
+            author_markdown = render_known_wikilinks(source_markdown, wikilink_resolver)
         # Technical: frontmatter + raw IDs
         technical_markdown = f"Ruta: {note_path_final}\nFrontmatter:\n" + json.dumps(frontmatter, indent=2)
     else:
         # Build synthesised markdown from entity data
         author_markdown = _build_author_markdown(label, kind, canonical_aliases, contextual_refs,
                                                   needs_review, summary, relationships,
-                                                  backlinks, outgoing, evidence_count, evidence_refs)
+                                                  backlinks, outgoing, evidence_count, evidence_refs, wikilink_resolver)
+        source_markdown = author_markdown
         technical_markdown = f"Nota no encontrada: {note_path_final}"
 
     # Review items for this entity
@@ -397,6 +409,8 @@ def build_entity_card(
             "content_hash": markdown_content_hash,
             "sections": markdown_sections,
             "author_markdown": author_markdown,
+            "source_markdown": source_markdown,
+            "unresolved_wikilinks": [],
             "technical_markdown": technical_markdown,
         },
         "evidence_refs": evidence_refs[:20],
@@ -448,6 +462,7 @@ def _build_author_markdown(
     outgoing: list[dict[str, str]],
     evidence_count: int,
     evidence_refs: list[dict[str, Any]] | None = None,
+    wikilink_resolver: WikilinkResolver | None = None,
 ) -> str:
     key_facts: list[str] = []
     if canonical_aliases:
@@ -462,8 +477,9 @@ def _build_author_markdown(
     related_href_cache: dict[str, str] = {}
 
     def _related_href(name: str) -> str:
-        cleaned = name.strip().lower()
-        return f"#graph_select={quote(cleaned)}" if cleaned else "#"
+        cleaned = name.strip()
+        slug = (wikilink_resolver.resolve_label(cleaned) if wikilink_resolver else None) or cleaned.lower()
+        return f"#graph_select={quote(slug)}" if slug else "#"
 
     def _related_link(name: str) -> str:
         label_text = name.strip()
@@ -564,10 +580,6 @@ def _looks_legacy_generated_body(body: str) -> bool:
     has_evidence = re.search(r"(^|\n)##\s+evidence\b", lower) is not None
     has_key = re.search(r"(^|\n)##\s+key facts\b", lower) is not None
     has_related = re.search(r"(^|\n)##\s+related entities\b", lower) is not None
-    has_literal_wikilink = "[[" in clean and "]]" in clean
-    if has_summary and has_key and has_related and has_literal_wikilink:
-        # SP-123 legacy generated structure (pre SP-123B rich markdown links).
-        return True
     if has_summary and has_facts and has_evidence and not has_key and not has_related:
         legacy_markers = ["source:", "chunk_", "## review notes", "- ch_"]
         return sum(1 for marker in legacy_markers if marker in lower) >= 2

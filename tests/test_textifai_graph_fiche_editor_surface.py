@@ -57,6 +57,22 @@ class TextifaiGraphFicheEditorSurfaceTests(unittest.TestCase):
         self.assertIn('buildFicheMarkdown', text)
         self.assertIn('[[' , text)
 
+    def test_graph_inspector_restores_generic_known_display_links_on_save(self):
+        text = INSPECTOR.read_text(encoding='utf-8')
+        self.assertIn('function restoreKnownDisplayLinks', text)
+        self.assertNotIn('restoreKnownSeraDisplayLink', text)
+        self.assertIn(".replace(/\\[([^\\]]+?)\\]\\(#graph_select=[^)]+\\)/g, '[[$1]]')", text)
+        self.assertIn('markdown: restoreKnownDisplayLinks(editorBody)', text)
+
+    def test_dev_debug_window_contract_exists(self):
+        app = APP.read_text(encoding='utf-8')
+        fiche = FICHE.read_text(encoding='utf-8')
+        self.assertIn('__TEXTIFAI_FICHE_DEBUG__', app)
+        self.assertIn('import.meta.env.PROD', app)
+        self.assertIn('__TEXTIFAI_FICHE_DEBUG__', fiche)
+        self.assertIn('anchors_rendered_in_editor', fiche)
+        self.assertIn('link_click_events', fiche)
+
     def test_fiche_body_preserves_authored_text_without_forced_structure(self):
         text = INSPECTOR.read_text(encoding='utf-8')
         self.assertIn('if (cleanBody) return cleanBody;', text)
@@ -91,8 +107,9 @@ class TextifaiGraphFicheEditorSurfaceTests(unittest.TestCase):
         self.assertIn('preventDefault()', fiche)
         self.assertIn('onInternalLinkClick?.(href)', fiche)
         self.assertIn('handleGraphInternalEntityLinkClick', app)
+        self.assertIn('clearGraphSelectFromUrl', app)
         self.assertIn("window.history.replaceState", app)
-        self.assertIn("searchParams.set('graph_select'", app)
+        self.assertNotIn("searchParams.set('graph_select'", app)
         self.assertIn('selectGraphEntityBySelectToken', app)
         self.assertIn('return f"#graph_select=', entity_card)
         self.assertNotIn('return f"/?graph_select=', entity_card)
