@@ -119,6 +119,10 @@ Graph visuals stay unchanged in SP-125D. No graph node semantic palette changes.
 - SP-125D: map shell/shared surfaces to approved brand board and enforce layering.
 - Future phases: migrate deeper modules one slice at time.
 
+## Future work
+
+- Ingestion progress bars should become realtime state-driven semantic indicators. They should hydrate from ingestion process state and use traffic-light status colors. This is explicitly deferred and not part of SP-129.
+
 ## Explicit non-goals
 
 - No graph color change.

@@ -54,5 +54,16 @@ class TextifAIReactShellMigrationTests(unittest.TestCase):
     def test_handoff_exists(self):
         self.assertTrue(HANDOFF.exists())
 
+    def test_projecthub_and_ingestion_avoid_neutral_warm_regressions(self):
+        targets = [
+            REPO / 'textifai/web_viewer/react_shell/src/modules/project/ProjectHubView.tsx',
+            REPO / 'textifai/web_viewer/react_shell/src/modules/ingestion/IngestionView.tsx',
+        ]
+        forbidden = ('bg-white', 'bg-neutral-', 'border-neutral-', 'text-neutral-')
+        for path in targets:
+            text = path.read_text(encoding='utf-8')
+            for token in forbidden:
+                self.assertNotIn(token, text, f'{path.name} still contains {token}')
+
 if __name__ == '__main__':
     unittest.main()
