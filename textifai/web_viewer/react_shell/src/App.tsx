@@ -300,7 +300,7 @@ function severityIconClass(level: string): string {
 }
 
 function decisionButtonClass(active: boolean): string {
-  return `rounded-2xl px-4 py-2 text-sm font-medium ${active ? 'bg-txf-nav-active text-txf-nav-active-text' : 'bg-txf-surface-soft text-txf-text border border-txf-border hover:bg-txf-surface-muted'}`;
+  return `rounded-2xl border px-4 py-2 text-sm font-medium ${active ? 'border-txf-surface-soft bg-txf-nav-active text-txf-nav-active-text ring-1 ring-txf-surface-soft/70' : 'border-txf-border bg-txf-surface-soft text-txf-text hover:bg-txf-surface-muted'}`;
 }
 
 function formatDecisionChoice(choice?: ReviewDecisionChoice): string {
@@ -322,12 +322,12 @@ function ProjectRow({ project, selected, onSelect }: { project: ProjectSummary; 
 
 function DecisionCard({ item, selected, choice, onSelect, onChoose, onOpenEvidencia }: { item: DecisionItem; selected?: boolean; choice?: ReviewDecisionChoice; onSelect: () => void; onChoose: (choice: ReviewDecisionChoice) => void; onOpenEvidencia: () => void }) {
   const choose = (nextChoice: ReviewDecisionChoice) => { onSelect(); onChoose(nextChoice); };
-  return <article className={`w-full rounded-3xl border p-5 text-left ${selected ? 'border-txf-border-strong bg-txf-surface-muted' : 'border-txf-border bg-txf-surface'}`}>
+  return <article className={`w-full rounded-3xl border p-5 text-left ${selected ? 'border-txf-border-strong bg-txf-nav-active text-txf-nav-active-text' : 'border-txf-border bg-txf-surface'}`}>
     <div className="flex items-start justify-between gap-3">
       <button type="button" onClick={onSelect} className="min-w-0 flex-1 text-left">
         <div className={`inline-flex rounded-full border px-3 py-1 text-xs uppercase tracking-wide ${severityClass(item.severity)}`}>{String(item.severity).toUpperCase()} SEVERITY · {item.source || 'Sin capítulos vinculados'}</div>
-        <h3 className="mt-2 text-2xl font-semibold tracking-tight">{item.title}</h3>
-        <p className="mt-2 text-sm text-txf-subtle">{item.human_reason || item.summary || item.evidence_summary || item.action}</p>
+        <h3 className={`mt-2 text-2xl font-semibold tracking-tight ${selected ? 'text-txf-nav-active-text' : ''}`}>{item.title}</h3>
+        <p className={`mt-2 text-sm ${selected ? 'text-txf-surface-soft' : 'text-txf-subtle'}`}>{item.human_reason || item.summary || item.evidence_summary || item.action}</p>
       </button>
       <AlertTriangle size={18} className={`mt-1 shrink-0 ${severityIconClass(item.severity)}`} />
     </div>
@@ -338,7 +338,7 @@ function DecisionCard({ item, selected, choice, onSelect, onChoose, onOpenEviden
       {!item.hasTarget ? <button type="button" onClick={() => choose('create')} className={decisionButtonClass(choice === 'create')}>Crear entidad nueva</button> : null}
       {(item.materiality === 'low' || item.materiality === 'noise' || !item.hasTarget) ? <button type="button" onClick={() => choose('discard')} className={decisionButtonClass(choice === 'discard')}>Descartar del canon</button> : null}
       <button type="button" onClick={() => choose('context')} className={decisionButtonClass(choice === 'context')}>Mantener como contexto</button>
-      <Button variant="secondary" onClick={() => { onSelect(); onOpenEvidencia(); }} className="text-txf-action">Ver evidencia</Button>
+      <Button variant="secondary" onClick={() => { onSelect(); onOpenEvidencia(); }} className="rounded-2xl border-txf-border bg-txf-surface-soft px-3 py-1.5 font-medium text-txf-action hover:bg-txf-surface-muted">Ver evidencia</Button>
     </div>
   </article>;
 }
@@ -435,6 +435,7 @@ export function App() {
   const [reviewQuery, setReviewQuery] = useState('');
   const [reviewEntityFilterTokens, setReviewEntityFilterTokens] = useState<Set<string>>(new Set());
   const [reviewSeverity, setReviewSeverity] = useState('all');
+  const [reviewSeverityOpen, setReviewSeverityOpen] = useState(false);
   const [selectedDecisionId, setSelectedDecisionId] = useState<string>('');
   const [reviewDecisionChoices, setReviewDecisionChoices] = useState<Record<string, ReviewDecisionChoice>>({});
   const [evidenceModalDecisionId, setEvidenciaModalDecisionId] = useState<string>('');
@@ -456,6 +457,18 @@ export function App() {
   const [renameChapterValue, setRenameChapterValue] = useState<string>('');
 
   const editorTextareaRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (!reviewSeverityOpen) return;
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+      if (target.closest('[data-review-severity-dropdown]')) return;
+      setReviewSeverityOpen(false);
+    };
+    window.addEventListener('pointerdown', handlePointerDown);
+    return () => window.removeEventListener('pointerdown', handlePointerDown);
+  }, [reviewSeverityOpen]);
 
   const [graphPayload, setGraphPayload] = useState<GraphPayload | null>(null);
   const [selectedGraphNodeId, setSelectedGraphNodeId] = useState<string>('');
@@ -1067,7 +1080,18 @@ export function App() {
       <div className="col-span-12 lg:col-span-8 space-y-4">
         <div className="flex gap-3">
           <input value={reviewQuery} onChange={(event) => { setReviewEntityFilterTokens(new Set()); setReviewQuery(event.target.value); }} className="flex-1 rounded-2xl border border-txf-border-strong bg-txf-surface px-4 py-2 text-sm text-txf-text placeholder:text-txf-subtle" placeholder="Buscar decisión..." />
-          <select value={reviewSeverity} onChange={(event) => setReviewSeverity(event.target.value)} className="rounded-2xl border border-txf-border-strong bg-txf-surface px-4 py-2 text-sm text-txf-text"><option value="all">Todas</option><option value="high">Alta</option><option value="medium">Media</option><option value="low">Baja</option></select>
+          <div className="relative" data-review-severity-dropdown>
+            <button type="button" onClick={() => setReviewSeverityOpen((value) => !value)} className="inline-flex min-w-[88px] items-center justify-between gap-3 rounded-2xl border border-txf-border-strong bg-txf-surface px-4 py-2 text-sm text-txf-text hover:bg-txf-surface-soft">
+              <span>{reviewSeverity === 'all' ? 'Todas' : reviewSeverity === 'high' ? 'Alta' : reviewSeverity === 'medium' ? 'Media' : 'Baja'}</span>
+              <ChevronDown size={16} className={`shrink-0 transition-transform ${reviewSeverityOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {reviewSeverityOpen ? <div className="absolute right-0 top-[calc(100%+8px)] z-20 overflow-hidden rounded-2xl border border-txf-border-strong bg-txf-surface shadow-txf-floating">{([
+              ['all', 'Todas'],
+              ['high', 'Alta'],
+              ['medium', 'Media'],
+              ['low', 'Baja'],
+            ] as const).map(([value, label]) => <button key={value} type="button" onClick={() => { setReviewSeverity(value); setReviewSeverityOpen(false); }} className={`block w-full px-5 py-2 text-left text-sm ${reviewSeverity === value ? 'bg-txf-nav-active text-txf-nav-active-text' : 'text-txf-text hover:bg-txf-surface-soft'}`}>{label}</button>)}</div> : null}
+          </div>
         </div>
         {visibleDecisions.map((item) => <DecisionCard key={item.id} item={item} selected={selectedDecision?.id === item.id} choice={reviewDecisionChoices[item.id]} onSelect={() => setSelectedDecisionId(item.id)} onChoose={(choice) => setReviewDecisionChoices((previous) => ({ ...previous, [item.id]: choice }))} onOpenEvidencia={() => setEvidenciaModalDecisionId(item.id)} />)}
       </div>

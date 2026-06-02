@@ -138,17 +138,17 @@ export function EntityFicheView({ editorKey, bodyMarkdown, onChangeBody, onInter
   }, [onInternalLinkClick, debugEnabled]);
 
   return (
-    <section className="mt-5 rounded-2xl border border-neutral-200 bg-white p-5" data-testid="entity-fiche-panel-body">
+    <section className="mt-5 rounded-2xl border border-txf-border bg-txf-surface p-5" data-testid="entity-fiche-panel-body">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h3 className="text-base font-semibold text-neutral-900">{t('graph.fiche_body')}</h3>
-        <button type="button" data-testid="entity-fiche-save-button" onClick={onSave} disabled={!canSave || saveState === 'saving'} className={`rounded-xl border px-3 py-1.5 text-xs font-medium ${canSave && saveState !== 'saving' ? 'border-neutral-300 bg-white text-neutral-800 hover:bg-neutral-50' : 'border-neutral-200 bg-neutral-100 text-neutral-400 cursor-not-allowed'}`}>{saveState === 'saving' ? t('graph.fiche_saving') : t('graph.fiche_save')}</button>
+        <h3 className="text-base font-semibold text-txf-text">{t('graph.fiche_body')}</h3>
+        <button type="button" data-testid="entity-fiche-save-button" onClick={onSave} disabled={!canSave || saveState === 'saving'} className={`rounded-xl border px-3 py-1.5 text-xs font-medium ${canSave && saveState !== 'saving' ? 'border-txf-border-strong bg-txf-surface text-txf-text hover:bg-txf-surface-soft' : 'border-txf-border bg-txf-surface-soft text-txf-subtle cursor-not-allowed'}`}>{saveState === 'saving' ? t('graph.fiche_saving') : t('graph.fiche_save')}</button>
       </div>
-      <p className="mb-3 text-xs text-neutral-500">{t('graph.fiche_local_note')}</p>
-      {localDirty ? <div className="mb-3 text-xs text-amber-700">{t('graph.fiche_local_dirty')}</div> : null}
-      {!canSave && saveDisabledReason ? <div className="mb-3 text-xs text-neutral-500">{saveDisabledReason}</div> : null}
-      {saveMessage ? <div data-testid="entity-fiche-save-status" className={`mb-3 rounded-xl border px-3 py-2 text-xs ${saveState === 'saved' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : saveState === 'conflict' || saveState === 'error' ? 'border-red-200 bg-red-50 text-red-700' : 'border-amber-200 bg-amber-50 text-amber-800'}`}>{saveMessage}</div> : null}
+      <p className="mb-3 text-xs text-txf-subtle">{t('graph.fiche_local_note')}</p>
+      {localDirty ? <div className="mb-3 text-xs text-txf-action">{t('graph.fiche_local_dirty')}</div> : null}
+      {!canSave && saveDisabledReason ? <div className="mb-3 text-xs text-txf-subtle">{saveDisabledReason}</div> : null}
+      {saveMessage ? <div data-testid="entity-fiche-save-status" className={`mb-3 rounded-xl border px-3 py-2 text-xs ${saveState === 'saved' ? 'border-txf-border bg-txf-surface-soft text-txf-text' : saveState === 'conflict' || saveState === 'error' ? 'border-txf-border bg-txf-surface-muted text-txf-text' : 'border-txf-border bg-txf-surface-soft text-txf-text'}`}>{saveMessage}</div> : null}
       <div
-        className="entity-fiche-editor-shell min-h-[560px] overflow-auto rounded-2xl border border-neutral-200 bg-white p-2"
+        className="entity-fiche-editor-shell min-h-[560px] overflow-auto rounded-2xl border border-txf-border bg-txf-surface p-2"
         data-testid="entity-fiche-editor"
         onClickCapture={(event) => {
           const href = extractHrefFromEventTarget(event.target);
@@ -166,7 +166,7 @@ export function EntityFicheView({ editorKey, bodyMarkdown, onChangeBody, onInter
         }}
       >
         <EditorBoundary
-          fallback={<textarea value={bodyMarkdown || t('graph.fiche_empty_placeholder')} onChange={(event) => onChangeBody(event.target.value)} className="min-h-[380px] w-full rounded-xl border border-neutral-200 bg-neutral-50 p-3 text-sm leading-6 text-neutral-800" />}
+          fallback={<textarea value={bodyMarkdown || t('graph.fiche_empty_placeholder')} onChange={(event) => onChangeBody(event.target.value)} className="min-h-[380px] w-full rounded-xl border border-txf-border bg-txf-surface-muted p-3 text-sm leading-6 text-txf-text" />}
         >
           <MDXEditor
             key={editorKey}

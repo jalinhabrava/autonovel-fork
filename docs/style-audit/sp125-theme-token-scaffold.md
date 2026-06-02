@@ -2,19 +2,15 @@
 
 ## Purpose
 
-SP-125A introduces non-visual theme token scaffolding for TextifAI Arc. Goal is to define semantic theme names without migrating component visuals yet.
+SP-125A introduced semantic theme tokens for TextifAI Arc. SP-125D moves shell and shared surfaces onto approved branded palette board while keeping graph semantics untouched.
 
 ## Scope
 
-- Adds CSS custom properties for app surfaces, borders, text, accents, status, and effects.
-- Extends Tailwind with semantic `txf` theme names backed by those variables.
-- Preserves current component structure in SP-125A/SP-125B.
-- Does not migrate TSX components to new tokens yet.
-- Does not change graph visual semantics in code.
-
-## Current mapped values
-
-These scaffold tokens are now mapped to product-web palette values or explicitly documented Arc app extensions.
+- Keeps semantic CSS custom properties and Tailwind `txf` names.
+- Re-maps Arc shell tokens to approved brand-board palette.
+- Applies layered surface rules only in shared shell and shared UI.
+- Does not change graph semantic colors in code.
+- Does not redesign deep feature modules.
 
 ## Token groups
 
@@ -30,6 +26,12 @@ These scaffold tokens are now mapped to product-web palette values or explicitly
 - `--txf-color-accent`
 - `--txf-color-accent-hover`
 - `--txf-color-accent-soft`
+- `--txf-color-action`
+- `--txf-color-action-hover`
+- `--txf-color-action-soft`
+- `--txf-color-nav-active`
+- `--txf-color-nav-active-text`
+- `--txf-color-focus-ring`
 - `--txf-color-danger`
 - `--txf-color-danger-soft`
 - `--txf-color-success`
@@ -40,76 +42,86 @@ These scaffold tokens are now mapped to product-web palette values or explicitly
 - `--txf-radius-card`
 - `--txf-radius-button`
 
-## Product website palette source of truth
+## SP-125D branded palette mapping
 
-TextifAI Arc should converge toward product-web palette source of truth at `/home/david/projects/textifai-web`. SP-125A introduces style control. SP-125B maps Arc tokens to product-web palette. SP-125C+ will migrate components.
+### Approved palette board
 
-## SP-125B product-web palette mapping
-
-### Product-web source path
-
-- `/home/david/projects/textifai-web`
+- `#F3E9D2` warm parchment
+- `#E8D9B8` pale sand
+- `#D3B18A` soft copper sand
+- `#B5674A` terracotta copper
+- `#9C3F2E` deep terracotta
+- `#6E5F40` warm brown
+- `#3A2A21` dark chocolate
 
 ### Final Arc token values selected
 
-| Token | Value | Type |
+| Token | Value | Role |
 | --- | --- | --- |
-| `--txf-color-bg` | `#f7f1e7` | direct product-web |
-| `--txf-color-bg-elevated` | `#efe4d6` | direct product-web |
-| `--txf-color-surface` | `rgba(255, 251, 245, 0.88)` | direct product-web |
-| `--txf-color-surface-muted` | `#fffaf3` | direct product-web |
-| `--txf-color-border` | `rgba(124, 97, 72, 0.18)` | direct product-web |
-| `--txf-color-border-strong` | `rgba(124, 97, 72, 0.28)` | Arc extension |
-| `--txf-color-text` | `#211913` | direct product-web |
-| `--txf-color-text-muted` | `#6f6256` | direct product-web |
-| `--txf-color-text-subtle` | `rgba(111, 98, 86, 0.72)` | Arc extension |
-| `--txf-color-accent` | `#b77a4b` | direct product-web |
-| `--txf-color-accent-hover` | `#9f673d` | Arc extension |
-| `--txf-color-accent-soft` | `rgba(183, 122, 75, 0.14)` | direct product-web |
-| `--txf-color-danger` | `#b4544f` | Arc extension |
-| `--txf-color-danger-soft` | `rgba(180, 84, 79, 0.14)` | Arc extension |
-| `--txf-color-success` | `#4f7a5c` | Arc extension |
-| `--txf-color-success-soft` | `rgba(79, 122, 92, 0.14)` | Arc extension |
-| `--txf-color-warning` | `#a16d3b` | Arc extension |
-| `--txf-color-warning-soft` | `rgba(161, 109, 59, 0.14)` | Arc extension |
-| `--txf-shadow-card` | `0 18px 60px rgba(49, 33, 19, 0.08)` | direct product-web |
-| `--txf-radius-card` | `24px` | direct product-web |
-| `--txf-radius-button` | `999px` | direct product-web |
+| `--txf-color-bg` | `#f3e9d2` | global page parchment |
+| `--txf-color-bg-elevated` | `#e8d9b8` | shell frame / raised base |
+| `--txf-color-surface` | `#fbf5e8` | main content cards and topbar |
+| `--txf-color-surface-muted` | `#efe1c7` | sidebar, nested bands, muted shared surfaces |
+| `--txf-color-border` | `rgba(110, 95, 64, 0.22)` | subtle separators |
+| `--txf-color-border-strong` | `rgba(58, 42, 33, 0.28)` | stronger shell separation |
+| `--txf-color-text` | `#3a2a21` | primary text |
+| `--txf-color-text-muted` | `#6e5f40` | secondary text |
+| `--txf-color-text-subtle` | `rgba(110, 95, 64, 0.76)` | tertiary text |
+| `--txf-color-accent` | `#b5674a` | warm accent surfaces / hover family |
+| `--txf-color-accent-hover` | `#9c3f2e` | stronger accent hover |
+| `--txf-color-accent-soft` | `rgba(181, 103, 74, 0.16)` | hover wash |
+| `--txf-color-action` | `#9c3f2e` | primary buttons |
+| `--txf-color-action-hover` | `#3a2a21` | primary button hover |
+| `--txf-color-action-soft` | `rgba(156, 63, 46, 0.14)` | action-adjacent soft fill |
+| `--txf-color-nav-active` | `#3a2a21` | active nav fill |
+| `--txf-color-nav-active-text` | `#fdf7f0` | active nav / primary action text |
+| `--txf-color-focus-ring` | `rgba(181, 103, 74, 0.42)` | focus treatment |
+| `--txf-color-danger` | `#9c3f2e` | destructive actions |
+| `--txf-color-danger-soft` | `rgba(156, 63, 46, 0.14)` | destructive soft state |
+| `--txf-color-success` | `#4f7a5c` | success status |
+| `--txf-color-success-soft` | `rgba(79, 122, 92, 0.14)` | success soft state |
+| `--txf-color-warning` | `#b5674a` | warning status |
+| `--txf-color-warning-soft` | `rgba(181, 103, 74, 0.14)` | warning soft state |
+| `--txf-shadow-card` | `0 18px 60px rgba(58, 42, 33, 0.12)` | card shadow |
+| `--txf-radius-card` | `24px` | shared card radius |
+| `--txf-radius-button` | `999px` | pill/button radius |
 
-### Arc app extension tokens
+### Reserved color usage
 
-- `--txf-color-action: #8f5a2a`
-- `--txf-color-action-hover: #6f4321`
-- `--txf-color-action-soft: rgba(183, 122, 75, 0.14)`
-- `--txf-color-nav-active: #8f5a2a`
-- `--txf-color-nav-active-text: #fdf7f0`
-- `--txf-color-focus-ring: rgba(183, 122, 75, 0.38)`
+- Surfaces stay in parchment, sand, and warm off-white range.
+- Actions and active navigation use terracotta to chocolate range.
+- Primary text uses dark chocolate; muted text uses warm brown.
+- Dark chocolate is reserved for text, active nav, and compact controls, not large backgrounds.
 
-These are future-facing app interaction tokens. They do not imply broad SP-125B component migration.
+### Layered surface logic
+
+- Page background uses `--txf-color-bg`.
+- Outer app frame uses `--txf-color-bg-elevated` so shell separates from page.
+- Main content and shared cards use `--txf-color-surface`.
+- Sidebar, top bands, chips, and nested shared sections use `--txf-color-surface-muted`.
+- Borders escalate from `--txf-color-border` to `--txf-color-border-strong` where stacked shell regions need clearer separation.
+- Secondary buttons use bordered `--txf-color-surface` fill so they do not collapse into cards or muted panels.
+
+### Accessibility notes
+
+- Primary text stays on `#3A2A21` for strong contrast over all light surfaces.
+- Active nav and primary actions pair dark fill with `#FDF7F0` text.
+- Hover fills stay translucent to preserve readable text and visible layering.
 
 ## Graph semantic color separation
 
-Graph visuals stay unchanged in SP-125A/SP-125B. Future graph token group proposal only:
-
-- `--txf-graph-character`
-- `--txf-graph-concept`
-- `--txf-graph-event`
-- `--txf-graph-object`
-- `--txf-graph-place`
-- `--txf-graph-review`
-- `--txf-graph-unresolved`
-- `--txf-graph-link`
-- `--txf-graph-link-active`
+Graph visuals stay unchanged in SP-125D. No graph node semantic palette changes.
 
 ## Migration plan
 
 - SP-125A: scaffold tokens only.
 - SP-125B: map tokens to product-web palette source.
-- SP-125C+: migrate one low-risk shell/component layer at a time.
+- SP-125D: map shell/shared surfaces to approved brand board and enforce layering.
+- Future phases: migrate deeper modules one slice at time.
 
 ## Explicit non-goals
 
-- No broad component class replacement.
-- No visual redesign by ad hoc scattered overrides.
 - No graph color change.
-- No manual edit to generated `textifai/web_viewer/static/react-shell/app.css`. This file may change only as build output from `textifai_react_build.sh`.
+- No deep module-specific redesign.
+- No manual edit to generated `textifai/web_viewer/static/react-shell/app.css`.
+- No manual edit to generated `textifai/web_viewer/static/react-shell/app.js`.
