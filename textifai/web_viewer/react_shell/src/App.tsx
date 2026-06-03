@@ -370,7 +370,7 @@ function sanitizeEditorMarkdown(raw: string): string {
 }
 
 function evidenceMissingReason(sourceMapChunksCount: number): string {
-  if (sourceMapChunksCount <= 0) return 'No hay fragmento textual resoluble porque source_map.chunks está vacío para este source_ref.';
+  if (sourceMapChunksCount <= 0) return t('graph.no_fragment_fallback');
   return t('review.item.no_fragment');
 }
 
@@ -1042,10 +1042,10 @@ export function App() {
   if (active === 'overview') content = <OverviewBoard setActive={setActive} />;
   if (active === 'hub') content = <ProjectHubView projectRows={projects.map((project) => <ProjectRow key={project.project_id} project={project} selected={project.project_id === selectedProjectId} onSelect={() => setSelectedProjectId(project.project_id)} />)} reducedProjectWarning={isMinimalFixture(selectedProject)} chaptersProcessed={projectDetail?.overview?.chapters_processed ?? 0} artifactsCount={artifactsCount} warningsVisible={warningsVisible} />;
   if (active === 'ingest') content = <IngestionView runStatus={runStatus} ingestionJobs={ingestionJobs} />;
-  if (active === 'codex') content = <section><TopBar title="Canon / VaERL" subtitle="Wiki author-facing del canon: entidades, hechos, evidencia y Story Bible consolidada." actions={<><Button variant="secondary">Export selection</Button><Button variant="secondary">Ver evidencia</Button></>} /><div className="p-5 grid grid-cols-12 gap-5"><div className="col-span-12 lg:col-span-8 space-y-5"><EntityRecordTable entities={projectDetail?.canon?.primaries || []} selectedKey={selectedEntityKey} onSelect={setSelectedEntityKey} /><div className="rounded-3xl border border-txf-border bg-txf-surface p-4"><div className="mb-3 flex items-center gap-2 text-sm font-semibold"><FileText size={16} /> Story Bible</div>{selectedProjectId ? <LegacyEmbed title="Story Bible alias inside Canon / VaERL" src={legacyUrl('notes', selectedProjectId)} /> : <div className="rounded-2xl border border-txf-border p-4 text-sm text-txf-subtle">Selecciona proyecto.</div>}</div></div><aside className="col-span-12 lg:col-span-4"><InspectorCard entity={selectedEntity} /></aside></div></section>;
+  if (active === 'codex') content = <section><TopBar title={t('codex.title')} subtitle={t('codex.subtitle')} actions={<><Button variant="secondary">{t('codex.export_selection')}</Button><Button variant="secondary">{t('codex.view_evidence')}</Button></>} /><div className="p-5 grid grid-cols-12 gap-5"><div className="col-span-12 lg:col-span-8 space-y-5"><EntityRecordTable entities={projectDetail?.canon?.primaries || []} selectedKey={selectedEntityKey} onSelect={setSelectedEntityKey} /><div className="rounded-3xl border border-txf-border bg-txf-surface p-4"><div className="mb-3 flex items-center gap-2 text-sm font-semibold"><FileText size={16} /> {t('codex.story_bible')}</div>{selectedProjectId ? <LegacyEmbed title={t('story_alias.legacy_notes_title')} src={legacyUrl('notes', selectedProjectId)} /> : <div className="rounded-2xl border border-txf-border p-4 text-sm text-txf-subtle">{t('codex.select_project')}</div>}</div></div><aside className="col-span-12 lg:col-span-4"><InspectorCard entity={selectedEntity} /></aside></div></section>;
   if (active === 'graph') content = (
     <section data-testid="graph-view">
-      <TopBar title="Graph" subtitle="Exploración visual author-facing con física viva e inspector editorial." actions={<Button variant="secondary" onClick={resetGraphFilters}>Restablecer filtros</Button>} />
+      <TopBar title={t('graph.title')} subtitle={t('graph.route.subtitle')} actions={<Button variant="secondary" onClick={resetGraphFilters}>{t('graph.reset_filters')}</Button>} />
       <div className="p-5 grid grid-cols-12 gap-5">
         <aside className="col-span-12">
           <GraphToolbar
@@ -1058,7 +1058,7 @@ export function App() {
         </aside>
         <div className="col-span-12 grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,26rem)] 2xl:grid-cols-[minmax(0,1fr)_minmax(24rem,30rem)]">
           <div className="min-w-0">
-            {selectedProjectId ? <GraphCanvas nodes={filteredGraph.nodes} edges={filteredGraph.edges} selectedNodeId={selectedGraphNodeId} onSelectNode={handleGraphNodeSelect} /> : <div className="rounded-3xl border border-txf-border p-5 text-sm text-txf-subtle">Selecciona un proyecto para abrir Graph.</div>}
+            {selectedProjectId ? <GraphCanvas nodes={filteredGraph.nodes} edges={filteredGraph.edges} selectedNodeId={selectedGraphNodeId} onSelectNode={handleGraphNodeSelect} /> : <div className="rounded-3xl border border-txf-border p-5 text-sm text-txf-subtle">{t('graph.select_project')}</div>}
           </div>
           <aside className="min-w-0 space-y-2 xl:sticky xl:top-5 xl:self-start">
             <GraphInspectorPanel

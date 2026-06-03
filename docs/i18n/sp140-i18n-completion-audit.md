@@ -133,3 +133,23 @@ Scope:
 Intentional non-translation:
 - heuristic `20 capítulos` scoring string stays raw because it is not rendered UI copy.
 - alias values, node labels, IDs, note paths, backlinks, outgoing labels, and markdown preview stay raw.
+
+## Current batch: SP-140F
+Migrated in this batch:
+- `graph.no_fragment_fallback`
+- `codex.title`
+- `codex.subtitle`
+- `codex.export_selection`
+- `codex.view_evidence`
+- `codex.story_bible`
+- `codex.select_project`
+- `graph.select_project`
+- `graph.title`
+- `graph.route.subtitle`
+- `graph.reset_filters`
+
+Scope:
+- `textifai/web_viewer/react_shell/src/App.tsx` codex/graph route top-bar and fallback chrome.
+
+Intentional non-translation:
+- route IDs, project/entity payload, graph node labels, legacy note content, and backend errors remain raw.

@@ -240,6 +240,17 @@ class TestTextifAII18nUiStrings(unittest.TestCase):
             'graph.inspector.aliases_legacy',
             'graph.inspector.relations_count',
             'graph.inspector.evidence_count',
+            'graph.no_fragment_fallback',
+            'codex.title',
+            'codex.subtitle',
+            'codex.export_selection',
+            'codex.view_evidence',
+            'codex.story_bible',
+            'codex.select_project',
+            'graph.select_project',
+            'graph.title',
+            'graph.route.subtitle',
+            'graph.reset_filters',
             'graph.kind.chapter',
             'graph.kind.character',
             'graph.kind.concept',
@@ -282,6 +293,8 @@ class TestTextifAII18nUiStrings(unittest.TestCase):
             'Draft local/read-only. Guardar cambios llegará con patch queue.',
             'relaciones',
             'evidencias',
+            'No hay fragmento textual resoluble porque source_map.chunks está vacío para este source_ref.',
+            'Selecciona un proyecto para abrir Graph.',
         ]:
             self.assertNotIn(migrated, text)
 
