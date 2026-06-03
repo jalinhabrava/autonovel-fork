@@ -218,6 +218,8 @@ class TestTextifAII18nUiStrings(unittest.TestCase):
             'project.workspace_status.chapters_ready',
             'project.workspace_status.chapters_failed',
             'project.workspace_status.semantic_review',
+            'project.count.chapters',
+            'project.count.nodes',
             'review.source.candidate',
             'review.source.evidence_pending',
             'review.item.needs_decision',
@@ -234,6 +236,10 @@ class TestTextifAII18nUiStrings(unittest.TestCase):
             'review.inspector.empty',
             'review.inspector.summary_missing',
             'review.inspector.edit_draft',
+            'graph.inspector.empty_legacy',
+            'graph.inspector.aliases_legacy',
+            'graph.inspector.relations_count',
+            'graph.inspector.evidence_count',
             'graph.kind.chapter',
             'graph.kind.character',
             'graph.kind.concept',
@@ -272,6 +278,10 @@ class TestTextifAII18nUiStrings(unittest.TestCase):
             'Reanálisis aún no implementado.',
             'Sin contenido de capítulo disponible.',
             'No hay fragmento resoluble porque source_ref no se pudo mapear a chunk narrativo.',
+            'Selecciona un nodo.',
+            'Draft local/read-only. Guardar cambios llegará con patch queue.',
+            'relaciones',
+            'evidencias',
         ]:
             self.assertNotIn(migrated, text)
 
@@ -279,9 +289,7 @@ class TestTextifAII18nUiStrings(unittest.TestCase):
         text = APP.read_text(encoding='utf-8')
         for still_raw in [
             'chapter_manifest',
-            'Draft local/read-only.',
-            'Draft local/read-only. Guardar cambios llegará con patch queue.',
-            'Selecciona un nodo.',
+            '20 capítulos',
         ]:
             self.assertIn(still_raw, text)
 

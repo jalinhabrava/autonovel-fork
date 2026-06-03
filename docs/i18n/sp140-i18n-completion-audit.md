@@ -117,3 +117,19 @@ Scope:
 
 Intentional non-translation:
 - node labels, node IDs, note paths, relationship target/type payload, backlinks, outgoing wikilink labels, and markdown preview stay raw.
+
+## Current batch: SP-140E
+Migrated in this batch:
+- `project.count.chapters`
+- `project.count.nodes`
+- `graph.inspector.empty_legacy`
+- `graph.inspector.aliases_legacy`
+- `graph.inspector.relations_count`
+- `graph.inspector.evidence_count`
+
+Scope:
+- `textifai/web_viewer/react_shell/src/App.tsx` remaining safe project-row counts and legacy inspector count/empty chrome.
+
+Intentional non-translation:
+- heuristic `20 capítulos` scoring string stays raw because it is not rendered UI copy.
+- alias values, node labels, IDs, note paths, backlinks, outgoing labels, and markdown preview stay raw.
