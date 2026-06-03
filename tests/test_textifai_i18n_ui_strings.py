@@ -8,6 +8,7 @@ SRC = REPO / 'textifai/web_viewer/react_shell/src'
 UI = SRC / 'i18n/ui.ts'
 NAV = SRC / 'shell/navigation.ts'
 APP = SRC / 'App.tsx'
+STORY_ALIAS_VIEW = SRC / 'modules/canon/StoryAliasView.tsx'
 
 FIX = REPO / 'tests/fixtures/textifai/i18n/expected'
 CATALOG = FIX / 'ui_i18n_catalog_after_sp119.json'
@@ -102,6 +103,12 @@ REQUIRED_KEYS = [
     'review.pronoun_pov','review.unconfirmed_local_candidates',
 ]
 
+STORY_ALIAS_KEYS = [
+    'story_alias.vault_tree',
+    'story_alias.open_canon',
+    'story_alias.legacy_notes_title',
+]
+
 class TestTextifAII18nUiStrings(unittest.TestCase):
     def test_catalog_and_t_exist(self):
         text = UI.read_text(encoding='utf-8')
@@ -119,6 +126,23 @@ class TestTextifAII18nUiStrings(unittest.TestCase):
         text = UI.read_text(encoding='utf-8')
         for key in GRAPH_TOOLBAR_KEYS:
             self.assertGreaterEqual(text.count(f"'{key}'"), 2, key)
+
+    def test_story_alias_keys_exist_es_en(self):
+        text = UI.read_text(encoding='utf-8')
+        for key in STORY_ALIAS_KEYS:
+            self.assertGreaterEqual(text.count(f"'{key}'"), 2, key)
+
+    def test_story_alias_view_uses_i18n_for_static_chrome(self):
+        text = STORY_ALIAS_VIEW.read_text(encoding='utf-8')
+        for key in ['story_alias.open_canon', 'story_alias.vault_tree', 'canon.select_project', 'nav.codex', 'canon.subtitle']:
+            self.assertIn(f"t('{key}')", text)
+        for raw in ['Open Canon / VaERL', 'Vault tree']:
+            self.assertNotIn(raw, text)
+
+    def test_story_alias_app_callsite_uses_i18n_legacy_embed_title(self):
+        text = APP.read_text(encoding='utf-8')
+        self.assertIn("t('story_alias.legacy_notes_title')", text)
+        self.assertNotIn('legacyNotes={<LegacyEmbed title="Story Bible alias inside Canon / VaERL"', text)
 
     def test_graph_inspector_keys_exist_es_en(self):
         text = UI.read_text(encoding='utf-8')

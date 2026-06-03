@@ -319,3 +319,10 @@ Deferred work:
 - `EntityFicheView.tsx` and deeper canon/editor surfaces remain untouched because their strings are broader and more payload-sensitive.
 
 Assessment: `arc_i18n_canon_vaerl_chrome_slice_ready`.
+
+## SP-137 StoryAliasView Closeout
+- `textifai/web_viewer/react_shell/src/modules/canon/StoryAliasView.tsx` static chrome migrated to i18n.
+- `textifai/web_viewer/react_shell/src/App.tsx` legacy embed title callsite migrated only because it belongs to StoryAlias chrome, via `story_alias.legacy_notes_title`.
+- Hydrated alias/canon/entity/payload values are intentionally not translated.
+- Alias payload values, entity labels, canonical labels, authored/generated content, paths, IDs, and technical fields remain raw.
+- Remaining hotspots are deferred; SP-137 does not broaden `App.tsx` migration beyond StoryAlias legacy/embed chrome.
