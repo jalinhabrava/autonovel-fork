@@ -71,3 +71,13 @@ Migrated in this batch:
 
 ## Acceptance target
 No obvious user-facing static fallback chrome should remain hardcoded in migrated `App.tsx` paths above.
+
+## Current batch: SP-140B
+Migrated in this batch:
+- `graph.edit_draft.readonly`
+
+Scope:
+- `textifai/web_viewer/react_shell/src/graph/GraphNodeEditDraftModal.tsx` read-only edit draft textarea copy.
+
+Intentional non-translation:
+- node label, note path, node kind, and review state stay raw payload/machine values.

@@ -92,7 +92,7 @@ REQUIRED_KEYS = [
     'ingestion.subtitle','ingestion.disabled','ingestion.progress_title','ingestion.progress_note','ingestion.status_title','ingestion.status_default','ingestion.step','ingestion.pending','ingestion.no_steps','ingestion.completed_review','ingestion.progress','ingestion.run','ingestion.no_run_id','ingestion.safe_workspace',
     'editor.save.chapter','editor.save.dirty','editor.save.saving','editor.save.saved','editor.save.conflict_message','editor.save.error',
     'editor.reanalysis.pending','editor.reanalysis.notice','editor.reanalysis.action',
-    'graph.node_sheet','graph.reset_filters','graph.search_placeholder','graph.related_only',
+    'graph.node_sheet','graph.reset_filters','graph.search_placeholder','graph.related_only','graph.edit_draft.readonly',
     'review.title','review.author_decisions_subtitle','review.apply_decisions','review.rerun_validation','review.search_placeholder',
     'review.severity','review.severity.all','review.severity.high','review.severity.medium','review.severity.low',
     'review.accept','review.reject','review.view_evidence','review.pending_decisions',
@@ -388,6 +388,11 @@ class TestTextifAII18nUiStrings(unittest.TestCase):
             'graph.fiche_empty_placeholder',
         ]:
             self.assertNotIn(f"t('{old_key}')", text)
+
+    def test_graph_edit_draft_modal_uses_i18n(self):
+        text = (SRC / 'graph/GraphNodeEditDraftModal.tsx').read_text(encoding='utf-8')
+        self.assertIn("t('graph.edit_draft.readonly')", text)
+        self.assertNotIn('No write-back', text)
 
     def test_canon_vaerl_view_uses_i18n_chrome_keys(self):
         text = (SRC / 'modules/canon/CanonVaerlView.tsx').read_text(encoding='utf-8')

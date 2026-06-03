@@ -26,7 +26,7 @@ export function GraphNodeEditDraftModal({ node, onClose }: GraphNodeEditDraftMod
         <div className="p-5">
           <textarea
             readOnly
-            value={`No write-back\n\n${t('graph.note_path')}: ${node.notePath || t('common.no_data')}\n${t('graph.node_kind')}: ${node.kind}\n${t('graph.node_state')}: ${node.reviewState || t('common.no_data')}`}
+            value={`${t('graph.edit_draft.readonly')}\n\n${t('graph.note_path')}: ${node.notePath || t('common.no_data')}\n${t('graph.node_kind')}: ${node.kind}\n${t('graph.node_state')}: ${node.reviewState || t('common.no_data')}`}
             className="h-52 w-full rounded-2xl border border-txf-border bg-txf-surface-muted p-4 text-sm"
           />
           <p className="mt-3 text-sm text-txf-subtle">
