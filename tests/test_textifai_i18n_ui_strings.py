@@ -279,7 +279,7 @@ class TestTextifAII18nUiStrings(unittest.TestCase):
         text = APP.read_text(encoding='utf-8')
         for still_raw in [
             'chapter_manifest',
-            'Editar ',
+            'Draft local/read-only.',
             'Draft local/read-only. Guardar cambios llegará con patch queue.',
             'Selecciona un nodo.',
         ]:

@@ -100,3 +100,20 @@ Scope:
 
 Intentional non-translation:
 - entity kind, confidence value, review state, aliases, canonical name, and other payload fields stay raw.
+
+## Current batch: SP-140D
+Migrated in this batch:
+- `graph.filters_title`
+- `graph.view.title`
+- `graph.view.subtitle`
+- `graph.visible_nodes`
+- `graph.edit_title`
+- `graph.edit_draft_body`
+- `graph.inspector.facts_bio`
+- `graph.inspector.main_relations`
+
+Scope:
+- `textifai/web_viewer/react_shell/src/App.tsx` legacy graph view chrome and safe legacy inspector labels/buttons.
+
+Intentional non-translation:
+- node labels, node IDs, note paths, relationship target/type payload, backlinks, outgoing wikilink labels, and markdown preview stay raw.
