@@ -81,3 +81,22 @@ Scope:
 
 Intentional non-translation:
 - node label, note path, node kind, and review state stay raw payload/machine values.
+
+## Current batch: SP-140C
+Migrated in this batch:
+- `review.entity`
+- `review.confidence`
+- `review.state`
+- `review.inspector.label`
+- `review.inspector.empty`
+- `review.inspector.summary_missing`
+- `review.inspector.edit_draft`
+- `review.evidence_store`
+- `review.yes`
+- `review.no`
+
+Scope:
+- `textifai/web_viewer/react_shell/src/App.tsx` entity record table and inspector card chrome.
+
+Intentional non-translation:
+- entity kind, confidence value, review state, aliases, canonical name, and other payload fields stay raw.
