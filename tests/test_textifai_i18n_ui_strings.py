@@ -21,6 +21,7 @@ KEY_MODULES = [
     SRC / 'App.tsx',
     SRC / 'shell/AppShell.tsx',
     SRC / 'modules/project/ProjectHubView.tsx',
+    SRC / 'modules/ingestion/IngestionView.tsx',
     SRC / 'modules/review/ReviewQueueView.tsx',
     SRC / 'modules/graph/GraphView.tsx',
     SRC / 'graph/GraphInspector.tsx',
@@ -33,6 +34,7 @@ REQUIRED_KEYS = [
     'overview.project_hub.title','overview.project_hub.text','overview.ingestion.title','overview.ingestion.text',
     'overview.review.title','overview.review.text','overview.graph.title','overview.graph.text',
     'overview.codex.title','overview.codex.text','overview.editor.title','overview.editor.text','overview.ai.title','overview.ai.text',
+    'ingestion.subtitle','ingestion.disabled','ingestion.progress_title','ingestion.progress_note','ingestion.status_title','ingestion.status_default','ingestion.step','ingestion.pending','ingestion.no_steps','ingestion.completed_review','ingestion.progress','ingestion.run','ingestion.no_run_id','ingestion.safe_workspace',
     'editor.save.chapter','editor.save.dirty','editor.save.saving','editor.save.saved','editor.save.conflict_message','editor.save.error',
     'editor.reanalysis.pending','editor.reanalysis.notice','editor.reanalysis.action',
     'graph.node_sheet','graph.reset_filters','graph.search_placeholder','graph.related_only',
@@ -114,6 +116,35 @@ class TestTextifAII18nUiStrings(unittest.TestCase):
         ]:
             self.assertNotIn(migrated, text)
 
+    def test_ingestion_view_uses_i18n(self):
+        text = (SRC / 'modules/ingestion/IngestionView.tsx').read_text(encoding='utf-8')
+        for key in [
+            'nav.ingest',
+            'ingestion.subtitle',
+            'ingestion.disabled',
+            'ingestion.progress_title',
+            'ingestion.progress_note',
+            'ingestion.step',
+            'ingestion.pending',
+            'ingestion.no_steps',
+            'ingestion.status_title',
+            'ingestion.status_default',
+            'ingestion.completed_review',
+            'ingestion.progress',
+            'ingestion.run',
+            'ingestion.no_run_id',
+            'ingestion.safe_workspace',
+        ]:
+            self.assertIn(f"t('{key}')", text)
+        for migrated in [
+            'Ingestion disabled',
+            'Ingestion progress',
+            'No steps available',
+            'Safe workspace',
+            'Ingestion completed with editorial review.',
+        ]:
+            self.assertNotIn(migrated, text)
+
     def test_no_obvious_hardcoded_ui_literals_in_key_modules(self):
         allow = json.loads(ALLOW.read_text(encoding='utf-8'))
         allowed_literals = set(allow['allowed_literal_substrings'])
@@ -134,6 +165,16 @@ class TestTextifAII18nUiStrings(unittest.TestCase):
                 if re.search(r'[A-Za-zÁÉÍÓÚáéíóúñÑ]{4,}\s+[A-Za-zÁÉÍÓÚáéíóúñÑ]{3,}', s):
                     offenders.append((str(path), s))
         self.assertFalse(offenders[:10], offenders[:10])
+
+    def test_ingestion_catalog_parity(self):
+        text = UI.read_text(encoding='utf-8')
+        for key in [
+            'ingestion.subtitle','ingestion.disabled','ingestion.progress_title','ingestion.progress_note',
+            'ingestion.status_title','ingestion.status_default','ingestion.step',
+            'ingestion.pending','ingestion.no_steps','ingestion.completed_review','ingestion.progress',
+            'ingestion.run','ingestion.no_run_id','ingestion.safe_workspace',
+        ]:
+            self.assertEqual(text.count(f"'{key}'"), 2, key)
 
     def test_reports_exist(self):
         for p in [CATALOG, AUDIT, ALLOW, NAV_REPORT, EDITOR_REPORT, GRAPH_REVIEW_REPORT]:

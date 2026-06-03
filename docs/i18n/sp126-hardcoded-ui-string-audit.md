@@ -119,3 +119,38 @@ Deferred scope:
 - No additional ProjectHubView strings were migrated in SP-128. Broader cleanup remains deferred to a later dedicated i18n slice to avoid mixing unrelated UI-copy changes with this closeout.
 
 Assessment: `arc_i18n_project_hub_slice_ready`.
+
+## SP-131 IngestionView Slice
+
+SP-131 migrated the visible `IngestionView.tsx` copy to the Arc i18n catalog.
+
+Migrated keys:
+
+- `ingestion.subtitle`
+- `ingestion.disabled`
+- `ingestion.progress_title`
+- `ingestion.progress_note`
+- `ingestion.status_title`
+- `ingestion.status_default`
+- `ingestion.step`
+- `ingestion.pending`
+- `ingestion.no_steps`
+- `ingestion.completed_review`
+- `ingestion.progress`
+- `ingestion.run`
+- `ingestion.no_run_id`
+- `ingestion.safe_workspace`
+
+Intentional non-translation:
+
+- run status machine values stay raw in data/state, including `completed_with_editorial_review` when returned by the backend
+- step status values stay raw machine values
+- run IDs and job IDs stay raw identifiers
+
+Deferred work:
+
+- realtime ingestion progress hydration
+- traffic-light semantic progress colors
+- remaining hotspots in `GraphInspector`, `GraphToolbar`, `CanonVaerlView`, `EditorView`, `ReviewQueueView`, and `AIStudioView`
+
+Assessment: `arc_i18n_ingestion_slice_ready`.
