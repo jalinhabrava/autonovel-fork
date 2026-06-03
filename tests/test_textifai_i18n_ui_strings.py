@@ -188,6 +188,54 @@ class TestTextifAII18nUiStrings(unittest.TestCase):
         for key in ['editor.save.saving','editor.save.chapter_saved','editor.save.conflict_message','editor.reanalysis.notice']:
             self.assertIn(f"t('{key}')", text)
 
+    def test_app_editor_chrome_sp139_keys_exist_in_both_locales(self):
+        text = UI.read_text(encoding='utf-8')
+        for key in [
+            'editor.title',
+            'editor.subtitle',
+            'editor.chapters',
+            'editor.chapter_list.hide',
+            'editor.chapter_list.show',
+            'editor.chapter_list.selected',
+            'editor.chapter_list.empty',
+            'editor.chapter.add',
+            'editor.chapter.add_body',
+            'editor.toolbar.contract',
+            'editor.markdown_placeholder',
+            'editor.context_panel',
+            'editor.source_text',
+            'editor.save.error_prefix',
+        ]:
+            self.assertEqual(text.count(f"'{key}'"), 2, key)
+
+    def test_app_editor_chrome_sp139_hardcoded_copy_removed(self):
+        text = APP.read_text(encoding='utf-8')
+        for migrated in [
+            'Solo capítulos/manuscrito desde chapter manifest canónico.',
+            'Capítulos',
+            'Ocultar',
+            'Mostrar',
+            'Añadir capítulo',
+            'Draft local pendiente. No hay write-back semántico en SP-116.',
+            'Seleccionado:',
+            'Sin capítulo',
+            'Write-back Markdown con hash guard y backup',
+            'Escribe capítulo en Markdown',
+            'Panel de contexto',
+            'Origen',
+        ]:
+            self.assertNotIn(migrated, text)
+
+    def test_app_editor_chrome_sp139_does_not_ban_unrelated_literals(self):
+        text = APP.read_text(encoding='utf-8')
+        for still_raw in [
+            'chapter_manifest',
+            'Editar ',
+            'Draft local/read-only. Guardar cambios llegará con patch queue.',
+            'Selecciona un nodo.',
+        ]:
+            self.assertIn(still_raw, text)
+
     def test_app_overview_uses_i18n(self):
         text = APP.read_text(encoding='utf-8')
         for key in [

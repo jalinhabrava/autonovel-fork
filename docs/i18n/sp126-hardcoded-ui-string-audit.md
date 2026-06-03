@@ -338,3 +338,15 @@ Assessment: `arc_i18n_canon_vaerl_chrome_slice_ready`.
 - Remaining hotspots: `App.tsx` editor chrome, deeper editor controls if any, and language selector/settings UI.
 
 Assessment: `arc_i18n_entity_fiche_chrome_slice_ready`.
+
+## SP-139 App Editor Chrome Slice
+- `textifai/web_viewer/react_shell/src/App.tsx` editor chrome migrated to `t(...)` for scoped editor-shell labels only.
+- No broad `App.tsx` sweep happened in SP-139.
+- Authored markdown and rendered content remain raw.
+- Wikilinks remain raw.
+- Project, chapter, and file-path values remain raw.
+- Save/write-back/backend payload/status text remains raw unless already part of static editor chrome.
+- Ambiguous editor strings were deferred.
+- Remaining hotspots: non-editor `App.tsx` chrome and language selector/settings.
+
+Assessment: `arc_i18n_app_editor_chrome_slice_ready`.
