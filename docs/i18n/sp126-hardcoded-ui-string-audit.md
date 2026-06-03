@@ -66,7 +66,7 @@ Scanned `textifai/web_viewer/react_shell/src` for user-visible string literals a
 ## SP-126B Progress Note
 - App overview/workspace copy in `textifai/web_viewer/react_shell/src/App.tsx` migrated to i18n.
 - `textifai/web_viewer/react_shell/src/modules/project/ProjectHubView.tsx` deferred because file had pre-existing dirty style/token changes before SP-126B started.
-- Remaining hotspots: `ProjectHubView.tsx`, `GraphInspector.tsx`, `GraphToolbar.tsx`, `CanonVaerlView.tsx`, `EditorView.tsx`, `ReviewQueueView.tsx`, `IngestionView.tsx`, `AIStudioView.tsx`.
+- Remaining hotspots: `ProjectHubView.tsx`, `GraphInspector.tsx`, `CanonVaerlView.tsx`, `EditorView.tsx`, `ReviewQueueView.tsx`, `IngestionView.tsx`, `AIStudioView.tsx`.
 
 ## SP-126C Dirty-File Triage
 
@@ -78,7 +78,7 @@ No additional i18n slice was migrated in SP-126C. All preferred target files wer
 | --- | --- | --- | --- |
 | `textifai/web_viewer/react_shell/src/graph/GraphCanvas.tsx` | yes | graph palette/style extraction | do not touch in SP-126C |
 | `textifai/web_viewer/react_shell/src/graph/GraphTheme.ts` | yes | graph semantic color indirection | do not touch in SP-126C |
-| `textifai/web_viewer/react_shell/src/graph/GraphToolbar.tsx` | yes | graph chip palette/style changes; copy already uses `t(...)` | defer; only migrate later after graph style diffs land or are reverted |
+| `textifai/web_viewer/react_shell/src/graph/GraphToolbar.tsx` | yes | graph chip palette/style changes; copy already uses `t(...)` | migrated in SP-133 as i18n-key-only cleanup; no style or graph-behavior changes |
 | `textifai/web_viewer/react_shell/src/graph/GraphPalette.ts` | yes, untracked | new graph palette constants | do not touch in SP-126C |
 | `textifai/web_viewer/react_shell/src/modules/ai/AIStudioView.tsx` | yes | style/token class changes; visible copy already uses `t(...)` | defer |
 | `textifai/web_viewer/react_shell/src/modules/ingestion/IngestionView.tsx` | yes | style/token class changes; visible copy already uses `t(...)`; machine status remains raw | defer |
@@ -187,7 +187,21 @@ Intentional non-translation:
 
 Remaining hotspots:
 
-- `GraphToolbar.tsx` and `GraphInspector.tsx`
+- `GraphInspector.tsx`
+
+## SP-133 GraphToolbar Key Migration
+
+SP-133 completed GraphToolbar i18n migration as a key-only cleanup with no class, palette, layout, or graph-behavior changes.
+
+Scope completed:
+
+- `textifai/web_viewer/react_shell/src/graph/GraphToolbar.tsx` now uses toolbar-specific Arc i18n keys for visible filter labels, search placeholder, and reset button text.
+- `textifai/web_viewer/react_shell/src/i18n/ui.ts` now includes matching `en`/`es` keys under `graph.toolbar.*`.
+- `tests/test_textifai_i18n_ui_strings.py` now asserts GraphToolbar key parity and guards against fallback to old generic key usage in this component.
+
+Still deferred:
+
+- `GraphInspector.tsx` remains separate because its labels and entity-facing copy are broader and more canon-sensitive.
 - `CanonVaerlView.tsx` and `EntityFicheView.tsx`
 - `ReviewQueueView.tsx`
 - deeper `ProjectHubView.tsx` strings, if any remain after earlier slices

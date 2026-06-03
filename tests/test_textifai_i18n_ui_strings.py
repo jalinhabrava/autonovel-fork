@@ -29,6 +29,19 @@ KEY_MODULES = [
     SRC / 'graph/GraphToolbar.tsx',
 ]
 
+GRAPH_TOOLBAR_KEYS = [
+    'graph.toolbar.filters.all',
+    'graph.toolbar.filters.chapters',
+    'graph.toolbar.filters.characters',
+    'graph.toolbar.filters.places',
+    'graph.toolbar.filters.objects',
+    'graph.toolbar.filters.events',
+    'graph.toolbar.filters.concepts',
+    'graph.toolbar.filters.review',
+    'graph.toolbar.search_placeholder',
+    'graph.toolbar.reset_filters',
+]
+
 REQUIRED_KEYS = [
     'nav.hub','nav.ingest','nav.review','nav.graph','nav.codex','nav.editor','nav.ask',
     'overview.title','overview.subtitle','overview.open_project',
@@ -57,6 +70,11 @@ class TestTextifAII18nUiStrings(unittest.TestCase):
     def test_required_keys_exist_es_en(self):
         text = UI.read_text(encoding='utf-8')
         for key in REQUIRED_KEYS:
+            self.assertGreaterEqual(text.count(f"'{key}'"), 2, key)
+
+    def test_graph_toolbar_keys_exist_es_en(self):
+        text = UI.read_text(encoding='utf-8')
+        for key in GRAPH_TOOLBAR_KEYS:
             self.assertGreaterEqual(text.count(f"'{key}'"), 2, key)
 
     def test_catalog_keys_match_between_es_and_en(self):
@@ -115,6 +133,15 @@ class TestTextifAII18nUiStrings(unittest.TestCase):
             'project.contract_note',
         ]:
             self.assertIn(f"t('{key}')", text)
+
+    def test_graph_toolbar_uses_toolbar_i18n_keys(self):
+        text = (SRC / 'graph/GraphToolbar.tsx').read_text(encoding='utf-8')
+        for key in GRAPH_TOOLBAR_KEYS[:8]:
+            self.assertIn(f"label: '{key}'", text)
+        for key in GRAPH_TOOLBAR_KEYS[8:]:
+            self.assertIn(f"t('{key}')", text)
+        for old_key in ['graph.filter_all', 'graph.filter_chapters', 'graph.filter_characters', 'graph.filter_places', 'graph.filter_objects', 'graph.filter_events', 'graph.filter_concepts', 'graph.filter_review', 'graph.search_placeholder', 'graph.reset_filters']:
+            self.assertNotIn(f"t('{old_key}')", text)
         for migrated in [
             'manifest.json',
             'Un archivo abre el bundle completo.',

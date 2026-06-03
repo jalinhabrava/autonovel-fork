@@ -13,14 +13,14 @@ const CHIP_TONES: Record<string, { background: string; border: string; color: st
 };
 
 const CHIP_LABELS: Array<{ id: string; label: UiI18nKey }> = [
-  { id: 'all', label: 'graph.filter_all' },
-  { id: 'chapter', label: 'graph.filter_chapters' },
-  { id: 'character', label: 'graph.filter_characters' },
-  { id: 'place', label: 'graph.filter_places' },
-  { id: 'object', label: 'graph.filter_objects' },
-  { id: 'event', label: 'graph.filter_events' },
-  { id: 'concept', label: 'graph.filter_concepts' },
-  { id: 'review', label: 'graph.filter_review' },
+  { id: 'all', label: 'graph.toolbar.filters.all' },
+  { id: 'chapter', label: 'graph.toolbar.filters.chapters' },
+  { id: 'character', label: 'graph.toolbar.filters.characters' },
+  { id: 'place', label: 'graph.toolbar.filters.places' },
+  { id: 'object', label: 'graph.toolbar.filters.objects' },
+  { id: 'event', label: 'graph.toolbar.filters.events' },
+  { id: 'concept', label: 'graph.toolbar.filters.concepts' },
+  { id: 'review', label: 'graph.toolbar.filters.review' },
 ];
 
 export type GraphToolbarProps = {
@@ -68,7 +68,7 @@ export function GraphToolbar({
       <input
         value={query}
         onChange={(event) => onQueryChange(event.target.value)}
-        placeholder={t('graph.search_placeholder')}
+        placeholder={t('graph.toolbar.search_placeholder')}
         className="w-full rounded-2xl border border-txf-border-strong bg-txf-surface px-3 py-2 text-sm text-txf-text placeholder:text-txf-subtle"
       />
 
@@ -78,7 +78,7 @@ export function GraphToolbar({
           onClick={onResetViewport}
           className="rounded-2xl border border-txf-border bg-txf-surface-soft px-3 py-1.5 text-sm font-medium text-txf-action hover:bg-txf-surface-muted"
         >
-          {t('graph.reset_filters')}
+          {t('graph.toolbar.reset_filters')}
         </button>
       </div>
     </div>
