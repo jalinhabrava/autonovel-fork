@@ -350,3 +350,40 @@ Assessment: `arc_i18n_entity_fiche_chrome_slice_ready`.
 - Remaining hotspots: non-editor `App.tsx` chrome and language selector/settings.
 
 Assessment: `arc_i18n_app_editor_chrome_slice_ready`.
+
+## SP-140A App Fallback Chrome Slice
+
+SP-140A migrated safe `App.tsx` fallback/display chrome that was still hardcoded after SP-139.
+
+Migrated keys:
+
+- `editor.save.not_saved_yet`
+- `editor.save.saved_since`
+- `editor.no_chapter_content`
+- `editor.reanalysis.pending_not_implemented`
+- `project.kind.workspace`
+- `project.kind.default`
+- `project.fixture.dev`
+- `project.fixture.real`
+- `project.language.pending`
+- `project.workspace_status.chapters_detected`
+- `project.workspace_status.chapters_ready`
+- `project.workspace_status.chapters_failed`
+- `project.workspace_status.semantic_review`
+- `review.source.candidate`
+- `review.source.evidence_pending`
+- `review.item.needs_decision`
+- `review.item.reviewing_target`
+- `review.item.source_with_entity`
+- `review.item.no_fragment`
+- `graph.kind.chapter`
+- `graph.kind.character`
+- `graph.kind.concept`
+- `graph.kind.event`
+- `graph.kind.object`
+- `graph.kind.place`
+- `graph.kind.review`
+
+Intentional non-translation remains unchanged: payload names, project/chapter/entity data, API statuses, IDs, paths, authored markdown, evidence excerpts, and backend-provided messages stay raw.
+
+Assessment: `arc_i18n_sp140a_app_fallback_chrome_slice_ready`.

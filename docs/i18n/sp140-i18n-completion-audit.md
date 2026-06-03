@@ -1,0 +1,73 @@
+# SP-140 i18n Completion Audit
+
+## Scope
+Scanned `textifai/web_viewer/react_shell/src` for remaining hardcoded Arc UI chrome after SP-139.
+
+## Batch plan
+1. `App.tsx` safe fallback and display-mapping chrome.
+2. Small auxiliary chrome files if still needed after re-audit.
+3. Final audit-only pass with deferred ambiguous strings documented.
+
+## Classification
+### A. Safe static UI chrome — migrate in this campaign
+- `textifai/web_viewer/react_shell/src/App.tsx`
+  - relative save-time fallback copy
+  - review-item fallback title/summary/evidence copy
+  - project-row fallback workspace status copy
+  - chapter-content / reanalysis fallback copy
+
+### B. UI-owned display mapping — migrate if display-only
+- `textifai/web_viewer/react_shell/src/App.tsx`
+  - kind labels for graph chips when UI renders node kind names
+  - project fixture labels (`dev fixture`, `real`)
+
+### C. Hydrated/payload/user/canon content — leave raw
+- project names, work titles, languages from payload
+- chapter titles, entity labels, aliases, evidence excerpts
+- review payload recommendation text when backend supplies it
+- markdown bodies, canon facts, wikilinks, note paths
+
+### D. Machine/internal value — leave raw
+- route IDs, graph node IDs, project IDs, review IDs
+- `chapter_id`, `run_id`, `manifest.json`, `.txtfai`
+- status-machine values and raw backend messages unless UI-owned fallback
+
+### E. Ambiguous — defer
+- Large legacy inspector block inside `textifai/web_viewer/react_shell/src/App.tsx` with mixed payload/chrome content
+- Any string requiring layout/className changes to isolate safely
+
+## Current batch: SP-140A
+Migrated in this batch:
+- `editor.save.not_saved_yet`
+- `editor.save.saved_since`
+- `editor.no_chapter_content`
+- `editor.reanalysis.pending_not_implemented`
+- `project.kind.workspace`
+- `project.kind.default`
+- `project.fixture.dev`
+- `project.fixture.real`
+- `project.language.pending`
+- `project.workspace_status.chapters_detected`
+- `project.workspace_status.chapters_ready`
+- `project.workspace_status.chapters_failed`
+- `project.workspace_status.semantic_review`
+- `review.source.candidate`
+- `review.source.evidence_pending`
+- `review.item.needs_decision`
+- `review.item.reviewing_target`
+- `review.item.source_with_entity`
+- `review.item.no_fragment`
+- `graph.kind.chapter`
+- `graph.kind.character`
+- `graph.kind.concept`
+- `graph.kind.event`
+- `graph.kind.object`
+- `graph.kind.place`
+- `graph.kind.review`
+
+## Deferred after SP-140A
+- Legacy inspector prose still embedded in `App.tsx`; mixed with payload and would need a separate safe slice.
+- Any remaining static chrome in `App.tsx` outside fallback paths after re-audit.
+
+## Acceptance target
+No obvious user-facing static fallback chrome should remain hardcoded in migrated `App.tsx` paths above.

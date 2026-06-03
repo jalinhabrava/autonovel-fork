@@ -173,16 +173,16 @@ function extractFirstH1(markdown: string): string {
 
 
 function formatRelativeSaveTime(iso: string | null | undefined): string {
-  if (!iso) return 'aún no guardado';
+  if (!iso) return t('editor.save.not_saved_yet');
   const diffMs = Math.max(0, Date.now() - new Date(iso).getTime());
   const diffSeconds = Math.floor(diffMs / 1000);
-  if (diffSeconds < 60) return `guardado hace ${diffSeconds}s`;
+  if (diffSeconds < 60) return t('editor.save.saved_since', { value: `${diffSeconds}s` });
   const diffMinutes = Math.floor(diffSeconds / 60);
-  if (diffMinutes < 60) return `guardado hace ${diffMinutes}m`;
+  if (diffMinutes < 60) return t('editor.save.saved_since', { value: `${diffMinutes}m` });
   const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24) return `guardado hace ${diffHours}h`;
+  if (diffHours < 24) return t('editor.save.saved_since', { value: `${diffHours}h` });
   const diffDays = Math.floor(diffHours / 24);
-  return `guardado hace ${diffDays}d`;
+  return t('editor.save.saved_since', { value: `${diffDays}d` });
 }
 function replaceOrInsertFirstH1(markdown: string, title: string): string {
   const cleanTitle = title.trim();
@@ -236,8 +236,8 @@ function choosePreferredProject(projects: ProjectSummary[]): ProjectSummary | un
 function toDecisionItem(item: ReviewItem, index: number): DecisionItem {
   const severity = String(item.severity || 'low');
   const target = item.target_label || (typeof item.target_entity === 'object' ? item.target_entity?.label : item.target_entity) || '';
-  const title = item.title || (target ? `Revisar “${target}”` : `${item.source_entity || 'Candidato'} · sin entidad sugerida`);
-  const summary = item.human_reason || item.subtitle || item.recommendation || item.suggested_action || item.review_type || item.type || item.evidence_summary || 'Necesita decisión editorial.';
+  const title = item.title || (target ? t('review.item.reviewing_target', { target }) : t('review.item.source_with_entity', { source: item.source_entity || t('review.source.candidate') }));
+  const summary = item.human_reason || item.subtitle || item.recommendation || item.suggested_action || item.review_type || item.type || item.evidence_summary || t('review.item.needs_decision');
   const lower = `${target} ${summary} ${item.review_type || ''} ${item.type || ''}`.toLowerCase();
   let actionKind = target ? 'accept_suggested_action' : 'manual_resolution_required';
   if (lower.includes('ruido') || lower.includes('noise')) actionKind = 'discard_from_canon';
@@ -249,7 +249,7 @@ function toDecisionItem(item: ReviewItem, index: number): DecisionItem {
     id: item.id || `${title}-${index}`,
     title,
     severity,
-    source: item.evidence_summary || (item.evidence_refs || []).map((row) => row.chapter_id || row.pointer || 'evidencia').slice(0, 2).join(', ') || 'Evidencia pendiente',
+    source: item.evidence_summary || (item.evidence_refs || []).map((row) => row.chapter_id || row.pointer || t('review.source.evidence_pending')).slice(0, 2).join(', ') || t('review.source.evidence_pending'),
     action: summary,
     actionKind,
     hasTarget: Boolean(target),
@@ -329,7 +329,7 @@ function legacyUrl(view: 'graph' | 'notes' | 'canon', projectId: string): string
 
 
 
-function ProjectRow({ project, selected, onSelect }: { project: ProjectSummary; selected?: boolean; onSelect: () => void }) { const title = project.work?.title || project.name || 'Proyecto narrativo'; return <button onClick={onSelect} className={`w-full rounded-2xl border p-4 text-left ${selected ? 'bg-txf-nav-active text-txf-nav-active-text border-txf-border-strong' : 'bg-txf-surface border-txf-border hover:bg-txf-surface-soft'}`}><div className="grid grid-cols-12 gap-3 items-center"><div className="col-span-12 md:col-span-7"><div className="font-semibold">{title}</div><div className={`text-xs ${selected ? 'text-txf-surface-soft' : 'text-txf-subtle'}`}>{project.kind || 'workspace'} · {project.work?.language || 'idioma pendiente'}</div></div><div className="col-span-4 md:col-span-2 text-sm">{project.chapter_count || 0} capítulos</div><div className="col-span-4 md:col-span-2 text-sm">{project.graph_summary?.node_count || 0} nodos</div><div className="col-span-4 md:col-span-1 text-sm">{isMinimalFixture(project) ? 'dev fixture' : 'real'}</div></div><div className={`mt-3 grid gap-2 text-xs ${selected ? 'text-txf-surface-soft' : 'text-txf-subtle'}`}><div>{project.workspace_status?.chapters_detected_label || `${project.chapter_count || 0} capítulos detectados`}</div><div>{project.workspace_status?.chapters_ready_label || 'Sin resumen de ingestión'}</div><div>{project.workspace_status?.chapters_still_failed_label || '0 siguen necesitando reintento'}</div><div>{project.workspace_status?.semantic_review_label || '0 decisiones editoriales pendientes'}</div></div></button>; }
+function ProjectRow({ project, selected, onSelect }: { project: ProjectSummary; selected?: boolean; onSelect: () => void }) { const title = project.work?.title || project.name || t('project.kind.default'); return <button onClick={onSelect} className={`w-full rounded-2xl border p-4 text-left ${selected ? 'bg-txf-nav-active text-txf-nav-active-text border-txf-border-strong' : 'bg-txf-surface border-txf-border hover:bg-txf-surface-soft'}`}><div className="grid grid-cols-12 gap-3 items-center"><div className="col-span-12 md:col-span-7"><div className="font-semibold">{title}</div><div className={`text-xs ${selected ? 'text-txf-surface-soft' : 'text-txf-subtle'}`}>{project.kind || t('project.kind.workspace')} · {project.work?.language || t('project.language.pending')}</div></div><div className="col-span-4 md:col-span-2 text-sm">{project.chapter_count || 0} capítulos</div><div className="col-span-4 md:col-span-2 text-sm">{project.graph_summary?.node_count || 0} nodos</div><div className="col-span-4 md:col-span-1 text-sm">{isMinimalFixture(project) ? t('project.fixture.dev') : t('project.fixture.real')}</div></div><div className={`mt-3 grid gap-2 text-xs ${selected ? 'text-txf-surface-soft' : 'text-txf-subtle'}`}><div>{project.workspace_status?.chapters_detected_label || t('project.workspace_status.chapters_detected', { count: project.chapter_count || 0 })}</div><div>{project.workspace_status?.chapters_ready_label || t('project.workspace_status.chapters_ready')}</div><div>{project.workspace_status?.chapters_still_failed_label || t('project.workspace_status.chapters_failed')}</div><div>{project.workspace_status?.semantic_review_label || t('project.workspace_status.semantic_review')}</div></div></button>; }
 
 function DecisionCard({ item, selected, choice, onSelect, onChoose, onOpenEvidencia }: { item: DecisionItem; selected?: boolean; choice?: ReviewDecisionChoice; onSelect: () => void; onChoose: (choice: ReviewDecisionChoice) => void; onOpenEvidencia: () => void }) {
   const choose = (nextChoice: ReviewDecisionChoice) => { onSelect(); onChoose(nextChoice); };
@@ -371,7 +371,7 @@ function sanitizeEditorMarkdown(raw: string): string {
 
 function evidenceMissingReason(sourceMapChunksCount: number): string {
   if (sourceMapChunksCount <= 0) return 'No hay fragmento textual resoluble porque source_map.chunks está vacío para este source_ref.';
-  return 'No hay fragmento resoluble porque source_ref no se pudo mapear a chunk narrativo.';
+  return t('review.item.no_fragment');
 }
 
 function EvidenciaModal({ item, onClose }: { item: EvidenciaModalItem; onClose: () => void }) {
@@ -430,7 +430,7 @@ function GraphInspector({ node, entityCard, noteContent, noteDetail, onEdit, set
   const relationCount = relationships.length || node.relationshipCount || node.relationship_count || noteDetail?.relationship_count || node.degree || 0;
   const evidenceCount = entityCard?.evidence_refs?.length || node.evidenceCount || node.evidence_count || noteDetail?.evidence_count || 0;
   const runEdit = () => onEdit ? onEdit(node as GraphCanvasNode) : setEditDraft ? setEditDraft({ title: `Editar ${label}`, notePath, body: 'Draft local/read-only. Guardar cambios llegará con patch queue.' }) : undefined;
-  return <aside className="col-span-12 xl:col-span-3 rounded-3xl border border-txf-border bg-txf-surface p-5 shadow-txf-card max-h-[720px] overflow-y-auto"><div className="text-xs uppercase tracking-wide text-txf-subtle">Ficha del nodo</div><h2 className="mt-2 text-xl font-semibold">{label}</h2><div className="mt-2 flex flex-wrap gap-2"><span className="rounded-full bg-txf-surface-soft px-3 py-1 text-xs">{kindLabels[kind] || kind}</span><span className="rounded-full bg-txf-surface-soft px-3 py-1 text-xs">{node.reviewState || node.review_state || node.status || 'ready'}</span><span className="rounded-full bg-txf-surface-soft px-3 py-1 text-xs">{relationCount} relaciones</span><span className="rounded-full bg-txf-surface-soft px-3 py-1 text-xs">{evidenceCount} evidencias</span></div><div className="mt-4 rounded-2xl border border-txf-border bg-txf-surface-muted p-4 text-sm leading-6 text-txf-text">{summary || 'Resumen no disponible todavía. Se muestran enlaces, rutas y datos disponibles para revisión.'}</div>{aliases.length ? <div className="mt-4"><div className="mb-2 text-xs uppercase tracking-wide text-neutral-400">Aliases</div><div className="flex flex-wrap gap-1">{aliases.slice(0, 10).map((alias) => <span key={alias} className="rounded-full border border-txf-border bg-txf-surface px-2 py-0.5 text-xs">{alias}</span>)}</div></div> : null}{facts.length ? <div className="mt-4"><div className="mb-2 text-xs uppercase tracking-wide text-neutral-400">Hechos / bio</div><ul className="list-inside list-disc space-y-1 text-sm text-txf-subtle">{facts.slice(0, 6).map((fact, i) => <li key={i}>{fact}</li>)}</ul></div> : null}{relationships.length ? <div className="mt-4"><div className="mb-2 text-xs uppercase tracking-wide text-neutral-400">Relaciones principales</div><div className="space-y-1">{relationships.slice(0, 6).map((rel, i) => <div key={i} className="rounded-xl border border-txf-border bg-txf-surface-muted px-3 py-2 text-sm">{rel.target || 'sin destino'} — {rel.type || rel.relation_type || 'relacionado'}</div>)}</div></div> : null}<div className="mt-4 grid gap-2 text-sm"><div className="rounded-2xl bg-txf-surface-muted border border-txf-border p-3">Backlinks: {backlinks.length}</div><div className="rounded-2xl bg-txf-surface-muted border border-txf-border p-3">Enlaces salientes: {outgoing.length}</div><div className="rounded-2xl bg-txf-surface-muted border border-txf-border p-3">Grafo local: {noteDetail?.local_graph?.nodes?.length || 0} nodos</div><div className="rounded-2xl bg-txf-surface-muted border border-txf-border p-3">Nota: {notePath || t('review.no_structured_reference')}</div></div>{backlinks.length ? <div className="mt-4"><div className="mb-2 text-xs uppercase tracking-wide text-neutral-400">Backlinks</div><div className="space-y-1">{backlinks.slice(0, 8).map((backlink) => <div key={backlink} className="rounded-xl border border-txf-border bg-txf-surface-muted px-3 py-2 text-xs">{backlink}</div>)}</div></div> : null}{outgoing.length ? <div className="mt-4"><div className="mb-2 text-xs uppercase tracking-wide text-neutral-400">Enlaces salientes</div><div className="space-y-1">{outgoing.slice(0, 8).map((link) => <div key={link.target || link.label} className="rounded-xl border border-txf-border bg-txf-surface-muted px-3 py-2 text-xs">{link.label || link.target}</div>)}</div></div> : null}{preview ? <details className="mt-4" open><summary className="cursor-pointer rounded-2xl border border-txf-border bg-txf-surface-muted px-3 py-2 text-xs font-semibold">Vista Markdown</summary><pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap rounded-2xl bg-txf-surface-muted p-3 text-xs text-txf-subtle">{preview}</pre></details> : null}<div className="mt-5 flex flex-wrap gap-2"><Button onClick={runEdit}>Editar</Button><Button variant="secondary">Abrir ficha</Button><Button variant="secondary">Ver en Review</Button></div></aside>;
+  return <aside className="col-span-12 xl:col-span-3 rounded-3xl border border-txf-border bg-txf-surface p-5 shadow-txf-card max-h-[720px] overflow-y-auto"><div className="text-xs uppercase tracking-wide text-txf-subtle">{t('graph.inspector.title')}</div><h2 className="mt-2 text-xl font-semibold">{label}</h2><div className="mt-2 flex flex-wrap gap-2"><span className="rounded-full bg-txf-surface-soft px-3 py-1 text-xs">{kindLabels[kind] || kind}</span><span className="rounded-full bg-txf-surface-soft px-3 py-1 text-xs">{node.reviewState || node.review_state || node.status || t('graph.review_label')}</span><span className="rounded-full bg-txf-surface-soft px-3 py-1 text-xs">{relationCount} relaciones</span><span className="rounded-full bg-txf-surface-soft px-3 py-1 text-xs">{evidenceCount} evidencias</span></div><div className="mt-4 rounded-2xl border border-txf-border bg-txf-surface-muted p-4 text-sm leading-6 text-txf-text">{summary || t('graph.summary_missing')}</div>{aliases.length ? <div className="mt-4"><div className="mb-2 text-xs uppercase tracking-wide text-neutral-400">Aliases</div><div className="flex flex-wrap gap-1">{aliases.slice(0, 10).map((alias) => <span key={alias} className="rounded-full border border-txf-border bg-txf-surface px-2 py-0.5 text-xs">{alias}</span>)}</div></div> : null}{facts.length ? <div className="mt-4"><div className="mb-2 text-xs uppercase tracking-wide text-neutral-400">Hechos / bio</div><ul className="list-inside list-disc space-y-1 text-sm text-txf-subtle">{facts.slice(0, 6).map((fact, i) => <li key={i}>{fact}</li>)}</ul></div> : null}{relationships.length ? <div className="mt-4"><div className="mb-2 text-xs uppercase tracking-wide text-neutral-400">Relaciones principales</div><div className="space-y-1">{relationships.slice(0, 6).map((rel, i) => <div key={i} className="rounded-xl border border-txf-border bg-txf-surface-muted px-3 py-2 text-sm">{rel.target || t('graph.fiche_entity_fallback')} — {rel.type || rel.relation_type || t('graph.relations')}</div>)}</div></div> : null}<div className="mt-4 grid gap-2 text-sm"><div className="rounded-2xl bg-txf-surface-muted border border-txf-border p-3">Backlinks: {backlinks.length}</div><div className="rounded-2xl bg-txf-surface-muted border border-txf-border p-3">Enlaces salientes: {outgoing.length}</div><div className="rounded-2xl bg-txf-surface-muted border border-txf-border p-3">Grafo local: {noteDetail?.local_graph?.nodes?.length || 0} nodos</div><div className="rounded-2xl bg-txf-surface-muted border border-txf-border p-3">Nota: {notePath || t('review.no_structured_reference')}</div></div>{backlinks.length ? <div className="mt-4"><div className="mb-2 text-xs uppercase tracking-wide text-neutral-400">Backlinks</div><div className="space-y-1">{backlinks.slice(0, 8).map((backlink) => <div key={backlink} className="rounded-xl border border-txf-border bg-txf-surface-muted px-3 py-2 text-xs">{backlink}</div>)}</div></div> : null}{outgoing.length ? <div className="mt-4"><div className="mb-2 text-xs uppercase tracking-wide text-neutral-400">Enlaces salientes</div><div className="space-y-1">{outgoing.slice(0, 8).map((link) => <div key={link.target || link.label} className="rounded-xl border border-txf-border bg-txf-surface-muted px-3 py-2 text-xs">{link.label || link.target}</div>)}</div></div> : null}{preview ? <details className="mt-4" open><summary className="cursor-pointer rounded-2xl border border-txf-border bg-txf-surface-muted px-3 py-2 text-xs font-semibold">Vista Markdown</summary><pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap rounded-2xl bg-txf-surface-muted p-3 text-xs text-txf-subtle">{preview}</pre></details> : null}<div className="mt-5 flex flex-wrap gap-2"><Button onClick={runEdit}>{t('graph.edit')}</Button><Button variant="secondary">Abrir ficha</Button><Button variant="secondary">Ver en Review</Button></div></aside>;
 }
 
 
@@ -517,7 +517,7 @@ export function App() {
       }));
   }, [editorSource, editorTitleDrafts]);
   const selectedEditorChapter = useMemo(() => chapterNotes.find((chapter) => chapter.path === editorNotePath) || null, [chapterNotes, editorNotePath]);
-  const selectedEditorTitle = selectedEditorChapter?.display_title || selectedEditorChapter?.name || editorNotePath || 'Selecciona capítulo';
+  const selectedEditorTitle = selectedEditorChapter?.display_title || selectedEditorChapter?.name || editorNotePath || t('editor.chapter_list.empty');
   const selectedEditorTitleValue = editorTitleDrafts[editorNotePath] || selectedEditorTitle;
   const saveSupported = String(editorSource?.source_used || '').toLowerCase() === 'project_store';
   const saveBlockedByFrontmatter = editorMode === 'visual' && editorDraft.parseStatus === 'malformed_frontmatter';
@@ -576,7 +576,7 @@ export function App() {
       setEditorReanalysisStatus('idle');
       setEditorReanalysisMessage('');
     } catch (_err) {
-      const fallback = 'Sin contenido de capítulo disponible.';
+      const fallback = t('editor.no_chapter_content');
       setEditorDraft(createEditorDraft(fallback, notePath));
       setEditorModeWarning('');
       markEditorDirty();
@@ -718,7 +718,7 @@ export function App() {
     try {
       const result: ChapterReanalysisResponse = await requestChapterReanalysis(selectedProjectId, selectedEditorChapter.chapter_id);
       setEditorReanalysisStatus(result.status === 'queued' ? 'queued' : 'idle');
-      setEditorReanalysisMessage(result.message || 'Reanálisis aún no implementado.');
+      setEditorReanalysisMessage(result.message || t('editor.reanalysis.pending_not_implemented'));
     } catch (err: any) {
       const payload = err?.payload || {};
       setEditorReanalysisStatus('error');
