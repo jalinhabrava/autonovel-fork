@@ -42,6 +42,32 @@ GRAPH_TOOLBAR_KEYS = [
     'graph.toolbar.reset_filters',
 ]
 
+GRAPH_INSPECTOR_KEYS = [
+    'graph.inspector.title',
+    'graph.inspector.open_fiche',
+    'graph.inspector.empty.body',
+    'graph.inspector.sections.aliases',
+    'graph.inspector.sections.reference_points',
+    'graph.inspector.sections.evidence',
+    'graph.inspector.sections.relations',
+    'graph.inspector.sections.backlinks',
+    'graph.inspector.sections.outgoing_links',
+    'graph.inspector.sections.local_graph',
+    'graph.inspector.sections.review',
+    'graph.inspector.empty.reference_points',
+    'graph.inspector.local_graph.body',
+    'graph.inspector.local_graph.stats',
+    'graph.inspector.local_graph.open',
+    'graph.inspector.review.body',
+    'graph.inspector.review.open',
+    'graph.inspector.fiche.body_note',
+    'graph.inspector.fiche.editor_placeholder',
+    'graph.inspector.fiche.save',
+    'graph.inspector.fiche.unsaved',
+    'graph.inspector.fiche.saved',
+    'graph.inspector.fiche.error',
+]
+
 REQUIRED_KEYS = [
     'nav.hub','nav.ingest','nav.review','nav.graph','nav.codex','nav.editor','nav.ask',
     'overview.title','overview.subtitle','overview.open_project',
@@ -75,6 +101,11 @@ class TestTextifAII18nUiStrings(unittest.TestCase):
     def test_graph_toolbar_keys_exist_es_en(self):
         text = UI.read_text(encoding='utf-8')
         for key in GRAPH_TOOLBAR_KEYS:
+            self.assertGreaterEqual(text.count(f"'{key}'"), 2, key)
+
+    def test_graph_inspector_keys_exist_es_en(self):
+        text = UI.read_text(encoding='utf-8')
+        for key in GRAPH_INSPECTOR_KEYS:
             self.assertGreaterEqual(text.count(f"'{key}'"), 2, key)
 
     def test_catalog_keys_match_between_es_and_en(self):
@@ -147,6 +178,33 @@ class TestTextifAII18nUiStrings(unittest.TestCase):
             'Un archivo abre el bundle completo.',
         ]:
             self.assertNotIn(migrated, text)
+
+    def test_graph_inspector_uses_inspector_i18n_keys(self):
+        text = (SRC / 'graph/GraphInspector.tsx').read_text(encoding='utf-8')
+        for key in GRAPH_INSPECTOR_KEYS:
+            needle = f"t('{key}')"
+            if key == 'graph.inspector.local_graph.stats':
+                self.assertIn(needle[:-1], text)
+                continue
+            self.assertIn(needle, text)
+        for old_key in [
+            'graph.ficha_hint',
+            'graph.node_sheet',
+            'graph.open_ficha',
+            'graph.aliases',
+            'graph.reference_points',
+            'graph.local_graph',
+            'graph.local_graph_note',
+            'graph.view_local_graph',
+            'graph.view_review',
+            'graph.review_filter_hint',
+            'graph.fiche_saving',
+            'graph.fiche_saved_pending_reanalysis',
+            'graph.fiche_conflict',
+            'graph.fiche_save_error',
+            'graph.fiche_empty_placeholder',
+        ]:
+            self.assertNotIn(f"t('{old_key}')", text)
 
     def test_ingestion_view_uses_i18n(self):
         text = (SRC / 'modules/ingestion/IngestionView.tsx').read_text(encoding='utf-8')
