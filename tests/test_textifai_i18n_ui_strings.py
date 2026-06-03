@@ -68,6 +68,15 @@ GRAPH_INSPECTOR_KEYS = [
     'graph.inspector.fiche.error',
 ]
 
+CANON_VAERL_KEYS = [
+    'canon.title',
+    'canon.subtitle',
+    'canon.actions.export_selection',
+    'canon.actions.open_evidence',
+    'canon.sections.story_bible',
+    'canon.empty.select_project',
+]
+
 REQUIRED_KEYS = [
     'nav.hub','nav.ingest','nav.review','nav.graph','nav.codex','nav.editor','nav.ask',
     'overview.title','overview.subtitle','overview.open_project',
@@ -258,6 +267,24 @@ class TestTextifAII18nUiStrings(unittest.TestCase):
             'graph.fiche_empty_placeholder',
         ]:
             self.assertNotIn(f"t('{old_key}')", text)
+
+    def test_canon_vaerl_view_uses_i18n_chrome_keys(self):
+        text = (SRC / 'modules/canon/CanonVaerlView.tsx').read_text(encoding='utf-8')
+        for key in CANON_VAERL_KEYS:
+            self.assertIn(f"t('{key}')", text)
+        for old_key in [
+            'nav.codex',
+            'canon.export_selection',
+            'review.open_evidence',
+            'canon.story_bible',
+            'canon.select_project',
+        ]:
+            self.assertNotIn(f"t('{old_key}')", text)
+
+    def test_canon_vaerl_catalog_parity(self):
+        text = UI.read_text(encoding='utf-8')
+        for key in CANON_VAERL_KEYS:
+            self.assertEqual(text.count(f"'{key}'"), 2, key)
 
     def test_ingestion_view_uses_i18n(self):
         text = (SRC / 'modules/ingestion/IngestionView.tsx').read_text(encoding='utf-8')

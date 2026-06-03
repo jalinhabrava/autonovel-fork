@@ -293,3 +293,29 @@ Intentional non-translation:
 - Ambiguous dynamic mappings remain deferred.
 
 Assessment: `arc_i18n_review_queue_chrome_slice_ready`.
+
+## SP-136 Canon/VaERL Chrome Slice
+
+SP-136 migrated the safe `CanonVaerlView.tsx` static chrome slice to Arc i18n keys.
+
+Migrated keys:
+
+- `canon.title`
+- `canon.subtitle`
+- `canon.actions.export_selection`
+- `canon.actions.open_evidence`
+- `canon.sections.story_bible`
+- `canon.empty.select_project`
+
+Classification:
+
+- Static chrome migrated: page title/subtitle, top-bar action buttons, Story Bible section heading, and no-project empty-state copy.
+- Existing payload/rendered content left raw: `canonTable`, `legacyNotes`, selected project state, embedded notes, canon payloads, generated/authored content, paths, IDs, and VaERL technical fields.
+- Machine/internal values left raw: route/view IDs, component props, CSS/class names, schema keys, API payload fields, and project identifiers.
+
+Deferred work:
+
+- `StoryAliasView.tsx` remains untouched for a later safepoint.
+- `EntityFicheView.tsx` and deeper canon/editor surfaces remain untouched because their strings are broader and more payload-sensitive.
+
+Assessment: `arc_i18n_canon_vaerl_chrome_slice_ready`.
