@@ -326,3 +326,15 @@ Assessment: `arc_i18n_canon_vaerl_chrome_slice_ready`.
 - Hydrated alias/canon/entity/payload values are intentionally not translated.
 - Alias payload values, entity labels, canonical labels, authored/generated content, paths, IDs, and technical fields remain raw.
 - Remaining hotspots are deferred; SP-137 does not broaden `App.tsx` migration beyond StoryAlias legacy/embed chrome.
+
+## SP-138 EntityFicheView Chrome Slice
+- `textifai/web_viewer/react_shell/src/modules/canon/EntityFicheView.tsx` static chrome migrated to i18n.
+- Migrated chrome: title, save button label, saving label, helper note, unsaved label, and empty placeholder.
+- Authored markdown and rendered content are intentionally not translated.
+- Wikilinks are intentionally left raw.
+- Save/writeback payload messages and backend status text are intentionally left raw.
+- Internal IDs, note paths, and entity/canon payload values are intentionally left raw.
+- `textifai/web_viewer/react_shell/src/App.tsx` editor chrome is deferred to a later dedicated slice.
+- Remaining hotspots: `App.tsx` editor chrome, deeper editor controls if any, and language selector/settings UI.
+
+Assessment: `arc_i18n_entity_fiche_chrome_slice_ready`.

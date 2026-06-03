@@ -94,9 +94,10 @@ function extractHrefFromEventTarget(target: EventTarget | null, path: EventTarge
 export function EntityFicheView({ editorKey, bodyMarkdown, onChangeBody, onInternalLinkClick, localDirty, saveState = 'idle', saveMessage = '', canSave = false, onSave, saveDisabledReason = '' }: EntityFicheViewProps) {
   const editorRef = useRef<MDXEditorMethods | null>(null);
   const debugEnabled = !import.meta.env.PROD;
+  const emptyPlaceholder = t('entityFiche.editor.placeholder');
 
   useEffect(() => {
-    const markdown = bodyMarkdown || t('graph.fiche_empty_placeholder');
+    const markdown = bodyMarkdown || emptyPlaceholder;
     const current = editorRef.current?.getMarkdown?.() || '';
     if (current !== markdown) editorRef.current?.setMarkdown(markdown);
     if (debugEnabled) {
@@ -105,7 +106,7 @@ export function EntityFicheView({ editorKey, bodyMarkdown, onChangeBody, onInter
         anchors_rendered_in_editor: Boolean(bodyMarkdown),
       };
     }
-  }, [bodyMarkdown, debugEnabled]);
+  }, [bodyMarkdown, debugEnabled, emptyPlaceholder]);
 
   useEffect(() => {
     if (!onInternalLinkClick) return undefined;
@@ -140,11 +141,11 @@ export function EntityFicheView({ editorKey, bodyMarkdown, onChangeBody, onInter
   return (
     <section className="mt-5 rounded-2xl border border-txf-border bg-txf-surface p-5" data-testid="entity-fiche-panel-body">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h3 className="text-base font-semibold text-txf-text">{t('graph.fiche_body')}</h3>
-        <button type="button" data-testid="entity-fiche-save-button" onClick={onSave} disabled={!canSave || saveState === 'saving'} className={`rounded-xl border px-3 py-1.5 text-xs font-medium ${canSave && saveState !== 'saving' ? 'border-txf-border-strong bg-txf-surface text-txf-text hover:bg-txf-surface-soft' : 'border-txf-border bg-txf-surface-soft text-txf-subtle cursor-not-allowed'}`}>{saveState === 'saving' ? t('graph.fiche_saving') : t('graph.fiche_save')}</button>
+        <h3 className="text-base font-semibold text-txf-text">{t('entityFiche.editor.title')}</h3>
+        <button type="button" data-testid="entity-fiche-save-button" onClick={onSave} disabled={!canSave || saveState === 'saving'} className={`rounded-xl border px-3 py-1.5 text-xs font-medium ${canSave && saveState !== 'saving' ? 'border-txf-border-strong bg-txf-surface text-txf-text hover:bg-txf-surface-soft' : 'border-txf-border bg-txf-surface-soft text-txf-subtle cursor-not-allowed'}`}>{saveState === 'saving' ? t('entityFiche.editor.saving') : t('entityFiche.actions.save')}</button>
       </div>
-      <p className="mb-3 text-xs text-txf-subtle">{t('graph.fiche_local_note')}</p>
-      {localDirty ? <div className="mb-3 text-xs text-txf-action">{t('graph.fiche_local_dirty')}</div> : null}
+      <p className="mb-3 text-xs text-txf-subtle">{t('entityFiche.editor.helper')}</p>
+      {localDirty ? <div className="mb-3 text-xs text-txf-action">{t('entityFiche.editor.unsaved')}</div> : null}
       {!canSave && saveDisabledReason ? <div className="mb-3 text-xs text-txf-subtle">{saveDisabledReason}</div> : null}
       {saveMessage ? <div data-testid="entity-fiche-save-status" className={`mb-3 rounded-xl border px-3 py-2 text-xs ${saveState === 'saved' ? 'border-txf-border bg-txf-surface-soft text-txf-text' : saveState === 'conflict' || saveState === 'error' ? 'border-txf-border bg-txf-surface-muted text-txf-text' : 'border-txf-border bg-txf-surface-soft text-txf-text'}`}>{saveMessage}</div> : null}
       <div
@@ -166,14 +167,14 @@ export function EntityFicheView({ editorKey, bodyMarkdown, onChangeBody, onInter
         }}
       >
         <EditorBoundary
-          fallback={<textarea value={bodyMarkdown || t('graph.fiche_empty_placeholder')} onChange={(event) => onChangeBody(event.target.value)} className="min-h-[380px] w-full rounded-xl border border-txf-border bg-txf-surface-muted p-3 text-sm leading-6 text-txf-text" />}
+          fallback={<textarea value={bodyMarkdown || emptyPlaceholder} onChange={(event) => onChangeBody(event.target.value)} className="min-h-[380px] w-full rounded-xl border border-txf-border bg-txf-surface-muted p-3 text-sm leading-6 text-txf-text" />}
         >
           <MDXEditor
             key={editorKey}
             ref={editorRef}
             className="entity-fiche-editor-root"
             contentEditableClassName="entity-fiche-editor-content"
-            markdown={bodyMarkdown || t('graph.fiche_empty_placeholder')}
+            markdown={bodyMarkdown || emptyPlaceholder}
             onChange={onChangeBody}
             plugins={[
               toolbarPlugin({

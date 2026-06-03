@@ -9,6 +9,7 @@ UI = SRC / 'i18n/ui.ts'
 NAV = SRC / 'shell/navigation.ts'
 APP = SRC / 'App.tsx'
 STORY_ALIAS_VIEW = SRC / 'modules/canon/StoryAliasView.tsx'
+ENTITY_FICHE_VIEW = SRC / 'modules/canon/EntityFicheView.tsx'
 
 FIX = REPO / 'tests/fixtures/textifai/i18n/expected'
 CATALOG = FIX / 'ui_i18n_catalog_after_sp119.json'
@@ -107,6 +108,15 @@ STORY_ALIAS_KEYS = [
     'story_alias.vault_tree',
     'story_alias.open_canon',
     'story_alias.legacy_notes_title',
+]
+
+ENTITY_FICHE_KEYS = [
+    'entityFiche.actions.save',
+    'entityFiche.editor.title',
+    'entityFiche.editor.placeholder',
+    'entityFiche.editor.helper',
+    'entityFiche.editor.unsaved',
+    'entityFiche.editor.saving',
 ]
 
 class TestTextifAII18nUiStrings(unittest.TestCase):
@@ -308,6 +318,25 @@ class TestTextifAII18nUiStrings(unittest.TestCase):
     def test_canon_vaerl_catalog_parity(self):
         text = UI.read_text(encoding='utf-8')
         for key in CANON_VAERL_KEYS:
+            self.assertEqual(text.count(f"'{key}'"), 2, key)
+
+    def test_entity_fiche_view_uses_i18n_chrome_keys(self):
+        text = ENTITY_FICHE_VIEW.read_text(encoding='utf-8')
+        for key in ENTITY_FICHE_KEYS:
+            self.assertIn(f"t('{key}')", text)
+        for old_key in [
+            'graph.fiche_body',
+            'graph.fiche_save',
+            'graph.fiche_saving',
+            'graph.fiche_local_note',
+            'graph.fiche_local_dirty',
+            'graph.fiche_empty_placeholder',
+        ]:
+            self.assertNotIn(f"t('{old_key}')", text)
+
+    def test_entity_fiche_catalog_parity(self):
+        text = UI.read_text(encoding='utf-8')
+        for key in ENTITY_FICHE_KEYS:
             self.assertEqual(text.count(f"'{key}'"), 2, key)
 
     def test_ingestion_view_uses_i18n(self):
