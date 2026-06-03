@@ -82,7 +82,15 @@ REQUIRED_KEYS = [
     'editor.save.chapter','editor.save.dirty','editor.save.saving','editor.save.saved','editor.save.conflict_message','editor.save.error',
     'editor.reanalysis.pending','editor.reanalysis.notice','editor.reanalysis.action',
     'graph.node_sheet','graph.reset_filters','graph.search_placeholder','graph.related_only',
+    'review.title','review.author_decisions_subtitle','review.apply_decisions','review.rerun_validation','review.search_placeholder',
+    'review.severity','review.severity.all','review.severity.high','review.severity.medium','review.severity.low',
     'review.accept','review.reject','review.view_evidence','review.pending_decisions',
+    'review.no_linked_chapters','review.accept_relationship','review.accept_alias','review.accept_suggestion','review.create_entity',
+    'review.evidence','review.evidence_item','review.chapter','review.technical_details','review.pointer',
+    'review.no_structured_evidence','review.decision_type','review.recommendation','review.severity_label',
+    'review.editorial_decision','review.needs_author_decision','review.no_structured_reference',
+    'review.possible_merges','review.probable_aliases','review.uncertain_relations','review.insufficient_evidence',
+    'review.pronoun_pov','review.unconfirmed_local_candidates',
 ]
 
 class TestTextifAII18nUiStrings(unittest.TestCase):
@@ -154,6 +162,51 @@ class TestTextifAII18nUiStrings(unittest.TestCase):
             'Local-first ahora; SaaS-ready después. VaERL manda, Markdown se edita.',
             'Abrir proyecto TextifAI completo vía manifest.json; .txtfai queda como dirección futura.',
             'Resolver avisos mediante decisiones explícitas del autor.',
+        ]:
+            self.assertNotIn(migrated, text)
+
+    def test_app_review_queue_chrome_uses_i18n(self):
+        text = APP.read_text(encoding='utf-8')
+        for key in [
+            'review.title','review.author_decisions_subtitle','review.apply_decisions','review.rerun_validation',
+            'review.search_placeholder','review.severity','review.no_linked_chapters','review.accept_relationship',
+            'review.accept_alias','review.accept_suggestion','review.create_entity','review.view_evidence',
+            'review.pending_decisions','review.summary_note','review.evidence','review.chapter',
+            'review.technical_details','review.pointer','review.no_structured_evidence','review.decision_type',
+            'review.recommendation','review.severity_label','review.editorial_decision',
+            'review.needs_author_decision','review.no_structured_reference',
+        ]:
+            self.assertIn(f"t('{key}')", text)
+        for key in ['review.severity.all','review.severity.high','review.severity.medium','review.severity.low']:
+            self.assertIn(key, text)
+        self.assertIn('review.evidence_item', text)
+        for key in [
+            'review.possible_merges','review.probable_aliases','review.uncertain_relations',
+            'review.insufficient_evidence','review.pronoun_pov','review.unconfirmed_local_candidates',
+        ]:
+            self.assertIn(key, text)
+        for migrated in [
+            'Review Queue',
+            'Decisiones del autor convierten ambigüedad semántica en canon estable.',
+            'Aplicar decisiones',
+            'Re-ejecutar validación',
+            'Buscar decisión...',
+            'Sin capítulos vinculados',
+            'Aceptar relación',
+            'Aceptar alias',
+            'Aceptar sugerencia',
+            'Crear entidad nueva',
+            'Decisiones pendientes',
+            'Resumen dinámico de cola editorial.',
+            'Posibles fusiones',
+            'Aliases probables',
+            'Relaciones inciertas',
+            'Evidencia insuficiente',
+            'Pronombres/POV',
+            'Candidatos no confirmados',
+            'Capítulo:',
+            'Detalles técnicos',
+            'Necesita decisión explícita del autor.',
         ]:
             self.assertNotIn(migrated, text)
 

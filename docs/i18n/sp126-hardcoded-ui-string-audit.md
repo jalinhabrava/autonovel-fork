@@ -238,3 +238,58 @@ Deferred work:
 - Review Queue remains a separate hotspot.
 
 Assessment: `arc_i18n_graph_inspector_chrome_slice_ready`.
+
+## SP-135 Review Queue Chrome Slice
+
+SP-135 migrated Review Queue static chrome to Arc i18n catalog.
+
+Migrated keys:
+
+- `review.title`
+- `review.author_decisions_subtitle`
+- `review.apply_decisions`
+- `review.rerun_validation`
+- `review.search_placeholder`
+- `review.severity`
+- `review.severity.all`
+- `review.severity.high`
+- `review.severity.medium`
+- `review.severity.low`
+- `review.no_linked_chapters`
+- `review.accept_relationship`
+- `review.accept_alias`
+- `review.accept_suggestion`
+- `review.create_entity`
+- `review.evidence`
+- `review.evidence_item`
+- `review.chapter`
+- `review.technical_details`
+- `review.pointer`
+- `review.no_structured_evidence`
+- `review.decision_type`
+- `review.recommendation`
+- `review.severity_label`
+- `review.editorial_decision`
+- `review.needs_author_decision`
+- `review.no_structured_reference`
+- `review.pronoun_pov`
+- `review.unconfirmed_local_candidates`
+
+Classification:
+
+- Static chrome labels migrated: top bar title/subtitle, action buttons, search placeholder, modal section headings, summary note, summary chip labels, evidence modal chrome.
+- UI-owned display mappings migrated: severity filter labels (`all/high/medium/low`), fallback no-source label, UI decision CTA variants keyed off `item.actionKind` and `item.hasTarget`.
+- Hydrated payload values left raw: `item.title`, `item.human_reason`, `item.summary`, `item.evidence_summary`, `item.action`, `item.source`, `item.raw.review_type`, `item.raw.recommendation`, `ref.reason`, `ref.chapter_label`, `ref.chapter_id`, `ref.pointer_short`, `ref.pointer`, evidence excerpts, summary counts, and severity token text itself.
+- Machine/internal values left raw: `choice` IDs, `reviewSeverity` state values (`all|high|medium|low`), `item.actionKind`, `item.materiality`, `item.hasTarget`, summary object keys, payload field names, and CSS/class names.
+- Ambiguous/deferred: any future backend-owned localized status/recommendation/severity payloads, entity/canon/evidence content semantics beyond current UI chrome shell.
+
+Intentional non-translation:
+
+- Review Queue static chrome migrated.
+- Review modal/filter/action/summary chrome migrated.
+- Severity/status labels migrated only where they are UI-owned display mappings.
+- Hydrated review payload/entity/evidence/canon values intentionally remain raw.
+- Machine review states/action IDs intentionally remain raw.
+- Ambiguous dynamic mappings remain deferred.
+
+Assessment: `arc_i18n_review_queue_chrome_slice_ready`.
