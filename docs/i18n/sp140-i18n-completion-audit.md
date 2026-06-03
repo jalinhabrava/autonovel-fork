@@ -154,41 +154,15 @@ Scope:
 Intentional non-translation:
 - route IDs, project/entity payload, graph node labels, legacy note content, and backend errors remain raw.
 
-## Current batch: SP-140F
-Migrated in this batch:
-- `graph.no_fragment_fallback`
-- `codex.title`
-- `codex.subtitle`
-- `codex.export_selection`
-- `codex.view_evidence`
-- `codex.story_bible`
-- `codex.select_project`
-- `graph.select_project`
-- `graph.title`
-- `graph.route.subtitle`
-- `graph.reset_filters`
-
-Scope:
-- `textifai/web_viewer/react_shell/src/App.tsx` codex/graph route top-bar and fallback chrome.
-
-Intentional non-translation:
-- route IDs, project/entity payload, graph node labels, legacy note content, and backend errors remain raw.
-
 ## Current batch: SP-140G
-Migrated in this batch:
-- `project.count.chapters`
-- `project.count.nodes`
-- `graph.inspector.empty_legacy`
-- `graph.inspector.aliases_legacy`
-- `graph.inspector.relations_count`
-- `graph.inspector.evidence_count`
+Final audit-only closeout.
 
-Scope:
-- `textifai/web_viewer/react_shell/src/App.tsx` remaining safe project-row counts and legacy inspector count/empty chrome.
+What the final scan shows:
+- remaining hardcoded strings in `App.tsx` are machine/payload content, heuristic/internal literals, or intentionally deferred mixed-content legacy blocks
+- no obvious user-facing static chrome remains in migrated `App.tsx` paths
+- generated bundles were excluded from commits and restored after validation
 
-Intentional non-translation:
-- heuristic `20 capítulos` scoring string stays raw because it is not rendered UI copy.
-- alias values, node labels, IDs, note paths, backlinks, outgoing labels, and markdown preview stay raw.
+Assessment: `arc_i18n_hardcoded_chrome_migration_complete`
 
 ## Closeout status
 - Remaining hardcoded strings in `App.tsx` are either machine/payload content, heuristic/internal literals, or intentionally deferred mixed-content legacy blocks.
