@@ -22,6 +22,7 @@ KEY_MODULES = [
     SRC / 'shell/AppShell.tsx',
     SRC / 'modules/project/ProjectHubView.tsx',
     SRC / 'modules/ingestion/IngestionView.tsx',
+    SRC / 'modules/ai/AIStudioView.tsx',
     SRC / 'modules/review/ReviewQueueView.tsx',
     SRC / 'modules/graph/GraphView.tsx',
     SRC / 'graph/GraphInspector.tsx',
@@ -34,6 +35,10 @@ REQUIRED_KEYS = [
     'overview.project_hub.title','overview.project_hub.text','overview.ingestion.title','overview.ingestion.text',
     'overview.review.title','overview.review.text','overview.graph.title','overview.graph.text',
     'overview.codex.title','overview.codex.text','overview.editor.title','overview.editor.text','overview.ai.title','overview.ai.text',
+    'aiStudio.title','aiStudio.subtitle','aiStudio.actions.openHistory','aiStudio.actions.checkCoverage','aiStudio.actions.send',
+    'aiStudio.placeholder.title','aiStudio.empty.title','aiStudio.empty.body','aiStudio.input.placeholder','aiStudio.grounding.title',
+    'aiStudio.grounding.value','aiStudio.grounding.note','aiStudio.future.brainstorming','aiStudio.future.brainstormingNote',
+    'aiStudio.future.characterLab','aiStudio.future.characterLabNote',
     'ingestion.subtitle','ingestion.disabled','ingestion.progress_title','ingestion.progress_note','ingestion.status_title','ingestion.status_default','ingestion.step','ingestion.pending','ingestion.no_steps','ingestion.completed_review','ingestion.progress','ingestion.run','ingestion.no_run_id','ingestion.safe_workspace',
     'editor.save.chapter','editor.save.dirty','editor.save.saving','editor.save.saved','editor.save.conflict_message','editor.save.error',
     'editor.reanalysis.pending','editor.reanalysis.notice','editor.reanalysis.action',
@@ -145,6 +150,24 @@ class TestTextifAII18nUiStrings(unittest.TestCase):
         ]:
             self.assertNotIn(migrated, text)
 
+    def test_ai_studio_view_uses_i18n(self):
+        text = (SRC / 'modules/ai/AIStudioView.tsx').read_text(encoding='utf-8')
+        for key in [
+            'aiStudio.title','aiStudio.subtitle','aiStudio.actions.openHistory','aiStudio.actions.checkCoverage','aiStudio.actions.send',
+            'aiStudio.placeholder.title','aiStudio.empty.title','aiStudio.empty.body','aiStudio.input.placeholder','aiStudio.grounding.title',
+            'aiStudio.grounding.value','aiStudio.grounding.note','aiStudio.future.brainstorming','aiStudio.future.brainstormingNote',
+            'aiStudio.future.characterLab','aiStudio.future.characterLabNote',
+        ]:
+            self.assertIn(f"t('{key}')", text)
+        for migrated in [
+            'Ask Canon placeholder.',
+            'Grounded answer',
+            'Placeholder. Canon is not generated without evidence backend.',
+            'Ask about canon, brainstorming, or characters...',
+            'No unsupported claims.',
+        ]:
+            self.assertNotIn(migrated, text)
+
     def test_no_obvious_hardcoded_ui_literals_in_key_modules(self):
         allow = json.loads(ALLOW.read_text(encoding='utf-8'))
         allowed_literals = set(allow['allowed_literal_substrings'])
@@ -173,6 +196,16 @@ class TestTextifAII18nUiStrings(unittest.TestCase):
             'ingestion.status_title','ingestion.status_default','ingestion.step',
             'ingestion.pending','ingestion.no_steps','ingestion.completed_review','ingestion.progress',
             'ingestion.run','ingestion.no_run_id','ingestion.safe_workspace',
+        ]:
+            self.assertEqual(text.count(f"'{key}'"), 2, key)
+
+    def test_ai_studio_catalog_parity(self):
+        text = UI.read_text(encoding='utf-8')
+        for key in [
+            'aiStudio.title','aiStudio.subtitle','aiStudio.actions.openHistory','aiStudio.actions.checkCoverage','aiStudio.actions.send',
+            'aiStudio.placeholder.title','aiStudio.empty.title','aiStudio.empty.body','aiStudio.input.placeholder','aiStudio.grounding.title',
+            'aiStudio.grounding.value','aiStudio.grounding.note','aiStudio.future.brainstorming','aiStudio.future.brainstormingNote',
+            'aiStudio.future.characterLab','aiStudio.future.characterLabNote',
         ]:
             self.assertEqual(text.count(f"'{key}'"), 2, key)
 

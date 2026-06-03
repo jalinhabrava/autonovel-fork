@@ -154,3 +154,46 @@ Deferred work:
 - remaining hotspots in `GraphInspector`, `GraphToolbar`, `CanonVaerlView`, `EditorView`, `ReviewQueueView`, and `AIStudioView`
 
 Assessment: `arc_i18n_ingestion_slice_ready`.
+
+## SP-132 AIStudioView Slice
+
+SP-132 migrated the visible `AIStudioView.tsx` placeholder/static copy to the Arc i18n catalog.
+
+Migrated keys:
+
+- `aiStudio.title`
+- `aiStudio.subtitle`
+- `aiStudio.actions.openHistory`
+- `aiStudio.actions.checkCoverage`
+- `aiStudio.actions.send`
+- `aiStudio.placeholder.title`
+- `aiStudio.empty.title`
+- `aiStudio.empty.body`
+- `aiStudio.input.placeholder`
+- `aiStudio.status.placeholder`
+- `aiStudio.grounding.title`
+- `aiStudio.grounding.value`
+- `aiStudio.grounding.note`
+- `aiStudio.future.brainstorming`
+- `aiStudio.future.brainstormingNote`
+- `aiStudio.future.characterLab`
+- `aiStudio.future.characterLabNote`
+
+Intentional non-translation:
+
+- Screen remains placeholder-level and early-development.
+- No real AI Studio feature behavior was implemented.
+- Machine/internal strings stay raw, including route/view IDs, component IDs, and placeholder runtime values.
+
+Remaining hotspots:
+
+- `GraphToolbar.tsx` and `GraphInspector.tsx`
+- `CanonVaerlView.tsx` and `EntityFicheView.tsx`
+- `ReviewQueueView.tsx`
+- deeper `ProjectHubView.tsx` strings, if any remain after earlier slices
+
+Deferred work:
+
+- broader AI Studio behavior, backend calls, persistence, and workflow changes remain out of scope for this slice
+
+Assessment: `arc_i18n_ai_studio_placeholder_slice_ready`.
