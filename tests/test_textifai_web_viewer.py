@@ -86,10 +86,11 @@ class TextifAIWebViewerTests(unittest.TestCase):
         config = build_ingestion_config()
         self.assertEqual(config["mode"], "local_path_preview_only")
         self.assertTrue(config["can_execute"])
-        self.assertFalse(config["can_upload"])
+        self.assertTrue(config["can_upload"])
         self.assertEqual(config["default_output_root"], "runs/web_ingestion")
         self.assertEqual(config["recommended_command"]["program"][:5], ["uv", "run", "python", "scripts/textifai.py", "init"])
         self.assertEqual(config["supported_input_mode"], "local_path")
+        self.assertIn("upload_staging", config["supported_input_modes"])
 
     def test_build_ingestion_command_validates_and_uses_args_list(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -416,19 +417,25 @@ class TextifAIWebViewerTests(unittest.TestCase):
             self.assertEqual(len(registry.list_jobs()), 1)
             self.assertEqual(registry.history_summary()["ignored_output_dirs_without_metadata"], 1)
 
-    def test_no_destructive_or_upload_endpoints_exist(self):
+    def test_no_destructive_endpoints_exist_and_upload_staging_is_available(self):
         with tempfile.TemporaryDirectory() as tmp:
             repo_root = Path(tmp)
             runs_root = repo_root / "runs"
             runs_root.mkdir(parents=True)
             catalog = ProjectCatalog([runs_root])
             registry = IngestionJobRegistry(repo_root=repo_root, start_immediately=False)
-            handler = _make_handler(catalog, registry)
+            handler = _make_handler(catalog, registry, repo_root=repo_root)
             server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
             thread = threading.Thread(target=server.serve_forever, daemon=True)
             thread.start()
             try:
-                for path in ("/api/ingestion/uploads", "/api/ingestion/jobs/delete", "/api/ingestion/jobs/cleanup"):
+                with self.assertRaises(HTTPError) as caught:
+                    urlopen(f"http://127.0.0.1:{server.server_port}/api/ingestion/uploads")
+                self.assertEqual(caught.exception.code, 400)
+                payload = json.loads(caught.exception.read().decode('utf-8'))
+                self.assertEqual(payload['error'], 'bad_request')
+                self.assertIn('upload_session_id is required', payload['message'])
+                for path in ("/api/ingestion/jobs/delete", "/api/ingestion/jobs/cleanup"):
                     with self.assertRaises(HTTPError) as caught:
                         urlopen(f"http://127.0.0.1:{server.server_port}{path}")
                     self.assertEqual(caught.exception.code, 404)
@@ -915,6 +922,7 @@ def _run_viewer_js_export(export_name, payload):
         }});
         const elements = new Map();
         const document = {{
+          documentElement: {{ dataset: {{ ui: "legacy" }} }},
           getElementById(id) {{
             if (!elements.has(id)) elements.set(id, elementFactory());
             return elements.get(id);
@@ -922,17 +930,21 @@ def _run_viewer_js_export(export_name, payload):
           querySelectorAll() {{
             return [];
           }},
+          addEventListener() {{}},
+          removeEventListener() {{}},
         }};
         const context = {{
           console,
           setTimeout,
           clearTimeout,
           document,
-          window: {{}},
+          window: {{ location: {{ search: "" }} }},
           fetch: async () => ({{ ok: true, json: async () => [] }}),
+          URLSearchParams,
           globalThis: {{}},
         }};
         context.window = context;
+        context.location = {{ search: "" }};
         context.globalThis = context;
         vm.createContext(context);
         vm.runInContext(source, context, {{ filename: "app.js" }});

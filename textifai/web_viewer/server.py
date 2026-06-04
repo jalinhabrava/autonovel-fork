@@ -11,6 +11,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 from textifai.web_viewer.ingestion_jobs import IngestionJobRegistry, job_to_json, jobs_history_json
 from textifai.web_viewer.project_reader import ProjectCatalog, read_artifact, read_note, read_project, read_entity_card
+from textifai.web_viewer.upload_staging import UploadValidationError, stage_uploaded_files, upload_session_json
 from textifai.project_store import open_project
 
 
@@ -22,7 +23,7 @@ def build_ingestion_config() -> dict[str, object]:
     return {
         "mode": "local_path_preview_only",
         "can_execute": True,
-        "can_upload": False,
+        "can_upload": True,
         "execution_mode": "local_path_job",
         "default_output_root": "runs/web_ingestion",
         "recommended_command": {
@@ -34,12 +35,13 @@ def build_ingestion_config() -> dict[str, object]:
             "Execution uses subprocess args list only; no shell interpolation.",
             "Writes are limited to dedicated runs/web_ingestion/<timestamp>_<slug>/ targets.",
             "No overwrite is allowed for target output roots.",
-            "Uploads are not enabled in this MVP shell.",
+            "Uploads are staged as metadata-only sessions under runs/web_ingestion_uploads; they do not start ingestion yet.",
             "Skip plugin install is recommended for the MVP path flow.",
             "No real vault/ directory writes are allowed from the wizard.",
         ],
         "supported_input_mode": "local_path",
-        "future_input_modes": ["upload"],
+        "supported_input_modes": ["local_path", "upload_staging"],
+        "future_input_modes": ["upload_to_ingestion_job"],
         "required_fields": [
             {"name": "source_root", "required": True},
             {"name": "project_title", "required": True},
@@ -89,13 +91,15 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
-def _make_handler(catalog: ProjectCatalog, registry: IngestionJobRegistry):
+def _make_handler(catalog: ProjectCatalog, registry: IngestionJobRegistry, *, repo_root: Path = REPO_ROOT):
     class ViewerHandler(BaseHTTPRequestHandler):
         def do_GET(self) -> None:  # noqa: N802
             try:
                 self._handle_get()
             except KeyError:
                 self._json({"error": "not_found"}, status=404)
+            except UploadValidationError as exc:
+                self._json(exc.to_json(), status=400)
             except FileNotFoundError as exc:
                 self._json({"error": "not_found", "message": str(exc)}, status=404)
             except ValueError as exc:
@@ -110,6 +114,8 @@ def _make_handler(catalog: ProjectCatalog, registry: IngestionJobRegistry):
                 self._handle_post()
             except KeyError:
                 self._json({"error": "not_found"}, status=404)
+            except UploadValidationError as exc:
+                self._json(exc.to_json(), status=400)
             except FileNotFoundError as exc:
                 self._json({"error": "not_found", "message": str(exc)}, status=404)
             except ValueError as exc:
@@ -129,6 +135,12 @@ def _make_handler(catalog: ProjectCatalog, registry: IngestionJobRegistry):
                 return
             if path == "/api/ingestion/jobs":
                 self._json(jobs_history_json(registry))
+                return
+            if path == "/api/ingestion/uploads":
+                upload_session_id = query.get("upload_session_id", [""])[0]
+                if not upload_session_id:
+                    raise ValueError("upload_session_id is required")
+                self._json(upload_session_json(repo_root, upload_session_id))
                 return
             if path.startswith("/api/ingestion/jobs/") and path.endswith("/log"):
                 parts = path.split("/")
@@ -243,6 +255,11 @@ def _make_handler(catalog: ProjectCatalog, registry: IngestionJobRegistry):
                         'message': 'Reanálisis de capítulo aún no implementado en viewer backend.',
                     }, status=202)
                     return
+            if parsed.path == "/api/ingestion/uploads":
+                uploads = self._multipart_uploads()
+                session = stage_uploaded_files(repo_root, uploads)
+                self._json(session.to_json(), status=201)
+                return
             if parsed.path != "/api/ingestion/jobs":
                 raise KeyError(parsed.path)
             payload = self._json_body()
@@ -291,7 +308,51 @@ def _make_handler(catalog: ProjectCatalog, registry: IngestionJobRegistry):
                 raise ValueError("JSON payload must be an object")
             return decoded
 
+        def _multipart_uploads(self) -> list[tuple[str, bytes]]:
+            content_type = self.headers.get("Content-Type", "")
+            marker = "boundary="
+            if "multipart/form-data" not in content_type or marker not in content_type:
+                raise ValueError("multipart/form-data upload required")
+            boundary = content_type.split(marker, 1)[1].split(";", 1)[0].strip().strip('"')
+            if not boundary:
+                raise ValueError("multipart boundary required")
+            raw_length = self.headers.get("Content-Length", "0").strip()
+            try:
+                length = int(raw_length)
+            except ValueError as exc:
+                raise ValueError("invalid Content-Length") from exc
+            body = self.rfile.read(max(length, 0))
+            delimiter = ("--" + boundary).encode("utf-8")
+            uploads: list[tuple[str, bytes]] = []
+            for part in body.split(delimiter):
+                part = part.lstrip(b"\r\n")
+                if not part or part == b"--":
+                    continue
+                if part.endswith(b"--"):
+                    part = part[:-2].rstrip(b"\r\n")
+                header_blob, separator, content = part.partition(b"\r\n\r\n")
+                if not separator:
+                    continue
+                filename = _multipart_filename(header_blob.decode("utf-8", errors="replace"))
+                if not filename:
+                    continue
+                uploads.append((filename, content.rstrip(b"\r\n")))
+            if not uploads:
+                raise UploadValidationError("at least one file required")
+            return uploads
+
     return ViewerHandler
+
+
+def _multipart_filename(headers: str) -> str | None:
+    for line in headers.splitlines():
+        if not line.lower().startswith("content-disposition:"):
+            continue
+        for segment in line.split(";"):
+            segment = segment.strip()
+            if segment.startswith("filename="):
+                return segment.split("=", 1)[1].strip().strip('"')
+    return None
 
 
 if __name__ == "__main__":
