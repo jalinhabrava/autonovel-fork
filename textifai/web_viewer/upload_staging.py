@@ -151,6 +151,24 @@ def upload_session_json(repo_root: Path, upload_session_id: str) -> dict[str, An
     return load_upload_session(repo_root, upload_session_id).to_json()
 
 
+def resolve_upload_session_source_root(repo_root: Path, upload_session_id: str) -> Path:
+    session = load_upload_session(repo_root, upload_session_id)
+    root = session_root(repo_root, session.upload_session_id)
+    valid_files: list[Path] = []
+    for item in session.files:
+        filename = str(item.filename or '')
+        try:
+            base, _ = _validate_filename(filename)
+        except UploadValidationError:
+            continue
+        candidate = root / base
+        if _safe_under(root, candidate) and candidate.exists() and candidate.is_file() and candidate.stat().st_size > 0:
+            valid_files.append(candidate)
+    if not valid_files:
+        raise UploadValidationError('upload session has no valid staged files')
+    return root
+
+
 INGESTION_JOB_STATUS_VALUES = [
     'queued',
     'running',

@@ -12,12 +12,16 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from textifai.web_viewer.upload_staging import resolve_upload_session_source_root
+
 SAFE_OUTPUT_ROOT = Path("runs/web_ingestion")
 JOB_METADATA_FILE = "web_ingestion_job.json"
 JOB_LOG_FILE = "web_ingestion_job.log"
 MAX_LOG_CHARS = 160_000
 ACTIVE_STATUSES = {"queued", "running"}
 FINAL_STATUSES = {"succeeded", "failed"}
+JOB_STAGE_STATUS_VALUES = ["pending", "running", "completed", "warning", "blocked", "failed", "skipped"]
+JOB_STATUS_VALUES = ["queued", "running", "blocked", "completed", "completed_with_warnings", "failed", "cancelled"]
 SECRET_PATTERNS = [
     re.compile(r"(?i)(api[_-]?key|token|secret|password)(\s*[=:]\s*)([^\s]+)"),
     re.compile(r"sk-[A-Za-z0-9_-]{12,}"),
@@ -117,6 +121,8 @@ class IngestionJob:
     source_root: str
     project_title: str
     run_name: str
+    input_mode: str = "local_path"
+    upload_session_id: str | None = None
     started_at: str | None = None
     finished_at: str | None = None
     exit_code: int | None = None
@@ -202,6 +208,8 @@ class IngestionJob:
                 "source_root": self.source_root,
                 "project_title": self.project_title,
                 "run_name": self.run_name,
+                "input_mode": self.input_mode,
+                "upload_session_id": self.upload_session_id,
                 "started_at": self.started_at,
                 "finished_at": self.finished_at,
                 "duration_seconds": _duration_seconds(self.started_at or self.created_at, self.finished_at),
@@ -226,6 +234,7 @@ class IngestionJob:
                 "log_truncated": self.log_truncated,
                 "log_tail": self.log[-log_tail_chars:] if log_tail_chars > 0 else "",
                 "last_log_lines": lines[-12:],
+                "stage_status": _stage_status_snapshot(self),
             }
 
 
@@ -264,6 +273,8 @@ class IngestionJobRegistry:
                 source_root=spec["source_root"],
                 project_title=spec["project_title"],
                 run_name=spec["run_name"],
+                input_mode=str(spec.get("input_mode") or "local_path"),
+                upload_session_id=str(spec.get("upload_session_id") or "") or None,
                 safe_output_root=str(self.output_root),
                 duplicate_key=duplicate_key,
             )
@@ -450,6 +461,8 @@ class IngestionJobRegistry:
                 source_root=str(data.get("source_root") or ""),
                 project_title=str(data.get("project_title") or ""),
                 run_name=str(data.get("run_name") or ""),
+                input_mode=str(data.get("input_mode") or "local_path"),
+                upload_session_id=str(data.get("upload_session_id") or "") or None,
                 started_at=str(data.get("started_at") or "") or None,
                 finished_at=str(data.get("finished_at") or "") or None,
                 exit_code=_coerce_int(data.get("exit_code")),
@@ -477,14 +490,19 @@ class IngestionJobRegistry:
 
 def build_ingestion_command(payload: dict[str, Any], *, repo_root: Path, output_root: Path) -> dict[str, Any]:
     source_root_raw = str(payload.get("source_root") or "").strip()
+    upload_session_id = str(payload.get("upload_session_id") or "").strip()
     project_title = str(payload.get("project_title") or "").strip()
     run_name = str(payload.get("run_name") or "").strip()
-    if not source_root_raw:
-        raise ValueError("source_root is required")
+    if bool(source_root_raw) == bool(upload_session_id):
+        raise ValueError("exactly one of source_root or upload_session_id is required")
     if not project_title:
         raise ValueError("project_title is required")
 
-    source_root = Path(source_root_raw).expanduser().resolve()
+    input_mode = "upload_session" if upload_session_id else "local_path"
+    if upload_session_id:
+        source_root = resolve_upload_session_source_root(repo_root, upload_session_id).resolve()
+    else:
+        source_root = Path(source_root_raw).expanduser().resolve()
     if not source_root.exists():
         raise ValueError("source_root does not exist")
     if not source_root.is_dir():
@@ -526,6 +544,8 @@ def build_ingestion_command(payload: dict[str, Any], *, repo_root: Path, output_
         "source_root": str(source_root),
         "project_title": project_title,
         "run_name": slug,
+        "input_mode": input_mode,
+        "upload_session_id": upload_session_id or None,
     }
 
 
@@ -591,6 +611,172 @@ def _compare_unavailable_reason(project_id: str | None, artifact_availability: d
     return None
 
 
+def _job_global_status(job: IngestionJob) -> str:
+    if job.status == "queued":
+        return "queued"
+    if job.status == "running":
+        return "running"
+    if job.status == "failed":
+        return "failed"
+    if job.status == "succeeded":
+        return "completed_with_warnings" if job.result_warnings else "completed"
+    return "failed"
+
+def _build_stage(
+    stage_id: str,
+    label: str,
+    status: str,
+    *,
+    progress: int,
+    summary: str,
+    warnings: list[str] | None = None,
+    errors: list[str] | None = None,
+    actions: list[str] | None = None,
+) -> dict[str, Any]:
+    return {
+        "id": stage_id,
+        "label": label,
+        "status": status if status in JOB_STAGE_STATUS_VALUES else "pending",
+        "progress": progress,
+        "summary": summary,
+        "warnings": list(warnings or []),
+        "errors": list(errors or []),
+        "retry_count": 0,
+        "actions": list(actions or []),
+    }
+
+def _stage_status_snapshot(job: IngestionJob) -> dict[str, Any]:
+    warnings = list(job.result_warnings)
+    errors = [job.error] if job.error else []
+    stages: list[dict[str, Any]] = []
+
+    if job.input_mode == "upload_session":
+        stages.append(
+            _build_stage(
+                "upload_staged",
+                "Upload staged",
+                "completed",
+                progress=100,
+                summary="Files are staged under controlled upload root",
+                actions=["inspect"],
+            )
+        )
+
+    stages.append(
+        _build_stage(
+            "job_queued",
+            "Job queued",
+            "running" if job.status == "queued" else "completed",
+            progress=0 if job.status == "queued" else 100,
+            summary="Job accepted and waiting for subprocess execution" if job.status == "queued" else "Job moved out of queue",
+            actions=["inspect"],
+        )
+    )
+
+    if job.status == "running":
+        running_status = "running"
+        running_progress = 0
+        running_summary = "Ingestion subprocess is running"
+    elif job.status == "succeeded":
+        running_status = "completed"
+        running_progress = 100
+        running_summary = "Ingestion subprocess finished"
+    elif job.status == "failed":
+        running_status = "failed"
+        running_progress = 0
+        running_summary = "Ingestion subprocess failed"
+    else:
+        running_status = "pending"
+        running_progress = 0
+        running_summary = "Ingestion subprocess not started yet"
+    stages.append(
+        _build_stage(
+            "ingestion_running",
+            "Ingestion running",
+            running_status,
+            progress=running_progress,
+            summary=running_summary,
+            errors=errors if running_status == "failed" else [],
+            actions=["inspect"],
+        )
+    )
+
+    if job.result_detected:
+        artifact_status = "completed"
+        artifact_progress = 100
+        artifact_summary = "Inspectable artifacts detected under 99_System"
+        artifact_warnings: list[str] = []
+        artifact_errors: list[str] = []
+    elif job.status == "failed":
+        artifact_status = "failed"
+        artifact_progress = 0
+        artifact_summary = "Inspectable artifacts not detected"
+        artifact_warnings = warnings
+        artifact_errors = errors
+    else:
+        artifact_status = "pending"
+        artifact_progress = 0
+        artifact_summary = "Inspectable artifacts not detected yet"
+        artifact_warnings = []
+        artifact_errors = []
+    stages.append(
+        _build_stage(
+            "artifacts_detected",
+            "Artifacts detected",
+            artifact_status,
+            progress=artifact_progress,
+            summary=artifact_summary,
+            warnings=artifact_warnings,
+            errors=artifact_errors,
+            actions=["inspect"],
+        )
+    )
+
+    if job.project_id:
+        ready_status = "warning" if warnings else "completed"
+        ready_progress = 100
+        ready_summary = "Project is ready for viewer inspection"
+        ready_warnings = warnings
+        ready_errors: list[str] = []
+    elif job.status == "failed":
+        ready_status = "failed"
+        ready_progress = 0
+        ready_summary = "Project was not materialized into ready viewer state"
+        ready_warnings = warnings
+        ready_errors = errors
+    else:
+        ready_status = "pending"
+        ready_progress = 0
+        ready_summary = "Project not ready yet"
+        ready_warnings = []
+        ready_errors = []
+    stages.append(
+        _build_stage(
+            "project_ready",
+            "Project ready",
+            ready_status,
+            progress=ready_progress,
+            summary=ready_summary,
+            warnings=ready_warnings,
+            errors=ready_errors,
+            actions=["inspect"] if (job.project_id or job.error or warnings) else [],
+        )
+    )
+
+    current_stage_id = "job_queued"
+    for stage in stages:
+        current_stage_id = stage["id"]
+        if stage["status"] in {"running", "failed", "warning", "pending"}:
+            break
+
+    return {
+        "schema": "textifai.ingestion_job_progress.v1",
+        "global_status": _job_global_status(job),
+        "current_stage_id": current_stage_id,
+        "progress": 100 if _job_global_status(job) in {"completed", "completed_with_warnings"} else 0,
+        "stages": stages,
+    }
+
 def _job_metadata_payload(job: IngestionJob) -> dict[str, Any]:
     snapshot = job.snapshot(log_tail_chars=0)
     return {
@@ -603,6 +789,8 @@ def _job_metadata_payload(job: IngestionJob) -> dict[str, Any]:
         "exit_code": snapshot["exit_code"],
         "project_title": snapshot["project_title"],
         "source_root": snapshot["source_root"],
+        "input_mode": snapshot["input_mode"],
+        "upload_session_id": snapshot["upload_session_id"],
         "output_root": snapshot["output_root"],
         "safe_output_root": snapshot["safe_output_root"],
         "command_preview": snapshot["command_preview"],
@@ -619,6 +807,7 @@ def _job_metadata_payload(job: IngestionJob) -> dict[str, Any]:
         "project_id": snapshot["project_id"],
         "error": _redacted_summary(snapshot["error"]),
         "run_name": snapshot["run_name"],
+        "stage_status": snapshot["stage_status"],
         "log_path_relative": snapshot["log_path_relative"],
         "restored_from_disk": snapshot["restored_from_disk"],
     }

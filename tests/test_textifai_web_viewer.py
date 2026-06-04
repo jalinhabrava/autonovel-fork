@@ -7,7 +7,7 @@ import unittest
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 from urllib.error import HTTPError
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 from unittest.mock import patch
 
 from textifai.web_viewer.ingestion_jobs import (
@@ -22,6 +22,7 @@ from textifai.web_viewer.ingestion_jobs import (
 )
 from textifai.web_viewer.project_reader import ProjectCatalog, build_graph, read_artifact, read_note, read_project
 from textifai.web_viewer.server import _make_handler, build_ingestion_config
+from textifai.web_viewer.upload_staging import UploadSession, save_upload_session, stage_uploaded_files
 
 
 class TextifAIWebViewerTests(unittest.TestCase):
@@ -115,13 +116,63 @@ class TextifAIWebViewerTests(unittest.TestCase):
         self.assertIn("--source-root", spec["args"])
         self.assertIn("--project-title", spec["args"])
         self.assertIn("--skip-plugin-install", spec["args"])
+        self.assertEqual(spec["input_mode"], "local_path")
         self.assertNotIn("shell=True", " ".join(spec["args"]))
+
+    def test_build_ingestion_command_accepts_upload_session_id(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            output_root = repo_root / "runs" / "web_ingestion"
+            session = stage_uploaded_files(repo_root, [("sample.md", b"# One\n\nBody",)])
+            spec = build_ingestion_command(
+                {"upload_session_id": session.upload_session_id, "project_title": "Upload Demo", "run_name": "upload-run"},
+                repo_root=repo_root,
+                output_root=output_root,
+            )
+        self.assertEqual(spec["input_mode"], "upload_session")
+        self.assertEqual(spec["upload_session_id"], session.upload_session_id)
+        self.assertIn(str(repo_root / "runs" / "web_ingestion_uploads" / session.upload_session_id), spec["args"])
+        self.assertIn("--source-root", spec["args"])
+
+    def test_build_ingestion_command_rejects_bad_upload_source_modes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            output_root = repo_root / "runs" / "web_ingestion"
+            source_root = repo_root / "source"
+            source_root.mkdir(parents=True)
+            session = stage_uploaded_files(repo_root, [("sample.md", b"# One",)])
+            with self.assertRaisesRegex(ValueError, "exactly one of source_root or upload_session_id"):
+                build_ingestion_command(
+                    {"source_root": str(source_root), "upload_session_id": session.upload_session_id, "project_title": "Demo", "run_name": "demo"},
+                    repo_root=repo_root,
+                    output_root=output_root,
+                )
+            with self.assertRaisesRegex(ValueError, "exactly one of source_root or upload_session_id"):
+                build_ingestion_command(
+                    {"project_title": "Demo", "run_name": "demo"},
+                    repo_root=repo_root,
+                    output_root=output_root,
+                )
+            with self.assertRaises(FileNotFoundError):
+                build_ingestion_command(
+                    {"upload_session_id": "upl_missing", "project_title": "Demo", "run_name": "demo"},
+                    repo_root=repo_root,
+                    output_root=output_root,
+                )
+            empty_session = UploadSession(upload_session_id="upl_empty", created_at="2026-01-01T00:00:00+00:00", files=[])
+            save_upload_session(repo_root, empty_session)
+            with self.assertRaisesRegex(ValueError, "upload session has no valid staged files"):
+                build_ingestion_command(
+                    {"upload_session_id": "upl_empty", "project_title": "Demo", "run_name": "demo"},
+                    repo_root=repo_root,
+                    output_root=output_root,
+                )
 
     def test_build_ingestion_command_rejects_bad_source_root(self):
         with tempfile.TemporaryDirectory() as tmp:
             repo_root = Path(tmp)
             output_root = repo_root / "runs" / "web_ingestion"
-            with self.assertRaisesRegex(ValueError, "source_root is required"):
+            with self.assertRaisesRegex(ValueError, "exactly one of source_root or upload_session_id"):
                 build_ingestion_command(
                     {"source_root": "", "project_title": "Demo", "run_name": "demo"},
                     repo_root=repo_root,
@@ -191,7 +242,90 @@ class TextifAIWebViewerTests(unittest.TestCase):
             self.assertEqual(payload["job_id"], job.job_id)
             self.assertEqual(payload["status"], "queued")
             self.assertEqual(payload["log_path_relative"], JOB_LOG_FILE)
+            self.assertEqual(payload["input_mode"], "local_path")
+            self.assertEqual(payload["stage_status"]["schema"], "textifai.ingestion_job_progress.v1")
+            self.assertIn("job_queued", [stage["id"] for stage in payload["stage_status"]["stages"]])
             self.assertIn("command_preview", payload)
+
+    def test_upload_backed_job_snapshot_exposes_truthful_stage_status_without_content(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            session = stage_uploaded_files(repo_root, [("chapter.md", b"secret chapter body",)])
+            registry = IngestionJobRegistry(repo_root=repo_root, start_immediately=False)
+            job = registry.create_job({"upload_session_id": session.upload_session_id, "project_title": "Demo", "run_name": "upload"})
+            payload = job.snapshot()
+        self.assertEqual(payload["input_mode"], "upload_session")
+        self.assertEqual(payload["upload_session_id"], session.upload_session_id)
+        self.assertTrue(Path(payload["output_root"]).is_relative_to(repo_root / "runs" / "web_ingestion"))
+        self.assertEqual(payload["stage_status"]["global_status"], "queued")
+        stages = {stage["id"]: stage for stage in payload["stage_status"]["stages"]}
+        self.assertEqual(stages["upload_staged"]["status"], "completed")
+        self.assertEqual(stages["job_queued"]["status"], "running")
+        self.assertNotIn("secret chapter body", json.dumps(payload))
+
+    def test_post_ingestion_jobs_accepts_upload_session_id(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            (repo_root / "runs").mkdir(parents=True)
+            session = stage_uploaded_files(repo_root, [("chapter.md", b"private manuscript body",)])
+            catalog = ProjectCatalog([repo_root / "runs"])
+            registry = IngestionJobRegistry(repo_root=repo_root, start_immediately=False)
+            handler = _make_handler(catalog, registry, repo_root=repo_root)
+            server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            try:
+                data = json.dumps({"upload_session_id": session.upload_session_id, "project_title": "Demo", "run_name": "upload"}).encode("utf-8")
+                request = Request(f"http://127.0.0.1:{server.server_port}/api/ingestion/jobs", data=data, method="POST")
+                request.add_header("Content-Type", "application/json")
+                with urlopen(request) as response:
+                    payload = json.loads(response.read().decode("utf-8"))
+            finally:
+                server.shutdown()
+                server.server_close()
+                thread.join(timeout=1.0)
+
+        self.assertEqual(payload["input_mode"], "upload_session")
+        self.assertEqual(payload["upload_session_id"], session.upload_session_id)
+        self.assertEqual(payload["stage_status"]["schema"], "textifai.ingestion_job_progress.v1")
+        self.assertNotIn("private manuscript body", json.dumps(payload))
+
+    def test_post_ingestion_jobs_rejects_invalid_source_modes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            runs_root = repo_root / "runs"
+            runs_root.mkdir(parents=True)
+            source_root = repo_root / "source"
+            source_root.mkdir(parents=True)
+            session = stage_uploaded_files(repo_root, [("chapter.md", b"body",)])
+            catalog = ProjectCatalog([runs_root])
+            registry = IngestionJobRegistry(repo_root=repo_root, start_immediately=False)
+            handler = _make_handler(catalog, registry, repo_root=repo_root)
+            server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            try:
+                cases = [
+                    {"project_title": "Demo", "run_name": "none"},
+                    {"source_root": str(source_root), "upload_session_id": session.upload_session_id, "project_title": "Demo", "run_name": "both"},
+                    {"upload_session_id": "upl_missing", "project_title": "Demo", "run_name": "missing"},
+                ]
+                messages = []
+                for payload in cases:
+                    data = json.dumps(payload).encode("utf-8")
+                    request = Request(f"http://127.0.0.1:{server.server_port}/api/ingestion/jobs", data=data, method="POST")
+                    request.add_header("Content-Type", "application/json")
+                    with self.assertRaises(HTTPError) as caught:
+                        urlopen(request)
+                    messages.append(json.loads(caught.exception.read().decode("utf-8"))["message"])
+            finally:
+                server.shutdown()
+                server.server_close()
+                thread.join(timeout=1.0)
+
+        self.assertIn("exactly one of source_root or upload_session_id", messages[0])
+        self.assertIn("exactly one of source_root or upload_session_id", messages[1])
+        self.assertTrue(any("upload_session.json" in message for message in messages))
 
     def test_duplicate_active_job_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
