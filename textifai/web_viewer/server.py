@@ -10,7 +10,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
 
 from textifai.web_viewer.ingestion_jobs import IngestionJobRegistry, job_to_json, jobs_history_json
-from textifai.web_viewer.project_reader import ProjectCatalog, read_artifact, read_note, read_project, read_entity_card
+from textifai.web_viewer.project_reader import ProjectCatalog, read_artifact, read_note, read_project, read_entity_card, tombstone_registry_project
 from textifai.web_viewer.upload_staging import UploadValidationError, stage_uploaded_files, upload_session_json
 from textifai.project_store import open_project
 
@@ -118,6 +118,16 @@ def _make_handler(catalog: ProjectCatalog, registry: IngestionJobRegistry, *, re
                 self._json(exc.to_json(), status=400)
             except FileNotFoundError as exc:
                 self._json({"error": "not_found", "message": str(exc)}, status=404)
+            except ValueError as exc:
+                self._json({"error": "bad_request", "message": str(exc)}, status=400)
+            except Exception as exc:  # pragma: no cover - defensive server boundary
+                self._json({"error": "internal_error", "message": str(exc)}, status=500)
+
+        def do_DELETE(self) -> None:  # noqa: N802
+            try:
+                self._handle_delete()
+            except KeyError:
+                self._json({"error": "not_found"}, status=404)
             except ValueError as exc:
                 self._json({"error": "bad_request", "message": str(exc)}, status=400)
             except Exception as exc:  # pragma: no cover - defensive server boundary
@@ -265,6 +275,18 @@ def _make_handler(catalog: ProjectCatalog, registry: IngestionJobRegistry, *, re
             payload = self._json_body()
             job = registry.create_job(payload)
             self._json(job_to_json(job), status=202)
+
+        def _handle_delete(self) -> None:
+            parsed = urlparse(self.path)
+            path = parsed.path
+            if path.startswith('/api/projects/'):
+                parts = path.split('/')
+                project_id = unquote(parts[3]) if len(parts) > 3 else ''
+                if len(parts) == 4 and project_id:
+                    removed = tombstone_registry_project(project_id)
+                    self._json({'ok': True, 'project_id': project_id, 'removed': removed, 'state': 'deleted'})
+                    return
+            raise KeyError(path)
 
         def _static(self, path: str) -> None:
             if path in {"", "/"}:

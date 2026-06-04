@@ -175,9 +175,11 @@ class TextifAIObsidianSetupTests(unittest.TestCase):
                 repo_root=base,
             )
 
-            self.assertEqual(result.import_strategy_used, "structured_bootstrap_v1_unavailable")
+            self.assertEqual(result.import_strategy_used, "deterministic_chapter_manifest_project")
             self.assertFalse(result.bootstrap_written_drafts)
-            self.assertIn("structured_bootstrap_v1_failed", result.bootstrap_warnings)
+            self.assertTrue((vault_root / "textifai.project.json").exists())
+            self.assertTrue((vault_root / "chapters" / "chapter_manifest.json").exists())
+            self.assertTrue((vault_root / "99_System" / "markdown_manifest.json").exists())
             self.assertFalse(result.official_obsidian_importer_used)
             self.assertIsNotNone(result.official_obsidian_importer_reason)
             self.assertEqual(result.readiness.source_reliability, "vault_reader_only")
@@ -339,7 +341,9 @@ class TextifAIObsidianSetupTests(unittest.TestCase):
             self.assertEqual(payload["mode"], "existing_material")
             self.assertTrue(payload["vault_ready"])
             self.assertFalse(payload["bootstrap_written_drafts"])
-            self.assertEqual(payload["import_strategy_used"], "structured_bootstrap_v1_unavailable")
+            self.assertEqual(payload["import_strategy_used"], "deterministic_chapter_manifest_project")
+            self.assertTrue((folder / "textifai.project.json").exists())
+            self.assertTrue((folder / "chapters" / "chapter_manifest.json").exists())
             self.assertEqual(payload["plugin_status"]["install_succeeded"], True)
 
     def test_short_obsidian_status_wrapper_reports_readiness(self):

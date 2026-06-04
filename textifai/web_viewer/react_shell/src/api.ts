@@ -177,6 +177,50 @@ export type IngestionJob = {
   run_name?: string;
   project_title?: string;
   created_at?: string;
+  input_mode?: string;
+  upload_session_id?: string | null;
+  project_id?: string | null;
+  stage_status?: IngestionStageStatusSnapshot;
+  result_status?: string;
+  error?: string | null;
+};
+
+export type UploadedIngestionFile = {
+  file_id: string;
+  filename: string;
+  size_bytes: number;
+  content_type?: string;
+  status: 'staged' | 'rejected';
+  error?: string;
+};
+
+export type IngestionUploadResponse = {
+  upload_session_id: string;
+  files: UploadedIngestionFile[];
+  created_at?: string;
+};
+
+export type IngestionStageStatus = 'pending' | 'running' | 'completed' | 'warning' | 'blocked' | 'failed' | 'skipped';
+
+export type IngestionStage = {
+  id: string;
+  label: string;
+  status: IngestionStageStatus;
+  progress?: number;
+  summary?: string;
+  message?: string;
+  warnings?: unknown[];
+  errors?: unknown[];
+  actions?: string[];
+};
+
+export type IngestionStageStatusSnapshot = {
+  schema: string;
+  global_status?: string;
+  current_stage_id?: string;
+  project_ready?: boolean;
+  progress?: number | null;
+  stages?: IngestionStage[];
 };
 
 
@@ -221,12 +265,13 @@ export type EntityFicheSaveResponse = {
   message?: string;
 };
 
-async function api<T>(path: string): Promise<T> {
-  const response = await fetch(path, { cache: 'no-store' });
+async function api<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(path, { cache: 'no-store', ...init });
+  const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(`${response.status} ${response.statusText}`);
+    throw Object.assign(new Error(`${response.status} ${response.statusText}`), { payload, status: response.status });
   }
-  return response.json();
+  return payload;
 }
 
 async function apiPost<T>(path: string, body: object): Promise<T> {
@@ -301,6 +346,10 @@ export async function fetchProjectDetail(projectId: string): Promise<ProjectDeta
   return api<ProjectDetail>(`/api/projects/${encodeURIComponent(projectId)}`);
 }
 
+export async function removeProject(projectId: string): Promise<{ ok?: boolean; project_id?: string }> {
+  return api<{ ok?: boolean; project_id?: string }>(`/api/projects/${encodeURIComponent(projectId)}`, { method: 'DELETE' });
+}
+
 export async function fetchGraph(projectId: string): Promise<GraphPayload> {
   return api<GraphPayload>(`/api/projects/${encodeURIComponent(projectId)}/graph`);
 }
@@ -339,6 +388,27 @@ export async function fetchIngestionConfig(): Promise<IngestionConfig> {
 export async function fetchIngestionJobs(): Promise<IngestionJob[]> {
   const payload = await api<{ jobs?: IngestionJob[] }>('/api/ingestion/jobs');
   return payload.jobs || [];
+}
+
+export async function uploadIngestionFiles(files: File[]): Promise<IngestionUploadResponse> {
+  const body = new FormData();
+  for (const file of files) body.append('file', file, file.name);
+  return api<IngestionUploadResponse>('/api/ingestion/uploads', {
+    method: 'POST',
+    body,
+  });
+}
+
+export async function fetchIngestionUploadSession(uploadSessionId: string): Promise<IngestionUploadResponse> {
+  return api<IngestionUploadResponse>(`/api/ingestion/uploads?upload_session_id=${encodeURIComponent(uploadSessionId)}`);
+}
+
+export async function startIngestionJobFromUpload(payload: { upload_session_id: string; project_title: string; run_name?: string }): Promise<IngestionJob> {
+  return apiPost<IngestionJob>('/api/ingestion/jobs', payload);
+}
+
+export async function fetchIngestionJob(jobId: string): Promise<IngestionJob> {
+  return api<IngestionJob>(`/api/ingestion/jobs/${encodeURIComponent(jobId)}`);
 }
 
 export async function saveChapterMarkdown(projectId: string, chapterId: string, markdown: string, expectedHash: string, displayTitle?: string): Promise<ChapterSaveResponse> {

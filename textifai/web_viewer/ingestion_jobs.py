@@ -551,6 +551,10 @@ def build_ingestion_command(payload: dict[str, Any], *, repo_root: Path, output_
 
 def detect_job_result(output_path: Path) -> dict[str, Any]:
     system_root = output_path / "99_System"
+    project_manifest = output_path / "textifai.project.json"
+    markdown_manifest = system_root / "markdown_manifest.json"
+    markdown_graph_index = system_root / "markdown_graph_index.json"
+    writer_outcome = system_root / "writer_outcome.json"
     artifact_names = [
         "obsidian_import.json",
         "review_queue.json",
@@ -558,6 +562,7 @@ def detect_job_result(output_path: Path) -> dict[str, Any]:
         "run_comparability_manifest.json",
     ]
     artifact_availability = {name: (system_root / name).exists() for name in artifact_names}
+    project_package_ready = project_manifest.exists() and markdown_manifest.exists() and markdown_graph_index.exists() and writer_outcome.exists()
 
     warnings: list[str] = []
     inspectable_artifacts_available = artifact_availability["obsidian_import.json"]
@@ -565,13 +570,13 @@ def detect_job_result(output_path: Path) -> dict[str, Any]:
 
     if not system_root.exists():
         warnings.append("99_System directory not found; result may not be inspectable in viewer yet")
-    if system_root.exists() and not inspectable_artifacts_available:
+    if system_root.exists() and not inspectable_artifacts_available and not project_package_ready:
         warnings.append("obsidian_import.json not found; result detection is incomplete")
-    if system_root.exists() and not review_queue_available:
+    if system_root.exists() and not review_queue_available and not project_package_ready:
         warnings.append("review_queue.json not found; review queue view may be unavailable")
 
-    project_openable = system_root.exists() and (inspectable_artifacts_available or review_queue_available)
-    result_detected = system_root.exists() and inspectable_artifacts_available
+    project_openable = system_root.exists() and (inspectable_artifacts_available or review_queue_available or project_package_ready)
+    result_detected = system_root.exists() and (inspectable_artifacts_available or project_package_ready)
     result_status = "inspectable" if result_detected else "warning"
 
     return {
@@ -580,6 +585,7 @@ def detect_job_result(output_path: Path) -> dict[str, Any]:
         "result_warnings": warnings,
         "review_queue_available": review_queue_available,
         "inspectable_artifacts_available": inspectable_artifacts_available,
+        "project_package_ready": project_package_ready,
         "artifact_availability": artifact_availability,
         "result_status": result_status,
     }
@@ -627,7 +633,7 @@ def _build_stage(
     label: str,
     status: str,
     *,
-    progress: int,
+    progress: int | None,
     summary: str,
     warnings: list[str] | None = None,
     errors: list[str] | None = None,
@@ -650,11 +656,39 @@ def _stage_status_snapshot(job: IngestionJob) -> dict[str, Any]:
     errors = [job.error] if job.error else []
     stages: list[dict[str, Any]] = []
 
-    if job.input_mode == "upload_session":
+    is_upload = job.input_mode == "upload_session"
+    is_running = job.status == "running"
+    is_succeeded = job.status == "succeeded"
+    is_failed = job.status == "failed"
+    has_artifacts = bool(job.result_detected or job.project_id)
+
+    def phase_status(*, before_done: bool = False) -> str:
+        if is_failed:
+            return "failed"
+        if is_succeeded:
+            return "completed"
+        if is_running:
+            return "running" if not before_done else "completed"
+        if before_done:
+            return "completed"
+        if has_artifacts:
+            return "completed"
+        return "pending"
+
+    def phase_progress(status: str) -> int | None:
+        if status == "completed":
+            return 100
+        if status == "running":
+            return None
+        if status in {"failed", "blocked"}:
+            return 0
+        return 0
+
+    if is_upload:
         stages.append(
             _build_stage(
-                "upload_staged",
-                "Upload staged",
+                "preparing_manuscript",
+                "Preparing manuscript",
                 "completed",
                 progress=100,
                 summary="Files are staged under controlled upload root",
@@ -662,118 +696,49 @@ def _stage_status_snapshot(job: IngestionJob) -> dict[str, Any]:
             )
         )
 
-    stages.append(
-        _build_stage(
-            "job_queued",
-            "Job queued",
-            "running" if job.status == "queued" else "completed",
-            progress=0 if job.status == "queued" else 100,
-            summary="Job accepted and waiting for subprocess execution" if job.status == "queued" else "Job moved out of queue",
-            actions=["inspect"],
-        )
-    )
+    stages.append(_build_stage("detecting_chapters", "Detecting chapters", "running" if job.status == "queued" else "completed", progress=0 if job.status == "queued" else 100, summary="Job accepted and waiting for subprocess execution" if job.status == "queued" else "Job moved out of queue", actions=["inspect"]))
 
-    if job.status == "running":
-        running_status = "running"
-        running_progress = 0
-        running_summary = "Ingestion subprocess is running"
-    elif job.status == "succeeded":
-        running_status = "completed"
-        running_progress = 100
-        running_summary = "Ingestion subprocess finished"
-    elif job.status == "failed":
-        running_status = "failed"
-        running_progress = 0
-        running_summary = "Ingestion subprocess failed"
-    else:
-        running_status = "pending"
-        running_progress = 0
-        running_summary = "Ingestion subprocess not started yet"
-    stages.append(
-        _build_stage(
-            "ingestion_running",
-            "Ingestion running",
-            running_status,
-            progress=running_progress,
-            summary=running_summary,
-            errors=errors if running_status == "failed" else [],
-            actions=["inspect"],
-        )
-    )
+    running_status = phase_status(before_done=False)
+    running_progress = phase_progress(running_status)
+    running_summary = "Ingestion is running" if running_status == "running" else ("Ingestion finished" if running_status == "completed" else "Ingestion has not started yet")
+    stages.append(_build_stage("writing_markdown", "Creating markdown chapters", running_status, progress=running_progress, summary=running_summary, errors=errors if running_status == "failed" else [], actions=["inspect"]))
 
-    if job.result_detected:
-        artifact_status = "completed"
-        artifact_progress = 100
-        artifact_summary = "Inspectable artifacts detected under 99_System"
-        artifact_warnings: list[str] = []
-        artifact_errors: list[str] = []
-    elif job.status == "failed":
-        artifact_status = "failed"
-        artifact_progress = 0
-        artifact_summary = "Inspectable artifacts not detected"
-        artifact_warnings = warnings
-        artifact_errors = errors
-    else:
-        artifact_status = "pending"
-        artifact_progress = 0
-        artifact_summary = "Inspectable artifacts not detected yet"
-        artifact_warnings = []
-        artifact_errors = []
-    stages.append(
-        _build_stage(
-            "artifacts_detected",
-            "Artifacts detected",
-            artifact_status,
-            progress=artifact_progress,
-            summary=artifact_summary,
-            warnings=artifact_warnings,
-            errors=artifact_errors,
-            actions=["inspect"],
-        )
-    )
+    artifact_status = "completed" if has_artifacts else ("warning" if (is_succeeded and not has_artifacts) else ("failed" if is_failed else ("running" if is_running else "pending")))
+    artifact_progress = 100 if artifact_status == "completed" else (None if artifact_status == "running" else 0)
+    artifact_summary = "Inspectable artifacts detected under 99_System" if artifact_status == "completed" else ("Run finished without inspectable artifacts" if artifact_status == "warning" else ("Inspectable artifacts not detected yet" if artifact_status == "pending" else "Inspectable artifacts not detected"))
+    artifact_warnings = warnings if artifact_status in {"completed", "failed", "warning"} else []
+    artifact_errors = errors if artifact_status == "failed" else []
+    stages.append(_build_stage("extracting_entities", "Extracting entities and relations", artifact_status, progress=artifact_progress, summary=artifact_summary, warnings=artifact_warnings, errors=artifact_errors, actions=["inspect"]))
 
-    if job.project_id:
-        ready_status = "warning" if warnings else "completed"
-        ready_progress = 100
-        ready_summary = "Project is ready for viewer inspection"
-        ready_warnings = warnings
-        ready_errors: list[str] = []
-    elif job.status == "failed":
-        ready_status = "failed"
-        ready_progress = 0
-        ready_summary = "Project was not materialized into ready viewer state"
-        ready_warnings = warnings
-        ready_errors = errors
-    else:
-        ready_status = "pending"
-        ready_progress = 0
-        ready_summary = "Project not ready yet"
-        ready_warnings = []
-        ready_errors = []
-    stages.append(
-        _build_stage(
-            "project_ready",
-            "Project ready",
-            ready_status,
-            progress=ready_progress,
-            summary=ready_summary,
-            warnings=ready_warnings,
-            errors=ready_errors,
-            actions=["inspect"] if (job.project_id or job.error or warnings) else [],
-        )
-    )
+    ready_status = "warning" if (is_succeeded and not job.project_id) else ("warning" if (job.project_id and warnings) else ("completed" if job.project_id else ("failed" if is_failed else "pending")))
+    ready_progress = 100 if ready_status in {"completed", "warning"} else 0
+    ready_summary = "Project is ready for viewer inspection" if ready_status == "completed" else ("Run finished but project was not materialized" if ready_status == "warning" else ("Project was not materialized into ready viewer state" if ready_status == "failed" else "Project not ready yet"))
+    ready_warnings = warnings if ready_status in {"completed", "warning"} else []
+    ready_errors = errors if ready_status == "failed" else []
+    stages.append(_build_stage("building_vaerl", "Building VaERL", ready_status, progress=ready_progress, summary=ready_summary, warnings=ready_warnings, errors=ready_errors, actions=["inspect"] if (job.project_id or job.error or warnings or is_succeeded) else []))
 
-    current_stage_id = "job_queued"
+    normalized_status = "completed" if job.project_id else ("warning" if ready_status == "warning" else ("failed" if is_failed else ("running" if is_running else "pending")))
+    stages.append(_build_stage("normalizing_entities", "Normalizing entities and aliases", normalized_status, progress=100 if normalized_status == "completed" else (None if normalized_status == "running" else 0), summary="Entities and aliases normalized" if normalized_status == "completed" else ("Entities and aliases not finalized" if normalized_status == "warning" else "Entities and aliases not ready yet"), warnings=warnings if normalized_status == "warning" else [], errors=errors if normalized_status == "failed" else [], actions=["inspect"]))
+    stages.append(_build_stage("building_graph", "Generating graph", normalized_status, progress=100 if normalized_status == "completed" else (None if normalized_status == "running" else 0), summary="Graph generated" if normalized_status == "completed" else ("Graph not generated yet" if normalized_status == "warning" else "Graph not ready yet"), warnings=warnings if normalized_status == "warning" else [], errors=errors if normalized_status == "failed" else [], actions=["inspect"]))
+    stages.append(_build_stage("building_review_queue", "Creating review queue", normalized_status, progress=100 if normalized_status == "completed" else (None if normalized_status == "running" else 0), summary="Review queue created" if normalized_status == "completed" else ("Review queue not created yet" if normalized_status == "warning" else "Review queue not ready yet"), warnings=warnings if normalized_status == "warning" else [], errors=errors if normalized_status == "failed" else [], actions=["inspect"]))
+    stages.append(_build_stage("validating_project", "Validating project", normalized_status, progress=100 if normalized_status == "completed" else (None if normalized_status == "running" else 0), summary="Project validated" if normalized_status == "completed" else ("Project not validated yet" if normalized_status == "warning" else "Project not ready yet"), warnings=warnings if normalized_status == "warning" else [], errors=errors if normalized_status == "failed" else [], actions=["inspect"]))
+    stages.append(_build_stage("workspace_ready", "Workspace ready", "completed" if job.project_id else ("warning" if ready_status == "warning" else ("failed" if is_failed else ("running" if is_running else "pending"))), progress=100 if job.project_id else (None if is_running else 0), summary="Workspace ready to open" if job.project_id else ("Run finished but workspace is not ready" if ready_status == "warning" else ("Workspace not ready" if is_failed else "Workspace not ready yet")), warnings=warnings if not job.project_id and ready_status == "warning" else [], errors=errors if is_failed else [], actions=["inspect"] if (job.project_id or job.error or warnings or is_succeeded) else []))
+
+    current_stage_id = "detecting_chapters"
     for stage in stages:
         current_stage_id = stage["id"]
         if stage["status"] in {"running", "failed", "warning", "pending"}:
             break
 
+    global_status = _job_global_status(job)
+    project_ready = bool(job.project_id)
+    progress = 100 if global_status in {"completed", "completed_with_warnings"} and project_ready else (None if global_status in {"running", "completed_with_warnings"} else 0)
     return {
         "schema": "textifai.ingestion_job_progress.v1",
-        "global_status": _job_global_status(job),
+        "global_status": global_status,
         "current_stage_id": current_stage_id,
-        "progress": 100 if _job_global_status(job) in {"completed", "completed_with_warnings"} else 0,
+        "project_ready": project_ready,
+        "progress": progress,
         "stages": stages,
     }
 

@@ -44,6 +44,7 @@ import {
   GraphNode,
   IngestionConfig,
   IngestionJob,
+  IngestionStage,
   ProjectDetail,
   ProjectSummary,
   ReviewItem,
@@ -51,15 +52,20 @@ import {
   fetchArtifacts,
   fetchGraph,
   fetchIngestionConfig,
+  fetchIngestionJob,
   fetchIngestionJobs,
+  fetchIngestionUploadSession,
   fetchNote,
   fetchProjectDetail,
   fetchProjects,
+  removeProject,
   fetchReviewQueue,
+  startIngestionJobFromUpload,
   saveChapterMarkdown,
   saveEntityFicheMarkdown,
   EntityCard,
   fetchEntityCard,
+  uploadIngestionFiles,
   requestChapterReanalysis } from './api';
 import { mapGraphPayload, filterGraph } from './graph/GraphDataAdapter';
 import { GraphCanvas } from './graph/GraphCanvas';
@@ -67,6 +73,9 @@ import { GraphToolbar } from './graph/GraphToolbar';
 import { GraphNodeEditDraftModal } from './graph/GraphNodeEditDraftModal';
 import { GraphCanvasNode } from './graph/types';
 import { GraphInspector as GraphInspectorPanel } from './graph/GraphInspector';
+
+const ACTIVE_INGESTION_GLOBAL_STATUSES = new Set(['queued', 'running']);
+const PROJECT_STORAGE_KEY = 'textifai.selectedProjectId';
 
 type DecisionItem = { id: string; title: string; severity: string; source: string; action: string; raw: ReviewItem; actionKind?: string; hasTarget?: boolean; materiality?: 'normal' | 'low' | 'noise' };
 type ReviewDecisionChoice = 'accept' | 'reject' | 'manual' | 'create' | 'discard' | 'context' | 'defer';
@@ -86,6 +95,14 @@ type EditorDraftState = {
 };
 
 type SaveStatus = 'idle' | 'dirty' | 'saving' | 'saved' | 'error' | 'conflict';
+
+function ingestionNameSeed(filename: string): string {
+  return String(filename || '').replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim();
+}
+
+function ingestionRunSlug(value: string): string {
+  return String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80);
+}
 
 const editorContractStrings = [
   'textifai-editor-toolbar',
@@ -233,6 +250,57 @@ function choosePreferredProject(projects: ProjectSummary[]): ProjectSummary | un
   })[0];
 }
 
+function ingestionJobSortValue(job: IngestionJob): number {
+  const value = job.created_at ? Date.parse(job.created_at) : NaN;
+  return Number.isFinite(value) ? value : 0;
+}
+
+function mapRunStepStatus(status: string | undefined): IngestionStage['status'] {
+  if (status === 'completed' || status === 'succeeded' || status === 'done') return 'completed';
+  if (status === 'running' || status === 'in_progress') return 'running';
+  if (status === 'failed' || status === 'error') return 'failed';
+  if (status === 'warning' || status === 'completed_with_warnings') return 'warning';
+  if (status === 'blocked') return 'blocked';
+  return 'pending';
+}
+
+function projectDetailToIngestionJob(detail: ProjectDetail | null, project: ProjectSummary | null): IngestionJob | null {
+  if (!detail?.project?.project_id || !detail.run_status) return null;
+  const stages: IngestionStage[] = (detail.run_status.steps || []).map((step) => ({
+    id: String(step.id || ''),
+    label: String(step.label || step.id || ''),
+    status: mapRunStepStatus(step.status),
+    progress: typeof step.progress === 'number' ? step.progress : undefined,
+  }));
+  return {
+    job_id: detail.run_status.run_id || detail.project.project_id,
+    project_id: detail.project.project_id,
+    project_title: detail.project.work?.title || project?.work?.title || project?.name || detail.project.name,
+    run_name: detail.project.name,
+    status: detail.run_status.status || 'completed',
+    input_mode: 'source_root',
+    created_at: '',
+    stage_status: {
+      schema: String(detail.run_status.schema || 'project_run_status'),
+      global_status: detail.run_status.status || 'completed',
+      current_stage_id: stages.find((stage) => stage.status !== 'completed')?.id || stages[stages.length - 1]?.id || '',
+      project_ready: Boolean(detail.run_status.safe_to_open_workspace),
+      stages,
+    },
+  };
+}
+
+function readStoredProjectId(): string {
+  if (typeof window === 'undefined') return '';
+  return window.localStorage.getItem(PROJECT_STORAGE_KEY) || '';
+}
+
+function storeSelectedProjectId(projectId: string) {
+  if (typeof window === 'undefined') return;
+  if (projectId) window.localStorage.setItem(PROJECT_STORAGE_KEY, projectId);
+  else window.localStorage.removeItem(PROJECT_STORAGE_KEY);
+}
+
 function toDecisionItem(item: ReviewItem, index: number): DecisionItem {
   const severity = String(item.severity || 'low');
   const target = item.target_label || (typeof item.target_entity === 'object' ? item.target_entity?.label : item.target_entity) || '';
@@ -329,7 +397,20 @@ function legacyUrl(view: 'graph' | 'notes' | 'canon', projectId: string): string
 
 
 
-function ProjectRow({ project, selected, onSelect }: { project: ProjectSummary; selected?: boolean; onSelect: () => void }) { const title = project.work?.title || project.name || t('project.kind.default'); return <button onClick={onSelect} className={`w-full rounded-2xl border p-4 text-left ${selected ? 'bg-txf-nav-active text-txf-nav-active-text border-txf-border-strong' : 'bg-txf-surface border-txf-border hover:bg-txf-surface-soft'}`}><div className="grid grid-cols-12 gap-3 items-center"><div className="col-span-12 md:col-span-7"><div className="font-semibold">{title}</div><div className={`text-xs ${selected ? 'text-txf-surface-soft' : 'text-txf-subtle'}`}>{project.kind || t('project.kind.workspace')} · {project.work?.language || t('project.language.pending')}</div></div><div className="col-span-4 md:col-span-2 text-sm">{t('project.count.chapters', { count: project.chapter_count || 0 })}</div><div className="col-span-4 md:col-span-2 text-sm">{t('project.count.nodes', { count: project.graph_summary?.node_count || 0 })}</div><div className="col-span-4 md:col-span-1 text-sm">{isMinimalFixture(project) ? t('project.fixture.dev') : t('project.fixture.real')}</div></div><div className={`mt-3 grid gap-2 text-xs ${selected ? 'text-txf-surface-soft' : 'text-txf-subtle'}`}><div>{project.workspace_status?.chapters_detected_label || t('project.workspace_status.chapters_detected', { count: project.chapter_count || 0 })}</div><div>{project.workspace_status?.chapters_ready_label || t('project.workspace_status.chapters_ready')}</div><div>{project.workspace_status?.chapters_still_failed_label || t('project.workspace_status.chapters_failed')}</div><div>{project.workspace_status?.semantic_review_label || t('project.workspace_status.semantic_review')}</div></div></button>; }
+function ProjectRow({ project, selected, previewed, flashSelected, onPreview, onSelect, onRemove }: { project: ProjectSummary; selected?: boolean; previewed?: boolean; flashSelected?: boolean; onPreview: () => void; onSelect: () => void; onRemove: () => void }) {
+  const title = project.work?.title || project.name || t('project.kind.default');
+  return <article className={`w-full rounded-2xl border p-4 text-left transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${selected ? 'bg-txf-nav-active text-txf-nav-active-text border-txf-border-strong' : previewed ? 'bg-txf-surface-muted border-txf-border-strong' : 'bg-txf-surface border-txf-border hover:bg-txf-surface-soft'} ${flashSelected ? 'scale-[1.01] ring-2 ring-txf-action' : ''}`}>
+    <button type="button" onClick={onPreview} className="w-full text-left">
+      <div className="grid grid-cols-12 gap-3 items-center">
+        <div className="col-span-12 md:col-span-8"><div className="flex items-center gap-2"><div className="font-semibold">{title}</div>{selected ? <span className="rounded-full border border-txf-border-strong px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide">{t('project.open_badge')}</span> : null}</div><div className={`text-xs ${selected ? 'text-txf-surface-soft' : 'text-txf-subtle'}`}>{project.work?.language || t('project.language.pending')}</div></div>
+        <div className="col-span-6 md:col-span-2 text-sm">{t('project.count.chapters', { count: project.chapter_count || 0 })}</div>
+        <div className="col-span-6 md:col-span-2 text-sm">{t('project.count.nodes', { count: project.graph_summary?.node_count || 0 })}</div>
+      </div>
+      <div className={`mt-3 grid gap-2 text-xs ${selected ? 'text-txf-surface-soft' : 'text-txf-subtle'}`}><div>{project.workspace_status?.chapters_detected_label || t('project.workspace_status.chapters_detected', { count: project.chapter_count || 0 })}</div><div>{project.workspace_status?.chapters_ready_label || t('project.workspace_status.chapters_ready')}</div><div>{project.workspace_status?.semantic_review_label || t('project.workspace_status.semantic_review')}</div></div>
+    </button>
+    <div className="mt-3 flex justify-end gap-2"><button type="button" onClick={onSelect} className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200 active:scale-[0.98] ${selected ? 'border-txf-surface-soft bg-txf-surface-soft text-txf-text' : 'border-txf-border bg-txf-surface text-txf-text hover:bg-txf-surface-muted'}`}>{flashSelected ? 'Seleccionado' : t('project.select')}</button><button type="button" onClick={onRemove} className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200 active:scale-[0.98] ${selected ? 'border-txf-surface-soft text-txf-surface-soft hover:bg-txf-surface-soft hover:text-txf-text' : 'border-txf-border text-txf-subtle hover:bg-txf-surface-muted hover:text-txf-text'}`}>{t('project.remove')}</button></div>
+  </article>;
+}
 
 function DecisionCard({ item, selected, choice, onSelect, onChoose, onOpenEvidencia }: { item: DecisionItem; selected?: boolean; choice?: ReviewDecisionChoice; onSelect: () => void; onChoose: (choice: ReviewDecisionChoice) => void; onOpenEvidencia: () => void }) {
   const choose = (nextChoice: ReviewDecisionChoice) => { onSelect(); onChoose(nextChoice); };
@@ -441,6 +522,18 @@ export function App() {
   const [projectDetail, setProjectDetail] = useState<ProjectDetail | null>(null);
   const [ingestionConfig, setIngestionConfig] = useState<IngestionConfig | null>(null);
   const [ingestionJobs, setIngestionJobs] = useState<IngestionJob[]>([]);
+  const [uploadSession, setUploadSession] = useState<Awaited<ReturnType<typeof fetchIngestionUploadSession>> | null>(null);
+  const [activeIngestionJobId, setActiveIngestionJobId] = useState<string>('');
+  const [completedIngestionJobId, setCompletedIngestionJobId] = useState<string>('');
+  const [ingestionComposerOpen, setIngestionComposerOpen] = useState(false);
+  const [projectTitleDraft, setProjectTitleDraft] = useState<string>('');
+  const [runNameDraft, setRunNameDraft] = useState<string>('');
+  const [uploadingFiles, setUploadingFiles] = useState(false);
+  const [startingIngestion, setStartingIngestion] = useState(false);
+  const [pollingJob, setPollingJob] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const [startError, setStartError] = useState('');
+  const [pollingError, setPollingError] = useState('');
   const [selectedEntityKey, setSelectedEntityKey] = useState<string>('');
   const [reviewQuery, setReviewQuery] = useState('');
   const [reviewEntityFilterTokens, setReviewEntityFilterTokens] = useState<Set<string>>(new Set());
@@ -493,9 +586,43 @@ export function App() {
   const [selectedGraphNoteDetail, setSelectedGraphNoteDetail] = useState<NoteDetail | null>(null);
   const [artifactsCount, setArtifactsCount] = useState<number>(0);
   const [editDraft, setEditDraft] = useState<EditDraft>(null);
+  const [projectHubPreviewId, setProjectHubPreviewId] = useState<string>('');
+  const [projectHubSelectionFlashId, setProjectHubSelectionFlashId] = useState<string>('');
+  const [removeProjectCandidate, setRemoveProjectCandidate] = useState<ProjectSummary | null>(null);
   const [error, setError] = useState<string>('');
 
   const selectedProject = useMemo(() => projects.find((project) => project.project_id === selectedProjectId) || null, [projects, selectedProjectId]);
+  const projectIds = useMemo(() => new Set(projects.map((project) => project.project_id)), [projects]);
+  const visibleIngestionJobs = useMemo(() => ingestionJobs.filter((job) => job.project_id && projectIds.has(job.project_id)), [ingestionJobs, projectIds]);
+  const selectedProjectIngestionSnapshot = useMemo(() => projectDetail ? projectDetailToIngestionJob(projectDetail, selectedProject) : null, [projectDetail, selectedProject]);
+  const activeIngestionJob = useMemo(() => {
+    const selectedJob = ingestionJobs.find((job) => job.job_id === activeIngestionJobId) || null;
+    const selectedStatus = String(selectedJob?.stage_status?.global_status || selectedJob?.status || '');
+    if (selectedJob && ACTIVE_INGESTION_GLOBAL_STATUSES.has(selectedStatus)) return selectedJob;
+    return ingestionJobs.find((job) => ACTIVE_INGESTION_GLOBAL_STATUSES.has(String(job.stage_status?.global_status || job.status || ''))) || null;
+  }, [ingestionJobs, activeIngestionJobId]);
+  const latestCompletedIngestionJob = useMemo(() => {
+    if (completedIngestionJobId) {
+      const matched = visibleIngestionJobs.find((job) => job.job_id === completedIngestionJobId);
+      if (matched) return matched;
+    }
+    if (selectedProjectId) {
+      const selectedMatch = [...visibleIngestionJobs]
+        .filter((job) => job.project_id === selectedProjectId && ['completed', 'completed_with_warnings'].includes(String(job.stage_status?.global_status || job.status || '')))
+        .sort((a, b) => ingestionJobSortValue(b) - ingestionJobSortValue(a))[0];
+      if (selectedMatch) return selectedMatch;
+    }
+    return [...visibleIngestionJobs]
+      .filter((job) => ['completed', 'completed_with_warnings'].includes(String(job.stage_status?.global_status || job.status || '')))
+      .sort((a, b) => ingestionJobSortValue(b) - ingestionJobSortValue(a))[0] || null;
+  }, [visibleIngestionJobs, completedIngestionJobId, selectedProjectId]);
+  const selectedProjectIngestionJob = useMemo(() => {
+    if (!selectedProjectId) return null;
+    if (selectedProjectIngestionSnapshot?.project_id === selectedProjectId) return selectedProjectIngestionSnapshot;
+    return [...visibleIngestionJobs]
+      .filter((job) => job.project_id === selectedProjectId)
+      .sort((a, b) => ingestionJobSortValue(b) - ingestionJobSortValue(a))[0] || null;
+  }, [selectedProjectId, visibleIngestionJobs, selectedProjectIngestionSnapshot]);
   const selectedEntity = useMemo(() => (projectDetail?.canon?.primaries || []).find((entity) => (entity.preferred_slug || entity.canonical_name || '') === selectedEntityKey), [projectDetail, selectedEntityKey]);
   const editorSource = (projectDetail as any)?.editor_chapters;
   const chapterNotes = useMemo(() => {
@@ -540,7 +667,32 @@ export function App() {
   const evidenceModalItem = useMemo(() => allDecisions.find((item) => item.id === evidenceModalDecisionId) || null, [allDecisions, evidenceModalDecisionId]);
 
   useEffect(() => { void loadInitial(); }, []);
+  useEffect(() => { storeSelectedProjectId(selectedProjectId); }, [selectedProjectId]);
   useEffect(() => { if (selectedProjectId) void loadProjectContext(selectedProjectId); }, [selectedProjectId]);
+  useEffect(() => {
+    const jobId = activeIngestionJob?.job_id || '';
+    const status = String(activeIngestionJob?.stage_status?.global_status || activeIngestionJob?.status || '');
+    if (!jobId || !['queued', 'running'].includes(status)) return;
+    const timer = window.setInterval(() => { void refreshIngestionJob(jobId, { quiet: true }); }, 2500);
+    return () => window.clearInterval(timer);
+  }, [activeIngestionJob?.job_id, activeIngestionJob?.status, activeIngestionJob?.stage_status?.global_status]);
+  useEffect(() => {
+    if (!activeIngestionJob?.project_id) return;
+    const globalStatus = String(activeIngestionJob.stage_status?.global_status || activeIngestionJob.status || '');
+    if (!['completed', 'completed_with_warnings'].includes(globalStatus)) return;
+    void refreshProjectsAndSelect(activeIngestionJob.project_id);
+  }, [activeIngestionJob?.project_id, activeIngestionJob?.stage_status?.global_status, activeIngestionJob?.status]);
+  useEffect(() => {
+    if (!activeIngestionJob?.upload_session_id || uploadSession?.upload_session_id === activeIngestionJob.upload_session_id) return;
+    void (async () => {
+      try {
+        const session = await fetchIngestionUploadSession(activeIngestionJob.upload_session_id || '');
+        setUploadSession(session);
+      } catch (err) {
+        setUploadError(String(err));
+      }
+    })();
+  }, [activeIngestionJob?.upload_session_id, uploadSession?.upload_session_id]);
   useEffect(() => { if (selectedProjectId && editorNotePath) void loadEditorNote(selectedProjectId, editorNotePath); }, [selectedProjectId, editorNotePath]);
   useEffect(() => {
     if (!selectedProjectId || !chapterNotes.length) return;
@@ -554,8 +706,95 @@ export function App() {
     setEditorVisualSeedMarkdown(editorDraft.bodyMarkdown);
   }, [editorMode, editorDraft.loadedChapterId, editorDraft.loadedContentHash, editorDraft.parseStatus, editorDraft.bodyMarkdown]);
 
-  async function loadInitial() { try { const [projectList, config, jobs] = await Promise.all([fetchProjects(), fetchIngestionConfig(), fetchIngestionJobs()]); setProjects(projectList); setIngestionConfig(config); setIngestionJobs(jobs); const preferred = choosePreferredProject(projectList); if (preferred) setSelectedProjectId(preferred.project_id); } catch (err) { setError(String(err)); } }
-  async function loadProjectContext(projectId: string) { try { const [detail, graph, reviewQueue, artifacts] = await Promise.all([fetchProjectDetail(projectId), fetchGraph(projectId), fetchReviewQueue(projectId), fetchArtifacts(projectId)]); setProjectDetail({ ...detail, canon: { ...detail.canon, review_queue: reviewQueue } }); setGraphPayload(graph || null); setArtifactsCount((artifacts.artifacts || []).length); const firstEntity = detail.canon?.primaries?.[0]; if (firstEntity) setSelectedEntityKey(firstEntity.preferred_slug || firstEntity.canonical_name || ''); const graphSelect = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('graph_select')?.trim().toLowerCase() : ''; const selectedFromUrl = graphSelect ? graph?.nodes?.find((node) => [node.label, node.display_label, node.canonical_id, node.id].some((value) => String(value || '').toLowerCase() === graphSelect)) : null; const firstNode = selectedFromUrl || graph?.nodes?.[0]; if (firstNode?.id) setSelectedGraphNodeId(firstNode.id); const firstChapter = ((detail as any)?.editor_chapters?.chapters || [])[0]; if (firstChapter?.path) { const firstChapterPath = String(firstChapter.path); setEditorNotePath(firstChapterPath); void loadEditorNote(projectId, firstChapterPath); } } catch (err) { setError(String(err)); } }
+  async function loadInitial() { try { const [projectList, config, jobs] = await Promise.all([fetchProjects(), fetchIngestionConfig(), fetchIngestionJobs()]); setProjects(projectList); setIngestionConfig(config); setIngestionJobs(jobs); const storedProjectId = readStoredProjectId(); const storedProject = projectList.find((project) => project.project_id === storedProjectId); const preferred = projectList.length === 1 ? projectList[0] : storedProject || choosePreferredProject(projectList); if (preferred) setSelectedProjectId(preferred.project_id); } catch (err) { setError(String(err)); } }
+  async function refreshProjectsAndSelect(projectId?: string, fallbackProjectId?: string) { try { const projectList = await fetchProjects(); setProjects(projectList); if (projectId && projectList.some((project) => project.project_id === projectId)) setSelectedProjectId(projectId); else if (fallbackProjectId && projectList.some((project) => project.project_id === fallbackProjectId)) setSelectedProjectId(fallbackProjectId); else if (!projectList.some((project) => project.project_id === selectedProjectId)) { const storedProjectId = readStoredProjectId(); const storedProject = projectList.find((project) => project.project_id === storedProjectId); const preferred = projectList.length === 1 ? projectList[0] : storedProject || choosePreferredProject(projectList); if (preferred) setSelectedProjectId(preferred.project_id); else setSelectedProjectId(''); } } catch (err) { setError(String(err)); } }
+  async function refreshIngestionJob(jobId: string, options: { quiet?: boolean } = {}) {
+    if (!jobId) return;
+    if (!options.quiet) setPollingJob(true);
+    setPollingError('');
+    try {
+      const job = await fetchIngestionJob(jobId);
+      setActiveIngestionJobId(job.job_id || jobId);
+      setIngestionJobs((current) => {
+        const withoutJob = current.filter((item) => item.job_id !== (job.job_id || jobId));
+        return [job, ...withoutJob];
+      });
+      const status = String(job.stage_status?.global_status || job.status || '');
+      if (job.project_id && job.stage_status?.project_ready && ['completed', 'completed_with_warnings'].includes(status)) {
+        setCompletedIngestionJobId(job.job_id || jobId);
+        setIngestionComposerOpen(false);
+        setUploadSession(null);
+        await refreshProjectsAndSelect(job.project_id);
+      }
+    } catch (err: any) {
+      setPollingError(String(err?.payload?.message || err?.message || err));
+    } finally {
+      if (!options.quiet) setPollingJob(false);
+    }
+  }
+  async function handleUploadIngestionFiles(files: File[]) {
+    setUploadingFiles(true);
+    setUploadError('');
+    setStartError('');
+    try {
+      const response = await uploadIngestionFiles(files);
+      setUploadSession(response);
+      const firstName = ingestionNameSeed(response.files?.[0]?.filename || files[0]?.name || '');
+      if (firstName && !projectTitleDraft.trim()) setProjectTitleDraft(firstName);
+      if (firstName && !runNameDraft.trim()) setRunNameDraft(ingestionRunSlug(firstName));
+    } catch (err: any) {
+      setUploadError(String(err?.payload?.message || err?.message || err));
+    } finally {
+      setUploadingFiles(false);
+    }
+  }
+  async function handleStartUploadIngestion() {
+    if (!uploadSession?.upload_session_id) {
+      setStartError(t('ingestion.job.upload_first'));
+      return;
+    }
+    setStartingIngestion(true);
+    setStartError('');
+    try {
+      const job = await startIngestionJobFromUpload({ upload_session_id: uploadSession.upload_session_id, project_title: projectTitleDraft.trim(), run_name: runNameDraft.trim() || undefined });
+      setActiveIngestionJobId(job.job_id || '');
+      setCompletedIngestionJobId('');
+      setIngestionJobs((current) => [job, ...current.filter((item) => item.job_id !== job.job_id)]);
+      if (job.job_id) void refreshIngestionJob(job.job_id, { quiet: true });
+    } catch (err: any) {
+      setStartError(String(err?.payload?.message || err?.message || err));
+    } finally {
+      setStartingIngestion(false);
+    }
+  }
+  async function openCompletedIngestionProject(target: 'graph' | 'editor' | 'review', projectIdOverride?: string) {
+    const projectId = projectIdOverride || (latestCompletedIngestionJob?.stage_status?.project_ready ? latestCompletedIngestionJob?.project_id || '' : '');
+    if (!projectId) {
+      setError(t('ingestion.job.project_not_ready_note'));
+      return;
+    }
+    await refreshProjectsAndSelect(projectId);
+    await loadProjectContext(projectId);
+    setSelectedProjectId(projectId);
+    setActive(target);
+  }
+  async function confirmRemoveProject(project: ProjectSummary) {
+    try {
+      await removeProject(project.project_id);
+      const fallback = projects.find((item) => item.project_id !== project.project_id)?.project_id || '';
+      if (selectedProjectId === project.project_id) {
+        setProjectDetail(null);
+        setGraphPayload(null);
+        setArtifactsCount(0);
+      }
+      setIngestionJobs((current) => current.filter((job) => job.project_id !== project.project_id));
+      await refreshProjectsAndSelect(undefined, fallback);
+      setRemoveProjectCandidate(null);
+    } catch (err: any) {
+      setError(String(err?.payload?.message || err?.message || err));
+    }
+  }
+  async function loadProjectContext(projectId: string) { try { const [detail, graph, reviewQueue, artifacts] = await Promise.all([fetchProjectDetail(projectId), fetchGraph(projectId), fetchReviewQueue(projectId), fetchArtifacts(projectId)]); setProjectDetail({ ...detail, canon: { ...detail.canon, review_queue: reviewQueue } }); setGraphPayload(graph || null); setArtifactsCount((artifacts.artifacts || []).length); const firstEntity = detail.canon?.primaries?.[0]; if (firstEntity) setSelectedEntityKey(firstEntity.preferred_slug || firstEntity.canonical_name || ''); const graphSelect = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('graph_select')?.trim().toLowerCase() : ''; const selectedFromUrl = graphSelect ? graph?.nodes?.find((node) => [node.label, node.display_label, node.canonical_id, node.id].some((value) => String(value || '').toLowerCase() === graphSelect)) : null; const firstNode = selectedFromUrl || graph?.nodes?.[0]; if (firstNode?.id) setSelectedGraphNodeId(firstNode.id); const firstChapter = ((detail as any)?.editor_chapters?.chapters || [])[0]; if (firstChapter?.path) { const firstChapterPath = String(firstChapter.path); setEditorNotePath(firstChapterPath); void loadEditorNote(projectId, firstChapterPath); } return detail; } catch (err) { setError(String(err)); return null; } }
   async function loadEditorNote(projectId: string, notePath: string) {
     try {
       const payload = await fetchNote(projectId, notePath);
@@ -1040,8 +1279,34 @@ export function App() {
   let content: React.ReactNode = null;
 
   if (active === 'overview') content = <OverviewBoard setActive={setActive} />;
-  if (active === 'hub') content = <ProjectHubView projectRows={projects.map((project) => <ProjectRow key={project.project_id} project={project} selected={project.project_id === selectedProjectId} onSelect={() => setSelectedProjectId(project.project_id)} />)} reducedProjectWarning={isMinimalFixture(selectedProject)} chaptersProcessed={projectDetail?.overview?.chapters_processed ?? 0} artifactsCount={artifactsCount} warningsVisible={warningsVisible} />;
-  if (active === 'ingest') content = <IngestionView runStatus={runStatus} ingestionJobs={ingestionJobs} />;
+  if (active === 'hub') content = <ProjectHubView projectRows={projects.map((project) => <ProjectRow key={project.project_id} project={project} selected={project.project_id === selectedProjectId} previewed={project.project_id === projectHubPreviewId} flashSelected={project.project_id === projectHubSelectionFlashId} onPreview={() => setProjectHubPreviewId(project.project_id)} onSelect={() => { setProjectHubPreviewId(''); setProjectHubSelectionFlashId(project.project_id); setSelectedProjectId(project.project_id); void loadProjectContext(project.project_id); window.setTimeout(() => setProjectHubSelectionFlashId(''), 900); }} onRemove={() => setRemoveProjectCandidate(project)} />)} reducedProjectWarning={isMinimalFixture(selectedProject)} chaptersProcessed={projectDetail?.overview?.chapters_processed ?? 0} artifactsCount={artifactsCount} warningsVisible={warningsVisible} selectedProjectStatus={projectDetail?.run_status?.status || selectedProject?.workspace_status?.semantic_review_label || t('project.status_ready')} onNewIngestion={() => { setError(''); setIngestionComposerOpen(true); setCompletedIngestionJobId(''); setUploadSession(null); setProjectTitleDraft(''); setRunNameDraft(''); setActive('ingest'); }} openProjectTitle={selectedProject?.work?.title || selectedProject?.name || ''} />;
+  if (active === 'ingest') content = <IngestionView
+    runStatus={runStatus}
+    ingestionJobs={selectedProjectId ? visibleIngestionJobs.filter((job) => job.project_id === selectedProjectId) : visibleIngestionJobs}
+    uploadSession={uploadSession}
+    activeJob={ingestionComposerOpen ? activeIngestionJob : selectedProjectIngestionJob}
+    latestCompletedJob={latestCompletedIngestionJob}
+    completionProjectId={selectedProjectIngestionJob?.project_id || latestCompletedIngestionJob?.project_id || ''}
+    composerOpen={ingestionComposerOpen}
+    showCompletionCard={Boolean(completedIngestionJobId && latestCompletedIngestionJob?.job_id === completedIngestionJobId)}
+    projectTitle={projectTitleDraft}
+    runName={runNameDraft}
+    uploading={uploadingFiles}
+    starting={startingIngestion}
+    polling={pollingJob}
+    uploadError={uploadError}
+    startError={startError}
+    pollingError={pollingError}
+    onProjectTitleChange={setProjectTitleDraft}
+    onRunNameChange={setRunNameDraft}
+    onUploadFiles={handleUploadIngestionFiles}
+    onStartIngestion={handleStartUploadIngestion}
+    onRefreshJob={(jobId) => void refreshIngestionJob(jobId)}
+    onOpenGraph={() => void openCompletedIngestionProject('graph', selectedProjectIngestionJob?.project_id || latestCompletedIngestionJob?.project_id || '')}
+    onOpenEditor={() => void openCompletedIngestionProject('editor', selectedProjectIngestionJob?.project_id || latestCompletedIngestionJob?.project_id || '')}
+    onOpenReview={() => void openCompletedIngestionProject('review', selectedProjectIngestionJob?.project_id || latestCompletedIngestionJob?.project_id || '')}
+    onNewIngestion={() => { setIngestionComposerOpen(true); setCompletedIngestionJobId(''); setUploadSession(null); setProjectTitleDraft(''); setRunNameDraft(''); }}
+  />;
   if (active === 'codex') content = <section><TopBar title={t('codex.title')} subtitle={t('codex.subtitle')} actions={<><Button variant="secondary">{t('codex.export_selection')}</Button><Button variant="secondary">{t('codex.view_evidence')}</Button></>} /><div className="p-5 grid grid-cols-12 gap-5"><div className="col-span-12 lg:col-span-8 space-y-5"><EntityRecordTable entities={projectDetail?.canon?.primaries || []} selectedKey={selectedEntityKey} onSelect={setSelectedEntityKey} /><div className="rounded-3xl border border-txf-border bg-txf-surface p-4"><div className="mb-3 flex items-center gap-2 text-sm font-semibold"><FileText size={16} /> {t('codex.story_bible')}</div>{selectedProjectId ? <LegacyEmbed title={t('story_alias.legacy_notes_title')} src={legacyUrl('notes', selectedProjectId)} /> : <div className="rounded-2xl border border-txf-border p-4 text-sm text-txf-subtle">{t('codex.select_project')}</div>}</div></div><aside className="col-span-12 lg:col-span-4"><InspectorCard entity={selectedEntity} /></aside></div></section>;
   if (active === 'graph') content = (
     <section data-testid="graph-view">
@@ -1129,7 +1394,7 @@ export function App() {
   if (active === 'story') content = <StoryAliasView selectedProjectId={selectedProjectId} notesPreview={(projectDetail?.notes || []).slice(0, 16).map((note) => <div key={note.path} className="rounded-xl bg-txf-surface border border-txf-border px-3 py-2">{note.name || note.path}</div>)} legacyNotes={<LegacyEmbed title={t('story_alias.legacy_notes_title')} src={legacyUrl('notes', selectedProjectId)} />} onOpenCanon={() => setActive('codex')} />;
   if (active === 'ask') content = <AIStudioView />;
 
-  return <AppShell active={active} setActive={setActive}><motion.div key={active} className="min-h-full bg-txf-canvas" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 }}>{content}</motion.div>{error ? <div className="mx-5 mb-5 rounded-2xl border border-txf-border bg-txf-surface-muted p-3 text-sm text-txf-text">{error}</div> : null}<EvidenciaModal item={evidenceModalItem} onClose={() => setEvidenciaModalDecisionId('')} />{graphInspectorFullscreen ? <div className="fixed inset-0 z-50 bg-[#3a2a21]/35 p-4"><div className="h-full w-full rounded-3xl border border-txf-border bg-txf-surface shadow-txf-floating overflow-y-auto"><div className="sticky top-0 z-10 flex items-center justify-between border-b border-txf-border bg-txf-surface p-4"><h2 className="text-lg font-semibold">{t('graph.node_sheet')}</h2><Button variant="secondary" onClick={() => setGraphInspectorFullscreen(false)}><X size={14} className="inline" /> {t('common.exit_fullscreen')}</Button></div><div className="p-4"><GraphInspectorPanel node={selectedGraphNode} entityCard={selectedGraphEntity} entityCardVm={selectedGraphEntityCardVm} noteContent={selectedGraphNoteContent} noteDetail={selectedGraphNoteDetail} onEdit={(node: GraphCanvasNode) => setGraphEditNodeId(node.id)} onInternalEntityLinkClick={handleGraphInternalEntityLinkClick} onSaveFiche={handleSaveGraphEntityFiche} /></div></div></div> : null}{editDraft ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#3a2a21]/35 p-4"><div className="w-full max-w-2xl rounded-3xl border border-txf-border bg-txf-surface shadow-txf-floating"><div className="flex items-center justify-between border-b border-txf-border bg-txf-surface-muted p-5"><div><h2 className="font-semibold">{editDraft.title}</h2><p className="text-sm text-txf-subtle">{editDraft.notePath || t('common.local_draft')}</p></div><button onClick={() => setEditDraft(null)} className="rounded-full p-2 hover:bg-txf-surface-soft"><X size={18} /></button></div><div className="bg-txf-surface p-5"><textarea readOnly value={editDraft.body} className="h-48 w-full rounded-2xl border border-txf-border bg-txf-surface-muted p-4 text-sm text-txf-text" /><p className="mt-3 text-sm text-txf-subtle">{t('common.drafts_note')}</p></div></div></div> : null}</AppShell>;
+  return <AppShell active={active} setActive={(nextActive) => { if (nextActive === 'ingest') { setIngestionComposerOpen(false); setCompletedIngestionJobId(''); } setActive(nextActive); }} openProjectLabel={selectedProject?.work?.title || selectedProject?.name || (selectedProjectId ? selectedProjectId : '')}><motion.div key={active} className="min-h-full bg-txf-canvas" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 }}>{content}</motion.div>{error ? <div className="mx-5 mb-5 rounded-2xl border border-txf-border bg-txf-surface-muted p-3 text-sm text-txf-text">{error}</div> : null}<EvidenciaModal item={evidenceModalItem} onClose={() => setEvidenciaModalDecisionId('')} />{graphInspectorFullscreen ? <div className="fixed inset-0 z-50 bg-[#3a2a21]/35 p-4"><div className="h-full w-full rounded-3xl border border-txf-border bg-txf-surface shadow-txf-floating overflow-y-auto"><div className="sticky top-0 z-10 flex items-center justify-between border-b border-txf-border bg-txf-surface p-4"><h2 className="text-lg font-semibold">{t('graph.node_sheet')}</h2><Button variant="secondary" onClick={() => setGraphInspectorFullscreen(false)}><X size={14} className="inline" /> {t('common.exit_fullscreen')}</Button></div><div className="p-4"><GraphInspectorPanel node={selectedGraphNode} entityCard={selectedGraphEntity} entityCardVm={selectedGraphEntityCardVm} noteContent={selectedGraphNoteContent} noteDetail={selectedGraphNoteDetail} onEdit={(node: GraphCanvasNode) => setGraphEditNodeId(node.id)} onInternalEntityLinkClick={handleGraphInternalEntityLinkClick} onSaveFiche={handleSaveGraphEntityFiche} /></div></div></div> : null}{editDraft ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#3a2a21]/35 p-4"><div className="w-full max-w-2xl rounded-3xl border border-txf-border bg-txf-surface shadow-txf-floating"><div className="flex items-center justify-between border-b border-txf-border bg-txf-surface-muted p-5"><div><h2 className="font-semibold">{editDraft.title}</h2><p className="text-sm text-txf-subtle">{editDraft.notePath || t('common.local_draft')}</p></div><button onClick={() => setEditDraft(null)} className="rounded-full p-2 hover:bg-txf-surface-soft"><X size={18} /></button></div><div className="bg-txf-surface p-5"><textarea readOnly value={editDraft.body} className="h-48 w-full rounded-2xl border border-txf-border bg-txf-surface-muted p-4 text-sm text-txf-text" /><p className="mt-3 text-sm text-txf-subtle">{t('common.drafts_note')}</p></div></div></div> : null}{removeProjectCandidate ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#3a2a21]/35 p-4"><div className="w-full max-w-xl rounded-3xl border border-txf-border bg-txf-surface shadow-txf-floating"><div className="flex items-center justify-between border-b border-txf-border bg-txf-surface-muted p-5"><div><h2 className="font-semibold">{t('project.remove')}</h2><p className="text-sm text-txf-subtle">{removeProjectCandidate.work?.title || removeProjectCandidate.name}</p></div><button type="button" onClick={() => setRemoveProjectCandidate(null)} className="rounded-full p-2 hover:bg-txf-surface-soft"><X size={18} /></button></div><div className="p-5"><p className="text-sm text-[var(--txf-color-text-subtle)]">{t('project.remove_confirm', { title: removeProjectCandidate.work?.title || removeProjectCandidate.name || removeProjectCandidate.project_id })}</p><div className="mt-5 flex justify-end gap-2"><Button variant="secondary" onClick={() => setRemoveProjectCandidate(null)}>{t('common.no')}</Button><Button onClick={() => void confirmRemoveProject(removeProjectCandidate)}>{t('common.yes')}</Button></div></div></div></div> : null}</AppShell>;
 }
 
 export default App;

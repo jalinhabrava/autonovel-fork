@@ -4,7 +4,8 @@ import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
+from datetime import datetime, timezone
 
 from textifai.obsidian.parser import extract_obsidian_links, parse_obsidian_frontmatter
 from textifai.project_store import open_project
@@ -15,6 +16,7 @@ from textifai.import_review.viewer_graph_adapter import adapt_ingestion_graph_to
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 LOCAL_PROJECT_REGISTRY = REPO_ROOT / '.textifai_runs' / 'registry.local.json'
+DELETED_PROJECT_STATES = {'deleted', 'hidden'}
 
 CANONICAL_KIND_PRIORITY = {
     "character": 700,
@@ -106,6 +108,8 @@ class ProjectCatalog:
         raise KeyError(project_id)
 
     def _discover(self) -> list[ProjectRef]:
+        deleted_project_ids = _deleted_registry_project_ids()
+        deleted_manifest_paths = _deleted_registry_manifest_paths()
         projects: dict[str, ProjectRef] = {}
         for root in self.roots:
             if not root.exists():
@@ -115,9 +119,16 @@ class ProjectCatalog:
                 project = _project_from_candidate(candidate)
                 if project is None:
                     continue
+                manifest_path = project.manifest_path.resolve().as_posix() if project.manifest_path else ''
+                if project.project_id in deleted_project_ids or manifest_path in deleted_manifest_paths:
+                    continue
                 projects.setdefault(project.project_id, project)
-        for project in _discover_registry_projects():
-            projects[project.project_id] = project
+        if _should_include_local_registry(self.roots):
+            for project in _discover_registry_projects():
+                manifest_path = project.manifest_path.resolve().as_posix() if project.manifest_path else ''
+                if project.project_id in deleted_project_ids or manifest_path in deleted_manifest_paths:
+                    continue
+                projects[project.project_id] = project
         return sorted(projects.values(), key=lambda item: item.name.casefold())
 
     def _project_summary(self, project: ProjectRef) -> dict[str, Any]:
@@ -188,7 +199,7 @@ def read_project(project: ProjectRef) -> dict[str, Any]:
     markdown_graph_index = read_markdown_graph_index(project) or {}
     editor_chapters = read_editor_chapters(project, markdown_manifest=markdown_manifest)
     source_map = read_source_map(project) or {}
-    graph_metadata = graph.get("metadata") if isinstance(graph, dict) else {}
+    graph_metadata = graph.get("metadata") if isinstance(graph, dict) and isinstance(graph.get("metadata"), dict) else {}
     writer_outcome = _read_writer_outcome(project)
     if not writer_outcome:
         writer_outcome = graph_metadata.get("writer_outcome") if isinstance(graph_metadata, dict) and isinstance(graph_metadata.get("writer_outcome"), dict) else {}
@@ -1658,21 +1669,144 @@ def _resolve_evidence_excerpt(chapter_paths: dict[str, Path], chapter_id: str, r
 def _project_id(path: Path) -> str:
     return path.resolve().as_posix().replace("/", "__").strip("_")
 
+def _should_include_local_registry(roots: list[Path]) -> bool:
+    textifai_projects = Path('/home/david/TextifAIProjects').resolve()
+    for root in roots:
+        resolved = root.resolve()
+        if resolved == textifai_projects or textifai_projects in resolved.parents:
+            return True
+        if resolved == REPO_ROOT or REPO_ROOT in resolved.parents:
+            return True
+    return False
+
 def _discover_registry_projects() -> list[ProjectRef]:
+  payload = _read_json(LOCAL_PROJECT_REGISTRY)
+  if not isinstance(payload, dict):
+    return []
+  projects: list[ProjectRef] = []
+  for row in payload.get('projects') or []:
+    if not isinstance(row, dict):
+      continue
+    manifest_path = Path(str(row.get('manifest_path') or '')).resolve()
+    manifest = _read_json(manifest_path)
+    if not manifest_path.exists() or not isinstance(manifest, dict) or manifest.get('schema') != 'textifai.project':
+      continue
+    root = manifest_path.parent
+    projects.append(ProjectRef(project_id=_project_id(root), name=str(manifest.get('title') or root.name), root=root, system_root=None, kind='textifai_project', manifest_path=manifest_path, manifest=manifest))
+  return projects
+
+def _registry_payload() -> dict[str, Any]:
     payload = _read_json(LOCAL_PROJECT_REGISTRY)
-    if not isinstance(payload, dict):
-        return []
-    projects: list[ProjectRef] = []
-    for row in payload.get('projects') or []:
+    return payload if isinstance(payload, dict) else {'schema': 'textifai.local_registry', 'schema_version': 2, 'projects': [], 'deleted_projects': []}
+
+def _deleted_registry_project_ids() -> set[str]:
+    payload = _registry_payload()
+    deleted: set[str] = set()
+    for row in payload.get('deleted_projects') or []:
+        if isinstance(row, dict):
+            project_id = str(row.get('project_id') or '').strip()
+            if project_id:
+                deleted.add(project_id)
+    return deleted
+
+def _deleted_registry_manifest_paths() -> set[str]:
+    payload = _registry_payload()
+    deleted: set[str] = set()
+    for row in payload.get('deleted_projects') or []:
+        if isinstance(row, dict):
+            manifest_path = str(row.get('manifest_path') or '').strip()
+            if manifest_path:
+                deleted.add(Path(manifest_path).resolve().as_posix())
+    return deleted
+
+def tombstone_registry_project(project_id: str) -> dict[str, Any]:
+    payload = _registry_payload()
+    projects = payload.get('projects') if isinstance(payload.get('projects'), list) else []
+    deleted_projects = payload.get('deleted_projects') if isinstance(payload.get('deleted_projects'), list) else []
+    kept: list[dict[str, Any]] = []
+    removed: dict[str, Any] | None = None
+    for row in projects:
         if not isinstance(row, dict):
             continue
         manifest_path = Path(str(row.get('manifest_path') or '')).resolve()
-        manifest = _read_json(manifest_path)
-        if not manifest_path.exists() or not isinstance(manifest, dict) or manifest.get('schema') != 'textifai.project':
+        root = manifest_path.parent if manifest_path.name else None
+        candidate_id = str(row.get('project_id') or '') or (_project_id(root) if root else '')
+        if candidate_id == project_id:
+            removed = row
+            deleted_projects.append({
+                'project_id': candidate_id,
+                'manifest_path': str(manifest_path),
+                'removed_at': datetime.now(timezone.utc).isoformat(),
+                'state': 'deleted',
+            })
             continue
-        root = manifest_path.parent
-        projects.append(ProjectRef(project_id=_project_id(root), name=str(manifest.get('title') or root.name), root=root, system_root=None, kind='textifai_project', manifest_path=manifest_path, manifest=manifest))
-    return projects
+        kept.append(row)
+    if removed is None:
+        for row in deleted_projects:
+            if not isinstance(row, dict):
+                continue
+            if str(row.get('project_id') or '') == project_id:
+                return row
+        removed = {'project_id': project_id}
+        deleted_projects.append({
+            'project_id': project_id,
+            'removed_at': datetime.now(timezone.utc).isoformat(),
+            'state': 'deleted',
+        })
+    payload['schema'] = payload.get('schema') or 'textifai.local_registry'
+    payload['schema_version'] = max(int(payload.get('schema_version') or 1), 2)
+    payload['projects'] = kept
+    payload['deleted_projects'] = deleted_projects
+    LOCAL_PROJECT_REGISTRY.parent.mkdir(parents=True, exist_ok=True)
+    LOCAL_PROJECT_REGISTRY.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding='utf-8')
+    return removed
+
+def prune_registry_projects(predicate: Callable[[dict[str, Any]], bool]) -> int:
+    payload = _read_json(LOCAL_PROJECT_REGISTRY)
+    if not isinstance(payload, dict):
+        return 0
+    projects = payload.get('projects')
+    if not isinstance(projects, list):
+        return 0
+    kept: list[dict[str, Any]] = []
+    removed = 0
+    for row in projects:
+        if isinstance(row, dict) and predicate(row):
+            removed += 1
+            continue
+        if isinstance(row, dict):
+            kept.append(row)
+    if removed:
+        payload['projects'] = kept
+        LOCAL_PROJECT_REGISTRY.parent.mkdir(parents=True, exist_ok=True)
+        LOCAL_PROJECT_REGISTRY.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding='utf-8')
+    return removed
+
+def remove_registry_project(project_id: str) -> dict[str, Any]:
+    payload = _read_json(LOCAL_PROJECT_REGISTRY)
+    if not isinstance(payload, dict):
+        raise KeyError(project_id)
+    projects = payload.get('projects')
+    if not isinstance(projects, list):
+        raise KeyError(project_id)
+    kept: list[dict[str, Any]] = []
+    removed: dict[str, Any] | None = None
+    for row in projects:
+        if not isinstance(row, dict):
+            continue
+        manifest_path = Path(str(row.get('manifest_path') or '')).resolve()
+        root = manifest_path.parent if manifest_path.name else None
+        candidate_id = _project_id(root) if root else str(row.get('project_id') or '')
+        if candidate_id == project_id:
+            removed = row
+            continue
+        kept.append(row)
+    if removed is None:
+        raise KeyError(project_id)
+    payload['projects'] = kept
+    LOCAL_PROJECT_REGISTRY.parent.mkdir(parents=True, exist_ok=True)
+    LOCAL_PROJECT_REGISTRY.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding='utf-8')
+    return removed
 
 def _project_path(project: ProjectRef, key: str) -> Path | None:
     manifest = project.manifest or {}

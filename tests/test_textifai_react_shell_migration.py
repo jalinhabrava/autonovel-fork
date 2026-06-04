@@ -77,5 +77,15 @@ class TextifAIReactShellMigrationTests(unittest.TestCase):
             for token in forbidden:
                 self.assertNotIn(token, text, f'{path.name} graph chrome still contains {token}')
 
+    def test_ingestion_view_hides_fake_actions_row(self):
+        text = (REPO / 'textifai/web_viewer/react_shell/src/modules/ingestion/IngestionView.tsx').read_text(encoding='utf-8')
+        self.assertNotIn('ingestion.job.available_actions', text)
+        self.assertNotIn('formatActionLabel', text)
+
+    def test_app_does_not_use_terminal_job_as_current_progress(self):
+        text = (REPO / 'textifai/web_viewer/react_shell/src/App.tsx').read_text(encoding='utf-8')
+        self.assertNotIn('const displayedIngestionJob = activeIngestionJob || ingestionJobs[0] || null;', text)
+        self.assertIn('latestCompletedIngestionJob', text)
+
 if __name__ == '__main__':
     unittest.main()

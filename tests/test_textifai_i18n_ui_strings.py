@@ -467,7 +467,6 @@ class TestTextifAII18nUiStrings(unittest.TestCase):
         for key in [
             'nav.ingest',
             'ingestion.subtitle',
-            'ingestion.disabled',
             'ingestion.progress_title',
             'ingestion.progress_note',
             'ingestion.step',
@@ -480,16 +479,40 @@ class TestTextifAII18nUiStrings(unittest.TestCase):
             'ingestion.run',
             'ingestion.no_run_id',
             'ingestion.safe_workspace',
+            'ingestion.upload.accepted_formats',
+            'ingestion.upload.choose_files',
+            'ingestion.job.project_not_ready',
+            'ingestion.job.project_not_ready_note',
+            'ingestion.job.run_name_label',
+            'ingestion.job.status.completed_with_warnings',
+            'ingestion.job.input_mode.upload_session',
+            'ingestion.stage.preparing_manuscript',
+            'ingestion.stage.workspace_ready',
         ]:
             self.assertIn(f"t('{key}')", text)
         for migrated in [
             'Ingestion disabled',
             'Ingestion progress',
             'No steps available',
+            'Accepted:',
             'Safe workspace',
             'Ingestion completed with editorial review.',
+            'Nombre de corrida',
+            'Acciones disponibles',
         ]:
             self.assertNotIn(migrated, text)
+
+    def test_ingestion_stage_labels_are_i18n_first(self):
+        text = (SRC / 'modules/ingestion/IngestionView.tsx').read_text(encoding='utf-8')
+        self.assertIn('STAGE_LABEL_KEYS[stageId]', text)
+        self.assertIn('t(mapped)', text)
+        self.assertLess(text.index('STAGE_LABEL_KEYS[stageId]'), text.index('return label;'))
+
+    def test_project_open_indicator_uses_i18n(self):
+        app = APP.read_text(encoding='utf-8')
+        hub = (SRC / 'modules/project/ProjectHubView.tsx').read_text(encoding='utf-8')
+        self.assertIn("t('project.open_badge')", app)
+        self.assertIn("t('project.open_indicator')", hub)
 
     def test_ai_studio_view_uses_i18n(self):
         text = (SRC / 'modules/ai/AIStudioView.tsx').read_text(encoding='utf-8')

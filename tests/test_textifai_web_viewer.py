@@ -244,7 +244,7 @@ class TextifAIWebViewerTests(unittest.TestCase):
             self.assertEqual(payload["log_path_relative"], JOB_LOG_FILE)
             self.assertEqual(payload["input_mode"], "local_path")
             self.assertEqual(payload["stage_status"]["schema"], "textifai.ingestion_job_progress.v1")
-            self.assertIn("job_queued", [stage["id"] for stage in payload["stage_status"]["stages"]])
+            self.assertIn("detecting_chapters", [stage["id"] for stage in payload["stage_status"]["stages"]])
             self.assertIn("command_preview", payload)
 
     def test_upload_backed_job_snapshot_exposes_truthful_stage_status_without_content(self):
@@ -259,9 +259,58 @@ class TextifAIWebViewerTests(unittest.TestCase):
         self.assertTrue(Path(payload["output_root"]).is_relative_to(repo_root / "runs" / "web_ingestion"))
         self.assertEqual(payload["stage_status"]["global_status"], "queued")
         stages = {stage["id"]: stage for stage in payload["stage_status"]["stages"]}
-        self.assertEqual(stages["upload_staged"]["status"], "completed")
-        self.assertEqual(stages["job_queued"]["status"], "running")
+        self.assertEqual(stages["preparing_manuscript"]["label"], "Preparing manuscript")
+        self.assertEqual(stages["preparing_manuscript"]["status"], "completed")
+        self.assertEqual(stages["detecting_chapters"]["label"], "Detecting chapters")
+        self.assertEqual(stages["detecting_chapters"]["status"], "running")
+        self.assertEqual(stages["writing_markdown"]["label"], "Creating markdown chapters")
+        self.assertEqual(stages["writing_markdown"]["status"], "pending")
+        self.assertEqual(stages["writing_markdown"].get("progress"), 0)
         self.assertNotIn("secret chapter body", json.dumps(payload))
+
+    def test_finished_ingestion_snapshot_exposes_restored_phase_labels(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            session = stage_uploaded_files(repo_root, [("chapter.md", b"chapter body",)])
+            registry = IngestionJobRegistry(repo_root=repo_root, start_immediately=False)
+            job = registry.create_job({"upload_session_id": session.upload_session_id, "project_title": "Demo", "run_name": "upload"})
+            job.finalize(status="succeeded", project_id="proj_1", result_detected=True, review_queue_available=True, inspectable_artifacts_available=True, result_status="completed")
+            payload = job.snapshot()
+        stages = {stage["id"]: stage for stage in payload["stage_status"]["stages"]}
+        self.assertEqual(payload["stage_status"]["global_status"], "completed")
+        self.assertEqual(stages["workspace_ready"]["label"], "Workspace ready")
+        self.assertEqual(stages["workspace_ready"]["status"], "completed")
+        self.assertNotEqual(payload["stage_status"]["current_stage_id"], "upload_session")
+
+    def test_completed_warning_without_project_keeps_full_stage_contract_not_ready(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            session = stage_uploaded_files(repo_root, [("chapter.md", b"chapter body",)])
+            registry = IngestionJobRegistry(repo_root=repo_root, start_immediately=False)
+            job = registry.create_job({"upload_session_id": session.upload_session_id, "project_title": "Demo", "run_name": "upload"})
+            job.finalize(status="succeeded", result_detected=False, result_warnings=["obsidian_import.json not found"], result_status="warning")
+            payload = job.snapshot()
+        stages = {stage["id"]: stage for stage in payload["stage_status"]["stages"]}
+        self.assertEqual(payload["stage_status"]["global_status"], "completed_with_warnings")
+        self.assertFalse(payload["stage_status"]["project_ready"])
+        self.assertIsNone(payload["stage_status"]["progress"])
+        self.assertEqual(payload["stage_status"]["current_stage_id"], "extracting_entities")
+        for stage_id in [
+            "preparing_manuscript",
+            "detecting_chapters",
+            "writing_markdown",
+            "extracting_entities",
+            "building_vaerl",
+            "normalizing_entities",
+            "building_graph",
+            "building_review_queue",
+            "validating_project",
+            "workspace_ready",
+        ]:
+            self.assertIn(stage_id, stages)
+        self.assertEqual(stages["extracting_entities"]["status"], "warning")
+        self.assertEqual(stages["building_vaerl"]["status"], "warning")
+        self.assertEqual(stages["workspace_ready"]["status"], "warning")
 
     def test_post_ingestion_jobs_accepts_upload_session_id(self):
         with tempfile.TemporaryDirectory() as tmp:

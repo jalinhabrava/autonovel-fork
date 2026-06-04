@@ -1,14 +1,18 @@
 from __future__ import annotations
 
+import hashlib
 import shutil
 import subprocess
 import json
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 
 from providers.text_provider import get_text_provider_config_error
 from textifai.bootstrap.source_reader import build_source_document_inventory, discover_importable_source_paths
 from textifai.bootstrap.source_reader import read_source_documents
+from textifai.import_review.markdown_graph_index import build_author_graph, build_markdown_graph_index
+from textifai.import_review.source_structure import write_chapter_manifest
 from textifai.import_review.structured_bootstrap_v1 import NovelBootstrapV1Config, run_structured_bootstrap_v1
 from textifai.obsidian.json_import import import_json_to_vault
 from textifai.obsidian.readiness import ObsidianOperationalReadiness, evaluate_obsidian_operational_readiness
@@ -197,16 +201,40 @@ def prepare_obsidian_project(
                 summary_count=len(story_summary_paths),
             )
         else:
-            import_strategy = "structured_bootstrap_v1_unavailable"
-            warnings.append("structured_bootstrap_v1_failed")
-            notes.append("Structured bootstrap v1 did not complete, and the legacy staging fallback is now archived and disabled.")
-            _append_bootstrap_progress(
-                progress_log_path,
-                phase="bootstrap",
-                event="structured_bootstrap_unavailable",
-                source_file_count=len(preexisting_source_paths),
+            fallback_result = _materialize_chapter_manifest_project(
+                vault_root=vault_root,
+                inventory=inventory,
+                project_title=config.project_title or source_root.name or "TextifAI Project",
+                language=config.primary_language or "es",
+                repo_path=repo_path,
+                progress_log_path=progress_log_path,
             )
-            importer_reason = "Legacy staging fallback archived; rerun with structured bootstrap settings or inspect model plan audit."
+            if fallback_result is not None:
+                import_strategy = "deterministic_chapter_manifest_project"
+                story_chapter_paths = list(fallback_result["chapter_paths"])
+                bootstrap_audit_path = str(vault_root / "99_System" / "markdown_manifest.json")
+                notes.append("Structured bootstrap v1 was unavailable; created deterministic chapter-manifest project from uploaded Markdown.")
+                _append_bootstrap_progress(
+                    progress_log_path,
+                    phase="bootstrap",
+                    event="deterministic_chapter_manifest_project_imported",
+                    chapter_count=len(story_chapter_paths),
+                    manifest_path=str(vault_root / "textifai.project.json"),
+                )
+            else:
+                import_strategy = "structured_bootstrap_v1_unavailable"
+                warnings.append("structured_bootstrap_v1_failed")
+                notes.append("Structured bootstrap v1 did not complete, and deterministic chapter-manifest fallback could not identify chapters.")
+                _append_bootstrap_progress(
+                    progress_log_path,
+                    phase="bootstrap",
+                    event="structured_bootstrap_unavailable",
+                    source_file_count=len(preexisting_source_paths),
+                )
+                importer_reason = "Structured bootstrap unavailable and deterministic chapter fallback found no chapters."
+                fallback_result = None
+            if fallback_result is not None:
+                importer_reason = "Structured semantic bootstrap unavailable; deterministic chapter-manifest package created without provider calls."
 
     plugin_status = None
     if config.install_bridge_plugin:
@@ -312,6 +340,154 @@ def _coerce_optional_int(value: str | None) -> int | None:
     except (TypeError, ValueError):
         return None
     return parsed if parsed > 0 else None
+
+def _materialize_chapter_manifest_project(
+    *,
+    vault_root: Path,
+    inventory,
+    project_title: str,
+    language: str,
+    repo_path: Path,
+    progress_log_path: str | None,
+) -> dict[str, object] | None:
+    texts = read_source_documents(inventory, progress_log_path=progress_log_path)
+    documents = list(getattr(inventory, "documents", []) or [])
+    if not documents:
+        return None
+    primary = max(documents, key=lambda item: int(getattr(item, "extracted_char_count", 0) or len(texts.get(item.source_id, ""))))
+    source_text = texts.get(primary.source_id, "")
+    if not source_text.strip():
+        return None
+
+    chapter_manifest, _ = write_chapter_manifest(vault_root, source_text, str(getattr(primary, "path", "") or getattr(primary, "filename", "")))
+    chapters = [chapter for chapter in chapter_manifest.get("chapters", []) if isinstance(chapter, dict)]
+    if not chapters:
+        return None
+
+    system_root = vault_root / "99_System"
+    system_root.mkdir(parents=True, exist_ok=True)
+    markdown_manifest = _build_markdown_manifest(vault_root, chapter_manifest)
+    (system_root / "markdown_manifest.json").write_text(json.dumps(markdown_manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    markdown_index = build_markdown_graph_index(vault_root)
+    (system_root / "markdown_graph_index.json").write_text(json.dumps(markdown_index, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    review_queue = _empty_review_queue()
+    vaerl = _minimal_vaerl(project_title=project_title, language=language, chapters=chapters)
+    author_graph = build_author_graph(markdown_index=markdown_index, review_queue=review_queue)
+    (vault_root / "vaerl").mkdir(parents=True, exist_ok=True)
+    (vault_root / "graph").mkdir(parents=True, exist_ok=True)
+    (vault_root / "reports").mkdir(parents=True, exist_ok=True)
+    (vault_root / "vaerl" / "vaerl.json").write_text(json.dumps(vaerl, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    (vault_root / "vaerl" / "review_queue.json").write_text(json.dumps(review_queue, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    (vault_root / "graph" / "author_graph.json").write_text(json.dumps(author_graph, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    writer_outcome = _writer_outcome(len(chapters))
+    (system_root / "writer_outcome.json").write_text(json.dumps(writer_outcome, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    manifest = _textifai_project_manifest(
+        project_title=project_title,
+        language=language,
+        source_path=str(getattr(primary, "path", "") or getattr(primary, "filename", "")),
+        source_text=source_text,
+        chapter_count=len(chapters),
+        graph_summary={
+            "node_count": len(author_graph.get("nodes") or []),
+            "edge_count": len(author_graph.get("edges") or []),
+        },
+    )
+    (vault_root / "textifai.project.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    _register_local_project(repo_path, vault_root / "textifai.project.json")
+    return {"chapter_paths": [str(chapter.get("markdown_path") or "") for chapter in chapters if chapter.get("markdown_path")]}
+
+def _build_markdown_manifest(project_root: Path, chapter_manifest: dict[str, object]) -> dict[str, object]:
+    notes = []
+    for chapter in chapter_manifest.get("chapters", []):
+        if not isinstance(chapter, dict):
+            continue
+        path = str(chapter.get("markdown_path") or "")
+        if not path:
+            continue
+        notes.append({
+            "path": path,
+            "kind": "chapter",
+            "title": str(chapter.get("display_title") or chapter.get("title") or chapter.get("chapter_id") or "chapter"),
+            "display_title": str(chapter.get("display_title") or chapter.get("title") or chapter.get("chapter_id") or "chapter"),
+            "canonical_label": str(chapter.get("display_title") or chapter.get("title") or chapter.get("chapter_id") or "chapter"),
+            "chapter_id": str(chapter.get("chapter_id") or ""),
+            "status": "ready",
+            "review_state": "ready",
+            "tags": ["chapter", "ready"],
+        })
+    return {
+        "schema_version": "textifai.vaerl_markdown_manifest.v1",
+        "output_root": str(project_root),
+        "folders": ["Chapters", "System"],
+        "notes": notes,
+        "note_count": len(notes),
+        "source_prose_included": False,
+        "provider_calls": False,
+    }
+
+def _minimal_vaerl(*, project_title: str, language: str, chapters: list[dict[str, object]]) -> dict[str, object]:
+    return {
+        "work": {"title": project_title, "language": language, "source": "deterministic_chapter_manifest_project"},
+        "chapters": [
+            {
+                "chapter_id": str(chapter.get("chapter_id") or ""),
+                "sequence_index": int(chapter.get("order") or index),
+                "chapter_title_original": str(chapter.get("display_title") or chapter.get("title") or chapter.get("chapter_id") or "chapter"),
+                "chapter_title_canonical": str(chapter.get("display_title") or chapter.get("title") or chapter.get("chapter_id") or "chapter"),
+                "status": "ready",
+                "review_state": "ready",
+            }
+            for index, chapter in enumerate(chapters, start=1)
+        ],
+        "entities": [],
+        "relationships": [],
+        "provider_calls": False,
+    }
+
+def _empty_review_queue() -> dict[str, object]:
+    return {"schema_version": "textifai.review_queue.v1", "item_count": 0, "items": [], "decision_items": [], "policy": {"pending_reviews_are_expected": True, "can_auto_apply_default": False}}
+
+def _writer_outcome(chapter_count: int) -> dict[str, object]:
+    return {"status": "success_ready", "total_chapters": chapter_count, "chapters_ready": chapter_count, "chapters_needing_retry": 0, "chapters_needing_review": 0, "chapters_failed": 0, "user_summary": f"{chapter_count} capítulos detectados. {chapter_count} listos.", "primary_action": {"label": "Abrir workspace", "action_id": "open_workspace"}, "secondary_action": {"label": "Abrir grafo", "action_id": "open_graph"}}
+
+def _textifai_project_manifest(*, project_title: str, language: str, source_path: str, source_text: str, chapter_count: int, graph_summary: dict[str, int]) -> dict[str, object]:
+    now = datetime.now(timezone.utc).isoformat()
+    source_hash = hashlib.sha256(source_text.encode("utf-8")).hexdigest()
+    project_id = project_title.lower().replace(" ", "-")[:80] or "textifai-project"
+    return {
+        "schema": "textifai.project",
+        "schema_version": 1,
+        "project_id": project_id,
+        "title": project_title,
+        "language": language,
+        "created_at": now,
+        "updated_at": now,
+        "textifai_version": "sp145-upload-deterministic",
+        "source": {"kind": "manuscript_markdown", "original_filename": Path(source_path).name, "source_hash": f"sha256:{source_hash}", "stored_in_project": False},
+        "paths": {"markdown_root": "markdown", "chapters_root": "markdown/Chapters", "chapter_manifest": "chapters/chapter_manifest.json", "vaerl": "vaerl/vaerl.json", "review_queue": "vaerl/review_queue.json", "graph": "graph/author_graph.json", "markdown_graph_index": "99_System/markdown_graph_index.json", "markdown_manifest": "99_System/markdown_manifest.json", "writer_outcome": "99_System/writer_outcome.json", "reports": "reports"},
+        "status": {"chapters_total": chapter_count, "chapters_ready": chapter_count, "chapters_ready_with_review_warnings": 0, "chapters_needs_author_review": 0, "chapters_retry_required": 0, "chapters_still_failed": 0, "review_items": 0, "graph_nodes": graph_summary.get("node_count", 0), "graph_edges": graph_summary.get("edge_count", 0), "vaerl_ready": True, "graph_ready": True, "review_ready": True},
+        "capabilities": {"read_only": False, "editable_markdown": True, "drafts": False, "patch_queue": False, "chapter_mini_ingestion": False, "vaerl_update": False},
+        "privacy": {"contains_source_prose": True, "contains_provider_outputs": False, "safe_to_commit": False, "shareable_package": False},
+        "dev": {"runtime_origin": "sp145_upload_deterministic_chapter_manifest", "contains_private_provider_outputs": False},
+        "workspace_entry": {"default_screen": "Project Hub", "editor_source": "markdown/Chapters", "graph_source": "graph/author_graph.json", "review_source": "vaerl/review_queue.json"},
+        "ingestion_policy": {"provider_calls": False, "deterministic_chapter_manifest": True},
+    }
+
+def _register_local_project(repo_path: Path, manifest_path: Path) -> None:
+    registry_path = repo_path / ".textifai_runs" / "registry.local.json"
+    registry_path.parent.mkdir(parents=True, exist_ok=True)
+    payload = json.loads(registry_path.read_text(encoding="utf-8")) if registry_path.exists() else {"schema": "textifai.local_registry", "schema_version": 2, "projects": [], "deleted_projects": []}
+    projects = [item for item in payload.get("projects", []) if isinstance(item, dict)]
+    deleted_projects = [item for item in payload.get("deleted_projects", []) if isinstance(item, dict)]
+    manifest_text = str(manifest_path.resolve())
+    if not any(str(item.get("manifest_path") or "") == manifest_text for item in projects):
+        deleted_projects = [item for item in deleted_projects if str(item.get("manifest_path") or "") != manifest_text]
+        projects.append({"manifest_path": manifest_text, "added_at": datetime.now(timezone.utc).isoformat()})
+    payload["projects"] = projects
+    payload["deleted_projects"] = deleted_projects
+    payload["schema"] = "textifai.local_registry"
+    payload["schema_version"] = max(int(payload.get("schema_version") or 1), 2)
+    registry_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
 def _bootstrap_progress_log_path(vault_root: Path) -> str:
