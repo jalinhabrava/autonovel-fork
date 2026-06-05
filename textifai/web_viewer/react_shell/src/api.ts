@@ -176,12 +176,22 @@ export type IngestionJob = {
   status?: string;
   run_name?: string;
   project_title?: string;
+  display_label?: string;
   created_at?: string;
   input_mode?: string;
   upload_session_id?: string | null;
   project_id?: string | null;
   stage_status?: IngestionStageStatusSnapshot;
   result_status?: string;
+  result_summary?: string;
+  semantic_status?: string;
+  semantic_artifact_counts?: {
+    entities?: number;
+    relationships?: number;
+    graph_nodes?: number;
+    graph_edges?: number;
+    review_items?: number;
+  };
   error?: string | null;
 };
 

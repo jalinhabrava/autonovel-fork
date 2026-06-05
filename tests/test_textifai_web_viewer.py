@@ -21,6 +21,7 @@ from textifai.web_viewer.ingestion_jobs import (
     sanitize_run_slug,
 )
 from textifai.web_viewer.project_reader import ProjectCatalog, build_graph, read_artifact, read_note, read_project
+from textifai.web_viewer.project_reader import ProjectRef
 from textifai.web_viewer.server import _make_handler, build_ingestion_config
 from textifai.web_viewer.upload_staging import UploadSession, save_upload_session, stage_uploaded_files
 
@@ -111,7 +112,8 @@ class TextifAIWebViewerTests(unittest.TestCase):
                 repo_root=repo_root,
                 output_root=output_root,
             )
-        self.assertEqual(spec["args"][:5], ["uv", "run", "python", "scripts/textifai.py", "init"])
+        self.assertEqual(spec["args"][1:5], ["run", "python", "scripts/textifai.py", "init"])
+        self.assertTrue(Path(spec["args"][0]).is_absolute())
         self.assertIn("--vault-root", spec["args"])
         self.assertIn("--source-root", spec["args"])
         self.assertIn("--project-title", spec["args"])
@@ -229,6 +231,52 @@ class TextifAIWebViewerTests(unittest.TestCase):
             self.assertTrue(inspectable_result["result_detected"])
             self.assertTrue(inspectable_result["review_queue_available"])
 
+    def test_result_detection_distinguishes_structural_and_semantic_ready(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            output_root = Path(tmp) / "run_001"
+            system_root = output_root / "99_System"
+            graph_root = output_root / "graph"
+            vaerl_root = output_root / "vaerl"
+            system_root.mkdir(parents=True, exist_ok=True)
+            graph_root.mkdir(parents=True, exist_ok=True)
+            vaerl_root.mkdir(parents=True, exist_ok=True)
+            (output_root / "textifai.project.json").write_text("{}", encoding="utf-8")
+            (system_root / "markdown_manifest.json").write_text("{}", encoding="utf-8")
+            (system_root / "markdown_graph_index.json").write_text("{}", encoding="utf-8")
+            (system_root / "writer_outcome.json").write_text("{}", encoding="utf-8")
+
+            structural = detect_job_result(output_root)
+            self.assertTrue(structural["project_package_ready"])
+            self.assertFalse(structural["semantic_artifacts_available"])
+            self.assertEqual(structural["semantic_status"], "structural_only")
+
+            (vaerl_root / "entities.json").write_text(json.dumps({"entities": [{"canonical_name": "Sera"}]}, ensure_ascii=False), encoding="utf-8")
+            (vaerl_root / "relationships.json").write_text(json.dumps({"relationships": [{"source": "Sera", "target": "Ren"}]}, ensure_ascii=False), encoding="utf-8")
+            (vaerl_root / "review_queue.json").write_text(json.dumps({"item_count": 1, "items": [{"id": "r1"}]}, ensure_ascii=False), encoding="utf-8")
+            (graph_root / "graph.json").write_text(json.dumps({"nodes": [{"id": "Sera"}], "edges": [{"source": "Sera", "target": "Ren"}]}, ensure_ascii=False), encoding="utf-8")
+
+            semantic = detect_job_result(output_root)
+            self.assertTrue(semantic["semantic_artifacts_available"])
+            self.assertEqual(semantic["semantic_status"], "semantic_ready")
+            self.assertEqual(semantic["semantic_artifact_counts"]["entities"], 1)
+            self.assertEqual(semantic["semantic_artifact_counts"]["review_items"], 1)
+
+    def test_result_detection_surfaces_bootstrap_failures_as_warnings_not_success_summary(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            output_root = Path(tmp) / "run_001"
+            system_root = output_root / "99_System"
+            system_root.mkdir(parents=True, exist_ok=True)
+            (output_root / "textifai.project.json").write_text("{}", encoding="utf-8")
+            (system_root / "markdown_manifest.json").write_text("{}", encoding="utf-8")
+            (system_root / "markdown_graph_index.json").write_text("{}", encoding="utf-8")
+            (system_root / "writer_outcome.json").write_text("{}", encoding="utf-8")
+            (system_root / "bootstrap_progress.jsonl").write_text(json.dumps({"event": "chapter_extraction_failed", "chapter_title": "Capítulo 1", "failure_type": "parse_failure", "attempt_count": 3}) + "\n", encoding="utf-8")
+
+            detection = detect_job_result(output_root)
+
+        self.assertIn("Chapter extraction warning", " ".join(detection["result_warnings"]))
+        self.assertEqual(detection["semantic_status"], "structural_only")
+
     def test_metadata_file_written_on_job_create(self):
         with tempfile.TemporaryDirectory() as tmp:
             repo_root = Path(tmp)
@@ -311,6 +359,46 @@ class TextifAIWebViewerTests(unittest.TestCase):
         self.assertEqual(stages["extracting_entities"]["status"], "warning")
         self.assertEqual(stages["building_vaerl"]["status"], "warning")
         self.assertEqual(stages["workspace_ready"]["status"], "warning")
+
+    def test_finished_ingestion_snapshot_marks_semantic_stages_warning_for_structural_only_project(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            session = stage_uploaded_files(repo_root, [("chapter.md", b"chapter body",)])
+            registry = IngestionJobRegistry(repo_root=repo_root, start_immediately=False)
+            job = registry.create_job({"upload_session_id": session.upload_session_id, "project_title": "Demo", "run_name": "upload"})
+            job.finalize(
+                status="succeeded",
+                project_id="proj_1",
+                result_detected=True,
+                project_package_ready=True,
+                semantic_artifacts_available=False,
+                semantic_status="structural_only",
+                result_warnings=["semantic provider unavailable"],
+                result_status="completed_with_warnings",
+            )
+            payload = job.snapshot()
+        stages = {stage["id"]: stage for stage in payload["stage_status"]["stages"]}
+        self.assertEqual(payload["stage_status"]["global_status"], "completed_with_warnings")
+        self.assertEqual(stages["writing_markdown"]["status"], "completed")
+        self.assertEqual(stages["extracting_entities"]["status"], "warning")
+        self.assertEqual(stages["building_graph"]["status"], "warning")
+        self.assertEqual(stages["workspace_ready"]["status"], "completed")
+
+    def test_build_graph_prefers_full_semantic_graph_when_author_graph_is_only_chapters(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            project_root = root / "project"
+            (project_root / "graph").mkdir(parents=True)
+            (project_root / "vaerl").mkdir(parents=True)
+            (project_root / "99_System").mkdir(parents=True)
+            manifest = {"paths": {"graph": "graph/graph.json"}}
+            (project_root / "textifai.project.json").write_text(json.dumps(manifest), encoding="utf-8")
+            (project_root / "graph" / "author_graph.json").write_text(json.dumps({"nodes": [{"id": "chapter:1", "kind": "chapter"}], "edges": []}), encoding="utf-8")
+            (project_root / "graph" / "graph.json").write_text(json.dumps({"nodes": [{"id": "chapter:1", "kind": "chapter"}, {"id": "entity:sera", "kind": "character"}], "edges": [{"source": "chapter:1", "target": "entity:sera"}]}), encoding="utf-8")
+            project = ProjectRef(project_id="demo", name="project", root=project_root, system_root=project_root / "99_System", kind="textifai_project", manifest_path=project_root / "textifai.project.json", manifest=manifest)
+            graph = build_graph(project)
+        self.assertEqual(len(graph["nodes"]), 2)
+        self.assertEqual(graph["metadata"]["graph_mode"], "semantic_graph")
 
     def test_post_ingestion_jobs_accepts_upload_session_id(self):
         with tempfile.TemporaryDirectory() as tmp:

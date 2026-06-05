@@ -167,6 +167,20 @@ def prepare_obsidian_project(
             vault_root=vault_root,
             inventory=inventory,
         )
+        provider_name, model = _resolve_bootstrap_provider_and_model(repo_path)
+        semantic_provider_available = bool(
+            provider_name
+            and model
+            and get_text_provider_config_error("bootstrap_global_normalization", provider_name) is None
+            and get_text_provider_config_error("bootstrap_chapter_extraction", provider_name) is None
+        )
+        _append_bootstrap_progress(
+            progress_log_path,
+            phase="bootstrap",
+            event="semantic_provider_available" if semantic_provider_available else "semantic_provider_unavailable",
+            provider_name=provider_name,
+            model=model,
+        )
         structured_result = _run_structured_bootstrap_pipeline(
             vault_root=vault_root,
             inventory=inventory,
@@ -175,10 +189,24 @@ def prepare_obsidian_project(
         )
         if structured_result is not None:
             import_strategy = "structured_bootstrap_v1_json_import"
+            _append_bootstrap_progress(
+                progress_log_path,
+                phase="bootstrap",
+                event="semantic_bootstrap_started",
+                provider_name=provider_name,
+                model=model,
+            )
             warnings.extend(list(structured_result.warnings))
             import_audit = import_json_to_vault(
                 source_json=Path(structured_result.obsidian_import_path),
                 vault_root=vault_root,
+            )
+            semantic_package = _finalize_semantic_project_package(
+                vault_root=vault_root,
+                structured_result=structured_result,
+                project_title=config.project_title or source_root.name or "TextifAI Project",
+                language=config.primary_language or "es",
+                repo_path=repo_path,
             )
             composed_paths = list(import_audit.get("primary_paths", []))
             story_chapter_paths = list(import_audit.get("chapter_paths", []))
@@ -192,6 +220,15 @@ def prepare_obsidian_project(
                 notes.append(f"Wrote {len(story_chapter_paths)} chapter notes from structured chapter outputs.")
             if story_summary_paths:
                 notes.append(f"Wrote {len(story_summary_paths)} chapter summaries from structured chapter outputs.")
+            _append_bootstrap_progress(
+                progress_log_path,
+                phase="bootstrap",
+                event="semantic_bootstrap_completed",
+                provider_name=provider_name,
+                model=model,
+                chapter_count=structured_result.chapter_count,
+                semantic_status=semantic_package.get("semantic_status"),
+            )
             _append_bootstrap_progress(
                 progress_log_path,
                 phase="bootstrap",
@@ -214,6 +251,13 @@ def prepare_obsidian_project(
                 story_chapter_paths = list(fallback_result["chapter_paths"])
                 bootstrap_audit_path = str(vault_root / "99_System" / "markdown_manifest.json")
                 notes.append("Structured bootstrap v1 was unavailable; created deterministic chapter-manifest project from uploaded Markdown.")
+                _append_bootstrap_progress(
+                    progress_log_path,
+                    phase="bootstrap",
+                    event="deterministic_fallback_used",
+                    provider_name=provider_name,
+                    model=model,
+                )
                 _append_bootstrap_progress(
                     progress_log_path,
                     phase="bootstrap",
@@ -395,6 +439,120 @@ def _materialize_chapter_manifest_project(
     (vault_root / "textifai.project.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     _register_local_project(repo_path, vault_root / "textifai.project.json")
     return {"chapter_paths": [str(chapter.get("markdown_path") or "") for chapter in chapters if chapter.get("markdown_path")]}
+
+def _finalize_semantic_project_package(
+    *,
+    vault_root: Path,
+    structured_result,
+    project_title: str,
+    language: str,
+    repo_path: Path,
+) -> dict[str, object]:
+    system_root = vault_root / "99_System"
+    vaerl_root = vault_root / "vaerl"
+    graph_root = vault_root / "graph"
+    vaerl_root.mkdir(parents=True, exist_ok=True)
+    graph_root.mkdir(parents=True, exist_ok=True)
+
+    obsidian_import = _read_json(Path(structured_result.obsidian_import_path), default={})
+    review_queue_path = getattr(structured_result, "review_queue_path", None)
+    review_queue = _read_json(Path(review_queue_path), default=_empty_review_queue()) if review_queue_path else _empty_review_queue()
+    entities = list(obsidian_import.get("entities") or []) if isinstance(obsidian_import, dict) else []
+    chapters = list(obsidian_import.get("chapters") or []) if isinstance(obsidian_import, dict) else []
+    relationships = _semantic_relationships_from_entities(entities)
+
+    vaerl = {
+        "work": obsidian_import.get("work") if isinstance(obsidian_import.get("work"), dict) else {"title": project_title, "language": language},
+        "entities": entities,
+        "chapters": chapters,
+        "reviews": review_queue.get("items", []) if isinstance(review_queue, dict) else [],
+        "provider_calls": True,
+    }
+    (vaerl_root / "vaerl.json").write_text(json.dumps(vaerl, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    (vaerl_root / "entities.json").write_text(json.dumps({"entities": entities}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    (vaerl_root / "relationships.json").write_text(json.dumps({"relationships": relationships}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    (vaerl_root / "review_queue.json").write_text(json.dumps(review_queue, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+    markdown_index = build_markdown_graph_index(vault_root)
+    (system_root / "markdown_graph_index.json").write_text(json.dumps(markdown_index, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    (graph_root / "graph.json").write_text(json.dumps(markdown_index, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    author_graph = build_author_graph(markdown_index=markdown_index, review_queue=review_queue if isinstance(review_queue, dict) else _empty_review_queue())
+    (graph_root / "author_graph.json").write_text(json.dumps(author_graph, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+    markdown_manifest = _build_semantic_markdown_manifest(vault_root, markdown_index)
+    (system_root / "markdown_manifest.json").write_text(json.dumps(markdown_manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    writer_outcome = _writer_outcome(int(structured_result.chapter_count or len(chapters)))
+    (system_root / "writer_outcome.json").write_text(json.dumps(writer_outcome, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+    graph_summary = markdown_index if isinstance(markdown_index, dict) else {}
+    manifest = _semantic_textifai_project_manifest(
+        project_title=project_title,
+        language=language,
+        source_path=str(structured_result.source_document),
+        chapter_count=int(structured_result.chapter_count or len(chapters)),
+        review_count=int(review_queue.get("item_count") or len(review_queue.get("items") or []) if isinstance(review_queue, dict) else 0),
+        graph_summary={
+            "node_count": int(graph_summary.get("node_count") or len(graph_summary.get("nodes") or [])),
+            "edge_count": int(graph_summary.get("edge_count") or len(graph_summary.get("edges") or [])),
+        },
+    )
+    (vault_root / "textifai.project.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    _register_local_project(repo_path, vault_root / "textifai.project.json")
+    return {"semantic_status": "semantic_ready", "entity_count": len(entities), "relationship_count": len(relationships)}
+
+def _read_json(path: Path, *, default):
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError):
+        return default
+
+def _semantic_relationships_from_entities(entities: list[object]) -> list[dict[str, object]]:
+    relationships: list[dict[str, object]] = []
+    for entity in entities:
+        if not isinstance(entity, dict):
+            continue
+        source = str(entity.get("canonical_name") or entity.get("canonical_label") or "").strip()
+        for relation in entity.get("relationships") or []:
+            if not isinstance(relation, dict):
+                continue
+            target = str(relation.get("target") or relation.get("to") or relation.get("to_canonical") or "").strip()
+            relationships.append({**relation, "source": source, "target": target})
+    return relationships
+
+def _build_semantic_markdown_manifest(project_root: Path, markdown_index: dict[str, object]) -> dict[str, object]:
+    notes = [item for item in markdown_index.get("notes", []) if isinstance(item, dict)]
+    return {
+        "schema_version": "textifai.vaerl_markdown_manifest.v1",
+        "output_root": str(project_root),
+        "folders": sorted({str(Path(str(item.get("path") or "")).parent) for item in notes if item.get("path")}),
+        "notes": notes,
+        "note_count": len(notes),
+        "source_prose_included": True,
+        "provider_calls": True,
+        "editable_policy": {"editable_markdown": True, "semantic_artifacts_provider_backed": True},
+    }
+
+def _semantic_textifai_project_manifest(*, project_title: str, language: str, source_path: str, chapter_count: int, review_count: int, graph_summary: dict[str, int]) -> dict[str, object]:
+    now = datetime.now(timezone.utc).isoformat()
+    project_id = project_title.lower().replace(" ", "-")[:80] or "textifai-project"
+    return {
+        "schema": "textifai.project",
+        "schema_version": 1,
+        "project_id": project_id,
+        "title": project_title,
+        "language": language,
+        "created_at": now,
+        "updated_at": now,
+        "textifai_version": "sp148-upload-semantic-bootstrap",
+        "source": {"kind": "manuscript_markdown", "original_filename": Path(source_path).name, "stored_in_project": False},
+        "paths": {"markdown_root": ".", "chapters_root": "04_Story/Chapters", "characters_root": "03_Characters/Profiles", "places_root": "02_World/Places", "events_root": "02_World/Events", "objects_root": "02_World/Objects", "concepts_root": "02_World/Concepts", "reviews_root": "90_Review", "vaerl": "vaerl/vaerl.json", "entities": "vaerl/entities.json", "relationships": "vaerl/relationships.json", "review_queue": "vaerl/review_queue.json", "graph": "graph/graph.json", "author_graph": "graph/author_graph.json", "markdown_graph_index": "99_System/markdown_graph_index.json", "markdown_manifest": "99_System/markdown_manifest.json", "writer_outcome": "99_System/writer_outcome.json", "reports": "reports"},
+        "status": {"chapters_total": chapter_count, "chapters_ready": chapter_count, "chapters_ready_with_review_warnings": 0, "chapters_needs_author_review": review_count, "chapters_retry_required": 0, "chapters_still_failed": 0, "review_items": review_count, "graph_nodes": graph_summary.get("node_count", 0), "graph_edges": graph_summary.get("edge_count", 0), "vaerl_ready": True, "graph_ready": True, "review_ready": True, "semantic_ready": True},
+        "capabilities": {"read_only": False, "editable_markdown": True, "drafts": False, "patch_queue": False, "chapter_mini_ingestion": False, "vaerl_update": False},
+        "privacy": {"contains_source_prose": True, "contains_provider_outputs": True, "safe_to_commit": False, "shareable_package": False},
+        "dev": {"runtime_origin": "sp148_upload_semantic_bootstrap", "contains_private_provider_outputs": True},
+        "workspace_entry": {"default_screen": "Project Hub", "editor_source": "04_Story/Chapters", "graph_source": "graph/graph.json", "review_source": "vaerl/review_queue.json"},
+        "ingestion_policy": {"provider_calls": True, "deterministic_chapter_manifest": False, "semantic_bootstrap": True},
+    }
 
 def _build_markdown_manifest(project_root: Path, chapter_manifest: dict[str, object]) -> dict[str, object]:
     notes = []

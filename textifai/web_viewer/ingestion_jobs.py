@@ -4,6 +4,7 @@ import json
 import os
 import re
 import secrets
+import shutil
 import subprocess
 import threading
 from collections import deque
@@ -57,8 +58,56 @@ def _redacted_summary(value: Any) -> str | None:
     return text or None
 
 
+def _json_list_count(path: Path, key: str) -> int:
+    payload = _read_json(path)
+    if isinstance(payload, dict):
+        items = payload.get(key)
+        if isinstance(items, list):
+            return len(items)
+    return 0
+
+
+def _bootstrap_progress_warnings(system_root: Path) -> list[str]:
+    progress_path = system_root / "bootstrap_progress.jsonl"
+    warnings: list[str] = []
+    if not progress_path.exists():
+        return warnings
+    try:
+        lines = progress_path.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return warnings
+    for line in lines:
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        event_name = str(event.get("event") or "")
+        if event_name == "chapter_extraction_failed":
+            chapter = str(event.get("chapter_title") or event.get("chapter_id") or "chapter").strip()
+            failure_type = str(event.get("failure_type") or "failed").strip()
+            attempt_count = event.get("attempt_count")
+            suffix = f" after {attempt_count} attempts" if attempt_count else ""
+            warnings.append(f"Chapter extraction warning: {chapter} {failure_type}{suffix}")
+        elif event_name == "global_normalization_batch_abandoned":
+            chapter_ids = ", ".join(str(item) for item in event.get("chapter_ids") or [])
+            warnings.append(f"Global normalization warning: abandoned batch {chapter_ids}".strip())
+    return warnings[:12]
+
+
 def _project_id_from_output(output_path: Path) -> str:
     return output_path.resolve().as_posix().replace("/", "__").strip("_")
+
+
+def _resolve_uv_executable() -> str:
+    configured = str(os.environ.get("UV") or "").strip()
+    candidates = [configured, shutil.which("uv") or "", str(Path.home() / ".local" / "bin" / "uv")]
+    for candidate in candidates:
+        if not candidate:
+            continue
+        path = Path(candidate).expanduser()
+        if path.exists() and os.access(path, os.X_OK):
+            return str(path)
+    return "uv"
 
 
 def _duration_seconds(started_at: str | None, finished_at: str | None) -> float | None:
@@ -134,6 +183,10 @@ class IngestionJob:
     inspectable_artifacts_available: bool = False
     result_status: str = "pending"
     artifact_availability: dict[str, bool] = field(default_factory=dict)
+    project_package_ready: bool = False
+    semantic_artifacts_available: bool = False
+    semantic_status: str = "pending"
+    semantic_artifact_counts: dict[str, int] = field(default_factory=dict)
     safe_output_root: str = str(SAFE_OUTPUT_ROOT)
     duplicate_key: str = ""
     restored_from_disk: bool = False
@@ -178,6 +231,11 @@ class IngestionJob:
         review_queue_available: bool = False,
         inspectable_artifacts_available: bool = False,
         result_status: str = "pending",
+        artifact_availability: dict[str, bool] | None = None,
+        project_package_ready: bool = False,
+        semantic_artifacts_available: bool = False,
+        semantic_status: str = "pending",
+        semantic_artifact_counts: dict[str, int] | None = None,
     ) -> None:
         with self._lock:
             merged_warnings = list(self.result_warnings)
@@ -195,6 +253,13 @@ class IngestionJob:
             self.review_queue_available = review_queue_available
             self.inspectable_artifacts_available = inspectable_artifacts_available
             self.result_status = result_status
+            if artifact_availability is not None:
+                self.artifact_availability = dict(artifact_availability)
+            self.project_package_ready = project_package_ready
+            self.semantic_artifacts_available = semantic_artifacts_available
+            self.semantic_status = semantic_status
+            if semantic_artifact_counts is not None:
+                self.semantic_artifact_counts = dict(semantic_artifact_counts)
 
     def snapshot(self, *, log_tail_chars: int = 8000) -> dict[str, Any]:
         with self._lock:
@@ -218,14 +283,19 @@ class IngestionJob:
                 "error": self.error,
                 "result_detected": self.result_detected,
                 "result_warnings": list(self.result_warnings),
+                "display_label": self.project_title or self.run_name or self.job_id,
+                "result_summary": self.semantic_status if self.semantic_status != "pending" else (self.result_status or self.status),
                 "review_queue_available": self.review_queue_available,
                 "inspectable_artifacts_available": self.inspectable_artifacts_available,
                 "result_status": self.result_status,
                 "artifact_availability": dict(self.artifact_availability),
+                "semantic_artifact_counts": dict(self.semantic_artifact_counts),
                 "can_compare": bool(self.project_id and self.artifact_availability.get("obsidian_import.json")),
                 "compare_unavailable_reason": _compare_unavailable_reason(self.project_id, self.artifact_availability),
                 "comparability_manifest_available": bool(self.artifact_availability.get("run_comparability_manifest.json")),
-                "semantic_artifacts_available": bool(self.artifact_availability.get("obsidian_import.json")),
+                "project_package_ready": self.project_package_ready,
+                "semantic_artifacts_available": self.semantic_artifacts_available or bool(self.artifact_availability.get("obsidian_import.json")),
+                "semantic_status": self.semantic_status,
                 "safe_output_root": self.safe_output_root,
                 "restored_from_disk": self.restored_from_disk,
                 "log_path_relative": self.log_path_relative,
@@ -356,6 +426,11 @@ class IngestionJobRegistry:
                     review_queue_available=detection["review_queue_available"],
                     inspectable_artifacts_available=detection["inspectable_artifacts_available"],
                     result_status=detection["result_status"],
+                    artifact_availability=dict(detection["artifact_availability"]),
+                    project_package_ready=bool(detection.get("project_package_ready")),
+                    semantic_artifacts_available=bool(detection.get("semantic_artifacts_available")),
+                    semantic_status=str(detection.get("semantic_status") or "pending"),
+                    semantic_artifact_counts=dict(detection.get("semantic_artifact_counts") or {}),
                 )
                 job.append_log(f"Job succeeded at {job.finished_at}\n")
             else:
@@ -474,6 +549,10 @@ class IngestionJobRegistry:
                 inspectable_artifacts_available=detection["inspectable_artifacts_available"],
                 result_status=("warning" if status == "failed" and stale_warning in warnings else detection["result_status"]),
                 artifact_availability=dict(detection["artifact_availability"]),
+                project_package_ready=bool(detection.get("project_package_ready")),
+                semantic_artifacts_available=bool(detection.get("semantic_artifacts_available")),
+                semantic_status=str(detection.get("semantic_status") or "pending"),
+                semantic_artifact_counts=dict(detection.get("semantic_artifact_counts") or {}),
                 safe_output_root=str(self.output_root),
                 duplicate_key=f"rehydrated::{job_id}",
                 restored_from_disk=True,
@@ -517,7 +596,7 @@ def build_ingestion_command(payload: dict[str, Any], *, repo_root: Path, output_
         raise ValueError("output target already exists")
 
     args = [
-        "uv", "run", "python", "scripts/textifai.py", "init",
+        _resolve_uv_executable(), "run", "python", "scripts/textifai.py", "init",
         "--vault-root", str(target),
         "--source-root", str(source_root),
         "--project-title", project_title,
@@ -555,6 +634,11 @@ def detect_job_result(output_path: Path) -> dict[str, Any]:
     markdown_manifest = system_root / "markdown_manifest.json"
     markdown_graph_index = system_root / "markdown_graph_index.json"
     writer_outcome = system_root / "writer_outcome.json"
+    semantic_artifact_paths = {
+        "entities.json": output_path / "vaerl" / "entities.json",
+        "relationships.json": output_path / "vaerl" / "relationships.json",
+        "graph.json": output_path / "graph" / "graph.json",
+    }
     artifact_names = [
         "obsidian_import.json",
         "review_queue.json",
@@ -567,6 +651,15 @@ def detect_job_result(output_path: Path) -> dict[str, Any]:
     warnings: list[str] = []
     inspectable_artifacts_available = artifact_availability["obsidian_import.json"]
     review_queue_available = artifact_availability["review_queue.json"]
+    semantic_artifacts_available = all(path.exists() for path in semantic_artifact_paths.values()) or inspectable_artifacts_available
+    semantic_artifact_counts = {
+        "entities": _json_list_count(semantic_artifact_paths["entities.json"], "entities"),
+        "relationships": _json_list_count(semantic_artifact_paths["relationships.json"], "relationships"),
+        "graph_nodes": len((_read_json(semantic_artifact_paths["graph.json"]) or {}).get("nodes") or []) if isinstance(_read_json(semantic_artifact_paths["graph.json"]), dict) else 0,
+        "graph_edges": len((_read_json(semantic_artifact_paths["graph.json"]) or {}).get("edges") or []) if isinstance(_read_json(semantic_artifact_paths["graph.json"]), dict) else 0,
+        "review_items": _json_list_count(output_path / "vaerl" / "review_queue.json", "items"),
+    }
+    semantic_status = "semantic_ready" if semantic_artifacts_available else ("structural_only" if project_package_ready else "pending")
 
     if not system_root.exists():
         warnings.append("99_System directory not found; result may not be inspectable in viewer yet")
@@ -574,6 +667,9 @@ def detect_job_result(output_path: Path) -> dict[str, Any]:
         warnings.append("obsidian_import.json not found; result detection is incomplete")
     if system_root.exists() and not review_queue_available and not project_package_ready:
         warnings.append("review_queue.json not found; review queue view may be unavailable")
+    for warning in _bootstrap_progress_warnings(system_root):
+        if warning not in warnings:
+            warnings.append(warning)
 
     project_openable = system_root.exists() and (inspectable_artifacts_available or review_queue_available or project_package_ready)
     result_detected = system_root.exists() and (inspectable_artifacts_available or project_package_ready)
@@ -586,6 +682,9 @@ def detect_job_result(output_path: Path) -> dict[str, Any]:
         "review_queue_available": review_queue_available,
         "inspectable_artifacts_available": inspectable_artifacts_available,
         "project_package_ready": project_package_ready,
+        "semantic_artifacts_available": semantic_artifacts_available,
+        "semantic_status": semantic_status,
+        "semantic_artifact_counts": semantic_artifact_counts,
         "artifact_availability": artifact_availability,
         "result_status": result_status,
     }
@@ -703,25 +802,50 @@ def _stage_status_snapshot(job: IngestionJob) -> dict[str, Any]:
     running_summary = "Ingestion is running" if running_status == "running" else ("Ingestion finished" if running_status == "completed" else "Ingestion has not started yet")
     stages.append(_build_stage("writing_markdown", "Creating markdown chapters", running_status, progress=running_progress, summary=running_summary, errors=errors if running_status == "failed" else [], actions=["inspect"]))
 
-    artifact_status = "completed" if has_artifacts else ("warning" if (is_succeeded and not has_artifacts) else ("failed" if is_failed else ("running" if is_running else "pending")))
+    semantic_status_value = str(getattr(job, "semantic_status", "pending") or "pending")
+    artifact_status = (
+        "warning"
+        if (has_artifacts and semantic_status_value == "semantic_ready" and warnings)
+        else (
+            "completed"
+            if has_artifacts and semantic_status_value == "semantic_ready"
+            else (
+                "warning"
+                if ((has_artifacts and is_succeeded) or (is_succeeded and not has_artifacts))
+                else ("failed" if is_failed else ("running" if is_running else "pending"))
+            )
+        )
+    )
     artifact_progress = 100 if artifact_status == "completed" else (None if artifact_status == "running" else 0)
     artifact_summary = "Inspectable artifacts detected under 99_System" if artifact_status == "completed" else ("Run finished without inspectable artifacts" if artifact_status == "warning" else ("Inspectable artifacts not detected yet" if artifact_status == "pending" else "Inspectable artifacts not detected"))
-    artifact_warnings = warnings if artifact_status in {"completed", "failed", "warning"} else []
+    artifact_warnings = warnings if artifact_status == "warning" else []
     artifact_errors = errors if artifact_status == "failed" else []
     stages.append(_build_stage("extracting_entities", "Extracting entities and relations", artifact_status, progress=artifact_progress, summary=artifact_summary, warnings=artifact_warnings, errors=artifact_errors, actions=["inspect"]))
 
-    ready_status = "warning" if (is_succeeded and not job.project_id) else ("warning" if (job.project_id and warnings) else ("completed" if job.project_id else ("failed" if is_failed else "pending")))
+    ready_status = "warning" if (is_succeeded and not job.project_id) else ("completed" if job.project_id else ("failed" if is_failed else "pending"))
     ready_progress = 100 if ready_status in {"completed", "warning"} else 0
     ready_summary = "Project is ready for viewer inspection" if ready_status == "completed" else ("Run finished but project was not materialized" if ready_status == "warning" else ("Project was not materialized into ready viewer state" if ready_status == "failed" else "Project not ready yet"))
-    ready_warnings = warnings if ready_status in {"completed", "warning"} else []
+    ready_warnings = warnings if ready_status == "warning" else []
     ready_errors = errors if ready_status == "failed" else []
     stages.append(_build_stage("building_vaerl", "Building VaERL", ready_status, progress=ready_progress, summary=ready_summary, warnings=ready_warnings, errors=ready_errors, actions=["inspect"] if (job.project_id or job.error or warnings or is_succeeded) else []))
 
-    normalized_status = "completed" if job.project_id else ("warning" if ready_status == "warning" else ("failed" if is_failed else ("running" if is_running else "pending")))
-    stages.append(_build_stage("normalizing_entities", "Normalizing entities and aliases", normalized_status, progress=100 if normalized_status == "completed" else (None if normalized_status == "running" else 0), summary="Entities and aliases normalized" if normalized_status == "completed" else ("Entities and aliases not finalized" if normalized_status == "warning" else "Entities and aliases not ready yet"), warnings=warnings if normalized_status == "warning" else [], errors=errors if normalized_status == "failed" else [], actions=["inspect"]))
-    stages.append(_build_stage("building_graph", "Generating graph", normalized_status, progress=100 if normalized_status == "completed" else (None if normalized_status == "running" else 0), summary="Graph generated" if normalized_status == "completed" else ("Graph not generated yet" if normalized_status == "warning" else "Graph not ready yet"), warnings=warnings if normalized_status == "warning" else [], errors=errors if normalized_status == "failed" else [], actions=["inspect"]))
-    stages.append(_build_stage("building_review_queue", "Creating review queue", normalized_status, progress=100 if normalized_status == "completed" else (None if normalized_status == "running" else 0), summary="Review queue created" if normalized_status == "completed" else ("Review queue not created yet" if normalized_status == "warning" else "Review queue not ready yet"), warnings=warnings if normalized_status == "warning" else [], errors=errors if normalized_status == "failed" else [], actions=["inspect"]))
-    stages.append(_build_stage("validating_project", "Validating project", normalized_status, progress=100 if normalized_status == "completed" else (None if normalized_status == "running" else 0), summary="Project validated" if normalized_status == "completed" else ("Project not validated yet" if normalized_status == "warning" else "Project not ready yet"), warnings=warnings if normalized_status == "warning" else [], errors=errors if normalized_status == "failed" else [], actions=["inspect"]))
+    semantic_status = semantic_status_value
+    semantic_counts = getattr(job, "semantic_artifact_counts", {}) if isinstance(getattr(job, "semantic_artifact_counts", {}), dict) else {}
+    semantic_detail = f"entities={semantic_counts.get('entities', 0)}; relationships={semantic_counts.get('relationships', 0)}; graph_nodes={semantic_counts.get('graph_nodes', 0)}; graph_edges={semantic_counts.get('graph_edges', 0)}; review_items={semantic_counts.get('review_items', 0)}"
+    semantic_phase_status = (
+        "completed"
+        if semantic_status == "semantic_ready"
+        else (
+            "warning"
+            if ((job.project_id and semantic_status == "structural_only") or (job.project_id and semantic_status == "semantic_ready" and warnings) or (ready_status == "warning" and not job.project_id))
+            else ("failed" if is_failed else ("running" if is_running else "pending"))
+        )
+    )
+    normalized_status = semantic_phase_status
+    stages.append(_build_stage("normalizing_entities", "Normalizing entities and aliases", normalized_status, progress=100 if normalized_status == "completed" else (None if normalized_status == "running" else 0), summary=("Entities and aliases normalized" if normalized_status == "completed" else ("Entities and aliases not finalized" if normalized_status == "warning" else "Entities and aliases not ready yet")) + (f"; {semantic_detail}" if normalized_status == "warning" else ""), warnings=warnings if normalized_status == "warning" else [], errors=errors if normalized_status == "failed" else [], actions=["inspect"]))
+    stages.append(_build_stage("building_graph", "Generating graph", normalized_status, progress=100 if normalized_status == "completed" else (None if normalized_status == "running" else 0), summary=("Graph generated" if normalized_status == "completed" else ("Graph not generated yet" if normalized_status == "warning" else "Graph not ready yet")) + (f"; {semantic_detail}" if normalized_status == "warning" else ""), warnings=warnings if normalized_status == "warning" else [], errors=errors if normalized_status == "failed" else [], actions=["inspect"]))
+    stages.append(_build_stage("building_review_queue", "Creating review queue", normalized_status, progress=100 if normalized_status == "completed" else (None if normalized_status == "running" else 0), summary=("Review queue created" if normalized_status == "completed" else ("Review queue not created yet" if normalized_status == "warning" else "Review queue not ready yet")) + (f"; {semantic_detail}" if normalized_status == "warning" else ""), warnings=warnings if normalized_status == "warning" else [], errors=errors if normalized_status == "failed" else [], actions=["inspect"]))
+    stages.append(_build_stage("validating_project", "Validating project", normalized_status, progress=100 if normalized_status == "completed" else (None if normalized_status == "running" else 0), summary=("Project validated" if normalized_status == "completed" else ("Project not validated yet" if normalized_status == "warning" else "Project not ready yet")) + (f"; {semantic_detail}" if normalized_status == "warning" else ""), warnings=warnings if normalized_status == "warning" else [], errors=errors if normalized_status == "failed" else [], actions=["inspect"]))
     stages.append(_build_stage("workspace_ready", "Workspace ready", "completed" if job.project_id else ("warning" if ready_status == "warning" else ("failed" if is_failed else ("running" if is_running else "pending"))), progress=100 if job.project_id else (None if is_running else 0), summary="Workspace ready to open" if job.project_id else ("Run finished but workspace is not ready" if ready_status == "warning" else ("Workspace not ready" if is_failed else "Workspace not ready yet")), warnings=warnings if not job.project_id and ready_status == "warning" else [], errors=errors if is_failed else [], actions=["inspect"] if (job.project_id or job.error or warnings or is_succeeded) else []))
 
     current_stage_id = "detecting_chapters"

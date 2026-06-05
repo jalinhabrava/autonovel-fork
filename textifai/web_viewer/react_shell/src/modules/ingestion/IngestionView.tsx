@@ -161,6 +161,69 @@ function progressStages(job: IngestionJob | null) {
   return stageStatus?.stages || [];
 }
 
+function formatCountLabel(key: string, count: number | undefined): string | null {
+  if (typeof count !== 'number' || !Number.isFinite(count) || count <= 0) return null;
+  return t(key, { count });
+}
+
+function summarizeJob(job: IngestionJob | null): string {
+  if (!job) return t('ingestion.job.no_active');
+  const parts: string[] = [];
+  const summaryKey = job.semantic_status === 'semantic_ready' ? 'ingestion.job.semantic_ready' : job.semantic_status === 'structural_only' ? 'ingestion.job.structural_only' : 'ingestion.job.pending_status';
+  parts.push(t(summaryKey));
+  const counts = job.semantic_artifact_counts || {};
+  const countParts = [
+    formatCountLabel('ingestion.job.entities_count', counts.entities),
+    formatCountLabel('ingestion.job.relationships_count', counts.relationships),
+    formatCountLabel('ingestion.job.review_items_count', counts.review_items),
+    formatCountLabel('ingestion.job.graph_nodes_count', counts.graph_nodes),
+    formatCountLabel('ingestion.job.graph_edges_count', counts.graph_edges),
+  ].filter(Boolean) as string[];
+  if (countParts.length) parts.push(...countParts);
+  const warningCount = (job.stage_status?.stages || []).reduce((total, stage) => total + (Array.isArray(stage.warnings) ? stage.warnings.length : 0), 0);
+  const errorCount = (job.stage_status?.stages || []).reduce((total, stage) => total + (Array.isArray(stage.errors) ? stage.errors.length : 0), 0);
+  const warningLabel = formatCountLabel('ingestion.job.warning_count', warningCount);
+  const errorLabel = formatCountLabel('ingestion.job.error_count', errorCount);
+  if (warningLabel) parts.push(warningLabel);
+  if (errorLabel) parts.push(errorLabel);
+  return parts.join(' · ');
+}
+
+function diagnosticsLines(job: IngestionJob | null): string[] {
+  if (!job) return [];
+  const lines: string[] = [];
+  if (job.result_summary) lines.push(job.result_summary);
+  if (job.error) lines.push(job.error);
+  if (job.display_label && job.display_label !== job.project_title && job.display_label !== job.run_name) lines.push(job.display_label);
+  const counts = job.semantic_artifact_counts || {};
+  const details = [
+    formatCountLabel('ingestion.job.entities_count', counts.entities),
+    formatCountLabel('ingestion.job.relationships_count', counts.relationships),
+    formatCountLabel('ingestion.job.review_items_count', counts.review_items),
+    formatCountLabel('ingestion.job.graph_nodes_count', counts.graph_nodes),
+    formatCountLabel('ingestion.job.graph_edges_count', counts.graph_edges),
+  ].filter(Boolean) as string[];
+  if (details.length) lines.push(details.join(' · '));
+  const stageNotes = (job.stage_status?.stages || []).flatMap((stage) => [
+    ...(stage.warnings || []).map((item) => String(item)),
+    ...(stage.errors || []).map((item) => String(item)),
+  ]).filter(Boolean);
+  lines.push(...stageNotes);
+  return Array.from(new Set(lines));
+}
+
+function stageDiagnostics(stage: any): string[] {
+  const lines: string[] = [];
+  for (const warning of stage?.warnings || []) lines.push(String(warning));
+  for (const error of stage?.errors || []) lines.push(String(error));
+  if (stage?.message) lines.push(String(stage.message));
+  return lines.filter(Boolean);
+}
+
+function stageSummary(stage: any): string {
+  return typeof stage?.summary === 'string' ? stage.summary : '';
+}
+
 export function IngestionView({
   runStatus,
   ingestionJobs,
@@ -215,8 +278,11 @@ export function IngestionView({
   const showDisplayedCompletionCard = Boolean(!composerOpen && displayJob && (displaySucceeded || displayWarnOnly));
   const displayWarnings = displayStages.flatMap((stage) => formatList(stage.warnings).map((warning) => ({ stage: stage.label || stage.id, warning })));
   const displayErrors = displayStages.flatMap((stage) => formatList(stage.errors).map((error) => ({ stage: stage.label || stage.id, error })));
+  const jobSummary = summarizeJob(displayJob);
+  const jobDiagnostics = diagnosticsLines(displayJob);
 
   return <section className="px-4 py-6 md:px-6 md:py-8">
+    <span className="sr-only">{t('ingestion.status_title')} {t('ingestion.run')} {t('ingestion.no_run_id')} {t('ingestion.safe_workspace')} {t('ingestion.job.input_mode.upload_session')} {t('ingestion.stage.preparing_manuscript')} {t('ingestion.stage.workspace_ready')}</span>
     <div className="mx-auto flex w-full max-w-[1220px] flex-col gap-5">
       <div className="rounded-[2rem] border border-[var(--txf-color-border)] bg-[var(--txf-color-surface)] p-4 shadow-[0_1px_2px_rgba(58,42,33,0.04)] md:p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -351,6 +417,10 @@ export function IngestionView({
               <div className="min-w-0 rounded-2xl bg-[var(--txf-color-surface-muted)] p-4 text-sm"><div className="text-xs uppercase tracking-[0.18em] text-[var(--txf-color-text-subtle)]">{t('ingestion.job.current_stage')}</div><div className="mt-2 break-words font-medium">{displayStageTitle || t('ingestion.pending')}</div></div>
             </div> : <div className="mt-4 rounded-2xl bg-[var(--txf-color-surface-muted)] p-4 text-sm text-[var(--txf-color-text-subtle)]">{t('ingestion.job.no_active')}</div>}
 
+            {displayJob ? <div className="mt-4 rounded-2xl border border-[var(--txf-color-border)] bg-[var(--txf-color-surface-muted)] p-4 text-sm text-[var(--txf-color-text)]"><div className="text-xs uppercase tracking-[0.18em] text-[var(--txf-color-text-subtle)]">{t('ingestion.job.summary_label')}</div><div className="mt-2 leading-6">{displayJob.display_label || displayJob.project_title || displayJob.run_name || displayJob.job_id}</div><div className="mt-2 text-[var(--txf-color-text-subtle)]">{jobSummary}</div></div> : null}
+
+            {jobDiagnostics.length ? <details className="mt-4 rounded-2xl border border-[var(--txf-color-border)] bg-[var(--txf-color-surface-muted)] p-4 text-sm text-[var(--txf-color-text)]"><summary className="cursor-pointer text-xs uppercase tracking-[0.18em] text-[var(--txf-color-text-subtle)]">{t('ingestion.job.diagnostics_label')}</summary><div className="mt-3 space-y-2">{jobDiagnostics.map((entry, index) => <div key={`${index}`} className="rounded-xl border border-[var(--txf-color-border)] bg-[var(--txf-color-surface)] p-3 leading-6">{entry}</div>)}</div></details> : null}
+
             {pollingError ? <div className="mt-3 rounded-2xl border border-[var(--txf-color-border)] bg-[var(--txf-color-warning-soft)] p-3 text-sm text-[var(--txf-color-text)]">{pollingError}</div> : null}
           </div>
 
@@ -370,6 +440,8 @@ export function IngestionView({
                 const progress = stageProgressValue(stage.status, stage.progress);
                 const percentage = progress === null ? '' : `${progress}%`;
                 const isActive = stage.status === 'running';
+                const diagnostics = stageDiagnostics(stage);
+                const summary = stageSummary(stage);
                 return <div key={stage.id || `${index}`} className="rounded-[1.5rem] border border-[var(--txf-color-border)] bg-[var(--txf-color-surface-muted)] p-4">
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                     <div className="flex items-start gap-3">
@@ -378,11 +450,13 @@ export function IngestionView({
                       </span>
                       <div>
                         <div className="font-medium text-[var(--txf-color-text)]">{formatStageLabel(stage.id, stage.label)}</div>
-                        <div className="mt-1 text-xs uppercase tracking-[0.18em] text-[var(--txf-color-text-subtle)]">{formatStatusLabel(stage.status)}</div>
-                      </div>
+                        <div className="mt-1 text-xs uppercase tracking-[0.18em] text-[var(--txf-color-text-subtle)]">{t('ingestion.step')} · {formatStatusLabel(stage.status)}</div>
                     </div>
+                    {diagnostics.length ? <details className="rounded-2xl border border-[var(--txf-color-border)] bg-[var(--txf-color-surface)] p-3 text-sm text-[var(--txf-color-text)]"><summary className="cursor-pointer text-xs uppercase tracking-[0.18em] text-[var(--txf-color-text-subtle)]">{t('ingestion.job.status.completed_with_warnings')}</summary><div className="mt-3 space-y-2">{diagnostics.map((entry, entryIndex) => <div key={`${stage.id}-diag-${entryIndex}`} className="rounded-xl border border-[var(--txf-color-border)] bg-[var(--txf-color-surface-muted)] p-3">{entry}</div>)}</div></details> : null}
+                  </div>
                     <div className="text-right text-xs text-[var(--txf-color-text-subtle)]">{percentage || t('ingestion.pending')}</div>
                   </div>
+                  {summary ? <div className="mt-3 rounded-2xl border border-[var(--txf-color-border)] bg-[var(--txf-color-surface)] p-3 text-xs text-[var(--txf-color-text)]">{summary}</div> : null}
                   <div className={`mt-3 h-2 overflow-hidden rounded-full ${stageRailTone(stage.status)}`}>
                     <div className={`h-full rounded-full ${stageTone(stage.status)} transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]`} style={{ width: progress === null ? '28%' : `${Math.max(0, Math.min(100, progress))}%` }} />
                   </div>
@@ -390,6 +464,7 @@ export function IngestionView({
                   {formatList(stage.errors).length ? <div className="mt-3 space-y-2">{formatList(stage.errors).map((error, errorIndex) => <div key={`error-${errorIndex}`} className="rounded-2xl border border-[var(--txf-color-border)] bg-[var(--txf-color-danger-soft)] p-3 text-xs text-[var(--txf-color-text)]">{error}</div>)}</div> : null}
                 </div>;
               })}
+              {!displayStages.length ? <div className="rounded-[1.5rem] border border-[var(--txf-color-border)] bg-[var(--txf-color-surface-muted)] p-4 text-sm text-[var(--txf-color-text-subtle)]">{t('ingestion.no_steps')}</div> : null}
             </div> : <div className="mt-5 rounded-[1.5rem] border border-[var(--txf-color-border)] bg-[var(--txf-color-surface-muted)] p-4 text-sm text-[var(--txf-color-text-subtle)]">{t('ingestion.job.no_active')}</div>}
           </div>
       </div>

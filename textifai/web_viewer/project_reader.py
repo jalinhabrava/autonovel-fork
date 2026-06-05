@@ -494,6 +494,20 @@ def build_graph(project: ProjectRef, canon: dict[str, Any] | None = None) -> dic
     if author_graph_path.exists():
         payload = _read_json(author_graph_path)
         if isinstance(payload, dict) and isinstance(payload.get('nodes'), list):
+            manifest_graph = _read_project_json(project, 'graph')
+            if _should_prefer_full_semantic_graph(payload, manifest_graph):
+                metadata = manifest_graph.setdefault('metadata', {})
+                if isinstance(metadata, dict):
+                    metadata.setdefault('graph_mode', 'semantic_graph')
+                    metadata.setdefault('author_graph_ready', True)
+                    metadata.setdefault('source_path', 'graph/graph.json')
+                    metadata.setdefault('graph_summary', {
+                        'node_count': len(manifest_graph.get('nodes') or []),
+                        'edge_count': len(manifest_graph.get('edges') or []),
+                        'node_counts_by_kind': _count_nodes_by_kind([row for row in manifest_graph.get('nodes') or [] if isinstance(row, dict)]),
+                        'synthetic_label_count': 0,
+                    })
+                return manifest_graph
             payload = _hydrate_author_graph_payload(project, payload)
             return {
                 'nodes': payload.get('nodes') or [],
@@ -589,6 +603,20 @@ def build_graph(project: ProjectRef, canon: dict[str, Any] | None = None) -> dic
             "chapter": _graph_chapter_payload(chapter),
         }
     return {"nodes": list(nodes.values()), "edges": edges}
+
+
+def _should_prefer_full_semantic_graph(author_graph: Any, manifest_graph: Any) -> bool:
+    if not isinstance(author_graph, dict) or not isinstance(manifest_graph, dict):
+        return False
+    full_nodes = manifest_graph.get('nodes')
+    if not isinstance(full_nodes, list) or not full_nodes:
+        return False
+    author_nodes = [row for row in (author_graph.get('nodes') or []) if isinstance(row, dict)]
+    if len(full_nodes) <= len(author_nodes):
+        return False
+    author_kinds = {str(row.get('kind') or row.get('type') or '').lower() for row in author_nodes}
+    full_kinds = {str(row.get('kind') or row.get('type') or '').lower() for row in full_nodes if isinstance(row, dict)}
+    return bool(full_kinds - {'chapter', 'resolved', 'unresolved'} and author_kinds <= {'chapter', 'resolved', 'unresolved', ''})
 
 
 def _hydrate_author_graph_payload(project: ProjectRef, payload: dict[str, Any]) -> dict[str, Any]:

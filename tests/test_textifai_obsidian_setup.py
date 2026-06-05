@@ -17,6 +17,14 @@ from vault.bootstrap import bootstrap_vault
 from vault.schema import note_frontmatter
 
 
+class _FakeStructuredBootstrapResult:
+    def __init__(self, obsidian_import_path: str, *, source_document: str = "source.md", chapter_count: int = 3, warnings: list[str] | None = None):
+        self.obsidian_import_path = obsidian_import_path
+        self.source_document = source_document
+        self.chapter_count = chapter_count
+        self.warnings = warnings or []
+
+
 class TextifAIObsidianSetupTests(unittest.TestCase):
     def test_update_env_values_deduplicates_provider_keys(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -215,6 +223,95 @@ class TextifAIObsidianSetupTests(unittest.TestCase):
             self.assertTrue((folder / "00_Project" / "Project.md").exists())
             self.assertTrue((folder / "fichas.md").exists())
             self.assertGreater(result.vaerl_index_entries, 0)
+
+    def test_prepare_existing_material_uses_semantic_bootstrap_when_available(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            source_root = base / "source"
+            source_root.mkdir()
+            (source_root / "manuscript.md").write_text("# Episodio 1\n\nTexto de prueba.\n\n# Episodio 2\n\nMás texto.\n", encoding="utf-8")
+            vault_root = base / "vault"
+            import_json = vault_root / "semantic.json"
+            import_json.parent.mkdir(parents=True, exist_ok=True)
+            import_json.write_text(
+                json.dumps(
+                    {
+                        "work": {"title": "Demo", "language": "es"},
+                        "chapters": [
+                            {"chapter_id": "ch_001", "chapter_title_original": "Episodio 1", "chapter_title_canonical": "Episodio 1", "sequence_index": 1},
+                            {"chapter_id": "ch_002", "chapter_title_original": "Episodio 2", "chapter_title_canonical": "Episodio 2", "sequence_index": 2},
+                            {"chapter_id": "ch_003", "chapter_title_original": "Episodio 3", "chapter_title_canonical": "Episodio 3", "sequence_index": 3},
+                        ],
+                        "entities": [],
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+
+            def fake_import_json_to_vault(*, source_json, vault_root):
+                (vault_root / "vaerl").mkdir(parents=True, exist_ok=True)
+                (vault_root / "graph").mkdir(parents=True, exist_ok=True)
+                (vault_root / "99_System").mkdir(parents=True, exist_ok=True)
+                (vault_root / "vaerl" / "vaerl.json").write_text(json.dumps({"work": {"title": "Demo"}, "chapters": []}, ensure_ascii=False), encoding="utf-8")
+                (vault_root / "vaerl" / "review_queue.json").write_text(json.dumps({"schema_version": "textifai.review_queue.v1", "item_count": 0, "items": [], "decision_items": [], "policy": {"pending_reviews_are_expected": True, "can_auto_apply_default": False}}, ensure_ascii=False), encoding="utf-8")
+                (vault_root / "graph" / "author_graph.json").write_text(json.dumps({"schema": "textifai.author_graph", "schema_version": 1, "source": "canonical_projection", "nodes": [], "edges": [], "excluded": {}, "stats": {"node_count": 0, "edge_count": 0, "review_decision_count": 0, "raw_node_count": 0, "raw_edge_count": 0}}, ensure_ascii=False), encoding="utf-8")
+                (vault_root / "textifai.project.json").write_text(json.dumps({"schema": "textifai.project", "schema_version": 1, "project_id": "demo", "title": "Demo", "language": "es", "status": {"chapters_total": 3, "chapters_ready": 3, "review_items": 0, "graph_nodes": 0, "graph_edges": 0, "vaerl_ready": True, "graph_ready": True, "review_ready": True}, "paths": {"graph": "graph/author_graph.json", "review_queue": "vaerl/review_queue.json", "writer_outcome": "99_System/writer_outcome.json"}}, ensure_ascii=False), encoding="utf-8")
+                return {"primary_paths": [], "chapter_paths": [str(vault_root / "markdown" / "Chapters" / f"Ch_{index:03d}.md") for index in range(1, 4)], "summary_paths": []}
+
+            with patch.dict("os.environ", {"AUTONOVEL_BOOTSTRAP_PROVIDER": "openai", "OPENAI_API_KEY": "test-key"}, clear=False), patch(
+                "textifai.obsidian.setup._run_structured_bootstrap_pipeline",
+                return_value=_FakeStructuredBootstrapResult(str(import_json), source_document=str(source_root / "manuscript.md"), chapter_count=3),
+            ) as semantic_mock, patch(
+                "textifai.obsidian.setup.import_json_to_vault",
+                side_effect=fake_import_json_to_vault,
+            ):
+                result = prepare_obsidian_project(
+                    ObsidianProjectSetupConfig(
+                        vault_root=str(vault_root),
+                        mode="existing_material",
+                        source_root=str(source_root),
+                        project_title="Demo",
+                        primary_language="es",
+                        install_bridge_plugin=False,
+                    ),
+                    repo_root=base,
+                )
+
+            self.assertEqual(result.import_strategy_used, "structured_bootstrap_v1_json_import")
+            self.assertTrue((vault_root / "textifai.project.json").exists())
+            self.assertTrue((vault_root / "vaerl" / "review_queue.json").exists())
+            self.assertTrue((vault_root / "graph" / "author_graph.json").exists())
+            self.assertTrue(any("structured_bootstrap_imported" in item for item in (vault_root / "99_System" / "bootstrap_progress.jsonl").read_text(encoding="utf-8").splitlines()))
+            self.assertTrue(semantic_mock.called)
+
+    def test_prepare_existing_material_records_deterministic_fallback_when_semantic_unavailable(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            source_root = base / "source"
+            source_root.mkdir()
+            (source_root / "manuscript.md").write_text("# Episodio 1\n\nTexto de prueba.\n# Episodio 2\n\nMás texto.\n", encoding="utf-8")
+            vault_root = base / "vault"
+            with patch.dict("os.environ", {}, clear=True), patch(
+                "textifai.obsidian.setup._run_structured_bootstrap_pipeline",
+                return_value=None,
+            ):
+                result = prepare_obsidian_project(
+                    ObsidianProjectSetupConfig(
+                        vault_root=str(vault_root),
+                        mode="existing_material",
+                        source_root=str(source_root),
+                        project_title="Demo",
+                        primary_language="es",
+                        install_bridge_plugin=False,
+                    ),
+                    repo_root=base,
+                )
+
+            self.assertEqual(result.import_strategy_used, "deterministic_chapter_manifest_project")
+            progress = (vault_root / "99_System" / "bootstrap_progress.jsonl").read_text(encoding="utf-8")
+            self.assertIn("semantic_provider_unavailable", progress)
+            self.assertIn("deterministic_fallback_used", progress)
 
     def test_readiness_becomes_fresh_when_valid_snapshot_exists(self):
         with tempfile.TemporaryDirectory() as tmp:
