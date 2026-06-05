@@ -1071,20 +1071,31 @@ def read_editor_chapters(project: ProjectRef, *, markdown_manifest: dict[str, An
     manifest_notes = (markdown_manifest or {}).get('notes') if isinstance(markdown_manifest, dict) else []
     rows = []
     for note in manifest_notes or []:
-        if not isinstance(note, dict) or str(note.get('kind') or '').lower() != 'chapter':
+        if not isinstance(note, dict):
             continue
         path = str(note.get('path') or '').strip()
+        normalized_path = path.replace('\\', '/')
+        kind = str(note.get('kind') or '').lower()
+        is_chapter_path = (
+            normalized_path.startswith('04_Story/Chapters/')
+            or normalized_path.startswith('markdown/Chapters/')
+            or '/Chapters/' in normalized_path
+        ) and '/Chapter_Summaries/' not in normalized_path
+        if kind != 'chapter' and not is_chapter_path:
+            continue
         fallback = path or 'chapter'
         display_title = _normalize_editor_chapter_title(note.get('display_title') or note.get('title') or note.get('canonical_label'), fallback)
+        order_match = re.search(r'(?:ch_|chapter_|episodio_|episode_)?(\d+)', normalized_path, flags=re.IGNORECASE)
         rows.append({
             'chapter_id': str(note.get('chapter_id') or '').strip(),
             'path': path,
             'title': display_title,
             'display_title': display_title,
-            'order': None,
+            'order': int(order_match.group(1)) if order_match else None,
             'kind': 'chapter',
             'source_used': 'markdown_manifest.notes_fallback',
         })
+    rows.sort(key=lambda row: (row.get('order') is None, row.get('order') or 0, row.get('path') or ''))
     return {
         'source_used': 'markdown_manifest.notes_fallback',
         'manifest_used': False,

@@ -135,6 +135,16 @@ function stageProgressValue(status: string | undefined, progress: number | undef
   return null;
 }
 
+function progressColor(progress: number | null, status: string | undefined): string {
+  if (status === 'failed' || status === 'blocked') return 'var(--txf-color-danger)';
+  if (status === 'warning' || status === 'completed_with_warnings') return 'var(--txf-color-warning)';
+  if (status === 'completed' || status === 'completed_with_editorial_review') return 'var(--txf-color-success)';
+  if (progress === null) return 'var(--txf-color-warning)';
+  if (progress <= 10) return 'var(--txf-color-danger)';
+  if (progress >= 90) return 'var(--txf-color-success)';
+  return 'var(--txf-color-warning)';
+}
+
 function stageIcon(status: string | undefined) {
   if (status === 'completed' || status === 'completed_with_editorial_review') return CheckCircle2;
   if (status === 'running') return Loader2;
@@ -458,7 +468,7 @@ export function IngestionView({
                   </div>
                   {summary ? <div className="mt-3 rounded-2xl border border-[var(--txf-color-border)] bg-[var(--txf-color-surface)] p-3 text-xs text-[var(--txf-color-text)]">{summary}</div> : null}
                   <div className={`mt-3 h-2 overflow-hidden rounded-full ${stageRailTone(stage.status)}`}>
-                    <div className={`h-full rounded-full ${stageTone(stage.status)} transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]`} style={{ width: progress === null ? '28%' : `${Math.max(0, Math.min(100, progress))}%` }} />
+                    <div className={`h-full rounded-full transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]`} style={{ width: progress === null ? '18%' : `${Math.max(0, Math.min(100, progress))}%`, backgroundColor: progressColor(progress, stage.status) }} />
                   </div>
                   {formatList(stage.warnings).length ? <div className="mt-3 space-y-2">{formatList(stage.warnings).map((warning, warningIndex) => <div key={`warning-${warningIndex}`} className="rounded-2xl border border-[var(--txf-color-border)] bg-[var(--txf-color-warning-soft)] p-3 text-xs text-[var(--txf-color-text)]">{warning}</div>)}</div> : null}
                   {formatList(stage.errors).length ? <div className="mt-3 space-y-2">{formatList(stage.errors).map((error, errorIndex) => <div key={`error-${errorIndex}`} className="rounded-2xl border border-[var(--txf-color-border)] bg-[var(--txf-color-danger-soft)] p-3 text-xs text-[var(--txf-color-text)]">{error}</div>)}</div> : null}

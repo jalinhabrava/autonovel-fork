@@ -20,7 +20,7 @@ from textifai.web_viewer.ingestion_jobs import (
     log_json,
     sanitize_run_slug,
 )
-from textifai.web_viewer.project_reader import ProjectCatalog, build_graph, read_artifact, read_note, read_project
+from textifai.web_viewer.project_reader import ProjectCatalog, build_graph, read_artifact, read_editor_chapters, read_note, read_project
 from textifai.web_viewer.project_reader import ProjectRef
 from textifai.web_viewer.server import _make_handler, build_ingestion_config
 from textifai.web_viewer.upload_staging import UploadSession, save_upload_session, stage_uploaded_files
@@ -383,6 +383,57 @@ class TextifAIWebViewerTests(unittest.TestCase):
         self.assertEqual(stages["extracting_entities"]["status"], "warning")
         self.assertEqual(stages["building_graph"]["status"], "warning")
         self.assertEqual(stages["workspace_ready"]["status"], "completed")
+
+    def test_read_editor_chapters_uses_manifest_paths_when_kind_missing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            project_root = root / "project"
+            chapters_dir = project_root / "04_Story" / "Chapters"
+            chapters_dir.mkdir(parents=True)
+            (project_root / "99_System").mkdir(parents=True)
+            manifest = {
+                "schema": "textifai.project",
+                "title": "Demo",
+                "paths": {},
+            }
+            (project_root / "textifai.project.json").write_text(json.dumps(manifest), encoding="utf-8")
+            markdown_manifest = {
+                "notes": [
+                    {"path": "04_Story/Chapters/ch_002.md", "title": "Two"},
+                    {"path": "04_Story/Chapters/ch_001.md", "title": "One"},
+                    {"path": "04_Story/Chapter_Summaries/summary.md", "title": "Skip"},
+                ]
+            }
+            project = ProjectRef(project_id="demo", name="project", root=project_root, system_root=project_root / "99_System", kind="textifai_project", manifest_path=project_root / "textifai.project.json", manifest=manifest)
+            chapters = read_editor_chapters(project, markdown_manifest=markdown_manifest)
+        self.assertEqual([chapter["path"] for chapter in chapters["chapters"]], ["04_Story/Chapters/ch_001.md", "04_Story/Chapters/ch_002.md"])
+
+    def test_stage_snapshot_uses_progress_jsonl_for_sequential_progress(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            (repo_root / "source").mkdir(parents=True)
+            registry = IngestionJobRegistry(repo_root=repo_root, start_immediately=False)
+            job = registry.create_job({"source_root": str(repo_root / "source"), "project_title": "Demo", "run_name": "demo"})
+            system_root = Path(job.output_root) / "99_System"
+            system_root.mkdir(parents=True, exist_ok=True)
+            (system_root / "bootstrap_progress.jsonl").write_text(
+                "\n".join(
+                    [
+                        json.dumps({"event": "chapter_extraction_started", "chapter_id": "ch_001"}),
+                        json.dumps({"event": "chapter_extraction_completed", "chapter_id": "ch_001"}),
+                        json.dumps({"event": "chapter_extraction_started", "chapter_id": "ch_002"}),
+                        json.dumps({"event": "global_normalization_batch_started", "batch_index": 1, "chapter_ids": ["ch_001", "ch_002"]}),
+                        json.dumps({"event": "global_normalization_batch_completed", "batch_index": 1, "chapter_ids": ["ch_001", "ch_002"]}),
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            payload = job.snapshot()
+        stages = {stage["id"]: stage for stage in payload["stage_status"]["stages"]}
+        self.assertEqual(stages["detecting_chapters"]["progress"], 50)
+        self.assertEqual(stages["writing_markdown"]["progress"], 50)
+        self.assertEqual(stages["extracting_entities"]["progress"], 100)
 
     def test_build_graph_prefers_full_semantic_graph_when_author_graph_is_only_chapters(self):
         with tempfile.TemporaryDirectory() as tmp:

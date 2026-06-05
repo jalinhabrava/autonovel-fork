@@ -94,6 +94,51 @@ def _bootstrap_progress_warnings(system_root: Path) -> list[str]:
     return warnings[:12]
 
 
+def _bootstrap_progress_snapshot(system_root: Path) -> dict[str, Any]:
+    progress_path = system_root / "bootstrap_progress.jsonl"
+    snapshot: dict[str, Any] = {
+        "chapter_total": 0,
+        "chapter_completed": 0,
+        "normalization_total": 0,
+        "normalization_completed": 0,
+        "semantic_started": False,
+    }
+    if not progress_path.exists():
+        return snapshot
+    chapter_started: set[str] = set()
+    chapter_done: set[str] = set()
+    normalization_started: set[str] = set()
+    normalization_done: set[str] = set()
+    try:
+        lines = progress_path.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return snapshot
+    for line in lines:
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        event_name = str(event.get("event") or "")
+        chapter_id = str(event.get("chapter_id") or "").strip()
+        if event_name == "chapter_extraction_started" and chapter_id:
+            chapter_started.add(chapter_id)
+        elif event_name in {"chapter_extraction_completed", "chapter_extraction_failed"} and chapter_id:
+            chapter_done.add(chapter_id)
+        elif event_name == "global_normalization_batch_started":
+            normalization_started.add(str(event.get("batch_index") or len(normalization_started) + 1))
+            snapshot["semantic_started"] = True
+        elif event_name in {"global_normalization_batch_completed", "global_normalization_batch_abandoned"}:
+            normalization_done.add(str(event.get("batch_index") or len(normalization_done) + 1))
+            snapshot["semantic_started"] = True
+        elif event_name == "semantic_bootstrap_started":
+            snapshot["semantic_started"] = True
+    snapshot["chapter_total"] = max(len(chapter_started), len(chapter_done))
+    snapshot["chapter_completed"] = len(chapter_done)
+    snapshot["normalization_total"] = max(len(normalization_started), len(normalization_done))
+    snapshot["normalization_completed"] = len(normalization_done)
+    return snapshot
+
+
 def _project_id_from_output(output_path: Path) -> str:
     return output_path.resolve().as_posix().replace("/", "__").strip("_")
 
@@ -754,12 +799,14 @@ def _stage_status_snapshot(job: IngestionJob) -> dict[str, Any]:
     warnings = list(job.result_warnings)
     errors = [job.error] if job.error else []
     stages: list[dict[str, Any]] = []
+    progress = _bootstrap_progress_snapshot(Path(job.output_root) / "99_System") if getattr(job, "output_root", None) else {}
 
     is_upload = job.input_mode == "upload_session"
     is_running = job.status == "running"
     is_succeeded = job.status == "succeeded"
     is_failed = job.status == "failed"
     has_artifacts = bool(job.result_detected or job.project_id)
+    semantic_status_value = str(getattr(job, "semantic_status", "pending") or "pending")
 
     def phase_status(*, before_done: bool = False) -> str:
         if is_failed:
@@ -795,37 +842,40 @@ def _stage_status_snapshot(job: IngestionJob) -> dict[str, Any]:
             )
         )
 
-    stages.append(_build_stage("detecting_chapters", "Detecting chapters", "running" if job.status == "queued" else "completed", progress=0 if job.status == "queued" else 100, summary="Job accepted and waiting for subprocess execution" if job.status == "queued" else "Job moved out of queue", actions=["inspect"]))
-
-    running_status = phase_status(before_done=False)
-    running_progress = phase_progress(running_status)
-    running_summary = "Ingestion is running" if running_status == "running" else ("Ingestion finished" if running_status == "completed" else "Ingestion has not started yet")
-    stages.append(_build_stage("writing_markdown", "Creating markdown chapters", running_status, progress=running_progress, summary=running_summary, errors=errors if running_status == "failed" else [], actions=["inspect"]))
-
-    semantic_status_value = str(getattr(job, "semantic_status", "pending") or "pending")
-    artifact_status = (
-        "warning"
-        if (has_artifacts and semantic_status_value == "semantic_ready" and warnings)
-        else (
-            "completed"
-            if has_artifacts and semantic_status_value == "semantic_ready"
-            else (
-                "warning"
-                if ((has_artifacts and is_succeeded) or (is_succeeded and not has_artifacts))
-                else ("failed" if is_failed else ("running" if is_running else "pending"))
-            )
+    chapter_total = int(progress.get("chapter_total") or 0)
+    chapter_completed = int(progress.get("chapter_completed") or 0)
+    chapter_progress = int(round((chapter_completed / chapter_total) * 100)) if chapter_total else (100 if is_succeeded else 0)
+    chapter_status = "completed" if is_succeeded and chapter_total and chapter_completed >= chapter_total else ("running" if job.status in {"queued", "running"} else "completed")
+    chapter_summary = (
+        f"{chapter_completed}/{chapter_total} chapters extracted" if chapter_total else (
+            "Job accepted and waiting for subprocess execution" if job.status == "queued" else "Chapter detection finished"
         )
     )
-    artifact_progress = 100 if artifact_status == "completed" else (None if artifact_status == "running" else 0)
-    artifact_summary = "Inspectable artifacts detected under 99_System" if artifact_status == "completed" else ("Run finished without inspectable artifacts" if artifact_status == "warning" else ("Inspectable artifacts not detected yet" if artifact_status == "pending" else "Inspectable artifacts not detected"))
-    artifact_warnings = warnings if artifact_status == "warning" else []
-    artifact_errors = errors if artifact_status == "failed" else []
-    stages.append(_build_stage("extracting_entities", "Extracting entities and relations", artifact_status, progress=artifact_progress, summary=artifact_summary, warnings=artifact_warnings, errors=artifact_errors, actions=["inspect"]))
+    stages.append(_build_stage("detecting_chapters", "Detecting chapters", chapter_status, progress=chapter_progress, summary=chapter_summary, actions=["inspect"]))
 
-    ready_status = "warning" if (is_succeeded and not job.project_id) else ("completed" if job.project_id else ("failed" if is_failed else "pending"))
+    normalization_total = int(progress.get("normalization_total") or 0)
+    normalization_completed = int(progress.get("normalization_completed") or 0)
+    semantic_progress = int(round((normalization_completed / normalization_total) * 100)) if normalization_total else (100 if semantic_status_value == "semantic_ready" else (50 if progress.get("semantic_started") else 0))
+    running_status = "completed" if is_succeeded else ("running" if job.status == "running" or chapter_total or chapter_completed else "pending")
+    running_progress = chapter_progress if running_status != "pending" else 0
+    running_summary = f"{chapter_completed}/{chapter_total or '?'} chapters extracted" if chapter_total else ("Ingestion is running" if running_status == "running" else "Ingestion has not started yet")
+    stages.append(_build_stage("writing_markdown", "Creating markdown chapters", running_status, progress=running_progress, summary=running_summary, errors=errors if running_status == "failed" else [], actions=["inspect"]))
+
+    semantic_has_progress = bool(progress.get("semantic_started") or normalization_total or normalization_completed)
+    artifact_status = (
+        "warning"
+        if is_succeeded and (semantic_status_value != "semantic_ready" or not has_artifacts)
+        else ("completed" if semantic_status_value == "semantic_ready" and has_artifacts and not is_failed else ("running" if (is_running or semantic_has_progress) else ("failed" if is_failed else "pending")))
+    )
+    artifact_summary = f"Semantic normalization {normalization_completed}/{normalization_total or '?'} batches" if normalization_total else ("Inspectable artifacts detected under 99_System" if artifact_status == "completed" else ("Inspectable artifacts not detected yet" if artifact_status == "pending" else "Inspectable artifacts not detected"))
+    artifact_warnings = warnings if warnings and artifact_status == "completed" else []
+    artifact_errors = errors if artifact_status == "failed" else []
+    stages.append(_build_stage("extracting_entities", "Extracting entities and relations", artifact_status, progress=semantic_progress if artifact_status != "pending" else 0, summary=artifact_summary, warnings=artifact_warnings, errors=artifact_errors, actions=["inspect"]))
+
+    ready_status = "completed" if job.project_id else ("warning" if is_succeeded else ("failed" if is_failed else ("running" if is_running else "pending")))
     ready_progress = 100 if ready_status in {"completed", "warning"} else 0
-    ready_summary = "Project is ready for viewer inspection" if ready_status == "completed" else ("Run finished but project was not materialized" if ready_status == "warning" else ("Project was not materialized into ready viewer state" if ready_status == "failed" else "Project not ready yet"))
-    ready_warnings = warnings if ready_status == "warning" else []
+    ready_summary = "Project is ready for viewer inspection" if ready_status == "completed" else ("Project was not materialized into ready viewer state" if ready_status == "failed" else "Project not ready yet")
+    ready_warnings = []
     ready_errors = errors if ready_status == "failed" else []
     stages.append(_build_stage("building_vaerl", "Building VaERL", ready_status, progress=ready_progress, summary=ready_summary, warnings=ready_warnings, errors=ready_errors, actions=["inspect"] if (job.project_id or job.error or warnings or is_succeeded) else []))
 
@@ -837,7 +887,7 @@ def _stage_status_snapshot(job: IngestionJob) -> dict[str, Any]:
         if semantic_status == "semantic_ready"
         else (
             "warning"
-            if ((job.project_id and semantic_status == "structural_only") or (job.project_id and semantic_status == "semantic_ready" and warnings) or (ready_status == "warning" and not job.project_id))
+            if is_succeeded and (semantic_status == "structural_only" or warnings)
             else ("failed" if is_failed else ("running" if is_running else "pending"))
         )
     )
