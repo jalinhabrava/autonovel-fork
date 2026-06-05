@@ -1,5 +1,5 @@
 import { useMemo, useRef } from 'react';
-import { AlertTriangle, ArrowRight, BookOpen, CheckCircle2, Circle, ClipboardList, GitBranch, LayoutGrid, Loader2, Sparkles, Upload } from 'lucide-react';
+import { AlertTriangle, BookOpen, CheckCircle2, Circle, ClipboardList, GitBranch, Loader2, Sparkles, Upload } from 'lucide-react';
 import { Button } from '../../common/ui';
 import type { IngestionJob, IngestionUploadResponse, ProjectDetail, UploadedIngestionFile } from '../../api';
 import { t, type UiI18nKey } from '../../i18n/ui';
@@ -216,10 +216,8 @@ export function IngestionView({
   const displayWarnings = displayStages.flatMap((stage) => formatList(stage.warnings).map((warning) => ({ stage: stage.label || stage.id, warning })));
   const displayErrors = displayStages.flatMap((stage) => formatList(stage.errors).map((error) => ({ stage: stage.label || stage.id, error })));
 
-  const recentJobs = useMemo(() => ingestionJobs.slice(0, 5), [ingestionJobs]);
-
   return <section className="px-4 py-6 md:px-6 md:py-8">
-    <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-5">
+    <div className="mx-auto flex w-full max-w-[1220px] flex-col gap-5">
       <div className="rounded-[2rem] border border-[var(--txf-color-border)] bg-[var(--txf-color-surface)] p-4 shadow-[0_1px_2px_rgba(58,42,33,0.04)] md:p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-2">
@@ -236,8 +234,7 @@ export function IngestionView({
         </div>
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(340px,0.75fr)]">
-        <div className="space-y-5">
+      <div className="mx-auto w-full max-w-[980px] space-y-5">
           {!composerOpen ? <div className="rounded-[2rem] border border-[var(--txf-color-border)] bg-[var(--txf-color-surface)] p-5 md:p-6">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div><div className="text-xs uppercase tracking-[0.2em] text-[var(--txf-color-text-subtle)]">{t('nav.ingest')}</div><h2 className="mt-1 text-2xl font-semibold tracking-tight">{t('project.new_ingestion')}</h2><p className="mt-2 text-sm text-[var(--txf-color-text-subtle)]">{displayJob ? t('ingestion.project_job_loaded') : t('ingestion.new_ingestion_note')}</p></div>
@@ -395,46 +392,6 @@ export function IngestionView({
               })}
             </div> : <div className="mt-5 rounded-[1.5rem] border border-[var(--txf-color-border)] bg-[var(--txf-color-surface-muted)] p-4 text-sm text-[var(--txf-color-text-subtle)]">{t('ingestion.job.no_active')}</div>}
           </div>
-
-        </div>
-
-        <aside className="space-y-5">
-          <div className="rounded-[2rem] border border-[var(--txf-color-border)] bg-[var(--txf-color-surface)] p-5 md:p-6">
-            <div className="text-xs uppercase tracking-[0.2em] text-[var(--txf-color-text-subtle)]">{t('ingestion.job.active_title')}</div>
-            <div className="mt-2 text-xl font-semibold tracking-tight">{displayJob ? (displayJob.project_title || displayJob.run_name || jobSummary(displayJob)) : t('ingestion.job.no_active')}</div>
-            <div className="mt-3 space-y-2 text-sm text-[var(--txf-color-text-subtle)]">
-              <div className="break-words">{t('ingestion.job.run_name_label')}: {displayJob ? jobSummary(displayJob) : t('ingestion.job.no_active')}</div>
-              <div className="break-all">{t('ingestion.job.project_id')}: {displayJob?.project_id || t('ingestion.job.not_ready')}</div>
-              <div className="break-words">{t('ingestion.job.input_mode')}: {displayJob ? formatInputModeLabel(displayJob?.input_mode) : t('ingestion.job.input_mode_unknown')}</div>
-              <div className="break-words">{t('ingestion.job.current_stage')}: {displayJob ? (displayStageTitle || t('ingestion.pending')) : t('ingestion.job.no_active')}</div>
-            </div>
-          </div>
-
-          <div className="rounded-[2rem] border border-[var(--txf-color-border)] bg-[var(--txf-color-surface)] p-5 md:p-6">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-lg font-semibold tracking-tight">{t('ingestion.job.recent_jobs')}</h2>
-              <span className="text-xs text-[var(--txf-color-text-subtle)]">{recentJobs.length}</span>
-            </div>
-            <div className="mt-4 space-y-2">
-              {recentJobs.length ? recentJobs.map((job) => <button key={job.job_id} type="button" onClick={() => job.job_id && onRefreshJob(job.job_id)} className="group block w-full rounded-[1.25rem] border border-[var(--txf-color-border)] bg-[var(--txf-color-surface-muted)] p-3 text-left transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-y-0.5 hover:bg-[var(--txf-color-surface-soft)]">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="font-medium text-[var(--txf-color-text)]">{job.run_name || job.job_id}</div>
-                    <div className="mt-1 text-xs text-[var(--txf-color-text-subtle)]">{formatStatusLabel(job.stage_status?.global_status || job.status)} · {formatInputModeLabel(job.input_mode)}</div>
-                  </div>
-                  <ArrowRight size={14} className="mt-1 text-[var(--txf-color-text-subtle)] transition-transform duration-300 group-hover:translate-x-0.5" />
-                </div>
-              </button>) : <div className="rounded-[1.25rem] border border-[var(--txf-color-border)] bg-[var(--txf-color-surface-muted)] p-4 text-sm text-[var(--txf-color-text-subtle)]">{t('ingestion.job.no_jobs')}</div>}
-            </div>
-          </div>
-
-          <div className="rounded-[2rem] border border-[var(--txf-color-border)] bg-[var(--txf-color-surface)] p-5 md:p-6">
-            <div className="text-xs uppercase tracking-[0.2em] text-[var(--txf-color-text-subtle)]">{t('ingestion.status_title')}</div>
-            <div className="mt-2 text-2xl font-semibold tracking-tight">{displayJob ? formatStatusLabel(displayStageStatus?.global_status || displayJob.status) : t('ingestion.job.no_active')}</div>
-            <div className="mt-2 text-sm text-[var(--txf-color-text-subtle)]">{displayJob ? (displayJob.project_title || displayJob.run_name || t('ingestion.job.active_title')) : t('ingestion.new_ingestion_note')}</div>
-            <div className="sr-only">{t('ingestion.step')} {t('ingestion.run')} {t('ingestion.no_run_id')} {t('ingestion.safe_workspace')} {t('ingestion.no_steps')} {t('ingestion.job.status.completed_with_warnings')} {t('ingestion.job.input_mode.upload_session')} {t('ingestion.stage.preparing_manuscript')} {t('ingestion.stage.workspace_ready')}</div>
-          </div>
-        </aside>
       </div>
     </div>
   </section>;

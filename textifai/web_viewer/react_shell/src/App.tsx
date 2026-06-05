@@ -121,7 +121,7 @@ import { t, type UiI18nKey } from './i18n/ui';
 import { Button, Metric, TopBar } from './common/ui';
 import { AppShell } from './shell/AppShell';
 import { screens, type ScreenConfig, type SectionId } from './shell/navigation';
-import { ProjectHubView } from './modules/project/ProjectHubView';
+import { ProjectHubView, type ProjectHubNotice } from './modules/project/ProjectHubView';
 import { IngestionView } from './modules/ingestion/IngestionView';
 import { ReviewQueueView } from './modules/review/ReviewQueueView';
 import { GraphView } from './modules/graph/GraphView';
@@ -397,10 +397,16 @@ function legacyUrl(view: 'graph' | 'notes' | 'canon', projectId: string): string
 
 
 
-function ProjectRow({ project, selected, previewed, flashSelected, onPreview, onSelect, onRemove }: { project: ProjectSummary; selected?: boolean; previewed?: boolean; flashSelected?: boolean; onPreview: () => void; onSelect: () => void; onRemove: () => void }) {
+function ProjectRow({ project, selected, previewed, flashSelected, onPreview, onSelect, onOpenIngestionHistory, onRemove }: { project: ProjectSummary; selected?: boolean; previewed?: boolean; flashSelected?: boolean; onPreview: () => void; onSelect: () => void; onOpenIngestionHistory: () => void; onRemove: () => void }) {
   const title = project.work?.title || project.name || t('project.kind.default');
-  return <article className={`w-full rounded-2xl border p-4 text-left transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${selected ? 'bg-txf-nav-active text-txf-nav-active-text border-txf-border-strong' : previewed ? 'bg-txf-surface-muted border-txf-border-strong' : 'bg-txf-surface border-txf-border hover:bg-txf-surface-soft'} ${flashSelected ? 'scale-[1.01] ring-2 ring-txf-action' : ''}`}>
-    <button type="button" onClick={onPreview} className="w-full text-left">
+  const highlighted = selected || previewed;
+  const rowTone = selected
+    ? 'bg-txf-nav-active text-txf-nav-active-text border-txf-border-strong shadow-sm'
+    : previewed
+      ? 'bg-[rgba(63,39,29,0.18)] text-txf-text border-txf-border-strong ring-1 ring-[rgba(63,39,29,0.18)]'
+      : 'bg-txf-surface border-txf-border hover:bg-[rgba(63,39,29,0.08)] hover:border-txf-border-strong';
+  return <article className={`w-full rounded-2xl border p-4 text-left transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${rowTone} ${flashSelected ? 'scale-[1.01] ring-2 ring-txf-action' : ''}`}>
+    <button type="button" onClick={onPreview} className="block w-full rounded-xl text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-txf-action">
       <div className="grid grid-cols-12 gap-3 items-center">
         <div className="col-span-12 md:col-span-8"><div className="flex items-center gap-2"><div className="font-semibold">{title}</div>{selected ? <span className="rounded-full border border-txf-border-strong px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide">{t('project.open_badge')}</span> : null}</div><div className={`text-xs ${selected ? 'text-txf-surface-soft' : 'text-txf-subtle'}`}>{project.work?.language || t('project.language.pending')}</div></div>
         <div className="col-span-6 md:col-span-2 text-sm">{t('project.count.chapters', { count: project.chapter_count || 0 })}</div>
@@ -408,7 +414,7 @@ function ProjectRow({ project, selected, previewed, flashSelected, onPreview, on
       </div>
       <div className={`mt-3 grid gap-2 text-xs ${selected ? 'text-txf-surface-soft' : 'text-txf-subtle'}`}><div>{project.workspace_status?.chapters_detected_label || t('project.workspace_status.chapters_detected', { count: project.chapter_count || 0 })}</div><div>{project.workspace_status?.chapters_ready_label || t('project.workspace_status.chapters_ready')}</div><div>{project.workspace_status?.semantic_review_label || t('project.workspace_status.semantic_review')}</div></div>
     </button>
-    <div className="mt-3 flex justify-end gap-2"><button type="button" onClick={onSelect} className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200 active:scale-[0.98] ${selected ? 'border-txf-surface-soft bg-txf-surface-soft text-txf-text' : 'border-txf-border bg-txf-surface text-txf-text hover:bg-txf-surface-muted'}`}>{flashSelected ? 'Seleccionado' : t('project.select')}</button><button type="button" onClick={onRemove} className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200 active:scale-[0.98] ${selected ? 'border-txf-surface-soft text-txf-surface-soft hover:bg-txf-surface-soft hover:text-txf-text' : 'border-txf-border text-txf-subtle hover:bg-txf-surface-muted hover:text-txf-text'}`}>{t('project.remove')}</button></div>
+    <div className="mt-3 flex flex-wrap justify-end gap-2"><button type="button" onClick={onOpenIngestionHistory} className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200 active:scale-[0.98] ${selected ? 'border-txf-surface-soft text-txf-surface-soft hover:bg-txf-surface-soft hover:text-txf-text' : 'border-txf-border bg-txf-surface text-txf-text hover:bg-txf-surface-muted'}`}>Ver historial de ingesta</button><button type="button" onClick={onSelect} className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200 active:scale-[0.98] ${selected ? 'border-txf-surface-soft bg-txf-surface-soft text-txf-text' : 'border-txf-border bg-txf-surface text-txf-text hover:bg-txf-surface-muted'}`}>{flashSelected ? 'Seleccionado' : t('project.select')}</button><button type="button" onClick={onRemove} className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200 active:scale-[0.98] ${selected ? 'border-txf-surface-soft text-txf-surface-soft hover:bg-txf-surface-soft hover:text-txf-text' : 'border-txf-border text-txf-subtle hover:bg-txf-surface-muted hover:text-txf-text'}`}>{t('project.remove')}</button></div>
   </article>;
 }
 
@@ -618,10 +624,12 @@ export function App() {
   }, [visibleIngestionJobs, completedIngestionJobId, selectedProjectId]);
   const selectedProjectIngestionJob = useMemo(() => {
     if (!selectedProjectId) return null;
-    if (selectedProjectIngestionSnapshot?.project_id === selectedProjectId) return selectedProjectIngestionSnapshot;
-    return [...visibleIngestionJobs]
+    const matchedJob = [...visibleIngestionJobs]
       .filter((job) => job.project_id === selectedProjectId)
       .sort((a, b) => ingestionJobSortValue(b) - ingestionJobSortValue(a))[0] || null;
+    if (matchedJob?.stage_status?.stages?.length) return matchedJob;
+    if (selectedProjectIngestionSnapshot?.project_id === selectedProjectId) return selectedProjectIngestionSnapshot;
+    return matchedJob;
   }, [selectedProjectId, visibleIngestionJobs, selectedProjectIngestionSnapshot]);
   const selectedEntity = useMemo(() => (projectDetail?.canon?.primaries || []).find((entity) => (entity.preferred_slug || entity.canonical_name || '') === selectedEntityKey), [projectDetail, selectedEntityKey]);
   const editorSource = (projectDetail as any)?.editor_chapters;
@@ -1276,10 +1284,17 @@ export function App() {
   }, [allDecisions, selectedGraphEntity?.canonical_name, selectedGraphEntity?.preferred_slug, selectedGraphNode?.label]);
   const graphEditNode = useMemo(() => (graphEditNodeId ? filteredGraph.byId[graphEditNodeId] || null : null), [filteredGraph, graphEditNodeId]);
   const graphStats = { nodes: filteredGraph.nodes.length, edges: filteredGraph.edges.length };
+  const projectHubSummaryProject = projects.find((project) => project.project_id === projectHubPreviewId) || selectedProject;
+  const projectHubSummaryTitle = projectHubSummaryProject?.work?.title || projectHubSummaryProject?.name || '';
+  const projectHubSummaryStatus = projectHubSummaryProject?.project_id === selectedProjectId ? (projectDetail?.run_status?.status || projectHubSummaryProject?.workspace_status?.semantic_review_label || t('project.status_ready')) : (projectHubSummaryProject?.workspace_status?.semantic_review_label || t('project.status_ready'));
+  const projectHubSummaryChapters = projectHubSummaryProject?.project_id === selectedProjectId ? (projectDetail?.overview?.chapters_processed ?? projectHubSummaryProject?.chapter_count ?? 0) : (projectHubSummaryProject?.chapter_count ?? 0);
+  const projectHubSummaryArtifacts = projectHubSummaryProject?.project_id === selectedProjectId ? artifactsCount : (projectHubSummaryProject?.has_ingestion_graph || projectHubSummaryProject?.has_markdown_manifest || projectHubSummaryProject?.has_markdown_graph_index ? 1 : 0);
+  const projectHubSummaryWarnings = projectHubSummaryProject?.project_id === selectedProjectId ? warningsVisible : (projectHubSummaryProject?.review_queue_count ?? projectHubSummaryProject?.review_count ?? 0);
+  const projectHubNotice: ProjectHubNotice | null = null;
   let content: React.ReactNode = null;
 
   if (active === 'overview') content = <OverviewBoard setActive={setActive} />;
-  if (active === 'hub') content = <ProjectHubView projectRows={projects.map((project) => <ProjectRow key={project.project_id} project={project} selected={project.project_id === selectedProjectId} previewed={project.project_id === projectHubPreviewId} flashSelected={project.project_id === projectHubSelectionFlashId} onPreview={() => setProjectHubPreviewId(project.project_id)} onSelect={() => { setProjectHubPreviewId(''); setProjectHubSelectionFlashId(project.project_id); setSelectedProjectId(project.project_id); void loadProjectContext(project.project_id); window.setTimeout(() => setProjectHubSelectionFlashId(''), 900); }} onRemove={() => setRemoveProjectCandidate(project)} />)} reducedProjectWarning={isMinimalFixture(selectedProject)} chaptersProcessed={projectDetail?.overview?.chapters_processed ?? 0} artifactsCount={artifactsCount} warningsVisible={warningsVisible} selectedProjectStatus={projectDetail?.run_status?.status || selectedProject?.workspace_status?.semantic_review_label || t('project.status_ready')} onNewIngestion={() => { setError(''); setIngestionComposerOpen(true); setCompletedIngestionJobId(''); setUploadSession(null); setProjectTitleDraft(''); setRunNameDraft(''); setActive('ingest'); }} openProjectTitle={selectedProject?.work?.title || selectedProject?.name || ''} />;
+  if (active === 'hub') content = <ProjectHubView projectRows={projects.map((project) => <ProjectRow key={project.project_id} project={project} selected={project.project_id === selectedProjectId} previewed={project.project_id === projectHubPreviewId} flashSelected={project.project_id === projectHubSelectionFlashId} onPreview={() => setProjectHubPreviewId(project.project_id)} onSelect={() => { setProjectHubPreviewId(project.project_id); setProjectHubSelectionFlashId(project.project_id); setSelectedProjectId(project.project_id); void loadProjectContext(project.project_id); window.setTimeout(() => setProjectHubSelectionFlashId(''), 900); }} onOpenIngestionHistory={() => { setProjectHubPreviewId(project.project_id); setProjectHubSelectionFlashId(project.project_id); setSelectedProjectId(project.project_id); void loadProjectContext(project.project_id); setIngestionComposerOpen(false); setActive('ingest'); }} onRemove={() => setRemoveProjectCandidate(project)} />)} projectHubNotice={projectHubNotice} chaptersProcessed={projectHubSummaryChapters} artifactsCount={projectHubSummaryArtifacts} warningsVisible={projectHubSummaryWarnings} selectedProjectStatus={projectHubSummaryStatus} selectedProjectTitle={projectHubSummaryTitle} onNewIngestion={() => { setError(''); setIngestionComposerOpen(true); setCompletedIngestionJobId(''); setUploadSession(null); setProjectTitleDraft(''); setRunNameDraft(''); setActive('ingest'); }} openProjectTitle={selectedProject?.work?.title || selectedProject?.name || ''} />;
   if (active === 'ingest') content = <IngestionView
     runStatus={runStatus}
     ingestionJobs={selectedProjectId ? visibleIngestionJobs.filter((job) => job.project_id === selectedProjectId) : visibleIngestionJobs}
