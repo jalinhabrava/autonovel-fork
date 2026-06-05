@@ -261,6 +261,72 @@ class TextifAIWebViewerTests(unittest.TestCase):
             self.assertEqual(semantic["semantic_artifact_counts"]["entities"], 1)
             self.assertEqual(semantic["semantic_artifact_counts"]["review_items"], 1)
 
+    def test_structural_only_job_does_not_fake_workspace_or_project_ready(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            session = stage_uploaded_files(repo_root, [("chapter.md", b"chapter body",)])
+            registry = IngestionJobRegistry(repo_root=repo_root, start_immediately=False)
+            job = registry.create_job({"upload_session_id": session.upload_session_id, "project_title": "Demo", "run_name": "upload"})
+            job.finalize(
+                status="succeeded",
+                project_id="proj_1",
+                result_detected=True,
+                project_package_ready=True,
+                semantic_artifacts_available=False,
+                semantic_status="structural_only",
+                result_warnings=["semantic artifacts not found; deterministic structural package is not semantic/VaERL ready"],
+                result_status="completed_with_warnings",
+            )
+            payload = job.snapshot()
+        stages = {stage["id"]: stage for stage in payload["stage_status"]["stages"]}
+        self.assertEqual(payload["stage_status"]["global_status"], "completed_with_warnings")
+        self.assertFalse(payload["stage_status"]["project_ready"])
+        self.assertEqual(stages["building_vaerl"]["status"], "warning")
+        self.assertEqual(stages["workspace_ready"]["status"], "warning")
+        self.assertIn("semantic artifacts not found", " ".join(payload["result_warnings"]).casefold())
+
+    def test_semantic_ready_job_completes_semantic_workspace_stages(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            session = stage_uploaded_files(repo_root, [("chapter.md", b"chapter body",)])
+            registry = IngestionJobRegistry(repo_root=repo_root, start_immediately=False)
+            job = registry.create_job({"upload_session_id": session.upload_session_id, "project_title": "Demo", "run_name": "upload"})
+            job.finalize(
+                status="succeeded",
+                project_id="proj_1",
+                result_detected=True,
+                project_package_ready=True,
+                semantic_artifacts_available=True,
+                semantic_status="semantic_ready",
+                semantic_artifact_counts={"entities": 1, "relationships": 1, "graph_nodes": 2, "graph_edges": 1, "review_items": 1},
+                result_status="completed",
+            )
+            payload = job.snapshot()
+        stages = {stage["id"]: stage for stage in payload["stage_status"]["stages"]}
+        self.assertEqual(payload["stage_status"]["global_status"], "completed")
+        self.assertTrue(payload["stage_status"]["project_ready"])
+        self.assertEqual(stages["extracting_entities"]["status"], "completed")
+        self.assertEqual(stages["building_vaerl"]["status"], "completed")
+        self.assertEqual(stages["normalizing_entities"]["status"], "completed")
+        self.assertEqual(stages["building_graph"]["status"], "completed")
+        self.assertEqual(stages["building_review_queue"]["status"], "completed")
+        self.assertEqual(stages["validating_project"]["status"], "completed")
+        self.assertEqual(stages["workspace_ready"]["status"], "completed")
+
+    def test_no_project_package_keeps_workspace_not_ready(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            session = stage_uploaded_files(repo_root, [("chapter.md", b"chapter body",)])
+            registry = IngestionJobRegistry(repo_root=repo_root, start_immediately=False)
+            job = registry.create_job({"upload_session_id": session.upload_session_id, "project_title": "Demo", "run_name": "upload"})
+            job.finalize(status="succeeded", result_detected=False, result_warnings=["99_System directory not found"], result_status="warning")
+            payload = job.snapshot()
+        stages = {stage["id"]: stage for stage in payload["stage_status"]["stages"]}
+        self.assertEqual(payload["stage_status"]["global_status"], "completed_with_warnings")
+        self.assertFalse(payload["stage_status"]["project_ready"])
+        self.assertEqual(stages["building_vaerl"]["status"], "warning")
+        self.assertEqual(stages["workspace_ready"]["status"], "warning")
+
     def test_result_detection_surfaces_bootstrap_failures_as_warnings_not_success_summary(self):
         with tempfile.TemporaryDirectory() as tmp:
             output_root = Path(tmp) / "run_001"
@@ -379,10 +445,12 @@ class TextifAIWebViewerTests(unittest.TestCase):
             payload = job.snapshot()
         stages = {stage["id"]: stage for stage in payload["stage_status"]["stages"]}
         self.assertEqual(payload["stage_status"]["global_status"], "completed_with_warnings")
+        self.assertFalse(payload["stage_status"]["project_ready"])
         self.assertEqual(stages["writing_markdown"]["status"], "completed")
         self.assertEqual(stages["extracting_entities"]["status"], "warning")
+        self.assertEqual(stages["building_vaerl"]["status"], "warning")
         self.assertEqual(stages["building_graph"]["status"], "warning")
-        self.assertEqual(stages["workspace_ready"]["status"], "completed")
+        self.assertEqual(stages["workspace_ready"]["status"], "warning")
 
     def test_read_editor_chapters_uses_manifest_paths_when_kind_missing(self):
         with tempfile.TemporaryDirectory() as tmp:

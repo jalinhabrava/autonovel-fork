@@ -712,6 +712,8 @@ def detect_job_result(output_path: Path) -> dict[str, Any]:
         warnings.append("obsidian_import.json not found; result detection is incomplete")
     if system_root.exists() and not review_queue_available and not project_package_ready:
         warnings.append("review_queue.json not found; review queue view may be unavailable")
+    if project_package_ready and not semantic_artifacts_available:
+        warnings.append("semantic artifacts not found; deterministic structural package is not semantic/VaERL ready")
     for warning in _bootstrap_progress_warnings(system_root):
         if warning not in warnings:
             warnings.append(warning)
@@ -769,8 +771,21 @@ def _job_global_status(job: IngestionJob) -> str:
     if job.status == "failed":
         return "failed"
     if job.status == "succeeded":
+        if str(getattr(job, "semantic_status", "pending") or "pending") != "semantic_ready":
+            return "completed_with_warnings"
         return "completed_with_warnings" if job.result_warnings else "completed"
     return "failed"
+
+def _job_semantic_ready(job: IngestionJob) -> bool:
+    """Semantic readiness contract for handoff/status UI.
+
+    no_project: no valid package/artifacts; `project_ready` stays false.
+    structural_only: chapter markdown/project package may be inspectable, but semantic VaERL/graph/review stages stay warning and workspace is not complete.
+    semantic_ready: semantic artifacts or legacy obsidian import exist; downstream semantic stages and workspace may complete.
+    """
+    semantic_status = str(getattr(job, "semantic_status", "pending") or "pending")
+    semantic_artifacts = bool(getattr(job, "semantic_artifacts_available", False) or getattr(job, "inspectable_artifacts_available", False))
+    return semantic_status == "semantic_ready" and semantic_artifacts
 
 def _build_stage(
     stage_id: str,
@@ -807,6 +822,7 @@ def _stage_status_snapshot(job: IngestionJob) -> dict[str, Any]:
     is_failed = job.status == "failed"
     has_artifacts = bool(job.result_detected or job.project_id)
     semantic_status_value = str(getattr(job, "semantic_status", "pending") or "pending")
+    semantic_ready = _job_semantic_ready(job)
 
     def phase_status(*, before_done: bool = False) -> str:
         if is_failed:
@@ -872,10 +888,10 @@ def _stage_status_snapshot(job: IngestionJob) -> dict[str, Any]:
     artifact_errors = errors if artifact_status == "failed" else []
     stages.append(_build_stage("extracting_entities", "Extracting entities and relations", artifact_status, progress=semantic_progress if artifact_status != "pending" else 0, summary=artifact_summary, warnings=artifact_warnings, errors=artifact_errors, actions=["inspect"]))
 
-    ready_status = "completed" if job.project_id else ("warning" if is_succeeded else ("failed" if is_failed else ("running" if is_running else "pending")))
+    ready_status = "completed" if job.project_id and semantic_ready else ("warning" if is_succeeded and (job.project_id or has_artifacts or warnings) else ("failed" if is_failed else ("running" if is_running else "pending")))
     ready_progress = 100 if ready_status in {"completed", "warning"} else 0
-    ready_summary = "Project is ready for viewer inspection" if ready_status == "completed" else ("Project was not materialized into ready viewer state" if ready_status == "failed" else "Project not ready yet")
-    ready_warnings = []
+    ready_summary = "Semantic VaERL artifacts are ready for viewer inspection" if ready_status == "completed" else ("Project was not materialized into ready viewer state" if ready_status == "failed" else "Semantic VaERL artifacts are not ready; structural package may be inspectable")
+    ready_warnings = warnings if ready_status == "warning" else []
     ready_errors = errors if ready_status == "failed" else []
     stages.append(_build_stage("building_vaerl", "Building VaERL", ready_status, progress=ready_progress, summary=ready_summary, warnings=ready_warnings, errors=ready_errors, actions=["inspect"] if (job.project_id or job.error or warnings or is_succeeded) else []))
 
@@ -896,7 +912,8 @@ def _stage_status_snapshot(job: IngestionJob) -> dict[str, Any]:
     stages.append(_build_stage("building_graph", "Generating graph", normalized_status, progress=100 if normalized_status == "completed" else (None if normalized_status == "running" else 0), summary=("Graph generated" if normalized_status == "completed" else ("Graph not generated yet" if normalized_status == "warning" else "Graph not ready yet")) + (f"; {semantic_detail}" if normalized_status == "warning" else ""), warnings=warnings if normalized_status == "warning" else [], errors=errors if normalized_status == "failed" else [], actions=["inspect"]))
     stages.append(_build_stage("building_review_queue", "Creating review queue", normalized_status, progress=100 if normalized_status == "completed" else (None if normalized_status == "running" else 0), summary=("Review queue created" if normalized_status == "completed" else ("Review queue not created yet" if normalized_status == "warning" else "Review queue not ready yet")) + (f"; {semantic_detail}" if normalized_status == "warning" else ""), warnings=warnings if normalized_status == "warning" else [], errors=errors if normalized_status == "failed" else [], actions=["inspect"]))
     stages.append(_build_stage("validating_project", "Validating project", normalized_status, progress=100 if normalized_status == "completed" else (None if normalized_status == "running" else 0), summary=("Project validated" if normalized_status == "completed" else ("Project not validated yet" if normalized_status == "warning" else "Project not ready yet")) + (f"; {semantic_detail}" if normalized_status == "warning" else ""), warnings=warnings if normalized_status == "warning" else [], errors=errors if normalized_status == "failed" else [], actions=["inspect"]))
-    stages.append(_build_stage("workspace_ready", "Workspace ready", "completed" if job.project_id else ("warning" if ready_status == "warning" else ("failed" if is_failed else ("running" if is_running else "pending"))), progress=100 if job.project_id else (None if is_running else 0), summary="Workspace ready to open" if job.project_id else ("Run finished but workspace is not ready" if ready_status == "warning" else ("Workspace not ready" if is_failed else "Workspace not ready yet")), warnings=warnings if not job.project_id and ready_status == "warning" else [], errors=errors if is_failed else [], actions=["inspect"] if (job.project_id or job.error or warnings or is_succeeded) else []))
+    workspace_status = "completed" if job.project_id and semantic_ready else ("warning" if ready_status == "warning" else ("failed" if is_failed else ("running" if is_running else "pending")))
+    stages.append(_build_stage("workspace_ready", "Workspace ready", workspace_status, progress=100 if workspace_status == "completed" else (None if is_running else 0), summary="Semantic workspace ready to open" if workspace_status == "completed" else ("Run finished but semantic workspace is not ready" if ready_status == "warning" else ("Workspace not ready" if is_failed else "Workspace not ready yet")), warnings=warnings if workspace_status == "warning" else [], errors=errors if is_failed else [], actions=["inspect"] if (job.project_id or job.error or warnings or is_succeeded) else []))
 
     current_stage_id = "detecting_chapters"
     for stage in stages:
@@ -905,7 +922,7 @@ def _stage_status_snapshot(job: IngestionJob) -> dict[str, Any]:
             break
 
     global_status = _job_global_status(job)
-    project_ready = bool(job.project_id)
+    project_ready = bool(job.project_id and semantic_ready)
     progress = 100 if global_status in {"completed", "completed_with_warnings"} and project_ready else (None if global_status in {"running", "completed_with_warnings"} else 0)
     return {
         "schema": "textifai.ingestion_job_progress.v1",
