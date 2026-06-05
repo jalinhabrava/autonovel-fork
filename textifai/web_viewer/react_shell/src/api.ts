@@ -217,6 +217,11 @@ export type IngestionStage = {
   label: string;
   status: IngestionStageStatus;
   progress?: number;
+  progress_kind?: 'determinate' | 'indeterminate' | 'unavailable';
+  completed_units?: number | null;
+  total_units?: number | null;
+  unit_label?: string | null;
+  detail?: string | null;
   summary?: string;
   message?: string;
   warnings?: unknown[];

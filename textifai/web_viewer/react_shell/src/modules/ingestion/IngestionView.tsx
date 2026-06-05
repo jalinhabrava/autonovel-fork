@@ -1,7 +1,7 @@
 import { useMemo, useRef } from 'react';
 import { AlertTriangle, BookOpen, CheckCircle2, Circle, ClipboardList, GitBranch, Loader2, Sparkles, Upload } from 'lucide-react';
 import { Button } from '../../common/ui';
-import type { IngestionJob, IngestionUploadResponse, ProjectDetail, UploadedIngestionFile } from '../../api';
+import type { IngestionJob, IngestionStage, IngestionUploadResponse, ProjectDetail, UploadedIngestionFile } from '../../api';
 import { t, type UiI18nKey } from '../../i18n/ui';
 
 const RUN_STATUS_LABEL_KEYS: Record<string, UiI18nKey> = {
@@ -127,12 +127,31 @@ function stageRailTone(status: string | undefined): string {
   return 'bg-[var(--txf-color-surface-soft)]';
 }
 
-function stageProgressValue(status: string | undefined, progress: number | undefined): number | null {
+function stageProgressValue(status: string | undefined, progress: number | undefined, progressKind?: string | null): number | null {
   if (typeof progress === 'number' && Number.isFinite(progress)) return Math.max(0, Math.min(100, progress));
+  if (progressKind === 'indeterminate') return null;
   if (status === 'completed' || status === 'completed_with_warnings' || status === 'completed_with_editorial_review') return 100;
   if (status === 'running') return null;
   if (status === 'queued' || status === 'blocked' || status === 'failed' || status === 'cancelled') return 0;
   return null;
+}
+
+function stageProgressLabel(stage: IngestionStage | undefined): string {
+  if (!stage) return t('ingestion.pending');
+  const progress = stageProgressValue(stage.status, stage.progress, stage.progress_kind);
+  if (stage.progress_kind === 'indeterminate' && stage.status === 'running') return t('ingestion.job.progress_indeterminate');
+  if (typeof progress === 'number') return `${progress}%`;
+  if (stage.status === 'pending') return t('ingestion.pending');
+  return formatStatusLabel(stage.status);
+}
+
+function stageMetaLabel(stage: IngestionStage | undefined): string {
+  if (!stage) return '';
+  if (stage.unit_label) return stage.unit_label;
+  if (typeof stage.completed_units === 'number' && typeof stage.total_units === 'number' && stage.total_units > 0) {
+    return `${stage.completed_units}/${stage.total_units}`;
+  }
+  return '';
 }
 
 function progressColor(progress: number | null, status: string | undefined): string {
@@ -447,11 +466,13 @@ export function IngestionView({
             {displayJob ? <div className="mt-5 space-y-3">
               {displayStages.map((stage, index) => {
                 const StageIcon = stageIcon(stage.status);
-                const progress = stageProgressValue(stage.status, stage.progress);
-                const percentage = progress === null ? '' : `${progress}%`;
+                const progress = stageProgressValue(stage.status, stage.progress, stage.progress_kind);
+                const percentage = stageProgressLabel(stage);
+                const metaLabel = stageMetaLabel(stage);
                 const isActive = stage.status === 'running';
                 const diagnostics = stageDiagnostics(stage);
                 const summary = stageSummary(stage);
+                const detail = typeof stage.detail === 'string' ? stage.detail : '';
                 return <div key={stage.id || `${index}`} className="rounded-[1.5rem] border border-[var(--txf-color-border)] bg-[var(--txf-color-surface-muted)] p-4">
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                     <div className="flex items-start gap-3">
@@ -461,10 +482,11 @@ export function IngestionView({
                       <div>
                         <div className="font-medium text-[var(--txf-color-text)]">{formatStageLabel(stage.id, stage.label)}</div>
                         <div className="mt-1 text-xs uppercase tracking-[0.18em] text-[var(--txf-color-text-subtle)]">{t('ingestion.step')} · {formatStatusLabel(stage.status)}</div>
+                        {metaLabel || detail ? <div className="mt-2 text-sm text-[var(--txf-color-text-subtle)]">{[metaLabel, detail].filter(Boolean).join(' · ')}</div> : null}
                     </div>
                     {diagnostics.length ? <details className="rounded-2xl border border-[var(--txf-color-border)] bg-[var(--txf-color-surface)] p-3 text-sm text-[var(--txf-color-text)]"><summary className="cursor-pointer text-xs uppercase tracking-[0.18em] text-[var(--txf-color-text-subtle)]">{t('ingestion.job.status.completed_with_warnings')}</summary><div className="mt-3 space-y-2">{diagnostics.map((entry, entryIndex) => <div key={`${stage.id}-diag-${entryIndex}`} className="rounded-xl border border-[var(--txf-color-border)] bg-[var(--txf-color-surface-muted)] p-3">{entry}</div>)}</div></details> : null}
                   </div>
-                    <div className="text-right text-xs text-[var(--txf-color-text-subtle)]">{percentage || t('ingestion.pending')}</div>
+                    <div className="text-right text-xs text-[var(--txf-color-text-subtle)]">{percentage}</div>
                   </div>
                   {summary ? <div className="mt-3 rounded-2xl border border-[var(--txf-color-border)] bg-[var(--txf-color-surface)] p-3 text-xs text-[var(--txf-color-text)]">{summary}</div> : null}
                   <div className={`mt-3 h-2 overflow-hidden rounded-full ${stageRailTone(stage.status)}`}>

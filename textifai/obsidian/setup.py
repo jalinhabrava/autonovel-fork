@@ -195,6 +195,8 @@ def prepare_obsidian_project(
                 event="semantic_bootstrap_started",
                 provider_name=provider_name,
                 model=model,
+                chapter_count=structured_result.chapter_count,
+                semantic_status="running",
             )
             warnings.extend(list(structured_result.warnings))
             import_audit = import_json_to_vault(
@@ -228,6 +230,7 @@ def prepare_obsidian_project(
                 model=model,
                 chapter_count=structured_result.chapter_count,
                 semantic_status=semantic_package.get("semantic_status"),
+                chapter_count_completed=structured_result.chapter_count,
             )
             _append_bootstrap_progress(
                 progress_log_path,

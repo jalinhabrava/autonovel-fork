@@ -476,6 +476,7 @@ class TestTextifAII18nUiStrings(unittest.TestCase):
             'ingestion.status_default',
             'ingestion.completed_review',
             'ingestion.progress',
+            'ingestion.job.progress_indeterminate',
             'ingestion.run',
             'ingestion.no_run_id',
             'ingestion.safe_workspace',

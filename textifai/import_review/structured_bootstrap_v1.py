@@ -1301,6 +1301,7 @@ def run_structured_bootstrap_v1(
     expected_chapters: list[dict[str, Any]] = []
     generated_chapters: list[dict[str, Any]] = []
     failed_chapters: list[dict[str, Any]] = []
+    total_chapters = len(chapters)
     for index, chapter in enumerate(chapters, start=1):
         chapter_id = f"ch_{index:03d}"
         expected_chapters.append(
@@ -1317,6 +1318,9 @@ def run_structured_bootstrap_v1(
             chapter_id=chapter_id,
             chapter_title=chapter.title,
             sequence_index=index,
+            completed_units=max(index - 1, 0),
+            total_units=total_chapters,
+            unit_label=f"Chapter {index} of {total_chapters}",
         )
         chapter_result = _run_chapter_extraction(
             work_title=work_title,
@@ -1362,6 +1366,9 @@ def run_structured_bootstrap_v1(
                 chapter_title=chapter.title,
                 attempt_count=chapter_result.attempt_count,
                 failure_type=chapter_result.failure_type,
+                completed_units=index,
+                total_units=total_chapters,
+                unit_label=f"Chapter {index} of {total_chapters}",
             )
             continue
         chapter_payload = chapter_result.payload
@@ -1392,6 +1399,9 @@ def run_structured_bootstrap_v1(
             chapter_id=chapter_id,
             chapter_title=chapter.title,
             attempt_count=chapter_result.attempt_count,
+            completed_units=index,
+            total_units=total_chapters,
+            unit_label=f"Chapter {index} of {total_chapters}",
         )
 
     run_status = _build_run_status(
@@ -3893,6 +3903,7 @@ def _run_global_normalization(
         if item.get("chapter_ids")
     }
 
+    total_batches = len(chapter_batches)
     for batch_index, batch in enumerate(chapter_batches, start=1):
         batch_chapter_ids = [f"ch_{item['sequence_index']:03d}" for item in batch]
         if trace_path is not None:
@@ -3922,6 +3933,8 @@ def _run_global_normalization(
                 request_trace_dir=request_trace_dir,
                 progress_log_path=progress_log_path,
                 telemetry_path=telemetry_path,
+                completed_batches_before=before_count,
+                total_batches=total_batches,
             )
         )
         completed = len(batch_payloads) > before_count
@@ -3985,6 +3998,8 @@ def _run_global_normalization_batch_with_fallbacks(
     progress_log_path: str | None,
     telemetry_path: Path | None,
     subdivision_depth: int = 0,
+    completed_batches_before: int = 0,
+    total_batches: int | None = None,
 ) -> list[dict[str, Any]]:
     batch_text = _render_global_batch_text(batch, max_chars=config.max_global_text_chars)
     if not batch_text.strip():
@@ -4007,6 +4022,9 @@ def _run_global_normalization_batch_with_fallbacks(
         event="global_normalization_batch_started",
         batch_index=batch_index,
         chapter_ids=batch_chapter_ids,
+        completed_units=completed_batches_before,
+        total_units=total_batches,
+        unit_label=(f"Batch {batch_index} of {total_batches}" if total_batches else None),
         estimated_input_tokens=batch_meta.get("input_tokens"),
         estimated_total_cost=batch_meta.get("estimated_total_cost"),
         token_count_method=batch_meta.get("token_count_method"),
@@ -4096,6 +4114,9 @@ def _run_global_normalization_batch_with_fallbacks(
                 event="global_normalization_batch_completed",
                 batch_index=batch_index,
                 chapter_ids=batch_chapter_ids,
+                completed_units=min(completed_batches_before + 1, total_batches) if total_batches else completed_batches_before + 1,
+                total_units=total_batches,
+                unit_label=(f"Batch {batch_index} of {total_batches}" if total_batches else None),
                 entity_count=len(normalized.get("entities") or []),
                 subdivision_depth=subdivision_depth,
             )
@@ -4200,15 +4221,18 @@ def _run_global_normalization_batch_with_fallbacks(
         )
         return payloads
 
-    _append_progress(
-        progress_log_path,
-        phase="structured_bootstrap_v1",
-        event="global_normalization_batch_abandoned",
-        batch_index=batch_index,
-        chapter_ids=batch_chapter_ids,
-        subdivision_depth=subdivision_depth,
-        error=last_error,
-    )
+        _append_progress(
+            progress_log_path,
+            phase="structured_bootstrap_v1",
+            event="global_normalization_batch_abandoned",
+            batch_index=batch_index,
+            chapter_ids=batch_chapter_ids,
+            completed_units=min(completed_batches_before + 1, total_batches) if total_batches else completed_batches_before + 1,
+            total_units=total_batches,
+            unit_label=(f"Batch {batch_index} of {total_batches}" if total_batches else None),
+            subdivision_depth=subdivision_depth,
+            error=last_error,
+        )
     return []
 
 

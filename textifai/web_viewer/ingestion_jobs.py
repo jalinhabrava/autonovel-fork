@@ -22,6 +22,7 @@ MAX_LOG_CHARS = 160_000
 ACTIVE_STATUSES = {"queued", "running"}
 FINAL_STATUSES = {"succeeded", "failed"}
 JOB_STAGE_STATUS_VALUES = ["pending", "running", "completed", "warning", "blocked", "failed", "skipped"]
+JOB_STAGE_PROGRESS_KIND_VALUES = ["determinate", "indeterminate", "unavailable"]
 JOB_STATUS_VALUES = ["queued", "running", "blocked", "completed", "completed_with_warnings", "failed", "cancelled"]
 SECRET_PATTERNS = [
     re.compile(r"(?i)(api[_-]?key|token|secret|password)(\s*[=:]\s*)([^\s]+)"),
@@ -102,6 +103,11 @@ def _bootstrap_progress_snapshot(system_root: Path) -> dict[str, Any]:
         "normalization_total": 0,
         "normalization_completed": 0,
         "semantic_started": False,
+        "chapter_event_total": 0,
+        "chapter_event_completed": 0,
+        "normalization_event_total": 0,
+        "normalization_event_completed": 0,
+        "latest_events": {},
     }
     if not progress_path.exists():
         return snapshot
@@ -109,6 +115,18 @@ def _bootstrap_progress_snapshot(system_root: Path) -> dict[str, Any]:
     chapter_done: set[str] = set()
     normalization_started: set[str] = set()
     normalization_done: set[str] = set()
+    chapter_total_hint = 0
+    normalization_total_hint = 0
+    latest_events: dict[str, dict[str, Any]] = {}
+
+    def remember(stage_key: str, event: dict[str, Any]) -> None:
+        latest_events[stage_key] = event
+
+    def positive_int(value: Any) -> int:
+        try:
+            return max(int(value or 0), 0)
+        except (TypeError, ValueError):
+            return 0
     try:
         lines = progress_path.read_text(encoding="utf-8", errors="replace").splitlines()
     except OSError:
@@ -122,20 +140,42 @@ def _bootstrap_progress_snapshot(system_root: Path) -> dict[str, Any]:
         chapter_id = str(event.get("chapter_id") or "").strip()
         if event_name == "chapter_extraction_started" and chapter_id:
             chapter_started.add(chapter_id)
+            remember("detecting_chapters", event)
+            chapter_total_hint = max(chapter_total_hint, positive_int(event.get("total_units")))
         elif event_name in {"chapter_extraction_completed", "chapter_extraction_failed"} and chapter_id:
             chapter_done.add(chapter_id)
+            remember("detecting_chapters", event)
+            chapter_total_hint = max(chapter_total_hint, positive_int(event.get("total_units")))
         elif event_name == "global_normalization_batch_started":
             normalization_started.add(str(event.get("batch_index") or len(normalization_started) + 1))
             snapshot["semantic_started"] = True
+            remember("extracting_entities", event)
+            normalization_total_hint = max(normalization_total_hint, positive_int(event.get("total_units")))
         elif event_name in {"global_normalization_batch_completed", "global_normalization_batch_abandoned"}:
             normalization_done.add(str(event.get("batch_index") or len(normalization_done) + 1))
             snapshot["semantic_started"] = True
+            remember("extracting_entities", event)
+            normalization_total_hint = max(normalization_total_hint, positive_int(event.get("total_units")))
         elif event_name == "semantic_bootstrap_started":
             snapshot["semantic_started"] = True
-    snapshot["chapter_total"] = max(len(chapter_started), len(chapter_done))
-    snapshot["chapter_completed"] = len(chapter_done)
-    snapshot["normalization_total"] = max(len(normalization_started), len(normalization_done))
+            remember("extracting_entities", event)
+        elif event_name in {"semantic_bootstrap_completed", "semantic_bootstrap_failed"}:
+            remember("extracting_entities", event)
+        elif event_name == "deterministic_chapter_manifest_project_imported":
+            chapter_count = positive_int(event.get("chapter_count"))
+            chapter_total_hint = max(chapter_total_hint, chapter_count)
+            if chapter_count:
+                snapshot["chapter_completed"] = max(int(snapshot.get("chapter_completed") or 0), chapter_count)
+            remember("detecting_chapters", event)
+    snapshot["chapter_total"] = max(len(chapter_started), len(chapter_done), chapter_total_hint)
+    snapshot["chapter_completed"] = max(len(chapter_done), int(snapshot.get("chapter_completed") or 0))
+    snapshot["normalization_total"] = max(len(normalization_started), len(normalization_done), normalization_total_hint)
     snapshot["normalization_completed"] = len(normalization_done)
+    snapshot["chapter_event_total"] = max(len(chapter_started), len(chapter_done), chapter_total_hint)
+    snapshot["chapter_event_completed"] = len(chapter_done)
+    snapshot["normalization_event_total"] = max(len(normalization_started), len(normalization_done), normalization_total_hint)
+    snapshot["normalization_event_completed"] = len(normalization_done)
+    snapshot["latest_events"] = latest_events
     return snapshot
 
 
@@ -793,6 +833,11 @@ def _build_stage(
     status: str,
     *,
     progress: int | None,
+    progress_kind: str = "unavailable",
+    completed_units: int | None = None,
+    total_units: int | None = None,
+    unit_label: str | None = None,
+    detail: str | None = None,
     summary: str,
     warnings: list[str] | None = None,
     errors: list[str] | None = None,
@@ -803,6 +848,11 @@ def _build_stage(
         "label": label,
         "status": status if status in JOB_STAGE_STATUS_VALUES else "pending",
         "progress": progress,
+        "progress_kind": progress_kind if progress_kind in JOB_STAGE_PROGRESS_KIND_VALUES else "unavailable",
+        "completed_units": completed_units,
+        "total_units": total_units,
+        "unit_label": unit_label,
+        "detail": detail,
         "summary": summary,
         "warnings": list(warnings or []),
         "errors": list(errors or []),
@@ -810,11 +860,38 @@ def _build_stage(
         "actions": list(actions or []),
     }
 
+
+def _progress_detail(stage_id: str, event: dict[str, Any] | None) -> str | None:
+    if not isinstance(event, dict):
+        return None
+    event_name = str(event.get("event") or "").strip()
+    unit_label = str(event.get("unit_label") or "").strip()
+    if stage_id in {"detecting_chapters", "writing_markdown"}:
+        if event_name == "chapter_extraction_started":
+            return f"Analyzing {unit_label}" if unit_label else "Analyzing chapter"
+        if event_name == "chapter_extraction_completed":
+            return f"Completed {unit_label}" if unit_label else "Chapter analyzed"
+        if event_name == "chapter_extraction_failed":
+            return f"Failed {unit_label}" if unit_label else "Chapter analysis failed"
+    if stage_id == "extracting_entities":
+        if event_name == "semantic_bootstrap_started":
+            return "Semantic bootstrap started"
+        if event_name == "semantic_bootstrap_completed":
+            return "Semantic bootstrap completed"
+        if event_name == "global_normalization_batch_started":
+            return f"Analyzing {unit_label}" if unit_label else "Analyzing semantic batch"
+        if event_name == "global_normalization_batch_completed":
+            return f"Completed {unit_label}" if unit_label else "Semantic batch completed"
+        if event_name == "global_normalization_batch_abandoned":
+            return f"Abandoned {unit_label}" if unit_label else "Semantic batch abandoned"
+    return None
+
 def _stage_status_snapshot(job: IngestionJob) -> dict[str, Any]:
     warnings = list(job.result_warnings)
     errors = [job.error] if job.error else []
     stages: list[dict[str, Any]] = []
     progress = _bootstrap_progress_snapshot(Path(job.output_root) / "99_System") if getattr(job, "output_root", None) else {}
+    latest_events = progress.get("latest_events", {}) if isinstance(progress.get("latest_events"), dict) else {}
 
     is_upload = job.input_mode == "upload_session"
     is_running = job.status == "running"
@@ -860,22 +937,23 @@ def _stage_status_snapshot(job: IngestionJob) -> dict[str, Any]:
 
     chapter_total = int(progress.get("chapter_total") or 0)
     chapter_completed = int(progress.get("chapter_completed") or 0)
-    chapter_progress = int(round((chapter_completed / chapter_total) * 100)) if chapter_total else (100 if is_succeeded else 0)
-    chapter_status = "completed" if is_succeeded and chapter_total and chapter_completed >= chapter_total else ("running" if job.status in {"queued", "running"} else "completed")
+    chapter_progress = int(round((chapter_completed / chapter_total) * 100)) if chapter_total else (100 if is_succeeded else (0 if is_failed else None))
+    chapter_status = "completed" if is_succeeded and chapter_total and chapter_completed >= chapter_total else ("running" if job.status in {"queued", "running"} else ("failed" if is_failed else "pending"))
+    chapter_progress_kind = "determinate" if chapter_total else ("indeterminate" if chapter_status == "running" else ("unavailable" if chapter_status == "pending" else "determinate"))
     chapter_summary = (
         f"{chapter_completed}/{chapter_total} chapters extracted" if chapter_total else (
-            "Job accepted and waiting for subprocess execution" if job.status == "queued" else "Chapter detection finished"
+            "Job accepted and waiting for subprocess execution" if job.status == "queued" else ("Chapter extraction finished" if chapter_status == "completed" else "Chapter detection waiting to start")
         )
     )
-    stages.append(_build_stage("detecting_chapters", "Detecting chapters", chapter_status, progress=chapter_progress, summary=chapter_summary, actions=["inspect"]))
+    stages.append(_build_stage("detecting_chapters", "Detecting chapters", chapter_status, progress=chapter_progress, progress_kind=chapter_progress_kind, completed_units=chapter_completed if chapter_total else None, total_units=chapter_total or None, unit_label=(f"Chapter {min(chapter_completed, chapter_total)} of {chapter_total}" if chapter_total else None), detail=_progress_detail("detecting_chapters", latest_events.get("detecting_chapters")), summary=chapter_summary, actions=["inspect"]))
 
     normalization_total = int(progress.get("normalization_total") or 0)
     normalization_completed = int(progress.get("normalization_completed") or 0)
-    semantic_progress = int(round((normalization_completed / normalization_total) * 100)) if normalization_total else (100 if semantic_status_value == "semantic_ready" else (50 if progress.get("semantic_started") else 0))
+    semantic_progress = int(round((normalization_completed / normalization_total) * 100)) if normalization_total else (100 if semantic_status_value == "semantic_ready" else (None if progress.get("semantic_started") else 0))
     running_status = "completed" if is_succeeded else ("running" if job.status == "running" or chapter_total or chapter_completed else "pending")
-    running_progress = chapter_progress if running_status != "pending" else 0
+    running_progress = chapter_progress if isinstance(chapter_progress, int) and running_status != "pending" else None
     running_summary = f"{chapter_completed}/{chapter_total or '?'} chapters extracted" if chapter_total else ("Ingestion is running" if running_status == "running" else "Ingestion has not started yet")
-    stages.append(_build_stage("writing_markdown", "Creating markdown chapters", running_status, progress=running_progress, summary=running_summary, errors=errors if running_status == "failed" else [], actions=["inspect"]))
+    stages.append(_build_stage("writing_markdown", "Creating markdown chapters", running_status, progress=running_progress, progress_kind=("determinate" if chapter_total else ("indeterminate" if running_status == "running" else "unavailable")), completed_units=chapter_completed if chapter_total else None, total_units=chapter_total or None, unit_label=(f"Chapter {min(chapter_completed, chapter_total)} of {chapter_total}" if chapter_total else None), detail=_progress_detail("writing_markdown", latest_events.get("detecting_chapters")), summary=running_summary, errors=errors if running_status == "failed" else [], actions=["inspect"]))
 
     semantic_has_progress = bool(progress.get("semantic_started") or normalization_total or normalization_completed)
     artifact_status = (
@@ -886,7 +964,7 @@ def _stage_status_snapshot(job: IngestionJob) -> dict[str, Any]:
     artifact_summary = f"Semantic normalization {normalization_completed}/{normalization_total or '?'} batches" if normalization_total else ("Inspectable artifacts detected under 99_System" if artifact_status == "completed" else ("Inspectable artifacts not detected yet" if artifact_status == "pending" else "Inspectable artifacts not detected"))
     artifact_warnings = warnings if warnings and artifact_status == "completed" else []
     artifact_errors = errors if artifact_status == "failed" else []
-    stages.append(_build_stage("extracting_entities", "Extracting entities and relations", artifact_status, progress=semantic_progress if artifact_status != "pending" else 0, summary=artifact_summary, warnings=artifact_warnings, errors=artifact_errors, actions=["inspect"]))
+    stages.append(_build_stage("extracting_entities", "Extracting entities and relations", artifact_status, progress=semantic_progress if artifact_status != "pending" else None, progress_kind=("determinate" if normalization_total else ("indeterminate" if artifact_status == "running" else "unavailable")), completed_units=normalization_completed if normalization_total else None, total_units=normalization_total or None, unit_label=(f"Batch {min(normalization_completed, normalization_total)} of {normalization_total}" if normalization_total else None), detail=_progress_detail("extracting_entities", latest_events.get("extracting_entities")), summary=artifact_summary, warnings=artifact_warnings, errors=artifact_errors, actions=["inspect"]))
 
     ready_status = "completed" if job.project_id and semantic_ready else ("warning" if is_succeeded and (job.project_id or has_artifacts or warnings) else ("failed" if is_failed else ("running" if is_running else "pending")))
     ready_progress = 100 if ready_status in {"completed", "warning"} else 0
@@ -918,7 +996,9 @@ def _stage_status_snapshot(job: IngestionJob) -> dict[str, Any]:
     current_stage_id = "detecting_chapters"
     for stage in stages:
         current_stage_id = stage["id"]
-        if stage["status"] in {"running", "failed", "warning", "pending"}:
+        if stage["status"] in {"running", "failed", "warning"}:
+            break
+        if stage["status"] == "pending" and current_stage_id != "detecting_chapters":
             break
 
     global_status = _job_global_status(job)

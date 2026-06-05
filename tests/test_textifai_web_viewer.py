@@ -15,6 +15,8 @@ from textifai.web_viewer.ingestion_jobs import (
     JOB_METADATA_FILE,
     IngestionJob,
     IngestionJobRegistry,
+    _bootstrap_progress_snapshot,
+    _build_stage,
     build_ingestion_command,
     detect_job_result,
     log_json,
@@ -574,6 +576,186 @@ class TextifAIWebViewerTests(unittest.TestCase):
         self.assertEqual(stages["extracting_entities"]["status"], "warning")
         self.assertEqual(stages["building_vaerl"]["status"], "warning")
         self.assertEqual(stages["building_graph"]["status"], "warning")
+        self.assertEqual(stages["workspace_ready"]["status"], "warning")
+
+    def test_build_stage_exposes_granular_progress_contract_fields(self):
+        stage = _build_stage(
+            "extracting_entities",
+            "Extracting entities and relations",
+            "running",
+            progress=66,
+            progress_kind="determinate",
+            completed_units=2,
+            total_units=3,
+            unit_label="2/3 capítulos",
+            detail="Analizando capítulo 2 de 3",
+            summary="Semantic normalization 2/3 batches",
+            warnings=["warn"],
+            errors=["err"],
+            actions=["inspect"],
+        )
+
+        self.assertEqual(stage["progress_kind"], "determinate")
+        self.assertEqual(stage["completed_units"], 2)
+        self.assertEqual(stage["total_units"], 3)
+        self.assertEqual(stage["unit_label"], "2/3 capítulos")
+        self.assertEqual(stage["detail"], "Analizando capítulo 2 de 3")
+        self.assertEqual(stage["progress"], 66)
+
+    def test_bootstrap_progress_snapshot_ignores_malformed_jsonl_and_uses_known_units(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            system_root = Path(tmp)
+            progress_path = system_root / "bootstrap_progress.jsonl"
+            progress_path.write_text(
+                "not-json\n" + "\n".join(
+                    [
+                        json.dumps({"event": "chapter_extraction_started", "chapter_id": "ch_001", "completed_units": 0, "total_units": 3, "unit_label": "Chapter 1 of 3"}),
+                        json.dumps({"event": "chapter_extraction_completed", "chapter_id": "ch_001", "completed_units": 1, "total_units": 3, "unit_label": "Chapter 1 of 3"}),
+                        json.dumps({"event": "chapter_extraction_started", "chapter_id": "ch_002", "completed_units": 1, "total_units": 3, "unit_label": "Chapter 2 of 3"}),
+                        json.dumps({"event": "chapter_extraction_completed", "chapter_id": "ch_002", "completed_units": 2, "total_units": 3, "unit_label": "Chapter 2 of 3"}),
+                        json.dumps({"event": "chapter_extraction_started", "chapter_id": "ch_003", "completed_units": 2, "total_units": 3, "unit_label": "Chapter 3 of 3"}),
+                        json.dumps({"event": "global_normalization_batch_started", "batch_index": 1, "completed_units": 0, "total_units": 3, "unit_label": "Batch 1 of 3"}),
+                        json.dumps({"event": "global_normalization_batch_completed", "batch_index": 1, "completed_units": 1, "total_units": 3, "unit_label": "Batch 1 of 3"}),
+                        json.dumps({"event": "global_normalization_batch_started", "batch_index": 2, "completed_units": 1, "total_units": 3, "unit_label": "Batch 2 of 3"}),
+                        json.dumps({"event": "global_normalization_batch_completed", "batch_index": 2, "completed_units": 2, "total_units": 3, "unit_label": "Batch 2 of 3"}),
+                    ]
+                ) + "\n",
+                encoding="utf-8",
+            )
+
+            snapshot = _bootstrap_progress_snapshot(system_root)
+
+        self.assertEqual(snapshot["chapter_total"], 3)
+        self.assertEqual(snapshot["chapter_completed"], 2)
+        self.assertEqual(snapshot["normalization_total"], 3)
+        self.assertEqual(snapshot["normalization_completed"], 2)
+        self.assertEqual(snapshot["latest_events"]["detecting_chapters"]["completed_units"], 2)
+        self.assertEqual(snapshot["latest_events"]["detecting_chapters"]["total_units"], 3)
+        self.assertEqual(snapshot["latest_events"]["extracting_entities"]["completed_units"], 2)
+        self.assertEqual(snapshot["latest_events"]["extracting_entities"]["total_units"], 3)
+
+    def test_running_snapshot_uses_determinate_and_indeterminate_progress_without_fake_completion(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            session = stage_uploaded_files(repo_root, [("chapter.md", b"chapter body",)])
+            registry = IngestionJobRegistry(repo_root=repo_root, start_immediately=False)
+            job = registry.create_job({"upload_session_id": session.upload_session_id, "project_title": "Demo", "run_name": "upload"})
+            output_root = Path(job.output_root)
+            system_root = output_root / "99_System"
+            system_root.mkdir(parents=True, exist_ok=True)
+            (system_root / "bootstrap_progress.jsonl").write_text(
+                "\n".join(
+                    [
+                        json.dumps({"event": "chapter_extraction_started", "chapter_id": "ch_001", "completed_units": 0, "total_units": 3, "unit_label": "Chapter 1 of 3"}),
+                        json.dumps({"event": "chapter_extraction_completed", "chapter_id": "ch_001", "completed_units": 1, "total_units": 3, "unit_label": "Chapter 1 of 3"}),
+                        json.dumps({"event": "chapter_extraction_started", "chapter_id": "ch_002", "completed_units": 1, "total_units": 3, "unit_label": "Chapter 2 of 3"}),
+                        json.dumps({"event": "global_normalization_batch_started", "batch_index": 1}),
+                    ]
+                ) + "\n",
+                encoding="utf-8",
+            )
+            job.status = "running"
+
+            payload = job.snapshot()
+
+        stages = {stage["id"]: stage for stage in payload["stage_status"]["stages"]}
+        self.assertEqual(stages["detecting_chapters"]["progress_kind"], "determinate")
+        self.assertEqual(stages["detecting_chapters"]["completed_units"], 1)
+        self.assertEqual(stages["detecting_chapters"]["total_units"], 3)
+        self.assertEqual(stages["detecting_chapters"]["progress"], 33)
+        self.assertEqual(stages["writing_markdown"]["progress"], 33)
+        self.assertEqual(stages["extracting_entities"]["progress_kind"], "determinate")
+        self.assertEqual(stages["extracting_entities"]["progress"], 0)
+        self.assertEqual(stages["extracting_entities"]["status"], "running")
+
+    def test_running_stage_without_known_total_is_indeterminate(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            session = stage_uploaded_files(repo_root, [("chapter.md", b"chapter body",)])
+            registry = IngestionJobRegistry(repo_root=repo_root, start_immediately=False)
+            job = registry.create_job({"upload_session_id": session.upload_session_id, "project_title": "Demo", "run_name": "upload"})
+            job.status = "running"
+
+            payload = job.snapshot()
+
+        stages = {stage["id"]: stage for stage in payload["stage_status"]["stages"]}
+        self.assertEqual(stages["detecting_chapters"]["status"], "running")
+        self.assertEqual(stages["detecting_chapters"]["progress_kind"], "indeterminate")
+        self.assertIsNone(stages["detecting_chapters"]["progress"])
+
+    def test_running_snapshot_uses_known_batch_units_for_semantic_progress_percent(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            session = stage_uploaded_files(repo_root, [("chapter.md", b"chapter body",)])
+            registry = IngestionJobRegistry(repo_root=repo_root, start_immediately=False)
+            job = registry.create_job({"upload_session_id": session.upload_session_id, "project_title": "Demo", "run_name": "upload"})
+            output_root = Path(job.output_root)
+            system_root = output_root / "99_System"
+            system_root.mkdir(parents=True, exist_ok=True)
+            (system_root / "bootstrap_progress.jsonl").write_text(
+                "\n".join(
+                    [
+                        json.dumps({"event": "chapter_extraction_started", "chapter_id": "ch_001"}),
+                        json.dumps({"event": "chapter_extraction_completed", "chapter_id": "ch_001"}),
+                        json.dumps({"event": "chapter_extraction_started", "chapter_id": "ch_002"}),
+                        json.dumps({"event": "chapter_extraction_completed", "chapter_id": "ch_002"}),
+                        json.dumps({"event": "chapter_extraction_started", "chapter_id": "ch_003"}),
+                        json.dumps({"event": "chapter_extraction_completed", "chapter_id": "ch_003"}),
+                        json.dumps({"event": "global_normalization_batch_started", "batch_index": 1, "completed_units": 0, "total_units": 3, "unit_label": "Batch 1 of 3"}),
+                        json.dumps({"event": "global_normalization_batch_completed", "batch_index": 1, "completed_units": 1, "total_units": 3, "unit_label": "Batch 1 of 3"}),
+                        json.dumps({"event": "global_normalization_batch_started", "batch_index": 2, "completed_units": 1, "total_units": 3, "unit_label": "Batch 2 of 3"}),
+                        json.dumps({"event": "global_normalization_batch_completed", "batch_index": 2, "completed_units": 2, "total_units": 3, "unit_label": "Batch 2 of 3"}),
+                    ]
+                ) + "\n",
+                encoding="utf-8",
+            )
+            job.status = "running"
+
+            payload = job.snapshot()
+
+        stages = {stage["id"]: stage for stage in payload["stage_status"]["stages"]}
+        self.assertEqual(stages["extracting_entities"]["progress_kind"], "determinate")
+        self.assertEqual(stages["extracting_entities"]["completed_units"], 2)
+        self.assertEqual(stages["extracting_entities"]["total_units"], 3)
+        self.assertEqual(stages["extracting_entities"]["progress"], 67)
+        self.assertEqual(stages["extracting_entities"]["unit_label"], "Batch 2 of 3")
+
+    def test_progress_events_alone_do_not_fake_semantic_ready_downstream_stages(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            session = stage_uploaded_files(repo_root, [("chapter.md", b"chapter body",)])
+            registry = IngestionJobRegistry(repo_root=repo_root, start_immediately=False)
+            job = registry.create_job({"upload_session_id": session.upload_session_id, "project_title": "Demo", "run_name": "upload"})
+            output_root = Path(job.output_root)
+            system_root = output_root / "99_System"
+            system_root.mkdir(parents=True, exist_ok=True)
+            (system_root / "bootstrap_progress.jsonl").write_text(
+                "\n".join(
+                    [
+                        json.dumps({"event": "semantic_bootstrap_started", "chapter_count": 3, "semantic_status": "running"}),
+                        json.dumps({"event": "global_normalization_batch_started", "batch_index": 1, "completed_units": 0, "total_units": 3, "unit_label": "Batch 1 of 3"}),
+                        json.dumps({"event": "global_normalization_batch_completed", "batch_index": 1, "completed_units": 1, "total_units": 3, "unit_label": "Batch 1 of 3"}),
+                    ]
+                ) + "\n",
+                encoding="utf-8",
+            )
+            job.finalize(
+                status="succeeded",
+                project_id="proj_1",
+                result_detected=True,
+                project_package_ready=True,
+                semantic_artifacts_available=False,
+                semantic_status="structural_only",
+                result_warnings=["semantic artifacts not found"],
+                result_status="completed_with_warnings",
+            )
+
+            payload = job.snapshot()
+
+        stages = {stage["id"]: stage for stage in payload["stage_status"]["stages"]}
+        self.assertEqual(stages["extracting_entities"]["progress_kind"], "determinate")
+        self.assertEqual(stages["extracting_entities"]["progress"], 33)
+        self.assertEqual(stages["building_vaerl"]["status"], "warning")
         self.assertEqual(stages["workspace_ready"]["status"], "warning")
 
     def test_read_editor_chapters_uses_manifest_paths_when_kind_missing(self):
