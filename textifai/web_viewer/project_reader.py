@@ -1465,6 +1465,7 @@ def _hydrate_review_queue(raw_review_queue: dict[str, Any], entities: list[dict[
                     pass
         chapter_titles[cid] = title or cid
     chapter_paths = _build_chapter_path_map(chapters, project_root) if hasattr(chapters, '__iter__') else {}
+    pronoun_groups: dict[tuple[str, str], dict[str, Any]] = {}
     for item in items:
         target_label = format_author_facing_label(str(item.get('target_label') or '').strip())
         summary = str(item.get('summary') or '').strip()
@@ -1480,11 +1481,13 @@ def _hydrate_review_queue(raw_review_queue: dict[str, Any], entities: list[dict[
             review_type = 'pronoun_pov'
             summary_key = 'pronoun_pov'
             severity = 'medium'
-            title = f'{target_label or "Pronombre"} · sin entidad sugerida'
+            title = f'Pronombre sin antecedente claro · {chapter_label}' if chapter_label else 'Pronombre sin antecedente claro'
             source_entity = {'label': target_label or 'pronoun'}
             target_entity = None
             suggested_action = materiality_action
-            human_reason = 'Pronombre de POV detectado; necesita resolución explícita antes de entrar al canon.'
+            human_reason = summary or f'Referencia {target_label or "pronoun"} sin entidad sugerida'
+            if chapter_label:
+                human_reason = f'{human_reason}. Fuente: {chapter_label}.'
         elif normalized_target in entity_map:
             review_type = 'possible_merge'
             summary_key = 'possible_merges'
@@ -1538,12 +1541,19 @@ def _hydrate_review_queue(raw_review_queue: dict[str, Any], entities: list[dict[
         for ref in source_refs:
             ev_ch_id = str(ref.get('chapter_id') or chapter_id or '')
             ev_ch_label = chapter_titles.get(ev_ch_id) or chapter_note or ev_ch_id or ''
-            ev_chunk_id = str(ref.get('chunk_id') or '')
+            ev_chunk_id = str(ref.get('chunk_id') or ref.get('source_ref') or ref.get('source_ref_key') or ref.get('pointer') or '')
             ev_excerpt = str(ref.get('excerpt') or '').strip() or None
             ev_reason = ''
             ev_reason_code = ''
             chunk_row = source_map_chunks.get(ev_chunk_id) if isinstance(source_map_chunks, dict) else None
             evidence_row = evidence_by_review_id.get(str(item.get('id') or item.get('review_item_id') or '')) or evidence_by_source_ref.get(ev_chunk_id)
+            if isinstance(evidence_row, dict):
+                indexed_chunk_id = str(evidence_row.get('chunk_id') or evidence_row.get('source_ref') or evidence_row.get('source_ref_key') or '').strip()
+                if indexed_chunk_id and not isinstance(chunk_row, dict):
+                    indexed_chunk_row = source_map_chunks.get(indexed_chunk_id) if isinstance(source_map_chunks, dict) else None
+                    if isinstance(indexed_chunk_row, dict):
+                        ev_chunk_id = indexed_chunk_id
+                        chunk_row = indexed_chunk_row
             if not ev_excerpt and isinstance(evidence_row, dict):
                 ev_excerpt = str(evidence_row.get('excerpt') or evidence_row.get('text_excerpt') or '').strip() or None
                 ev_reason = str(evidence_row.get('reason') or evidence_row.get('why') or '').strip()
@@ -1598,6 +1608,36 @@ def _hydrate_review_queue(raw_review_queue: dict[str, Any], entities: list[dict[
                 'reason_code': ev_reason_code,
             }
             evidence_refs.append(ev)
+        evidence_resolution = 'unavailable'
+        if evidence_refs:
+            if any(ref.get('has_text') for ref in evidence_refs):
+                evidence_resolution = 'resolved'
+            elif not isinstance(source_map_payload, dict) or not source_map_payload:
+                evidence_resolution = 'missing_source_map'
+            else:
+                evidence_resolution = 'missing_chunk'
+        elif source_refs:
+            if not isinstance(source_map_payload, dict) or not source_map_payload:
+                evidence_resolution = 'missing_source_map'
+            elif source_map_chunks_count <= 0:
+                evidence_resolution = 'missing_chunk'
+            else:
+                evidence_resolution = 'missing_chunk'
+        if review_type == 'pronoun_pov':
+            if evidence_resolution == 'resolved':
+                human_reason = f'{human_reason} Hay fragmento de evidencia disponible.'
+            else:
+                human_reason = f'{human_reason} Evidencia textual no disponible ({evidence_resolution}).'
+            if item.get('candidate_entities'):
+                human_reason = f'{human_reason} Candidatos existentes requieren revisión manual.'
+            else:
+                human_reason = f'{human_reason} No hay entidad candidata sugerida.'
+        raw_candidates = item.get('candidate_entities') if isinstance(item.get('candidate_entities'), list) else []
+        candidate_entities = [row for row in raw_candidates if isinstance(row, dict)]
+        metadata = {
+            'evidence_resolution': evidence_resolution,
+            'occurrence_count': 1,
+        }
         decision_items.append(
             {
                 'id': str(item.get('id') or f'review:{len(decision_items)+1}'),
@@ -1609,8 +1649,10 @@ def _hydrate_review_queue(raw_review_queue: dict[str, Any], entities: list[dict[
                 'target_entity': target_entity,
                 'suggested_action': suggested_action,
                 'human_reason': human_reason,
+                'candidate_entities': candidate_entities,
                 'evidence_summary': f'{len(evidence_refs)} referencias' if evidence_refs else 'Sin evidencia textual',
                 'evidence_refs': evidence_refs,
+                'metadata': metadata,
                 'local_state': 'pending',
                 'impact_if_accept': 'Refina la proyección canónica y reduce ambigüedad visible.',
                 'impact_if_reject': 'Mantiene la referencia fuera del canon visible hasta nueva evidencia.',
@@ -1619,6 +1661,26 @@ def _hydrate_review_queue(raw_review_queue: dict[str, Any], entities: list[dict[
         )
         decision_items[-1]['technical_details']['source_map_chunks_count'] = source_map_chunks_count
         decision_items[-1]['technical_details']['evidence_store_used'] = bool(evidence_index_items or source_map_payload)
+        if review_type == 'pronoun_pov':
+            group_key = (normalized_target or '__missing__', chapter_id or chapter_label or '__unknown__')
+            current = decision_items[-1]
+            existing = pronoun_groups.get(group_key)
+            if existing:
+                existing['metadata']['occurrence_count'] = int(existing['metadata'].get('occurrence_count') or 1) + 1
+                existing['technical_details']['occurrence_count'] = existing['metadata']['occurrence_count']
+                existing['technical_details'].setdefault('grouped_review_item_ids', []).append(current['id'])
+                for ref in evidence_refs:
+                    if not any(old.get('pointer') == ref.get('pointer') for old in existing.get('evidence_refs') or []):
+                        existing.setdefault('evidence_refs', []).append(ref)
+                existing['evidence_summary'] = f'{len(existing.get("evidence_refs") or [])} referencias' if existing.get('evidence_refs') else 'Sin evidencia textual'
+                if existing['metadata'].get('evidence_resolution') != 'resolved' and evidence_resolution == 'resolved':
+                    existing['metadata']['evidence_resolution'] = 'resolved'
+                    existing['human_reason'] = current['human_reason']
+                decision_items.pop()
+            else:
+                current['technical_details']['occurrence_count'] = 1
+                current['technical_details']['grouped_review_item_ids'] = [current['id']]
+                pronoun_groups[group_key] = current
         summary_counts['total_pending'] += 1
         summary_counts[summary_key] = summary_counts.get(summary_key, 0) + 1
 

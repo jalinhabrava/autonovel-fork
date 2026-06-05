@@ -27,6 +27,130 @@ from textifai.web_viewer.upload_staging import UploadSession, save_upload_sessio
 
 
 class TextifAIWebViewerTests(unittest.TestCase):
+    def test_pronoun_review_items_are_grouped_with_occurrence_count_and_evidence(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            run = root / "runs" / "sample_run"
+            system = run / "99_System"
+            evidence = run / "evidence"
+            chapters_dir = run / "markdown" / "Chapters"
+            system.mkdir(parents=True)
+            evidence.mkdir(parents=True)
+            chapters_dir.mkdir(parents=True)
+            (chapters_dir / "Ch_001.md").write_text("# Episodio 1\n\nElla miró puerta.\n", encoding="utf-8")
+            (system / "obsidian_import.json").write_text(
+                json.dumps(
+                    {
+                        "work": {"title": "Sample", "language": "es"},
+                        "chapters": [{"chapter_id": "ch_001", "chapter_title_original": "Episodio 1"}],
+                        "entities": [{"canonical_name": "Ari Mar", "entity_kind": "character", "review_state": "canonical"}],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (system / "review_queue.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": "textifai.review_queue.v1",
+                        "item_count": 3,
+                        "items": [
+                            {"id": "p1", "target_label": "ella", "chapter_id": "ch_001", "source_refs": [{"source_ref": "src:ch_001:chunk_001"}]},
+                            {"id": "p2", "target_label": "ella", "chapter_id": "ch_001", "source_refs": [{"source_ref": "src:ch_001:chunk_001"}]},
+                            {"id": "n1", "target_label": "Ari Mar", "chapter_id": "ch_001", "summary": "Alias posible"},
+                        ],
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+            (evidence / "source_map.json").write_text(
+                json.dumps(
+                    {"chunks": {"chunk_001": {"chapter_id": "ch_001", "chapter_path": "markdown/Chapters/Ch_001.md", "char_start": 0, "char_end": 18}}},
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+            (evidence / "evidence_index.json").write_text(
+                json.dumps(
+                    {
+                        "items": [
+                            {"review_item_id": "p1", "source_ref": "src:ch_001:chunk_001", "chunk_id": "chunk_001"},
+                            {"review_item_id": "p2", "source_ref": "src:ch_001:chunk_001", "chunk_id": "chunk_001"},
+                        ]
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+
+            catalog = ProjectCatalog([root / "runs"])
+            project = catalog.get_project(catalog.list_projects()[0]["project_id"])
+            payload = read_project(project)
+
+        items = payload["canon"]["review_queue"]["decision_items"]
+        pronoun_items = [row for row in items if row["type"] == "pronoun_pov"]
+        self.assertEqual(len(pronoun_items), 1)
+        pronoun = pronoun_items[0]
+        self.assertEqual(pronoun["metadata"]["occurrence_count"], 2)
+        self.assertEqual(pronoun["technical_details"]["occurrence_count"], 2)
+        self.assertEqual(pronoun["technical_details"]["grouped_review_item_ids"], ["p1", "p2"])
+        self.assertEqual(pronoun["metadata"]["evidence_resolution"], "resolved")
+        self.assertTrue(pronoun["evidence_refs"])
+        self.assertEqual(pronoun["evidence_refs"][0]["chapter_label"], "Episodio 1")
+        self.assertIn("Hay fragmento de evidencia disponible", pronoun["human_reason"])
+        self.assertNotEqual(pronoun["title"], "Pronombre · sin entidad sugerida")
+        non_pronoun = next(row for row in items if row["type"] != "pronoun_pov")
+        self.assertEqual(non_pronoun["title"], "Ari Mar → Ari Mar")
+
+    def test_pronoun_review_without_candidates_does_not_invent_entities_and_handles_missing_source_map(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            run = root / "runs" / "sample_run"
+            system = run / "99_System"
+            system.mkdir(parents=True)
+            (system / "obsidian_import.json").write_text(
+                json.dumps(
+                    {
+                        "work": {"title": "Sample", "language": "es"},
+                        "chapters": [{"chapter_id": "ch_002", "chapter_title_original": "Episodio 2"}],
+                        "entities": [{"canonical_name": "Sera", "entity_kind": "character", "review_state": "canonical"}],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (system / "review_queue.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": "textifai.review_queue.v1",
+                        "item_count": 1,
+                        "items": [
+                            {
+                                "id": "p3",
+                                "target_label": "ella",
+                                "chapter_id": "ch_002",
+                                "source_refs": [{"source_ref": "src:ch_002:chunk_missing"}],
+                                "candidate_entities": [],
+                            }
+                        ],
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+
+            catalog = ProjectCatalog([root / "runs"])
+            project = catalog.get_project(catalog.list_projects()[0]["project_id"])
+            payload = read_project(project)
+
+        pronoun = payload["canon"]["review_queue"]["decision_items"][0]
+        self.assertEqual(pronoun["type"], "pronoun_pov")
+        self.assertEqual(pronoun["candidate_entities"], [])
+        self.assertIsNone(pronoun["target_entity"])
+        self.assertEqual(pronoun["metadata"]["evidence_resolution"], "missing_source_map")
+        self.assertIn("No hay entidad candidata sugerida", pronoun["human_reason"])
+        self.assertIn("missing_source_map", pronoun["human_reason"])
+        self.assertIn("Episodio 2", pronoun["title"])
+
     def test_project_catalog_discovers_run_and_reads_views(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
